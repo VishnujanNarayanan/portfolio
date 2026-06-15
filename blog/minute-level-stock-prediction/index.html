@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en-US" class="lenis no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Predicting Next-Minute Price Direction on 9.4M NSE Ticks — Vishnujan Narayanan</title>
+<meta name="description" content="Turning 9.4M NSE trade and quote ticks into minute bars, engineering rolling and microstructure features, and backtesting a directional model without look-ahead leakage.">
+<link rel="canonical" href="https://vishnujannarayanan.com/blog/minute-level-stock-prediction/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta property="og:title" content="Predicting Next-Minute Price Direction on 9.4M NSE Ticks">
+<meta property="og:description" content="From raw ticks to minute bars to a directional model — and the leakage traps that make backtests lie.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://vishnujannarayanan.com/blog/minute-level-stock-prediction/">
+<meta property="og:image" content="https://vishnujannarayanan.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Predicting Next-Minute Price Direction on 9.4M NSE Ticks">
+<meta name="twitter:description" content="From raw ticks to minute bars to a directional model — and the leakage traps that make backtests lie.">
+<meta name="twitter:image" content="https://vishnujannarayanan.com/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../styles.css">
+<script>document.documentElement.classList.remove("no-js");</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujannarayanan.com/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujannarayanan.com/blog/"},{"@type":"ListItem","position":3,"name":"Predicting Next-Minute Price Direction on 9.4M NSE Ticks","item":"https://vishnujannarayanan.com/blog/minute-level-stock-prediction/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Predicting Next-Minute Price Direction on 9.4M NSE Ticks","datePublished":"2025-05-28","dateModified":"2025-05-28","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujannarayanan.com/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujannarayanan.com/blog/minute-level-stock-prediction/"}</script>
+</head>
+<body class="subpage-body">
+<div class="mobile-nav__overlay"></div>
+<header class="show">
+  <nav class="header__nav-left">
+    <a href="../../index.html#projects">Projects</a>
+    <a href="../../index.html#skills">Skills</a>
+    <a href="../../index.html#services">Services</a>
+    <a href="../../blog/index.html">Blog</a>
+  </nav>
+  <div class="header__logo">
+    <a href="../../index.html" class="header__logo_link" aria-label="Vishnujan Narayanan — Home"><span class="logo-text">VJ</span></a>
+  </div>
+  <nav class="header__nav-right">
+    <div class="header__ctas">
+      <a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Hire Me</span></a>
+      <a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark"><span class="pill-btn-span">Get In Touch</span></a>
+    </div>
+    <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
+      <span class="menu-btn__icon">
+        <span class="menu-btn__line menu-btn__line--1"></span>
+        <span class="menu-btn__line menu-btn__line--2"></span>
+        <span class="menu-btn__line menu-btn__line--3"></span>
+      </span>
+    </button>
+  </nav>
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <div class="mobile-nav__panel-bg"></div>
+    <div class="mobile-nav__panel">
+      <div class="mobile-nav__header">
+        <a href="../../index.html" class="mobile-nav__logo"><span class="logo-text">VJ</span></a>
+        <button class="mobile-nav__close" type="button" aria-label="Close menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="#050419"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="#050419"></rect></svg>
+        </button>
+      </div>
+      <ul class="mobile-nav__list">
+        <li class="mobile-nav__item"><a href="../../index.html#projects">Projects</a></li>
+        <li class="mobile-nav__item"><a href="../../index.html#skills">Skills</a></li>
+        <li class="mobile-nav__item"><a href="../../index.html#services">Services</a></li>
+        <li class="mobile-nav__item"><a href="../../blog/index.html">Blog</a></li>
+      </ul>
+      <div class="mobile-nav__ctas">
+        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Hire Me</span></a></div>
+        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark mobile-nav__cta"><span class="pill-btn-span">Get In Touch</span></a></div>
+      </div>
+    </div>
+  </nav>
+</header>
+<main>
+<nav class="breadcrumb"><a href="../../index.html">Home</a><span>›</span><a href="../../blog/index.html">Blog</a><span>›</span>Predicting Next-Minute Price Direction on 9.4M NSE Ticks</nav>
+<article class="article">
+  <h1>Predicting Next-Minute Price Direction on 9.4M NSE Ticks</h1>
+  <div class="meta"><span>Quant / ML</span><span>9 min read</span><span>Published May 2025</span></div>
+
+  <p>Intraday prediction is where machine learning meets market microstructure, and where it is easiest to fool yourself. This is a walkthrough of how I built an intraday price-direction system over 9.4 million NSE tick records across 31 NIFTY stocks — from raw trades and quotes to minute bars to a model and a backtest — and, just as importantly, the leakage traps that quietly inflate results if you let them. The full project lives on the <a href="../../projects/nse-stock-prediction/index.html">Minute-Level Stock Prediction</a> page.</p>
+
+  <h2>From ticks to minute bars</h2>
+  <p>Raw tick data is firehose-shaped: 2.9 million trades and 6.4 million quotes across 31 symbols. You cannot model on that directly, and you would not want to — the signal at the individual-tick level is mostly noise and exchange mechanics. The first job is aggregation. I ingested 31 per-symbol tick files (~9.4M rows total) with a pandas loader, tagged every record by company, and concatenated them into unified trade and quote datasets.</p>
+  <p>From there I condensed the firehose into minute bars: grouping on company and minute, then inner-joining the trade and quote aggregates on a composite key. The output is roughly 11,600 labeled OHLC feature rows — a dataset small enough to model on and structured enough to reason about. Going from 9.4M ticks to ~11,600 rows is not just compression; it is choosing the timescale at which you believe a signal exists.</p>
+
+  <h2>Features that capture momentum and liquidity</h2>
+  <p>A minute bar on its own is thin. The predictive content comes from context — what happened over the last several minutes. I constructed rolling mean and standard-deviation features over 3-, 5-, 10-, and 20-minute windows on both price and volume, using pandas <code>groupby</code>-transform so each window is computed per company without bleeding across symbols.</p>
+  <p>On top of the rolling features I derived microstructure signals: per-minute VWAP, OHLC statistics, and bid-ask spread computed from the raw order flow. Spread is a liquidity proxy; VWAP anchors price against traded volume; the rolling stats capture momentum and volatility regime. Together that is 20-plus engineered features describing not just where the price is, but how it is moving and how liquid the book is.</p>
+
+  <h2>The leakage trap</h2>
+  <p>Here is where most intraday backtests go wrong. If you shuffle your data and do a random train/test split, you train on the future and test on the past — and your metrics look fantastic right up until you trade real money. Time-series prediction demands that the model only ever sees the past.</p>
+  <p>I labeled the target as next-minute return direction using horizon-shifted targets, and split train and test with a per-company, time-ordered split. Every test bar comes strictly after every training bar for that symbol. No shuffling, no leakage. This is unglamorous and it lowers your headline numbers, which is exactly why it matters: the numbers you get are numbers you can believe.</p>
+
+  <h2>Modeling for precision, not accuracy</h2>
+  <p>Accuracy is the wrong objective for a directional trading signal. If you act on every prediction, you pay costs on every trade and drown a weak edge in noise. What you actually want is to act only when the model is confident. I trained a scikit-learn <code>RandomForestClassifier</code> on the engineered features, then tuned a probability threshold of 0.63: the system only takes a long signal when predicted probability clears that bar.</p>
+  <p>That threshold lifted next-minute precision from a coin-flip 0.51 to 0.61. The trade-off is fewer trades — you are deliberately staying out of the market when the model is unsure. For a signal, that is the right trade-off. A precise signal you act on selectively beats a noisy one you act on constantly.</p>
+
+  <h2>Backtesting honestly</h2>
+  <p>Finally, the backtest. I evaluated threshold-filtered long signals across 3,100 held-out minute bars with per-trade PnL accounting, comparing precision and trade count at 0.5, 0.6, and 0.7 cutoffs. Sweeping the threshold shows you the whole frontier: lower cutoffs trade more often at lower precision, higher cutoffs trade rarely at higher precision. Seeing that curve — rather than a single cherry-picked number — is what lets you choose an operating point deliberately.</p>
+  <p>The discipline that makes this trustworthy is the same discipline from the data-engineering side of my work: be honest about what the data can and cannot tell you. The leak-free split here is the modeling cousin of the repair-not-corrupt reruns I described in <a href="../../blog/building-resumable-etl-pipelines/index.html">building resumable ETL pipelines</a>. In both cases the goal is the same — results you can actually rely on, not results that merely look good in a notebook.</p>
+
+  <a class="back" href="../../blog/index.html">← Back to writing</a>
+</article>
+</main>
+<footer class="footer">
+  <nav class="footer-nav">
+    <a href="../../index.html#projects" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Projects</span></a>
+    <a href="../../index.html#skills" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Skills</span></a>
+    <a href="../../index.html#services" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Services</span></a>
+    <a href="../../blog/index.html" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Blog</span></a>
+  </nav>
+  <div class="footer__bottom">
+    <span class="logo-text footer__logo">VJ</span>
+    <div class="footer__meta">
+      <p class="footer__copyright">© 2026 Vishnujan Narayanan</p>
+      <a href="https://github.com/VishnujanNarayanan" class="footer__privacy" target="_blank" rel="noopener">GitHub</a>
+      <a href="http://www.linkedin.com/in/vishnujan-narayanan" class="footer__privacy" target="_blank" rel="noopener">LinkedIn</a>
+    </div>
+  </div>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
+<script src="../../main.js" defer></script>
+</body>
+</html>

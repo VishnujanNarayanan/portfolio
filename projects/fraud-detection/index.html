@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en-US" class="lenis no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fraud Transaction Detection — Vishnujan Narayanan</title>
+<meta name="description" content="An end-to-end fraud-detection ML pipeline in Python (scikit-learn) on 6.4M transactions, catching 95% of fraud at 0.995 ROC-AUC despite a 0.13% fraud rate.">
+<link rel="canonical" href="https://vishnujannarayanan.com/projects/fraud-detection/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta property="og:title" content="Fraud Transaction Detection — Vishnujan Narayanan">
+<meta property="og:description" content="End-to-end fraud detection on 6.4M transactions — 95% recall at 0.995 ROC-AUC on a 0.13% fraud rate.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://vishnujannarayanan.com/projects/fraud-detection/">
+<meta property="og:image" content="https://vishnujannarayanan.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Fraud Transaction Detection — Vishnujan Narayanan">
+<meta name="twitter:description" content="End-to-end fraud detection on 6.4M transactions — 95% recall at 0.995 ROC-AUC on a 0.13% fraud rate.">
+<meta name="twitter:image" content="https://vishnujannarayanan.com/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../styles.css">
+<script>document.documentElement.classList.remove("no-js");</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujannarayanan.com/"},{"@type":"ListItem","position":2,"name":"Projects","item":"https://vishnujannarayanan.com/#projects"},{"@type":"ListItem","position":3,"name":"Fraud Transaction Detection","item":"https://vishnujannarayanan.com/projects/fraud-detection/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"CreativeWork","name":"Fraud Transaction Detection","datePublished":"2025-02-01","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujannarayanan.com/"},"about":["Machine Learning","Fraud Detection","scikit-learn"]}</script>
+</head>
+<body class="subpage-body">
+<div class="mobile-nav__overlay"></div>
+<header class="show">
+  <nav class="header__nav-left">
+    <a href="../../index.html#projects">Projects</a>
+    <a href="../../index.html#skills">Skills</a>
+    <a href="../../index.html#services">Services</a>
+    <a href="../../blog/index.html">Blog</a>
+  </nav>
+  <div class="header__logo">
+    <a href="../../index.html" class="header__logo_link" aria-label="Vishnujan Narayanan — Home"><span class="logo-text">VJ</span></a>
+  </div>
+  <nav class="header__nav-right">
+    <div class="header__ctas">
+      <a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Hire Me</span></a>
+      <a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark"><span class="pill-btn-span">Get In Touch</span></a>
+    </div>
+    <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
+      <span class="menu-btn__icon">
+        <span class="menu-btn__line menu-btn__line--1"></span>
+        <span class="menu-btn__line menu-btn__line--2"></span>
+        <span class="menu-btn__line menu-btn__line--3"></span>
+      </span>
+    </button>
+  </nav>
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <div class="mobile-nav__panel-bg"></div>
+    <div class="mobile-nav__panel">
+      <div class="mobile-nav__header">
+        <a href="../../index.html" class="mobile-nav__logo"><span class="logo-text">VJ</span></a>
+        <button class="mobile-nav__close" type="button" aria-label="Close menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="#050419"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="#050419"></rect></svg>
+        </button>
+      </div>
+      <ul class="mobile-nav__list">
+        <li class="mobile-nav__item"><a href="../../index.html#projects">Projects</a></li>
+        <li class="mobile-nav__item"><a href="../../index.html#skills">Skills</a></li>
+        <li class="mobile-nav__item"><a href="../../index.html#services">Services</a></li>
+        <li class="mobile-nav__item"><a href="../../blog/index.html">Blog</a></li>
+      </ul>
+      <div class="mobile-nav__ctas">
+        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Hire Me</span></a></div>
+        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark mobile-nav__cta"><span class="pill-btn-span">Get In Touch</span></a></div>
+      </div>
+    </div>
+  </nav>
+</header>
+<main>
+<nav class="breadcrumb"><a href="../../index.html">Home</a><span>›</span><a href="../../index.html#projects">Projects</a><span>›</span>Fraud Transaction Detection</nav>
+<article class="article">
+  <h1>Fraud Transaction Detection</h1>
+  <div class="meta"><span>Machine learning · imbalanced classification</span><span>Python · scikit-learn · pandas</span></div>
+
+  <div class="tech-list"><span>Python</span><span>scikit-learn</span><span>pandas</span><span>NumPy</span><span>SciPy</span></div>
+
+  <p>An end-to-end fraud-detection model on 6.4M financial transactions that catches 95% of fraud at 0.995 ROC-AUC — built around a leak-free, reusable preprocessing pipeline and evaluation tuned for catching rare cases rather than raw accuracy.</p>
+
+  <h2>Results</h2>
+  <ul>
+    <li>Built an end-to-end fraud-detection model on 6.4M financial transactions, catching 95% of fraud at 0.995 ROC-AUC despite a 0.13% fraud rate.</li>
+    <li>Trained a class-weight-balanced Logistic Regression on a 0.13% fraud rate, reaching 95.31% fraud recall and 96.78% accuracy without resampling.</li>
+    <li>Pruned seven weak predictors through coefficient analysis, shrinking the feature set while holding ROC-AUC at 0.9946 versus the full 0.995.</li>
+  </ul>
+
+  <h2>Feature engineering &amp; pipeline</h2>
+  <ul>
+    <li>Designed a reusable feature pipeline that cleans and engineers 6.4M-row transaction data into model-ready inputs for fraud scoring.</li>
+    <li>Engineered a custom scikit-learn transformer (BaseEstimator/TransformerMixin) bundling encoding, scaling, and feature creation into one fit/transform step reusable on new data.</li>
+    <li>Created domain fraud features — balance deltas, a suspicious-transfer flag, log-scaled amount, and cyclical time encodings — that ranked as the model's top predictors.</li>
+  </ul>
+
+  <h2>Data cleaning &amp; validation</h2>
+  <ul>
+    <li>Cleaned 6.4M records by dropping leakage columns and one of two perfectly correlated balance fields, removing multicollinearity before modeling.</li>
+    <li>Validated feature significance with Chi-Square and Mann-Whitney U tests, confirming transaction type and amount differ across fraud classes at p &lt; 0.0001.</li>
+    <li>Surfaced that fraud concentrates in high-value CASH_OUT/TRANSFER transfers (avg 1.47M vs 178K), pinpointing balance-unchanged transfers as a core fraud signal.</li>
+  </ul>
+
+  <a class="gh-btn pill-btn pill-btn--dark" href="https://github.com/VishnujanNarayanan/Fraud_Transaction_Detection" target="_blank" rel="noopener"><span class="pill-btn-span">View on GitHub</span></a>
+  <br>
+  <a class="back" href="../../index.html#projects">← Back to projects</a>
+</article>
+</main>
+<footer class="footer">
+  <nav class="footer-nav">
+    <a href="../../index.html#projects" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Projects</span></a>
+    <a href="../../index.html#skills" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Skills</span></a>
+    <a href="../../index.html#services" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Services</span></a>
+    <a href="../../blog/index.html" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Blog</span></a>
+  </nav>
+  <div class="footer__bottom">
+    <span class="logo-text footer__logo">VJ</span>
+    <div class="footer__meta">
+      <p class="footer__copyright">© 2026 Vishnujan Narayanan</p>
+      <a href="https://github.com/VishnujanNarayanan" class="footer__privacy" target="_blank" rel="noopener">GitHub</a>
+      <a href="http://www.linkedin.com/in/vishnujan-narayanan" class="footer__privacy" target="_blank" rel="noopener">LinkedIn</a>
+    </div>
+  </div>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
+<script src="../../main.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en-US" class="lenis no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How I Scraped 20 Years of NSE Insider Filings — Vishnujan Narayanan</title>
+<meta name="description" content="Backfilling two decades of NSE insider-trade filings from the PIT API: chunked 180-day windows, composite-key dedup that survives numeric drift, and source reconciliation.">
+<link rel="canonical" href="https://vishnujannarayanan.com/blog/how-i-scraped-nse-insider-filings/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta property="og:title" content="How I Scraped 20 Years of NSE Insider Filings">
+<meta property="og:description" content="Chunked date windows, composite-key dedup, and source reconciliation to backfill two decades of insider-trade data.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://vishnujannarayanan.com/blog/how-i-scraped-nse-insider-filings/">
+<meta property="og:image" content="https://vishnujannarayanan.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="How I Scraped 20 Years of NSE Insider Filings">
+<meta name="twitter:description" content="Chunked date windows, composite-key dedup, and source reconciliation to backfill two decades of insider-trade data.">
+<meta name="twitter:image" content="https://vishnujannarayanan.com/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../styles.css">
+<script>document.documentElement.classList.remove("no-js");</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujannarayanan.com/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujannarayanan.com/blog/"},{"@type":"ListItem","position":3,"name":"How I Scraped 20 Years of NSE Insider Filings","item":"https://vishnujannarayanan.com/blog/how-i-scraped-nse-insider-filings/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"How I Scraped 20 Years of NSE Insider Filings","datePublished":"2025-05-10","dateModified":"2025-05-10","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujannarayanan.com/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujannarayanan.com/blog/how-i-scraped-nse-insider-filings/"}</script>
+</head>
+<body class="subpage-body">
+<div class="mobile-nav__overlay"></div>
+<header class="show">
+  <nav class="header__nav-left">
+    <a href="../../index.html#projects">Projects</a>
+    <a href="../../index.html#skills">Skills</a>
+    <a href="../../index.html#services">Services</a>
+    <a href="../../blog/index.html">Blog</a>
+  </nav>
+  <div class="header__logo">
+    <a href="../../index.html" class="header__logo_link" aria-label="Vishnujan Narayanan — Home"><span class="logo-text">VJ</span></a>
+  </div>
+  <nav class="header__nav-right">
+    <div class="header__ctas">
+      <a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Hire Me</span></a>
+      <a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark"><span class="pill-btn-span">Get In Touch</span></a>
+    </div>
+    <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
+      <span class="menu-btn__icon">
+        <span class="menu-btn__line menu-btn__line--1"></span>
+        <span class="menu-btn__line menu-btn__line--2"></span>
+        <span class="menu-btn__line menu-btn__line--3"></span>
+      </span>
+    </button>
+  </nav>
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <div class="mobile-nav__panel-bg"></div>
+    <div class="mobile-nav__panel">
+      <div class="mobile-nav__header">
+        <a href="../../index.html" class="mobile-nav__logo"><span class="logo-text">VJ</span></a>
+        <button class="mobile-nav__close" type="button" aria-label="Close menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="#050419"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="#050419"></rect></svg>
+        </button>
+      </div>
+      <ul class="mobile-nav__list">
+        <li class="mobile-nav__item"><a href="../../index.html#projects">Projects</a></li>
+        <li class="mobile-nav__item"><a href="../../index.html#skills">Skills</a></li>
+        <li class="mobile-nav__item"><a href="../../index.html#services">Services</a></li>
+        <li class="mobile-nav__item"><a href="../../blog/index.html">Blog</a></li>
+      </ul>
+      <div class="mobile-nav__ctas">
+        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Hire Me</span></a></div>
+        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark mobile-nav__cta"><span class="pill-btn-span">Get In Touch</span></a></div>
+      </div>
+    </div>
+  </nav>
+</header>
+<main>
+<nav class="breadcrumb"><a href="../../index.html">Home</a><span>›</span><a href="../../blog/index.html">Blog</a><span>›</span>How I Scraped 20 Years of NSE Insider Filings</nav>
+<article class="article">
+  <h1>How I Scraped 20 Years of NSE Insider Filings</h1>
+  <div class="meta"><span>Data engineering</span><span>9 min read</span><span>Published May 2025</span></div>
+
+  <p>Insider-trade filings are one of the richest signals you can feed a quant research team, and one of the most annoying to collect. India's National Stock Exchange publishes them through its PIT (Prohibition of Insider Trading) disclosure API, but "publishes" is doing a lot of work in that sentence. The endpoint is happy to hand you a few weeks of data and distinctly unhappy if you ask for twenty years in one request. This post walks through how I backfilled roughly two decades of NSE insider-trade filings into a clean, deduplicated dataset that reruns safely — part of the wider <a href="../../projects/market-data-pipeline/index.html">market-data platform</a> I built and own.</p>
+
+  <h2>The problem with "just download everything"</h2>
+  <p>The naive approach — request a date range spanning 2005 to today — fails in several ways at once. The API times out on wide ranges, silently truncates results, and applies rate limits that you only discover when your rows quietly stop arriving. A twenty-year backfill is not a single download; it is thousands of small downloads that have to be orchestrated, paced, and stitched back together without gaps or duplicates.</p>
+  <p>So the first design decision was to stop thinking of it as one job. I split the full history into chunked 180-day windows and walked them sequentially. A 180-day window is small enough that the API reliably returns a complete result, and large enough that you are not making tens of thousands of requests. Each window writes its own slice; the orchestration layer tracks which windows are done so an interrupted run picks up where it left off rather than starting over.</p>
+
+  <h2>Backfill once, then stay current cheaply</h2>
+  <p>A historical backfill and a daily refresh have completely different cost profiles, and conflating them is a classic mistake. The backfill is a one-time, expensive march through history. The daily refresh should be almost free. I built the pipeline to recognize which mode it is in: on a cold start it chunks the wide range into 180-day windows, but on subsequent runs it switches to a one-year incremental re-pull. The one-year overlap is deliberate — filings can be amended or arrive late, so re-pulling a trailing window catches corrections without re-downloading the entire history every day.</p>
+
+  <h2>Deduplication that survives numeric drift</h2>
+  <p>Once you are appending overlapping windows, duplicates are guaranteed. The interesting part is that naive deduplication does not work, because the same filing does not always look identical across fetches. A quantity field might come back as the integer <code>629221</code> in one response and the float <code>629221.0</code> in another. String versus numeric drift like this defeats a plain row-equality check, and you end up double-counting the same disclosure.</p>
+  <p>The fix was a normalized composite-key set anti-join. Instead of comparing whole rows, I build a composite key from the fields that actually identify a filing, normalize each component so <code>629221</code> and <code>629221.0</code> collapse to the same token, and then anti-join new rows against the keys already on disk. Only genuinely new filings get appended. This is what lets the pipeline rerun across overlapping windows without ever inflating the dataset — a property that matters enormously when the numbers downstream are feeding research.</p>
+
+  <h2>Closing the reporting lag with a second source</h2>
+  <p>Even a perfect scrape of NSE has a structural problem: the exchange's insider data carries a 30-to-60-day reporting lag. For research that cares about recent activity, that lag is a real blind spot. To close it, I reconciled the NSE feed against a second source, Trendlyne, which surfaces filings sooner. That meant parsing Trendlyne's HTML tables with BeautifulSoup and normalizing them into exactly the same schema as the NSE records, so the two sources merge into one consistent view rather than two datasets you have to reason about separately.</p>
+  <p>Source reconciliation is its own small discipline. The two feeds disagree on column names, date formats, and occasionally on the filings themselves. The composite-key approach from earlier pays off again here: once both sources are normalized into the same key space, deduplication across sources is the same operation as deduplication within a source.</p>
+
+  <h2>What made it reliable</h2>
+  <p>None of these pieces are exotic on their own. The reliability came from combining them: chunked windows so requests always succeed, a mode switch so daily runs stay cheap, normalized composite-key dedup so reruns repair instead of corrupt, and source reconciliation so the data is timely. The result is a pipeline I can leave alone — it fetches only what is new, heals gaps on rerun, and keeps two decades of insider activity current across ~1,665 listed companies.</p>
+  <p>If you want the broader picture of how this fits into a 28-pipeline ingestion layer, the <a href="../../projects/market-data-pipeline/index.html">Market Data Platform project</a> covers the prices, options, news, and corporate-action pipelines that sit alongside this one. And the companion post on <a href="../../blog/building-resumable-etl-pipelines/index.html">resumable ETL pipelines</a> goes deeper on the incremental-load and backoff patterns that keep all of them running unattended.</p>
+
+  <a class="back" href="../../blog/index.html">← Back to writing</a>
+</article>
+</main>
+<footer class="footer">
+  <nav class="footer-nav">
+    <a href="../../index.html#projects" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Projects</span></a>
+    <a href="../../index.html#skills" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Skills</span></a>
+    <a href="../../index.html#services" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Services</span></a>
+    <a href="../../blog/index.html" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Blog</span></a>
+  </nav>
+  <div class="footer__bottom">
+    <span class="logo-text footer__logo">VJ</span>
+    <div class="footer__meta">
+      <p class="footer__copyright">© 2026 Vishnujan Narayanan</p>
+      <a href="https://github.com/VishnujanNarayanan" class="footer__privacy" target="_blank" rel="noopener">GitHub</a>
+      <a href="http://www.linkedin.com/in/vishnujan-narayanan" class="footer__privacy" target="_blank" rel="noopener">LinkedIn</a>
+    </div>
+  </div>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
+<script src="../../main.js" defer></script>
+</body>
+</html>

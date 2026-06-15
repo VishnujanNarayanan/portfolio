@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en-US" class="lenis no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Data Platform — Vishnujan Narayanan</title>
+<meta name="description" content="A 28-pipeline NSE market-data ingestion layer in Python (pandas, yfinance) feeding 12+ datasets across ~1,665 listed companies with incremental, resumable loads.">
+<link rel="canonical" href="https://vishnujannarayanan.com/projects/market-data-pipeline/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta property="og:title" content="Market Data Platform — Vishnujan Narayanan">
+<meta property="og:description" content="A 28-pipeline NSE market-data ingestion layer feeding 12+ datasets with incremental, resumable loads.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://vishnujannarayanan.com/projects/market-data-pipeline/">
+<meta property="og:image" content="https://vishnujannarayanan.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Market Data Platform — Vishnujan Narayanan">
+<meta name="twitter:description" content="A 28-pipeline NSE market-data ingestion layer feeding 12+ datasets with incremental, resumable loads.">
+<meta name="twitter:image" content="https://vishnujannarayanan.com/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../styles.css">
+<script>document.documentElement.classList.remove("no-js");</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujannarayanan.com/"},{"@type":"ListItem","position":2,"name":"Projects","item":"https://vishnujannarayanan.com/#projects"},{"@type":"ListItem","position":3,"name":"Market Data Platform","item":"https://vishnujannarayanan.com/projects/market-data-pipeline/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"CreativeWork","name":"Market Data Platform","datePublished":"2025-06-01","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujannarayanan.com/"},"about":["Data Engineering","ETL","Market Data"]}</script>
+</head>
+<body class="subpage-body">
+<div class="mobile-nav__overlay"></div>
+<header class="show">
+  <nav class="header__nav-left">
+    <a href="../../index.html#projects">Projects</a>
+    <a href="../../index.html#skills">Skills</a>
+    <a href="../../index.html#services">Services</a>
+    <a href="../../blog/index.html">Blog</a>
+  </nav>
+  <div class="header__logo">
+    <a href="../../index.html" class="header__logo_link" aria-label="Vishnujan Narayanan — Home"><span class="logo-text">VJ</span></a>
+  </div>
+  <nav class="header__nav-right">
+    <div class="header__ctas">
+      <a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Hire Me</span></a>
+      <a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark"><span class="pill-btn-span">Get In Touch</span></a>
+    </div>
+    <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
+      <span class="menu-btn__icon">
+        <span class="menu-btn__line menu-btn__line--1"></span>
+        <span class="menu-btn__line menu-btn__line--2"></span>
+        <span class="menu-btn__line menu-btn__line--3"></span>
+      </span>
+    </button>
+  </nav>
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <div class="mobile-nav__panel-bg"></div>
+    <div class="mobile-nav__panel">
+      <div class="mobile-nav__header">
+        <a href="../../index.html" class="mobile-nav__logo"><span class="logo-text">VJ</span></a>
+        <button class="mobile-nav__close" type="button" aria-label="Close menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="#050419"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="#050419"></rect></svg>
+        </button>
+      </div>
+      <ul class="mobile-nav__list">
+        <li class="mobile-nav__item"><a href="../../index.html#projects">Projects</a></li>
+        <li class="mobile-nav__item"><a href="../../index.html#skills">Skills</a></li>
+        <li class="mobile-nav__item"><a href="../../index.html#services">Services</a></li>
+        <li class="mobile-nav__item"><a href="../../blog/index.html">Blog</a></li>
+      </ul>
+      <div class="mobile-nav__ctas">
+        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Hire Me</span></a></div>
+        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark mobile-nav__cta"><span class="pill-btn-span">Get In Touch</span></a></div>
+      </div>
+    </div>
+  </nav>
+</header>
+<main>
+<nav class="breadcrumb"><a href="../../index.html">Home</a><span>›</span><a href="../../index.html#projects">Projects</a><span>›</span>Market Data Platform</nav>
+<article class="article">
+  <h1>Market Data Platform</h1>
+  <div class="meta"><span>Role: AI Quant Researcher · CiteSert</span><span>Python · pandas · yfinance · SQL</span></div>
+
+  <div class="tech-list"><span>Python</span><span>pandas</span><span>NumPy</span><span>yfinance</span><span>SQL</span><span>ETL</span><span>Scrapy</span><span>Playwright</span><span>asyncio</span></div>
+
+  <p>The data backbone for a quant research team — 20 years of NSE prices, F&amp;O bhavcopies, insider filings, news, and analyst signals across ~1,665 listed companies, all refreshed incrementally and kept consistent across sources.</p>
+
+  <h2>What I built</h2>
+  <ul>
+    <li>Built and own a 28-pipeline NSE market-data ingestion layer feeding 12+ datasets — prices, insider trades, options, news, corporate actions — into a partitioned CSV store.</li>
+    <li>Engineered the data backbone for quant research: 20 years of NSE prices, F&amp;O bhavcopies, insider filings and analyst signals across ~1,665 tickers, all refreshed incrementally.</li>
+    <li>Designed resilient ingestion clients for a dozen financial APIs and sites, with retries, adaptive rate-limit backoff and resumable state that survives restarts.</li>
+    <li>Assembled multi-source feature datasets — prices, insider activity, news, fear/greed and analyst signals — as clean research inputs for quant and ML modeling.</li>
+  </ul>
+
+  <h2>Incremental &amp; resumable ingestion</h2>
+  <ul>
+    <li>Developed an incremental price pipeline in yfinance and pandas that resumes each of ~1,665 tickers from its last stored bar, fetching only new data each run.</li>
+    <li>Architected a concurrent.futures thread-pool downloader with adaptive concurrency — dropping workers and pausing 30s on HTTP 429/auth errors, then ramping back after 15 clean calls.</li>
+    <li>Backfilled ~20 years of NSE insider-trade filings from the PIT API, chunking wide ranges into 180-day windows and switching to a 1-year incremental re-pull on reruns.</li>
+    <li>Automated F&amp;O bhavcopy ingestion from 2017 to date, handling NSE's mid-2024 UDiFF URL-format change and streaming each ZIP from memory into per-day CSVs.</li>
+  </ul>
+
+  <h2>Data quality that repairs, not corrupts</h2>
+  <ul>
+    <li>Hardened the dataset with data-quality safeguards — NaN-price row purges, (Date, Symbol) dedup merges and duplicate-file consolidation — so reruns repair gaps instead of corrupting history.</li>
+    <li>Deduplicated appended filings with a normalized composite-key set anti-join that collapses numeric/string drift (629221 vs 629221.0), preventing double-counts across overlapping windows.</li>
+    <li>Reconciled insider data across NSE and Trendlyne to close a 30–60-day reporting lag, parsing Trendlyne HTML tables with BeautifulSoup and normalizing them into the NSE schema.</li>
+  </ul>
+
+  <h2>Scraping the stubborn sources</h2>
+  <ul>
+    <li>Scraped 22 SEBI X/Twitter handles with async Playwright and stealth, injecting session cookies from env and harvesting the virtualized timeline via an in-page MutationObserver.</li>
+    <li>Wrote a rate-limit recovery state machine for the X scraper — fresh-page retry cycles, 12-minute mid-scroll waits and silent-throttle detection — checkpointing progress to JSON for resumable runs.</li>
+    <li>Extended a forked 16-publisher Scrapy news crawler with a configurable-output base spider, incremental update-mode resume from the last published date, and filesystem HTTP caching.</li>
+    <li>Classified NSE corporate announcements into fundraising, contract-win, regulatory and FDA-approval buckets via a keyword taxonomy, scraped through stealth Playwright.</li>
+  </ul>
+
+  <p><em>Built at CiteSert — source is private.</em></p>
+  <a class="back" href="../../index.html#projects">← Back to projects</a>
+</article>
+</main>
+<footer class="footer">
+  <nav class="footer-nav">
+    <a href="../../index.html#projects" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Projects</span></a>
+    <a href="../../index.html#skills" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Skills</span></a>
+    <a href="../../index.html#services" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Services</span></a>
+    <a href="../../blog/index.html" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Blog</span></a>
+  </nav>
+  <div class="footer__bottom">
+    <span class="logo-text footer__logo">VJ</span>
+    <div class="footer__meta">
+      <p class="footer__copyright">© 2026 Vishnujan Narayanan</p>
+      <a href="https://github.com/VishnujanNarayanan" class="footer__privacy" target="_blank" rel="noopener">GitHub</a>
+      <a href="http://www.linkedin.com/in/vishnujan-narayanan" class="footer__privacy" target="_blank" rel="noopener">LinkedIn</a>
+    </div>
+  </div>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
+<script src="../../main.js" defer></script>
+</body>
+</html>

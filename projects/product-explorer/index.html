@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en-US" class="lenis no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product Explorer — Vishnujan Narayanan</title>
+<meta name="description" content="A full-stack TypeScript app that scrapes a book e-commerce catalog into PostgreSQL and serves it via a Next.js UI with real-time, click-driven scraping over WebSockets.">
+<link rel="canonical" href="https://vishnujannarayanan.com/projects/product-explorer/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta property="og:title" content="Product Explorer — Vishnujan Narayanan">
+<meta property="og:description" content="Full-stack TypeScript app with real-time, click-driven scraping over WebSockets, Redis caching and BullMQ queues.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://vishnujannarayanan.com/projects/product-explorer/">
+<meta property="og:image" content="https://vishnujannarayanan.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Product Explorer — Vishnujan Narayanan">
+<meta name="twitter:description" content="Full-stack TypeScript app with real-time, click-driven scraping over WebSockets, Redis caching and BullMQ queues.">
+<meta name="twitter:image" content="https://vishnujannarayanan.com/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../styles.css">
+<script>document.documentElement.classList.remove("no-js");</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujannarayanan.com/"},{"@type":"ListItem","position":2,"name":"Projects","item":"https://vishnujannarayanan.com/#projects"},{"@type":"ListItem","position":3,"name":"Product Explorer","item":"https://vishnujannarayanan.com/projects/product-explorer/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"CreativeWork","name":"Product Explorer","datePublished":"2025-03-01","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujannarayanan.com/"},"about":["Full-Stack Development","NestJS","WebSockets"]}</script>
+</head>
+<body class="subpage-body">
+<div class="mobile-nav__overlay"></div>
+<header class="show">
+  <nav class="header__nav-left">
+    <a href="../../index.html#projects">Projects</a>
+    <a href="../../index.html#skills">Skills</a>
+    <a href="../../index.html#services">Services</a>
+    <a href="../../blog/index.html">Blog</a>
+  </nav>
+  <div class="header__logo">
+    <a href="../../index.html" class="header__logo_link" aria-label="Vishnujan Narayanan — Home"><span class="logo-text">VJ</span></a>
+  </div>
+  <nav class="header__nav-right">
+    <div class="header__ctas">
+      <a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Hire Me</span></a>
+      <a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark"><span class="pill-btn-span">Get In Touch</span></a>
+    </div>
+    <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
+      <span class="menu-btn__icon">
+        <span class="menu-btn__line menu-btn__line--1"></span>
+        <span class="menu-btn__line menu-btn__line--2"></span>
+        <span class="menu-btn__line menu-btn__line--3"></span>
+      </span>
+    </button>
+  </nav>
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <div class="mobile-nav__panel-bg"></div>
+    <div class="mobile-nav__panel">
+      <div class="mobile-nav__header">
+        <a href="../../index.html" class="mobile-nav__logo"><span class="logo-text">VJ</span></a>
+        <button class="mobile-nav__close" type="button" aria-label="Close menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="#050419"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="#050419"></rect></svg>
+        </button>
+      </div>
+      <ul class="mobile-nav__list">
+        <li class="mobile-nav__item"><a href="../../index.html#projects">Projects</a></li>
+        <li class="mobile-nav__item"><a href="../../index.html#skills">Skills</a></li>
+        <li class="mobile-nav__item"><a href="../../index.html#services">Services</a></li>
+        <li class="mobile-nav__item"><a href="../../blog/index.html">Blog</a></li>
+      </ul>
+      <div class="mobile-nav__ctas">
+        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Hire Me</span></a></div>
+        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark mobile-nav__cta"><span class="pill-btn-span">Get In Touch</span></a></div>
+      </div>
+    </div>
+  </nav>
+</header>
+<main>
+<nav class="breadcrumb"><a href="../../index.html">Home</a><span>›</span><a href="../../index.html#projects">Projects</a><span>›</span>Product Explorer</nav>
+<article class="article">
+  <h1>Product Explorer</h1>
+  <div class="meta"><span>Full-stack · real-time scraping</span><span>TypeScript · NestJS · Next.js</span></div>
+
+  <div class="tech-list"><span>TypeScript</span><span>NestJS</span><span>Next.js</span><span>React</span><span>PostgreSQL</span><span>Redis</span><span>BullMQ</span><span>Socket.IO</span><span>Playwright</span><span>Docker</span></div>
+
+  <p>A full-stack app that scrapes a book e-commerce catalog into PostgreSQL and serves it through a Next.js UI with real-time, click-driven scraping streamed over WebSockets — backed by Redis caching, BullMQ queues, and an 8-entity relational schema.</p>
+
+  <h2>Architecture</h2>
+  <ul>
+    <li>Built a full-stack TypeScript app that scrapes a book e-commerce catalog into PostgreSQL and serves it through a Next.js UI with real-time, click-driven scraping over WebSockets.</li>
+    <li>Designed a NestJS backend exposing 15 REST endpoints and a Socket.IO gateway over PostgreSQL + Redis, backed by BullMQ queues and TypeORM across 8 entities.</li>
+    <li>Engineered a four-stage ETL pipeline (navigation → category → product → detail) that ingests an e-commerce catalog into a normalized relational schema with deduplicated upserts.</li>
+    <li>Modeled an 8-entity PostgreSQL schema with TypeORM, enforcing unique source IDs and upserting on conflict to deduplicate scraped rows.</li>
+  </ul>
+
+  <h2>Real-time interactive scraping</h2>
+  <ul>
+    <li>Streamed live scraping over Socket.IO: each client click hovers, navigates, and scrapes the matching category in a dedicated browser session, emitting product chunks and status events back to the UI.</li>
+    <li>Implemented a NestJS WebSocket gateway that spins up a Playwright session per connection and routes hover/click/paginate/get-details actions, returning structured DATA_CHUNK and SCRAPE_STATUS events.</li>
+    <li>Built a custom Socket.IO client wrapper with an event-emitter API, automatic reconnection (5 attempts, exponential backoff), and typed request/response contracts shared with React hooks.</li>
+    <li>Wrote a useInteractiveScraper React hook that buffers streamed product chunks per category, dedupes by source ID, tracks scrape status, and surfaces progress via toasts across an 8-page Next.js/Tailwind UI.</li>
+  </ul>
+
+  <h2>Queues, caching &amp; resilience</h2>
+  <ul>
+    <li>Offloaded scraping to two BullMQ/Redis queues (foreground and background) with high/medium/low priorities, dedicated processors, and scrape_job rows tracking job state.</li>
+    <li>Cut redundant scrapes with read-through caching across Redis and PostgreSQL, using per-resource TTLs (navigation 24h, category 1h, product 24h) before falling back to a live crawl.</li>
+    <li>Hardened Playwright crawls against bot defenses with stealth launch flags, a desktop user-agent, automatic cookie-consent dismissal, and retry-on-blocked with configurable retry counts.</li>
+    <li>Managed long-lived browser sessions per client with a 30-minute idle timeout, a 5-minute cleanup sweep, and graceful teardown on disconnect and module shutdown.</li>
+    <li>Reduced scrape bandwidth and page-load time by aborting image, CSS, font, and media requests at Playwright's network layer during interactive sessions.</li>
+  </ul>
+
+  <h2>Infrastructure</h2>
+  <ul>
+    <li>Containerized the stack with Docker Compose — Postgres 15 and Redis 7 with health-check gating and persistent volumes, plus an auto-seeded SQL schema on first boot.</li>
+  </ul>
+
+  <a class="back" href="../../index.html#projects">← Back to projects</a>
+</article>
+</main>
+<footer class="footer">
+  <nav class="footer-nav">
+    <a href="../../index.html#projects" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Projects</span></a>
+    <a href="../../index.html#skills" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Skills</span></a>
+    <a href="../../index.html#services" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Services</span></a>
+    <a href="../../blog/index.html" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Blog</span></a>
+  </nav>
+  <div class="footer__bottom">
+    <span class="logo-text footer__logo">VJ</span>
+    <div class="footer__meta">
+      <p class="footer__copyright">© 2026 Vishnujan Narayanan</p>
+      <a href="https://github.com/VishnujanNarayanan" class="footer__privacy" target="_blank" rel="noopener">GitHub</a>
+      <a href="http://www.linkedin.com/in/vishnujan-narayanan" class="footer__privacy" target="_blank" rel="noopener">LinkedIn</a>
+    </div>
+  </div>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
+<script src="../../main.js" defer></script>
+</body>
+</html>

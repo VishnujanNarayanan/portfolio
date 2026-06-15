@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en-US" class="lenis no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building Resumable ETL Pipelines That Repair, Not Corrupt — Vishnujan Narayanan</title>
+<meta name="description" content="Incremental loads that resume from the last stored bar, adaptive concurrency that backs off on rate limits, and reruns that heal gaps instead of corrupting history.">
+<link rel="canonical" href="https://vishnujannarayanan.com/blog/building-resumable-etl-pipelines/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta property="og:title" content="Building Resumable ETL Pipelines That Repair, Not Corrupt">
+<meta property="og:description" content="Incremental loads, adaptive backoff, and reruns that heal gaps instead of corrupting history.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://vishnujannarayanan.com/blog/building-resumable-etl-pipelines/">
+<meta property="og:image" content="https://vishnujannarayanan.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Building Resumable ETL Pipelines That Repair, Not Corrupt">
+<meta name="twitter:description" content="Incremental loads, adaptive backoff, and reruns that heal gaps instead of corrupting history.">
+<meta name="twitter:image" content="https://vishnujannarayanan.com/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../styles.css">
+<script>document.documentElement.classList.remove("no-js");</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujannarayanan.com/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujannarayanan.com/blog/"},{"@type":"ListItem","position":3,"name":"Building Resumable ETL Pipelines That Repair, Not Corrupt","item":"https://vishnujannarayanan.com/blog/building-resumable-etl-pipelines/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Building Resumable ETL Pipelines That Repair, Not Corrupt","datePublished":"2025-05-20","dateModified":"2025-05-20","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujannarayanan.com/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujannarayanan.com/blog/building-resumable-etl-pipelines/"}</script>
+</head>
+<body class="subpage-body">
+<div class="mobile-nav__overlay"></div>
+<header class="show">
+  <nav class="header__nav-left">
+    <a href="../../index.html#projects">Projects</a>
+    <a href="../../index.html#skills">Skills</a>
+    <a href="../../index.html#services">Services</a>
+    <a href="../../blog/index.html">Blog</a>
+  </nav>
+  <div class="header__logo">
+    <a href="../../index.html" class="header__logo_link" aria-label="Vishnujan Narayanan — Home"><span class="logo-text">VJ</span></a>
+  </div>
+  <nav class="header__nav-right">
+    <div class="header__ctas">
+      <a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Hire Me</span></a>
+      <a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark"><span class="pill-btn-span">Get In Touch</span></a>
+    </div>
+    <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
+      <span class="menu-btn__icon">
+        <span class="menu-btn__line menu-btn__line--1"></span>
+        <span class="menu-btn__line menu-btn__line--2"></span>
+        <span class="menu-btn__line menu-btn__line--3"></span>
+      </span>
+    </button>
+  </nav>
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <div class="mobile-nav__panel-bg"></div>
+    <div class="mobile-nav__panel">
+      <div class="mobile-nav__header">
+        <a href="../../index.html" class="mobile-nav__logo"><span class="logo-text">VJ</span></a>
+        <button class="mobile-nav__close" type="button" aria-label="Close menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="#050419"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="#050419"></rect></svg>
+        </button>
+      </div>
+      <ul class="mobile-nav__list">
+        <li class="mobile-nav__item"><a href="../../index.html#projects">Projects</a></li>
+        <li class="mobile-nav__item"><a href="../../index.html#skills">Skills</a></li>
+        <li class="mobile-nav__item"><a href="../../index.html#services">Services</a></li>
+        <li class="mobile-nav__item"><a href="../../blog/index.html">Blog</a></li>
+      </ul>
+      <div class="mobile-nav__ctas">
+        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Hire Me</span></a></div>
+        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark mobile-nav__cta"><span class="pill-btn-span">Get In Touch</span></a></div>
+      </div>
+    </div>
+  </nav>
+</header>
+<main>
+<nav class="breadcrumb"><a href="../../index.html">Home</a><span>›</span><a href="../../blog/index.html">Blog</a><span>›</span>Building Resumable ETL Pipelines That Repair, Not Corrupt</nav>
+<article class="article">
+  <h1>Building Resumable ETL Pipelines That Repair, Not Corrupt</h1>
+  <div class="meta"><span>Data engineering</span><span>8 min read</span><span>Published May 2025</span></div>
+
+  <p>Anyone can write a script that downloads data once. The hard part — and the part that separates a pipeline you babysit from one you forget about — is what happens on the second run. Does it re-download everything? Does it duplicate rows? Does a half-finished run leave the dataset in a worse state than before it started? Over building roughly 28 ingestion pipelines for a <a href="../../projects/market-data-pipeline/index.html">market-data platform</a>, I converged on a small set of patterns that make reruns boring. Boring is exactly what you want.</p>
+
+  <h2>Fetch only what is new</h2>
+  <p>The foundation of every reliable pipeline I build is incremental loading. Take the price pipeline as an example: it tracks roughly 1,665 tickers, and on each run it resumes every ticker from its last stored bar and fetches only the new data since then. The first run is a full history pull; every run after that touches a few new rows per symbol. This single decision changes the economics of the whole system. A full re-download of twenty years of prices for 1,665 symbols is an overnight job that hammers the source. An incremental refresh is a few minutes and a polite number of requests.</p>
+  <p>Incremental loading also makes the pipeline naturally resumable. If the last stored bar is the source of truth for where to continue, an interrupted run does not need a separate checkpoint file — the data itself is the checkpoint. Restart it and it asks each ticker "what is the latest bar you have?" and carries on.</p>
+
+  <h2>Slow down when the source pushes back</h2>
+  <p>External sources rate-limit you, and they rarely do it politely. You get an HTTP 429, an auth error, or — worst of all — a silent throttle where requests still return but the data quietly degrades. A pipeline that ignores this will either get banned or corrupt its own dataset with partial responses.</p>
+  <p>My answer is adaptive concurrency. The price downloader runs on a <code>concurrent.futures</code> thread pool, but the pool size is not fixed. On an HTTP 429 or auth error it drops workers and pauses for 30 seconds, then — once it sees 15 clean calls in a row — it ramps concurrency back up. The system speeds up when the source is healthy and slows down the moment it pushes back, without any manual tuning. This is the difference between a downloader that respects rate limits and one that fights them.</p>
+
+  <h2>Reruns must repair, not corrupt</h2>
+  <p>This is the rule I care about most. A rerun should always move the dataset toward correctness. If a previous run left a gap, the rerun fills it. If it wrote a bad row, the rerun fixes it. It should never be possible for running the pipeline again to make the data worse.</p>
+  <p>Concretely, that meant building data-quality safeguards directly into the load step: purging rows with NaN prices, merging duplicates on a <code>(Date, Symbol)</code> key, and consolidating duplicate files that accumulate over time. Because these run on every load, the dataset self-heals. You can rerun after a crash, after a bad source response, or just out of paranoia, and the result converges instead of drifting.</p>
+  <p>Deduplication deserves special care because real-world keys are messy. The same record can come back with numeric drift — <code>629221</code> one time, <code>629221.0</code> the next. A normalized composite-key anti-join collapses that drift so overlapping fetch windows never double-count. I wrote about that in more detail in the post on <a href="../../blog/how-i-scraped-nse-insider-filings/index.html">scraping NSE insider filings</a>, where overlapping windows are unavoidable.</p>
+
+  <h2>Handle format changes without breaking history</h2>
+  <p>Sources change on you. Midway through 2024, NSE changed the URL format for its F&amp;O bhavcopy files (the move to UDiFF). A brittle pipeline would simply start 404-ing and silently stop ingesting. Mine detects which format applies for a given date and handles both, streaming each ZIP from memory into per-day CSVs. The historical data keeps flowing and the new format is picked up transparently. Designing for the source to change — rather than assuming it never will — is what keeps a backfill from rotting.</p>
+
+  <h2>The payoff: unattended pipelines</h2>
+  <p>Put these together — incremental loads, adaptive backoff, self-healing reruns, and tolerance for format changes — and you get pipelines that run unattended. That is the whole point. I am not watching dashboards waiting to manually restart a failed job; the pipeline restarts itself from the data, paces itself against the source, and repairs any damage on the next run. The same patterns generalize well beyond market data: the resilient-ingestion approach carried directly into the real-time scraping in <a href="../../projects/product-explorer/index.html">Product Explorer</a>, where queues and caching play the role that incremental loads play here.</p>
+  <p>If you take one idea away, make it this: design for the second run, not the first. The first run always works in a demo. The second run is where reliability lives.</p>
+
+  <a class="back" href="../../blog/index.html">← Back to writing</a>
+</article>
+</main>
+<footer class="footer">
+  <nav class="footer-nav">
+    <a href="../../index.html#projects" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Projects</span></a>
+    <a href="../../index.html#skills" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Skills</span></a>
+    <a href="../../index.html#services" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Services</span></a>
+    <a href="../../blog/index.html" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Blog</span></a>
+  </nav>
+  <div class="footer__bottom">
+    <span class="logo-text footer__logo">VJ</span>
+    <div class="footer__meta">
+      <p class="footer__copyright">© 2026 Vishnujan Narayanan</p>
+      <a href="https://github.com/VishnujanNarayanan" class="footer__privacy" target="_blank" rel="noopener">GitHub</a>
+      <a href="http://www.linkedin.com/in/vishnujan-narayanan" class="footer__privacy" target="_blank" rel="noopener">LinkedIn</a>
+    </div>
+  </div>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
+<script src="../../main.js" defer></script>
+</body>
+</html>
