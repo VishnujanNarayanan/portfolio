@@ -138,7 +138,7 @@
 
   /* ---------- three.js depth scene ---------- */
   var THREEok = (typeof THREE !== "undefined") && !isMobile && !reduce;
-  var renderer, scene, camera, focal = [], images = [], particles, clock, keyLight, bulbLight, GAP = 14;
+  var renderer, scene, camera, focal = [], images = [], clock, keyLight, bulbLight, GAP = 14;
   var IMG_Z = 1;                  // hero plane sits in front, close to camera
   var BOX_W = 9.5, BOX_H = 6;     // bounding box; each plane fits inside it (kept
                                   // narrow so the image lives on the RIGHT half,
@@ -253,16 +253,6 @@
       scene.add(grp); focal.push(grp);
     }
 
-    var count = 850, pos = new Float32Array(count * 3);
-    for (var p = 0; p < count; p++) {
-      pos[p * 3] = Math.random() * (N - 1) * GAP * 1.15 - GAP * 0.25;
-      pos[p * 3 + 1] = (Math.random() - 0.5) * 30;
-      pos[p * 3 + 2] = (Math.random() - 0.5) * 42;
-    }
-    var pg = new THREE.BufferGeometry();
-    pg.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-    particles = new THREE.Points(pg, new THREE.PointsMaterial({ color: 0x3932dc, size: 0.085, transparent: true, opacity: 0.5, sizeAttenuation: true }));
-    scene.add(particles);
 
     clock = new THREE.Clock();
     resizeGL();
@@ -315,7 +305,6 @@
       focal[i].rotation.y = t * focal[i].userData.spin;
       focal[i].rotation.x = Math.sin(t * 0.2 + i) * 0.14;
     }
-    if (particles) particles.rotation.y = t * 0.01;
 
     // Warm bulb light pulses gently and travels with the journey.
     keyLight.position.x = gx + 6; keyLight.target.position.set(gx, 0, IMG_Z);
