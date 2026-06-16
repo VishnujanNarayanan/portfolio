@@ -17,6 +17,8 @@
 
   var isMobile = window.matchMedia("(max-width: 820px)").matches;
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var DEBUG = /[?&]debug/.test(location.search);   // ?debug → on-screen GL diagnostics
+  var dbg = null;
 
   var wrapper = flow.querySelector(".flow__wrapper");
   var track = flow.querySelector(".flow__track");
@@ -136,7 +138,67 @@
 
   /* ---------- three.js depth scene ---------- */
   var THREEok = (typeof THREE !== "undefined") && !isMobile && !reduce;
-  var renderer, scene, camera, focal = [], particles, clock, GAP = 14;
+  var renderer, scene, camera, focal = [], images = [], particles, clock, keyLight, bulbLight, GAP = 14;
+  var IMG_Z = 1;                  // hero plane sits in front, close to camera
+  var BOX_W = 12, BOX_H = 7.6;    // bounding box; each plane fits inside it
+  // Mouse-tilt: normalized pointer (-1..1); image rotation is lerped toward it.
+  var mx = 0, my = 0;
+
+  // Resize a group's image plane (+ its edge frame and shadow receiver) so the
+  // plane keeps the texture's real aspect ratio while fitting inside BOX_W×BOX_H.
+  function fitPlane(grp, aspect) {
+    var w = BOX_W, h = BOX_W / aspect;
+    if (h > BOX_H) { h = BOX_H; w = BOX_H * aspect; }
+    var u = grp.userData;
+    u.img.geometry.dispose(); u.img.geometry = new THREE.PlaneGeometry(w, h);
+    u.edge.geometry.dispose(); u.edge.geometry = new THREE.EdgesGeometry(new THREE.PlaneGeometry(w, h));
+    u.recv.geometry.dispose(); u.recv.geometry = new THREE.PlaneGeometry(w * 1.5, h * 1.5);
+  }
+
+  // One hero image plane per panel, loaded from panel.dataset.img. A missing
+  // file degrades to a solid indigo placeholder plane so the scene still works
+  // before real assets are dropped into images/flow/. Behind each image sits a
+  // ShadowMaterial receiver so the (shadow-casting) key light reads as a soft
+  // drop shadow; its opacity later fades with distance from the active panel.
+  function createImageObject(panel, i) {
+    var grp = new THREE.Group();
+    grp.position.set(i * GAP, 0, IMG_Z);
+
+    var mat = new THREE.MeshStandardMaterial({ color: 0x7b73ff, roughness: 0.62, metalness: 0.05, side: THREE.DoubleSide });
+    var img = new THREE.Mesh(new THREE.PlaneGeometry(BOX_W, BOX_H), mat);
+    img.castShadow = true;
+    grp.add(img);
+
+    // Soft frame edge so the plane reads as a physical object even as a placeholder
+    var edge = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.PlaneGeometry(BOX_W, BOX_H)),
+      new THREE.LineBasicMaterial({ color: 0x3932dc, transparent: true, opacity: 0.25 })
+    );
+    grp.add(edge);
+
+    var shadowMat = new THREE.ShadowMaterial({ opacity: 0.3 });
+    var receiver = new THREE.Mesh(new THREE.PlaneGeometry(BOX_W * 1.5, BOX_H * 1.5), shadowMat);
+    receiver.position.z = -1.2;
+    receiver.receiveShadow = true;
+    grp.add(receiver);
+
+    grp.userData = { baseY: 0, amp: 0.4 + (i % 3) * 0.12, fp: 0.5 + i * 0.07, ph: Math.random() * Math.PI * 2, shadowMat: shadowMat, img: img, edge: edge, recv: receiver };
+    scene.add(grp); images.push(grp);
+
+    var src = panel.getAttribute("data-img");
+    if (src) {
+      new THREE.TextureLoader().load(src, function (tex) {
+        if ("sRGBEncoding" in THREE) tex.encoding = THREE.sRGBEncoding;
+        mat.map = tex; mat.color.set(0xffffff); mat.needsUpdate = true;
+        var iw = (tex.image && tex.image.width) || 1, ih = (tex.image && tex.image.height) || 1;
+        fitPlane(grp, iw / ih);
+        grp.userData.loaded = true; grp.userData.iw = iw; grp.userData.ih = ih;
+      }, undefined, function (err) {
+        grp.userData.loaded = false; grp.userData.err = (err && err.message) || "load error";
+      });
+    }
+  }
+
   function initGL() {
     var canvas = document.createElement("canvas");
     canvas.className = "flow__gl";
@@ -144,13 +206,29 @@
     wrapper.insertBefore(canvas, track);
     renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    if ("sRGBEncoding" in THREE) renderer.outputEncoding = THREE.sRGBEncoding;
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(55, 1, 0.1, 220);
-    camera.position.set(0, 0, 22);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.95));
-    var key = new THREE.DirectionalLight(0xffffff, 0.65); key.position.set(6, 9, 12); scene.add(key);
-    var rim = new THREE.DirectionalLight(0x3932dc, 0.55); rim.position.set(-7, -3, 5); scene.add(rim);
+    camera.position.set(0, 0, 17);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+    keyLight = new THREE.DirectionalLight(0xffffff, 0.7); keyLight.position.set(6, 9, 12);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024, 1024);
+    var sc = keyLight.shadow.camera;
+    sc.left = -10; sc.right = 10; sc.top = 8; sc.bottom = -8; sc.near = 1; sc.far = 40;
+    scene.add(keyLight);
+    scene.add(keyLight.target);
+    var rim = new THREE.DirectionalLight(0x3932dc, 0.5); rim.position.set(-7, -3, 5); scene.add(rim);
 
+    // Warm point light driven by the hanging HTML bulb; travels with the camera.
+    bulbLight = new THREE.PointLight(0xfff0d0, 0.0, 60, 2); bulbLight.position.set(9, 7, 9); scene.add(bulbLight);
+
+    // Hero image plane per panel
+    panels.forEach(createImageObject);
+
+    // Existing geometric forms kept as smaller secondary accents behind the image
     var geos = [
       new THREE.IcosahedronGeometry(3.2, 1),
       new THREE.TorusGeometry(2.7, 0.92, 26, 90),
@@ -160,10 +238,11 @@
     for (var i = 0; i < N; i++) {
       var grp = new THREE.Group();
       var g = geos[i % geos.length];
-      var mat = new THREE.MeshStandardMaterial({ color: 0x7b73ff, metalness: 0.28, roughness: 0.4, transparent: true, opacity: 0.9, flatShading: true });
+      var mat = new THREE.MeshStandardMaterial({ color: 0x7b73ff, metalness: 0.28, roughness: 0.4, transparent: true, opacity: 0.55, flatShading: true });
       grp.add(new THREE.Mesh(g, mat));
-      grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: 0x3932dc, transparent: true, opacity: 0.32 })));
-      grp.position.set(i * GAP, -0.4, -4);
+      grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: 0x3932dc, transparent: true, opacity: 0.22 })));
+      grp.position.set(i * GAP - 6.5, 2.4, -12);
+      grp.scale.setScalar(0.55);
       grp.userData.spin = 0.14 + i * 0.025;
       scene.add(grp); focal.push(grp);
     }
@@ -191,16 +270,39 @@
   }
   function renderGL(progress) {
     if (!renderer) return;
+    var global = progress * (N - 1);
     var gx = progress * (N - 1) * GAP;
     camera.position.x = gx;
     camera.position.y = Math.sin(progress * Math.PI * 2) * 0.55;
-    camera.lookAt(gx, -0.4, -4);
+    camera.lookAt(gx, 0, IMG_Z);
     var t = clock.getElapsedTime();
+    var bulbPulse = 0.7 + 0.3 * Math.sin(t * 0.8);   // gentle breathing glow
+
+    // Hero images: bob + idle sway + mouse-tilt; shadow fades away from centre.
+    for (var k = 0; k < images.length; k++) {
+      var u = images[k].userData;
+      images[k].position.y = u.baseY + Math.sin(t * u.fp + u.ph) * u.amp;
+      images[k].rotation.x = lerp(images[k].rotation.x, my * 0.06, 0.08) + Math.sin(t * 0.3 + k) * 0.01;
+      images[k].rotation.y = lerp(images[k].rotation.y, mx * 0.09, 0.08) + Math.sin(t * 0.22 + k) * 0.015;
+      var near = clamp(1 - Math.abs(global - k), 0, 1);   // 1 at its panel centre
+      u.shadowMat.opacity = 0.12 + 0.26 * near;
+      if (u.img.material.emissive) {
+        u.img.material.emissive.setHex(0x4a3a10);
+        u.img.material.emissiveIntensity = 0.10 * near * bulbPulse;
+      }
+    }
+
     for (var i = 0; i < focal.length; i++) {
       focal[i].rotation.y = t * focal[i].userData.spin;
       focal[i].rotation.x = Math.sin(t * 0.2 + i) * 0.14;
     }
     if (particles) particles.rotation.y = t * 0.01;
+
+    // Warm bulb light pulses gently and travels with the journey.
+    keyLight.position.x = gx + 6; keyLight.target.position.set(gx, 0, IMG_Z);
+    bulbLight.position.x = gx + 9;   // top-right, mirroring the HTML bulb
+    bulbLight.intensity = 0.55 * bulbPulse;
+
     renderer.render(scene, camera);
   }
 
@@ -292,8 +394,11 @@
       lastActive = active;
     }
 
+    // On desktop the GL image planes replace the DOM card floats (hidden via
+    // CSS), so skip their per-frame transforms entirely. Mobile never reaches
+    // this loop (it returns early in boot), so the card code still serves it.
     var now = Date.now();
-    cards.forEach(function (c) {
+    if (!THREEok) cards.forEach(function (c) {
       var pp = 0.5 + (global - c.panel) * 0.5;
       var st = cardState(c, pp);
       if (!c.init) { c.cx = st.x; c.cy = st.y; c.csc = st.sc; c.init = true; }
@@ -314,7 +419,42 @@
     nodeEls.forEach(function (n, i) { n.classList.toggle("flow-journey__node--active", i === active); });
     if (fillEl) fillEl.style.strokeDashoffset = fillLen * (1 - progress);
 
+    if (dbg) updateDebug(progress, global);
+
     requestAnimationFrame(loop);
+  }
+
+  /* ---------- Debug overlay (?debug) ---------- */
+  function updateDebug(progress, global) {
+    var lines = [];
+    lines.push("THREEok=" + THREEok + "  flow--gl=" + flow.classList.contains("flow--gl"));
+    if (renderer) {
+      var sz = renderer.getSize(new THREE.Vector2());
+      lines.push("canvas " + Math.round(sz.x) + "x" + Math.round(sz.y) + "  rect.top=" + Math.round(flow.getBoundingClientRect().top));
+    } else {
+      lines.push("renderer = NONE (GL never initialised)");
+    }
+    lines.push("progress=" + progress.toFixed(3) + " global=" + global.toFixed(2) + " camX=" + (camera ? camera.position.x.toFixed(1) : "-"));
+    if (renderer && renderer.info) lines.push("draws=" + renderer.info.render.calls + " tris=" + renderer.info.render.triangles);
+    var cv = renderer && renderer.domElement;
+    if (cv) { var cs = getComputedStyle(cv); lines.push("canvas vis=" + cs.visibility + " op=" + cs.opacity + " disp=" + cs.display + " z=" + cs.zIndex); }
+    lines.push("images=" + images.length);
+    for (var k = 0; k < images.length; k++) {
+      var g = images[k], u = g.userData;
+      var gp = u.img.geometry.parameters || {};
+      var v = g.position.clone(); if (camera) v.project(camera);
+      var onScreen = Math.abs(v.x) <= 1 && Math.abs(v.y) <= 1 && v.z > -1 && v.z < 1;
+      var hit = "";
+      if (onScreen) {
+        var px = (v.x * 0.5 + 0.5) * window.innerWidth, py = (-v.y * 0.5 + 0.5) * window.innerHeight;
+        var el = document.elementFromPoint(px, py);
+        hit = " topEl=" + (el ? (el.tagName + "." + (typeof el.className === "string" ? el.className.split(" ")[0] : "")) : "null");
+      }
+      lines.push("  #" + k + " loaded=" + (u.loaded === true ? "Y" : u.loaded === false ? "ERR(" + (u.err || "") + ")" : "…") +
+        " plane=" + (gp.width ? gp.width.toFixed(1) + "x" + gp.height.toFixed(1) : "?") +
+        " screen=(" + (v.x * 50 + 50).toFixed(0) + "%," + (50 - v.y * 50).toFixed(0) + "%) " + (onScreen ? "ON" : "off") + hit);
+    }
+    dbg.textContent = lines.join("\n");
   }
 
   /* ---------- Boot ---------- */
@@ -329,7 +469,19 @@
     cards.forEach(function (c) { c.init = false; });
   });
   if (THREEok) {
-    try { initGL(); } catch (e) { THREEok = false; }
+    try { initGL(); flow.classList.add("flow--gl"); } catch (e) { THREEok = false; }
+  }
+  // Mouse-tilt input (desktop GL only): normalize pointer to -1..1.
+  if (THREEok) {
+    window.addEventListener("pointermove", function (e) {
+      mx = (e.clientX / window.innerWidth) * 2 - 1;
+      my = (e.clientY / window.innerHeight) * 2 - 1;
+    }, { passive: true });
+  }
+  if (DEBUG) {
+    dbg = document.createElement("pre");
+    dbg.style.cssText = "position:fixed;left:8px;bottom:8px;z-index:9999;margin:0;padding:8px 10px;background:rgba(5,4,25,.85);color:#9cff9c;font:11px/1.4 monospace;white-space:pre;pointer-events:none;border-radius:6px;max-width:90vw";
+    document.body.appendChild(dbg);
   }
   paintSky(0);
   requestAnimationFrame(loop);
