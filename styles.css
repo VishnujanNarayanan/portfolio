@@ -87,16 +87,34 @@ body.nav-open{overflow:hidden}
 
 /* --- scroll / layering fixes (hero overlap + projects length) --- */
 .flow,.features,.standards,.faq,.cta-section{position:relative;z-index:2}
-.hero{z-index:1}
+/* Hero sits ABOVE the scrolling sections (was z-index:1, below the flow) so its
+   exit animation paints over the flow's opaque sky instead of being covered by it
+   as the flow scrolls up. Safe because .hero is pointer-events:none + transparent,
+   and its text is opacity:0 once exited, so it never blocks or hides the sections. */
+.hero{z-index:3}
 .features{height:150vh}
 .hero__content,.hero__scroll-btn{will-change:opacity,transform}
 
 .flow__title a{color:inherit;text-decoration:none}
 
-/* Hero scroll-cue exit = reverse of its arrival. The label slide-down is driven
-   inline in main.js; this retracts the underline (drawn by .hero.show ...:after).
-   Specificity must beat that rule, hence the .hero.show prefix. */
-.hero.show .hero__scroll-btn.is-exiting>span:after{transform:scaleX(0) translateZ(0);transition:transform .4s var(--ease-default)}
+/* Hero exit is TRIGGERED by scroll (main.js toggles .hero--leaving past a
+   threshold) but PLAYED by CSS at a fixed duration — scroll position no longer
+   scrubs it frame-by-frame. Exit = the entrance mirrored to the opposite
+   (top-left) corner, rotation kept at the entrance values. Removing the class
+   eases everything back to the resting .hero.show state. The .hero.show prefix
+   gives the specificity to beat the resting/arrival rules. Easing is a fast-
+   start curve (no slow ease-in ramp) so motion begins the instant it triggers. */
+.hero.show.hero--leaving .hero__title,.hero.show.hero--leaving .hero__subtitle{opacity:0;transform:perspective(1000px) translate(-50%) translate3d(222.2px,-88px,0) rotateY(-35deg) rotateX(-60deg);transition:opacity .35s cubic-bezier(.2,0,0,1),transform .35s cubic-bezier(.2,0,0,1)}
+/* scroll cue leaves with it: label slides back down out of the clip, underline retracts */
+.hero.show.hero--leaving .hsbtn-in{transform:translate3d(0,calc(100% + 7px),0);transition:transform .6s cubic-bezier(.2,0,0,1)}
+.hero.show.hero--leaving .hero__scroll-btn>span:after{transform:scaleX(0) translateZ(0);transition:transform .4s var(--ease-default)}
+/* Return (scroll back up) gets its own fast, synced transition instead of the
+   slow 1.5s entrance one (which also staggers the subtitle .3s behind the
+   title) — that combination read as a hesitant, half-finished return. Same
+   selector specificity as .hero--leaving above; main.js keeps the two classes
+   mutually exclusive so there's no rule-order ambiguity. */
+.hero.show.hero--returning .hero__title,.hero.show.hero--returning .hero__subtitle{transition:opacity .4s cubic-bezier(.2,0,0,1),transform .4s cubic-bezier(.2,0,0,1)}
+.hero.show.hero--returning .hsbtn-in{transition:transform .4s cubic-bezier(.2,0,0,1)}
 
 /* ============================================================
    Continuous light scene (revision 2026-06-15)
