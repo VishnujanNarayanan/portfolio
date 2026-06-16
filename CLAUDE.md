@@ -396,3 +396,94 @@ Keep this section updated after every change. Format:
   narrowed from 0.22 → 0.12 wide; entry now pp .24→.36 (was .14→.36), exit pp .64→.76 (was .66→.88).
   Cards snap into and out of place over less scroll with a wider rest band (.36–.64); still a small
   overlap with the neighbouring zone so the seam never goes fully empty. Comment updated; node --check OK.
+
+### 2026-06-16 (flow 3D image objects — first milestone of the todo.md gallery)
+- First milestone of todo.md's "3D image gallery" vision (planned scope: image objects + shadows +
+  hanging-bulb lighting + mouse-tilt; later phases — scroll Z-depth/DOF, text lighting reaction,
+  LOD/perf, glass clearcoat — deferred). NOTE: Three.js was NOT new — flow.js already ran a full
+  scene (renderer, dollying camera, lights, focal geometry, particles); this AUGMENTS it.
+- index.html: each .flow-panel gained data-img="images/flow/<slug>.jpg" (data-collection /
+  processing-storage / ml-analysis / build-ship). Added a hanging .flow-bulb (cord + glow) inside
+  .flow__wrapper. .flow-panel__floats DOM cards kept (mobile fallback).
+- flow.js: createImageObject() loads each panel's image via THREE.TextureLoader into a hero
+  PlaneGeometry (7×4.4 ≈16:10) at i*GAP; missing file → solid indigo placeholder material (graceful
+  fallback so the scene works before assets exist). Each image: castShadow + a ShadowMaterial receiver
+  plane behind it (receiveShadow) whose opacity fades with distance from its panel centre. Renderer
+  shadowMap enabled (PCFSoft); key DirectionalLight now casts (ortho shadow cam) and its target tracks
+  the active image. Added a warm PointLight tied to the HTML bulb (gentle breathing pulse, travels with
+  the camera, warms near images via emissive). Images bob + idle-sway + mouse-tilt (pointermove → mx/my,
+  lerped onto rotation). The old focal geometry demoted to smaller background accents (scale .55, pushed
+  up/back). Desktop GL skips the DOM-card transform loop (if(!THREEok)); on initGL success flow gets a
+  .flow--gl class.
+- styles.css: @media(min-width:821px){.flow--gl .flow-panel__floats{display:none}} (hide DOM cards on
+  desktop ONLY when GL initialized — so a WebGL failure still shows the cards). Added .flow-bulb /
+  __cord / __glow; bulb display:none ≤820px. Mobile unchanged (GL + bulb off, cards stack).
+- images/flow/ added with README listing expected filenames (user supplies placeholders).
+- Verified: node --check flow.js OK; headless Chrome (desktop viewport) shows .flow__gl canvas + Vanta
+  canvas (THREE CDN loads) + .flow-bulb, no JS exceptions (only swiftshader's "Error creating WebGL
+  context" — a software-GL limitation, caught by the try/catch; needs a real GPU browser to see the
+  shadows/float/tilt/bulb composited, per the standing headless caveat). Mobile viewport correctly
+  skips GL.
+
+### 2026-06-16 (bulb: global top-right + real bulb shape)
+- User: bulb sat top-MIDDLE and looked like a "circle sun"; wants it top-RIGHT and persistent across
+  every section (hero included), not just the flow scene.
+- index.html: moved .flow-bulb out of .flow__wrapper to a body-level element (before <main>) so it's
+  global. New markup: cord + __cap (screw base) + __glass (was cord + __glow).
+- styles.css: .flow-bulb now position:fixed; top:0; right:clamp(28px,7vw,120px); z-index:40 — hangs
+  top-right over all sections. Redesigned to read as a hanging bulb: thin cord, brass __cap (ridged
+  via repeating-linear-gradient), pear-shaped __glass (border-radius 50% 50% 48% 48%/62% 62% 40% 40%,
+  warm radial fill) with a MODEST halo (was a big 90px sun glow) + a gentle bulbGlow pulse
+  (prefers-reduced-motion:none guard). Still display:none ≤820px.
+- flow.js: removed the unused `bulb` query; moved bulbLight to the scene's top-right (init (9,7,9),
+  per-frame x = gx+9) so the GL warm light direction matches the HTML bulb's corner.
+- Verified via headless screenshot (CSS bulb renders without WebGL): bulb hangs top-right on the hero,
+  bulb-shaped, modest glow. node --check flow.js OK.
+
+### 2026-06-16 (image planes: real aspect ratio + made visible)
+- User added real placeholder JPEGs to images/flow/ (varied aspect: portrait 1242×2326,
+  landscape 5312×2988, etc.) and reported the images were not visible in the zones.
+- flow.js: planes now adopt the texture's true aspect ratio. New fitPlane(grp, aspect) fits the
+  image inside a BOX_W×BOX_H (12×7.6) box (no more fixed 7×4.4 stretch); called from the
+  TextureLoader onLoad using tex.image.width/height. Image mesh, edge frame, and ShadowMaterial
+  receiver all resize together (old geometries disposed). Stored edge/recv refs in userData.
+- Visibility: images are now the clear hero — moved to IMG_Z=1 (in front), camera dollied closer
+  (z 22→17) and re-centred on the plane (lookAt (gx,0,IMG_Z); key-light target + group baseY → y0).
+  Material is side:DoubleSide (insurance against a back-facing plane). Initial placeholder is now the
+  full BOX-sized indigo plane so something large shows before the texture loads.
+- NOTE: still cannot verify the GL visuals headless — SwiftShader doesn't composite the WebGL canvas
+  here (Vanta's canvas is invisible in headless shots too), so this needs a real-GPU browser to
+  confirm. node --check flow.js OK.
+
+### 2026-06-16 (THE images-invisible bug: global canvas{opacity:0}; + ?debug overlay)
+- User reported images never appeared. Two stacked causes found by adding a `?debug` on-screen overlay
+  (gated by location.search; flow.js builds a fixed <pre> reporting THREEok/flow--gl, canvas size +
+  computed vis/op/disp/z, draws/tris, and per-image loaded/plane/src/screen%/topEl via elementFromPoint):
+  1) On file:// the JPEG textures were CORS-blocked ("CORS request not http") — WebGL can't read
+     file:// images into a texture. Fix = serve over HTTP (python3 -m http.server). Not a code issue;
+     the indigo placeholder fallback was what showed.
+  2) Over HTTP the debug showed THREEok=true, all textures loaded=Y, planes ON-screen, draws>0 — but
+     `canvas op=0`. ROOT CAUSE: the reference's global rule `canvas{...;opacity:0}` (only
+     `canvas.is-ready` is shown) was hiding BOTH our WebGL canvases (they never get .is-ready). This
+     had also been hiding the Vanta background the whole time.
+- styles.css fix: `.flow__gl,#vanta-bg canvas{opacity:1}` — higher specificity than the bare `canvas`
+  selector (.class 0-1-0 and #id+el 1-0-1 both beat 0-0-1), so both canvases are forced visible;
+  display/z-index/mobile rules untouched.
+- flow.js: TextureLoader now also has an onError (sets userData.loaded=false/err) and records iw/ih on
+  load; the `?debug` overlay + updateDebug() added (REMOVE before publishing — search "?debug"/dbg).
+
+### 2026-06-16 (flow image motion: one-at-a-time, right→centre, quick left-swap)
+- Iterated the image presentation with the user to a final model (earlier tries: all 4 spread along
+  the dolly track = saw two at once; then pinned-centre with quick snap; then linear right→left full-
+  width). FINAL spec from the user: only ONE image on screen; the active image is scroll-driven from
+  the RIGHT to CENTRE using only the right half (clear of the left-aligned text); at the text change
+  (zone midpoint) it does a QUICK switch — shoots off to the LEFT (allowed to use the left during the
+  swap) while the NEXT image comes in from the RIGHT. First/last must not sit centred.
+- flow.js renderGL image loop: imgActive = round(global); local = global-imgActive ∈[-0.5,0.5].
+  targetX = active ? REST_X*(0.5-local) (right→centre; scrolling down moves it LEFT) : (passed ? OFF_L
+  : OFF_R). u.off lerps toward targetX at 0.18 — tracks scroll within a zone, and resolves the big
+  jump at the active flip as the quick left-exit / right-entry swap (same trigger as the per-letter
+  title reel, so image + text switch together). Constants: REST_X=8, OFF_L=-22, OFF_R=22. Plane box
+  narrowed to BOX_W=9.5×BOX_H=6 so the image stays on the right half. Camera still dollies in x for
+  background (geometry/particles) parallax; images are positioned camera-relative (camera.x + u.off).
+- node --check flow.js OK. Still needs a real-GPU browser over HTTP to view (headless WebGL caveat).

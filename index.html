@@ -76,6 +76,14 @@
   </nav>
 </header>
 
+<!-- Hanging bulb: fixed top-right across every section; inside the flow scene a
+     Three.js PointLight mirrors it to light the floating image planes -->
+<div class="flow-bulb" aria-hidden="true">
+  <span class="flow-bulb__cord"></span>
+  <span class="flow-bulb__cap"></span>
+  <span class="flow-bulb__glass"></span>
+</div>
+
 <main>
   <div class="top">
 
@@ -98,7 +106,7 @@
 
         <!-- Horizontal track: 4 full-viewport stages slide left as you scroll -->
         <div class="flow__track">
-      <article class="flow-panel" data-panel="0" data-screen-label="Data Collection">
+      <article class="flow-panel" data-panel="0" data-screen-label="Data Collection" data-img="images/flow/data-collection.jpg">
         <div class="flow-panel__floats" aria-hidden="true">
         <article class="flow-card flow-card--project flow-card--focal" data-from="top" data-to="left" data-depth="0.4" data-tilt="-3" style="left:55%;top:16%">
           <div class="flow-card__shot" aria-hidden="true"></div><h3 class="flow-card__name">Market Data Platform</h3>
@@ -139,7 +147,7 @@
         </div>
         <div class="flow-panel__side" aria-hidden="true"><span>Z01</span><span>1,665</span></div>
       </article>
-      <article class="flow-panel" data-panel="1" data-screen-label="Processing & Storage">
+      <article class="flow-panel" data-panel="1" data-screen-label="Processing & Storage" data-img="images/flow/processing-storage.jpg">
         <div class="flow-panel__floats" aria-hidden="true">
         <article class="flow-card flow-card--tool flow-card--focal" data-from="top" data-to="left" data-depth="0.4" data-tilt="-3" style="left:55%;top:16%">
           <h3 class="flow-card__tool">pandas</h3>
@@ -180,7 +188,7 @@
         </div>
         <div class="flow-panel__side" aria-hidden="true"><span>Z02</span><span>20 yrs</span></div>
       </article>
-      <article class="flow-panel" data-panel="2" data-screen-label="ML & Analysis">
+      <article class="flow-panel" data-panel="2" data-screen-label="ML & Analysis" data-img="images/flow/ml-analysis.jpg">
         <div class="flow-panel__floats" aria-hidden="true">
         <article class="flow-card flow-card--project flow-card--focal" data-from="top" data-to="left" data-depth="0.4" data-tilt="-3" style="left:55%;top:16%">
           <div class="flow-card__shot" aria-hidden="true"></div><h3 class="flow-card__name">Fraud Detection</h3>
@@ -221,7 +229,7 @@
         </div>
         <div class="flow-panel__side" aria-hidden="true"><span>Z03</span><span>9.4M</span></div>
       </article>
-      <article class="flow-panel" data-panel="3" data-screen-label="Build & Ship">
+      <article class="flow-panel" data-panel="3" data-screen-label="Build & Ship" data-img="images/flow/build-ship.jpg">
         <div class="flow-panel__floats" aria-hidden="true">
         <article class="flow-card flow-card--project flow-card--focal" data-from="top" data-to="left" data-depth="0.4" data-tilt="-3" style="left:55%;top:16%">
           <div class="flow-card__shot" aria-hidden="true"></div><h3 class="flow-card__name">DekhLaw Platform</h3>
