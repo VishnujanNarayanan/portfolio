@@ -454,3 +454,36 @@ Keep this section updated after every change. Format:
 - NOTE: still cannot verify the GL visuals headless — SwiftShader doesn't composite the WebGL canvas
   here (Vanta's canvas is invisible in headless shots too), so this needs a real-GPU browser to
   confirm. node --check flow.js OK.
+
+### 2026-06-16 (THE images-invisible bug: global canvas{opacity:0}; + ?debug overlay)
+- User reported images never appeared. Two stacked causes found by adding a `?debug` on-screen overlay
+  (gated by location.search; flow.js builds a fixed <pre> reporting THREEok/flow--gl, canvas size +
+  computed vis/op/disp/z, draws/tris, and per-image loaded/plane/src/screen%/topEl via elementFromPoint):
+  1) On file:// the JPEG textures were CORS-blocked ("CORS request not http") — WebGL can't read
+     file:// images into a texture. Fix = serve over HTTP (python3 -m http.server). Not a code issue;
+     the indigo placeholder fallback was what showed.
+  2) Over HTTP the debug showed THREEok=true, all textures loaded=Y, planes ON-screen, draws>0 — but
+     `canvas op=0`. ROOT CAUSE: the reference's global rule `canvas{...;opacity:0}` (only
+     `canvas.is-ready` is shown) was hiding BOTH our WebGL canvases (they never get .is-ready). This
+     had also been hiding the Vanta background the whole time.
+- styles.css fix: `.flow__gl,#vanta-bg canvas{opacity:1}` — higher specificity than the bare `canvas`
+  selector (.class 0-1-0 and #id+el 1-0-1 both beat 0-0-1), so both canvases are forced visible;
+  display/z-index/mobile rules untouched.
+- flow.js: TextureLoader now also has an onError (sets userData.loaded=false/err) and records iw/ih on
+  load; the `?debug` overlay + updateDebug() added (REMOVE before publishing — search "?debug"/dbg).
+
+### 2026-06-16 (flow image motion: one-at-a-time, right→centre, quick left-swap)
+- Iterated the image presentation with the user to a final model (earlier tries: all 4 spread along
+  the dolly track = saw two at once; then pinned-centre with quick snap; then linear right→left full-
+  width). FINAL spec from the user: only ONE image on screen; the active image is scroll-driven from
+  the RIGHT to CENTRE using only the right half (clear of the left-aligned text); at the text change
+  (zone midpoint) it does a QUICK switch — shoots off to the LEFT (allowed to use the left during the
+  swap) while the NEXT image comes in from the RIGHT. First/last must not sit centred.
+- flow.js renderGL image loop: imgActive = round(global); local = global-imgActive ∈[-0.5,0.5].
+  targetX = active ? REST_X*(0.5-local) (right→centre; scrolling down moves it LEFT) : (passed ? OFF_L
+  : OFF_R). u.off lerps toward targetX at 0.18 — tracks scroll within a zone, and resolves the big
+  jump at the active flip as the quick left-exit / right-entry swap (same trigger as the per-letter
+  title reel, so image + text switch together). Constants: REST_X=8, OFF_L=-22, OFF_R=22. Plane box
+  narrowed to BOX_W=9.5×BOX_H=6 so the image stays on the right half. Camera still dollies in x for
+  background (geometry/particles) parallax; images are positioned camera-relative (camera.x + u.off).
+- node --check flow.js OK. Still needs a real-GPU browser over HTTP to view (headless WebGL caveat).

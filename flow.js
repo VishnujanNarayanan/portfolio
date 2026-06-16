@@ -140,7 +140,13 @@
   var THREEok = (typeof THREE !== "undefined") && !isMobile && !reduce;
   var renderer, scene, camera, focal = [], images = [], particles, clock, keyLight, bulbLight, GAP = 14;
   var IMG_Z = 1;                  // hero plane sits in front, close to camera
-  var BOX_W = 12, BOX_H = 7.6;    // bounding box; each plane fits inside it
+  var BOX_W = 9.5, BOX_H = 6;     // bounding box; each plane fits inside it (kept
+                                  // narrow so the image lives on the RIGHT half,
+                                  // clear of the left-aligned text)
+  var REST_X = 8;                 // right-side entry position; image scrolls from
+                                  // here (right) to centre over a zone
+  var OFF_L = -22;                // off-screen left — where a passed image exits
+  var OFF_R = 22;                 // off-screen right — where the next image waits
   // Mouse-tilt: normalized pointer (-1..1); image rotation is lerped toward it.
   var mx = 0, my = 0;
 
@@ -278,13 +284,26 @@
     var t = clock.getElapsedTime();
     var bulbPulse = 0.7 + 0.3 * Math.sin(t * 0.8);   // gentle breathing glow
 
-    // Hero images: bob + idle sway + mouse-tilt; shadow fades away from centre.
+    // One image at a time. The ACTIVE panel's image is scroll-driven: it enters
+    // from the right (REST_X) and slides LEFT to centre across the zone, using
+    // only the right half until the midpoint — x = REST_X*(0.5 - local), so
+    // scrolling DOWN moves it left. The OTHER images wait off-screen: passed ones
+    // off the LEFT, upcoming ones off the RIGHT. When the active panel flips — the
+    // exact instant the text swaps — the lerp resolves the jump as the quick
+    // switch: the outgoing image shoots off to the LEFT (allowed to use that side
+    // during the change) and the incoming one comes in from the RIGHT.
+    var imgActive = clamp(Math.round(global), 0, N - 1);
+    var local = global - imgActive;                       // [-0.5, 0.5] within the zone
     for (var k = 0; k < images.length; k++) {
-      var u = images[k].userData;
-      images[k].position.y = u.baseY + Math.sin(t * u.fp + u.ph) * u.amp;
-      images[k].rotation.x = lerp(images[k].rotation.x, my * 0.06, 0.08) + Math.sin(t * 0.3 + k) * 0.01;
-      images[k].rotation.y = lerp(images[k].rotation.y, mx * 0.09, 0.08) + Math.sin(t * 0.22 + k) * 0.015;
-      var near = clamp(1 - Math.abs(global - k), 0, 1);   // 1 at its panel centre
+      var g = images[k], u = g.userData;
+      var targetX = (k === imgActive) ? (REST_X * (0.5 - local)) : (k < imgActive ? OFF_L : OFF_R);
+      if (u.off === undefined) u.off = targetX;
+      u.off += (targetX - u.off) * 0.18;                  // tracks scroll within a zone; quick at the flip
+      g.position.x = camera.position.x + u.off;
+      g.position.y = u.baseY + Math.sin(t * u.fp + u.ph) * u.amp;
+      g.rotation.x = lerp(g.rotation.x, my * 0.06, 0.08) + Math.sin(t * 0.3 + k) * 0.01;
+      g.rotation.y = lerp(g.rotation.y, mx * 0.09, 0.08) + Math.sin(t * 0.22 + k) * 0.015;
+      var near = clamp(1 - Math.abs(u.off) / 16, 0, 1);   // 1 near centre, 0 off-screen
       u.shadowMat.opacity = 0.12 + 0.26 * near;
       if (u.img.material.emissive) {
         u.img.material.emissive.setHex(0x4a3a10);
