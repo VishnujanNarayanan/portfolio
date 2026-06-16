@@ -36,72 +36,35 @@
       }
     }, 1700);
 
-    // Fade the hero off as the user scrolls. Crucially we drive the SAME
-    // elements the entrance does (.hero__title + .hero__subtitle individually),
-    // not the parent .hero__content — the entrance's translate(50%) is relative
-    // to each element's OWN width and rotates about each element's OWN centre, so
-    // mirroring the container (a different size/pivot) skewed the exit toward the
-    // wrong corner.
-    var heroRevealEls = hero.querySelectorAll(".hero__title, .hero__subtitle");
-    var heroScrollBtn = hero.querySelector(".hero__scroll-btn");
-    var heroScrollText = hero.querySelector(".hsbtn-in");
-    var heroTicking = false;
-    function fadeHero() {
-      var vh = window.innerHeight || 800;
-      var p = Math.min(window.scrollY / (vh * 0.6), 1);
-      var e = p * p * (3 - 2 * p); // smoothstep
-      if (p <= 0.0005) {
-        // At rest, hand control back to the CSS entrance transition.
-        heroRevealEls.forEach(function (el) {
-          el.style.removeProperty("transition");
-          el.style.removeProperty("opacity");
-          el.style.removeProperty("transform");
-        });
-      } else {
-        // Exit = each element's entrance with BOTH x-contributing terms AND the
-        // y term flipped (rotation kept at its entrance value). Entrance start
-        // (per element) is translate(50%) translate3d(-222.2px,88px) rotateY(60)
-        // rotateX(35) → identity — note translate(50%) and translate3d-x are
-        // opposite in sign and nearly cancel (the entrance barely drifts in x;
-        // the bottom-right read comes mostly from the y offset + 3D tilt). Only
-        // flipping translate3d-x (keeping translate(50%) positive) broke that
-        // cancellation and made the exit drift right instead of mirroring, so
-        // translate(%) is flipped too: translate(-50%) translate3d(+222.2px,-88px).
-        var tf = "perspective(1000px) translate(" + (-e * 50) + "%) translate3d(" + (e * 222.2) + "px," + (-e * 88) + "px,0) rotateY(" + (e * 60) + "deg) rotateX(" + (e * 35) + "deg)";
-        heroRevealEls.forEach(function (el) {
-          el.style.transition = "none";
-          el.style.opacity = 1 - p;
-          el.style.transform = tf;
-        });
+    // Hero exit is now TRIGGERED by scroll, not scrubbed: once the user scrolls
+    // past a threshold we add .hero--leaving and CSS plays a fixed-duration exit
+    // (title/subtitle fly out to the opposite corner, scroll cue slides down).
+    // Return uses a much larger threshold (RETURN_AT) than the leave threshold
+    // (LEAVE_AT) so it kicks in well before the user is back at the very top —
+    // gated to only fire while actually scrolling UP (goingUp), since RETURN_AT
+    // > LEAVE_AT would otherwise immediately cancel the exit on the way down.
+    var heroLeaving = false;
+    var lastY = window.scrollY;
+    var LEAVE_AT = 40, RETURN_AT = 550;
+    function updateHeroExit() {
+      var y = window.scrollY;
+      var goingUp = y < lastY;
+      if (!heroLeaving && y > LEAVE_AT) {
+        heroLeaving = true;
+        hero.classList.remove("hero--returning");
+        hero.classList.add("hero--leaving");
+      } else if (heroLeaving && goingUp && y < RETURN_AT) {
+        heroLeaving = false;
+        hero.classList.remove("hero--leaving");
+        // .hero--returning gives the title+subtitle a fast, synced transition
+        // (no 0.3s subtitle stagger, no 1.5s entrance duration) so the return
+        // reads as one complete motion instead of a slow, half-finished one.
+        hero.classList.add("hero--returning");
       }
-      if (heroScrollBtn) {
-        if (p <= 0.0005) {
-          // Back at the top — hand control back to the CSS arrival transitions.
-          heroScrollBtn.classList.remove("is-exiting");
-          if (heroScrollText) {
-            heroScrollText.style.removeProperty("transition");
-            heroScrollText.style.removeProperty("transform");
-          }
-        } else {
-          // Reverse of the arrival: the label rose UP into view from below the
-          // clip and the underline drew in, so on scroll the label slides back
-          // DOWN out of view (scroll-driven, transition off so it tracks the
-          // wheel) and .is-exiting retracts the underline. The button container
-          // is never transformed, so it can no longer jump sideways (it loses
-          // its translate(-50%) centring otherwise) when scrolling starts/stops.
-          heroScrollBtn.classList.add("is-exiting");
-          if (heroScrollText) {
-            heroScrollText.style.transition = "none";
-            heroScrollText.style.transform = "translate3d(0,calc(" + (e * 100) + "% + " + (e * 7) + "px),0)";
-          }
-        }
-      }
-      heroTicking = false;
+      lastY = y;
     }
-    window.addEventListener("scroll", function () {
-      if (!heroTicking) { requestAnimationFrame(fadeHero); heroTicking = true; }
-    }, { passive: true });
-    fadeHero();
+    window.addEventListener("scroll", updateHeroExit, { passive: true });
+    updateHeroExit();
   }
 
   /* ---------- IntersectionObserver reveals ---------- */
