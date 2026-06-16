@@ -93,6 +93,11 @@ body.nav-open{overflow:hidden}
 
 .flow__title a{color:inherit;text-decoration:none}
 
+/* Hero scroll-cue exit = reverse of its arrival. The label slide-down is driven
+   inline in main.js; this retracts the underline (drawn by .hero.show ...:after).
+   Specificity must beat that rule, hence the .hero.show prefix. */
+.hero.show .hero__scroll-btn.is-exiting>span:after{transform:scaleX(0) translateZ(0);transition:transform .4s var(--ease-default)}
+
 /* ============================================================
    Continuous light scene (revision 2026-06-15)
    The hero AND flow are transparent so the single fixed Vanta net
@@ -108,35 +113,83 @@ body.nav-open{overflow:hidden}
 .hero-spacer{min-height:100svh}
 
 /* ============================================================
-   Flow: parallax scene — the background layer drifts slower than the
-   scroll (0.3x, set in JS), and each floating card moves at its own
-   depth (0.2x–0.45x). Numbered steps overlay bottom-left at 1x.
-   400vh tall (100vh per step); the wrapper sticks for one screen.
+   Flow — three.js parallax journey (2026-06-16)
+   500vh section; the wrapper pins for one screen and four stages
+   slide left. A transparent three.js canvas (.flow__gl) renders the
+   depth scene behind the DOM content; the journey spine stays pinned.
    ============================================================ */
-.flow{height:400vh;background:transparent}
-.flow__wrapper{position:sticky;top:0;height:100vh;display:block;padding:0;overflow:hidden}
+.flow{height:500vh;background:transparent}
+.flow__wrapper{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
 
-/* Layer 1 — parallax background (translateY at 0.3x set in JS). The
-   fixed Vanta scene shows through; cards float over it at varied depths. */
-.flow__bg{position:absolute;inset:0;width:100%;height:100%;z-index:0;background:transparent;pointer-events:none;will-change:transform}
+/* Airy light sky (hue cross-fades via JS) + soft indigo horizon glow */
+.flow__sky{position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,#dbe6f4 0%,#e8eef7 55%,#f4f5f9 100%)}
+.flow__horizon{position:absolute;left:0;right:0;bottom:0;height:55%;z-index:0;pointer-events:none;background:radial-gradient(120% 80% at 50% 100%,rgba(57,50,220,.10) 0%,rgba(57,50,220,0) 60%)}
 
-/* Floating cards — scattered absolutely; left + initial top inline,
-   per-card translateY/opacity driven by JS. Style per spec. */
-.flow-float{position:absolute;width:280px;background:#fff;border:1px solid #e6e6e8;border-radius:12px;padding:24px;box-shadow:0 4px 24px rgba(0,0,0,.08);will-change:transform,opacity}
+/* three.js canvas — between sky and content */
+.flow__gl{position:absolute;inset:0;z-index:1;width:100%;height:100%;pointer-events:none}
 
-/* Layer 2 — numbered steps, foreground bottom-left (normal scroll speed) */
-.flow__steps{position:absolute;bottom:var(--space-2xl);left:var(--space-2xl);z-index:1;width:max-content;max-width:none;padding:0}
+/* Horizontal track of four full-viewport stages */
+.flow__track{position:absolute;inset:0;z-index:2;display:flex;width:400vw;height:100%;will-change:transform}
+/* No overflow clip here: a per-panel clip slices flying cards exactly at the
+   seam between zones (the "cut off" feeling). The outer .flow__wrapper already
+   clips at the screen edge, so cards can hand off across the seam unbroken. */
+.flow-panel{position:relative;flex:0 0 100vw;width:100vw;height:100%}
 
-/* Card inner type */
-.flow-card__title{font-family:"Inter",sans-serif;font-weight:500;font-size:18px;letter-spacing:-.3px;line-height:1.25;color:var(--color-text);margin-bottom:8px}
-.flow-card__desc{font-size:14px;line-height:1.5;color:var(--color-text-muted);margin:0}
-.flow-card__title+.flow-card__desc{margin-top:0}
+/* Stage content (z3, over the floats) */
+.flow-panel__floats{position:absolute;inset:0;z-index:1;pointer-events:none}
+.flow-panel__content{position:absolute;z-index:3;left:clamp(24px,6vw,120px);top:50%;transform:translateY(-58%);max-width:min(46vw,540px);will-change:transform,opacity}
+.flow-panel__index{display:block;font-family:var(--font-ui);font-weight:500;font-size:var(--text-sm);letter-spacing:.28em;color:var(--color-highlight);margin-bottom:18px}
+.flow-panel__title{font-family:"Inter",sans-serif;font-weight:600;font-size:clamp(48px,7vw,104px);line-height:.92;letter-spacing:-.03em;color:var(--color-text);margin:0}
+.flow-panel__sub{margin:24px 0 0;font-size:var(--text-lg);line-height:1.35;color:var(--color-text-muted);max-width:480px}
+.flow-panel__pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:28px}
+.flow-panel__pill{font-family:var(--font-ui);font-size:12px;letter-spacing:.02em;padding:7px 14px;border:1px solid rgba(57,50,220,.25);border-radius:999px;color:var(--color-highlight);background:rgba(255,255,255,.55);backdrop-filter:blur(4px)}
+
+/* Side vertical labels (top-right) */
+.flow-panel__side{position:absolute;z-index:2;top:calc(var(--header-height) + 8px);right:clamp(14px,2.4vw,40px);display:flex;flex-direction:column;align-items:flex-end;gap:14px;writing-mode:vertical-rl;font-family:var(--font-ui);font-size:11px;letter-spacing:.34em;color:var(--color-text-subtle);text-transform:uppercase}
+
+/* Floating data cards */
+.flow-card{position:absolute;width:230px;background:rgba(255,255,255,.84);backdrop-filter:blur(8px);border:1px solid rgba(5,4,25,.08);border-radius:14px;padding:16px 18px;box-shadow:0 18px 40px -16px rgba(5,4,25,.28);will-change:transform,opacity}
+.flow-card--focal{width:268px;padding:18px 20px;box-shadow:0 30px 64px -20px rgba(57,50,220,.45)}
+.flow-card__shot{width:100%;height:104px;border-radius:8px;margin-bottom:12px;position:relative;overflow:hidden;background:linear-gradient(135deg,var(--color-highlight),var(--color-dark))}
+.flow-card--focal .flow-card__shot{height:130px}
+.flow-card__shot::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.14) 0 8px,transparent 8px 16px)}
+.flow-card__name{font-family:"Inter",sans-serif;font-weight:600;font-size:16px;letter-spacing:-.01em;color:var(--color-text);margin:0}
+.flow-card__tool{font-family:"Inter",sans-serif;font-weight:600;font-size:22px;letter-spacing:-.02em;color:var(--color-text);margin:0}
+.flow-card--focal .flow-card__tool{font-size:28px}
+.flow-card__line{font-size:13px;line-height:1.45;color:var(--color-text-muted);margin:8px 0 0}
 .flow-card__tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-.flow-card__tag{font-family:var(--font-ui);font-size:11px;padding:3px 9px;border:1px solid var(--color-border);border-radius:999px;color:var(--color-text-muted)}
-.flow-card__read{display:inline-block;font-family:var(--font-ui);font-size:13px;color:var(--color-highlight)}
+.flow-card__tag{font-family:var(--font-ui);font-size:11px;padding:3px 9px;border:1px solid var(--color-border);border-radius:999px;color:var(--color-text-muted);background:rgba(255,255,255,.6)}
 
+/* Journey spine — pinned at the bottom of the pinned wrapper */
+.flow-journey{position:absolute;left:0;right:0;bottom:0;z-index:4;height:170px;pointer-events:none;opacity:0;transition:opacity .5s var(--ease-default)}
+.flow-journey.is-live{opacity:1}
+.flow-journey__svg{position:absolute;left:0;top:0;width:100%;height:150px;overflow:visible}
+.flow-journey__line{fill:none;stroke:rgba(57,50,220,.22);stroke-width:2}
+.flow-journey__fill{fill:none;stroke:var(--color-highlight);stroke-width:2.5;stroke-linecap:round}
+.flow-journey__nodes{position:absolute;inset:0;overflow:visible}
+.flow-journey__node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:7px;background:none;border:0;padding:0;pointer-events:auto;cursor:pointer}
+.flow-journey__zone{font-family:var(--font-ui);font-size:9px;letter-spacing:.22em;color:var(--color-text-subtle);opacity:.7;transition:opacity .3s,color .3s}
+.flow-journey__dot{width:11px;height:11px;border-radius:50%;background:#fff;border:2px solid rgba(57,50,220,.4);transition:width .35s var(--ease-default),height .35s var(--ease-default),background-color .35s,border-color .35s,box-shadow .35s}
+.flow-journey__name{font-family:var(--font-ui);font-size:11px;letter-spacing:.02em;color:var(--color-text-muted);white-space:nowrap;opacity:0;transform:translateY(-4px);transition:opacity .35s,transform .35s,color .35s}
+.flow-journey__node--active .flow-journey__dot{width:20px;height:20px;background:var(--color-highlight);border-color:var(--color-highlight);box-shadow:0 0 0 6px rgba(57,50,220,.14)}
+.flow-journey__node--active .flow-journey__name{opacity:1;transform:translateY(0);color:var(--color-text)}
+.flow-journey__node--active .flow-journey__zone{color:var(--color-highlight);opacity:1}
+@media (pointer:fine){.flow-journey__node:hover .flow-journey__name{opacity:1;transform:translateY(0)}.flow-journey__node:not(.flow-journey__node--active):hover .flow-journey__dot{border-color:var(--color-highlight);box-shadow:0 0 0 5px rgba(57,50,220,.10)}.flow-journey__node:hover .flow-journey__zone{color:var(--color-highlight);opacity:1}}
+
+/* ---- Mobile: drop the pin + GL, stack the four stages ---- */
 @media (max-width:820px){
-  .flow__steps{bottom:24px;left:24px}
-  .flow-float{width:230px;padding:18px}
-  .flow-card__title{font-size:16px}
+  .flow{height:auto}
+  .flow__wrapper{position:relative;height:auto;overflow:visible}
+  .flow__gl,.flow__sky,.flow__horizon,.flow-journey{display:none}
+  .flow__track{position:relative;flex-direction:column;width:100%;transform:none!important}
+  .flow-panel{width:100%;height:auto;padding:88px 24px 40px;background:linear-gradient(180deg,#e8eef7,#f5f6f9)}
+  .flow-panel:nth-child(2){background:linear-gradient(180deg,#eaedf5,#f6f6f9)}
+  .flow-panel:nth-child(3){background:linear-gradient(180deg,#ece8f6,#f7f5fb)}
+  .flow-panel:nth-child(4){background:linear-gradient(180deg,#e6eef2,#f6f8f8)}
+  .flow-panel__content{position:relative;left:auto;top:auto;transform:none!important;opacity:1!important;max-width:100%}
+  .flow-panel__title{font-size:clamp(40px,11vw,60px)}
+  .flow-panel__side{display:none}
+  .flow-panel__floats{position:relative;inset:auto;display:flex;flex-direction:column;gap:14px;margin-top:32px;pointer-events:auto}
+  .flow-card{position:relative!important;left:auto!important;top:auto!important;width:100%!important;transform:none!important;opacity:1!important;backdrop-filter:none;background:#fff}
+  .flow-card--focal{width:100%!important}
 }

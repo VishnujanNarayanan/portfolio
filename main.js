@@ -10,6 +10,7 @@
   var lenis = null;
   if (typeof Lenis !== "undefined" && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     lenis = new Lenis({ duration: 1.1, smoothWheel: true });
+    window.__lenis = lenis; // exposed so flow.js can drive click-to-jump
     function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
     requestAnimationFrame(raf);
   }
@@ -18,25 +19,82 @@
   var hero = document.querySelector(".hero");
   if (hero) {
     requestAnimationFrame(function () {
-      requestAnimationFrame(function () { hero.classList.add("show"); });
+      void hero.offsetWidth; // commit the pre-reveal state, then transition in
+      hero.classList.add("show");
     });
+    // Safety net: if the entrance transition fails to settle (some engines
+    // stall a combined 3D-transform + opacity transition), force the end
+    // state so the hero is never left invisible.
+    setTimeout(function () {
+      var t = hero.querySelector(".hero__title");
+      if (t && parseFloat(getComputedStyle(t).opacity) < 0.9 && window.scrollY < 4) {
+        hero.querySelectorAll(".hero__title, .hero__subtitle").forEach(function (el) {
+          el.style.transition = "none";
+          el.style.opacity = "1";
+          el.style.transform = "none";
+        });
+      }
+    }, 1700);
 
-    // Fade + lift the hero content off as the user starts scrolling, so it
-    // animates away cleanly instead of bleeding through later sections.
-    var heroContent = hero.querySelector(".hero__content");
+    // Fade the hero off as the user scrolls. Crucially we drive the SAME
+    // elements the entrance does (.hero__title + .hero__subtitle individually),
+    // not the parent .hero__content — the entrance's translate(50%) is relative
+    // to each element's OWN width and rotates about each element's OWN centre, so
+    // mirroring the container (a different size/pivot) skewed the exit toward the
+    // wrong corner.
+    var heroRevealEls = hero.querySelectorAll(".hero__title, .hero__subtitle");
     var heroScrollBtn = hero.querySelector(".hero__scroll-btn");
+    var heroScrollText = hero.querySelector(".hsbtn-in");
     var heroTicking = false;
     function fadeHero() {
       var vh = window.innerHeight || 800;
-      var p = Math.min(window.scrollY / (vh * 0.55), 1); // gone by ~55% of a screen
-      var op = 1 - p;
-      if (heroContent) {
-        heroContent.style.opacity = op;
-        heroContent.style.transform = "translateY(" + (-p * 80) + "px)";
+      var p = Math.min(window.scrollY / (vh * 0.6), 1);
+      var e = p * p * (3 - 2 * p); // smoothstep
+      if (p <= 0.0005) {
+        // At rest, hand control back to the CSS entrance transition.
+        heroRevealEls.forEach(function (el) {
+          el.style.removeProperty("transition");
+          el.style.removeProperty("opacity");
+          el.style.removeProperty("transform");
+        });
+      } else {
+        // Exit = each element's entrance with BOTH x-contributing terms AND the
+        // y term flipped (rotation kept at its entrance value). Entrance start
+        // (per element) is translate(50%) translate3d(-222.2px,88px) rotateY(60)
+        // rotateX(35) → identity — note translate(50%) and translate3d-x are
+        // opposite in sign and nearly cancel (the entrance barely drifts in x;
+        // the bottom-right read comes mostly from the y offset + 3D tilt). Only
+        // flipping translate3d-x (keeping translate(50%) positive) broke that
+        // cancellation and made the exit drift right instead of mirroring, so
+        // translate(%) is flipped too: translate(-50%) translate3d(+222.2px,-88px).
+        var tf = "perspective(1000px) translate(" + (-e * 50) + "%) translate3d(" + (e * 222.2) + "px," + (-e * 88) + "px,0) rotateY(" + (e * 60) + "deg) rotateX(" + (e * 35) + "deg)";
+        heroRevealEls.forEach(function (el) {
+          el.style.transition = "none";
+          el.style.opacity = 1 - p;
+          el.style.transform = tf;
+        });
       }
       if (heroScrollBtn) {
-        heroScrollBtn.style.opacity = op;
-        heroScrollBtn.style.transform = "translateY(" + (p * 30) + "px)";
+        if (p <= 0.0005) {
+          // Back at the top — hand control back to the CSS arrival transitions.
+          heroScrollBtn.classList.remove("is-exiting");
+          if (heroScrollText) {
+            heroScrollText.style.removeProperty("transition");
+            heroScrollText.style.removeProperty("transform");
+          }
+        } else {
+          // Reverse of the arrival: the label rose UP into view from below the
+          // clip and the underline drew in, so on scroll the label slides back
+          // DOWN out of view (scroll-driven, transition off so it tracks the
+          // wheel) and .is-exiting retracts the underline. The button container
+          // is never transformed, so it can no longer jump sideways (it loses
+          // its translate(-50%) centring otherwise) when scrolling starts/stops.
+          heroScrollBtn.classList.add("is-exiting");
+          if (heroScrollText) {
+            heroScrollText.style.transition = "none";
+            heroScrollText.style.transform = "translate3d(0,calc(" + (e * 100) + "% + " + (e * 7) + "px),0)";
+          }
+        }
       }
       heroTicking = false;
     }
@@ -126,75 +184,9 @@
     a.addEventListener("click", function () { setNav(false); });
   });
 
-  /* ---------- Flow: scroll-driven steps + parallax background ---------- */
-  var flow = document.querySelector(".flow");
-  if (flow) {
-    var steps = Array.prototype.slice.call(flow.querySelectorAll(".flow__step"));
-    var fills = steps.map(function (s) { return s.querySelector(".flow__track-fill"); });
-    var bg = flow.querySelector(".flow__bg");
-    var LAYER_SPEED = 0.3; // background layer drifts at 0.3x the scroll
-    var n = steps.length;
-    var vh = window.innerHeight || 800;
-
-    // Each floating card: which step it belongs to, its parallax speed
-    // (0.2x–0.45x), and its target viewport top (vh) when its step is active.
-    var cards = Array.prototype.slice.call(flow.querySelectorAll(".flow-float")).map(function (el) {
-      return {
-        el: el,
-        step: parseInt(el.getAttribute("data-step"), 10),
-        speed: parseFloat(el.getAttribute("data-speed")),
-        y: parseFloat(el.getAttribute("data-y")) // vh
-      };
-    });
-
-    // Position each card so that, at the centre of its step's scroll zone,
-    // it lands at its target y. Re-run on resize (depends on viewport px).
-    function layoutCards() {
-      vh = window.innerHeight || 800;
-      var total = flow.getBoundingClientRect().height - vh; // px scrolled across flow
-      cards.forEach(function (c) {
-        var scrolledAtCentre = ((c.step - 0.5) / n) * total;
-        var baseTop = (c.y / 100) * vh + c.speed * scrolledAtCentre;
-        c.el.style.top = baseTop + "px";
-      });
-    }
-
-    function updateflow() {
-      var rect = flow.getBoundingClientRect();
-      var total = rect.height - vh;
-      var scrolled = Math.min(Math.max(-rect.top, 0), total);
-      var progress = total > 0 ? scrolled / total : 0; // 0..1 across whole flow
-      var pos = progress * n; // which step we're on (float)
-      var activeIdx = Math.min(Math.floor(pos), n - 1);
-
-      // Foreground steps (unchanged behaviour: active class, track-fill, title scale)
-      steps.forEach(function (step, i) {
-        var local = Math.min(Math.max(pos - i, 0), 1);
-        if (fills[i]) fills[i].style.transform = "scaleY(" + local + ")";
-        step.classList.toggle("flow__step--active", i === activeIdx);
-        step.classList.toggle("flow__step--visited", pos >= i + 1 || i <= Math.floor(pos));
-      });
-
-      // Background layer drifts upward at 0.3x the scroll
-      if (bg) bg.style.transform = "translateY(" + (-LAYER_SPEED * scrolled) + "px)";
-
-      // Each card moves at its own speed (net) and fades by distance from
-      // the active step: active = 1, far = 0.12.
-      cards.forEach(function (c) {
-        var rel = -(c.speed - LAYER_SPEED) * scrolled; // relative to the 0.3x layer → net = c.speed
-        c.el.style.transform = "translateY(" + rel + "px)";
-        var dist = Math.abs(pos - (c.step - 0.5)); // 0 at this step's centre
-        // active step (dist ≤ .5) fully visible; neighbours recede fast; far → 0.12
-        var op = dist <= 0.5 ? 1 : Math.max(0.12, 1 - (dist - 0.5) * 1.6);
-        c.el.style.opacity = op;
-      });
-    }
-
-    window.addEventListener("scroll", updateflow, { passive: true });
-    window.addEventListener("resize", function () { layoutCards(); updateflow(); });
-    layoutCards();
-    updateflow();
-  }
+  /* ---------- Flow journey ---------- */
+  /* The flow section's three.js parallax journey lives in flow.js,
+     loaded only on pages that contain .flow. */
 
   /* Vanta NET background is initialised inline in index.html (#vanta-bg). */
 })();

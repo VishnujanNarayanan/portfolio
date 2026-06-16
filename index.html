@@ -42,8 +42,8 @@
   </div>
   <nav class="header__nav-right">
     <div class="header__ctas">
-      <a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Hire Me</span></a>
-      <a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark"><span class="pill-btn-span">Get In Touch</span></a>
+      <a href="/cdn-cgi/l/email-protection#acc2cddecdd5cdc2cdc282dac5dfc4c2d9c6cdc2eccbc1cdc5c082cfc3c193dfd9cec6c9cfd891e4c5dec9899e9ce1c9" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Hire Me</span></a>
+      <a href="/cdn-cgi/l/email-protection#117f70637068707f707f3f677862797f647b707f51767c70787d3f727e7c" class="pill-btn pill-btn--dark"><span class="pill-btn-span">Get In Touch</span></a>
     </div>
     <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
       <span class="menu-btn__icon">
@@ -69,8 +69,8 @@
         <li class="mobile-nav__item"><a href="blog/index.html">Blog</a></li>
       </ul>
       <div class="mobile-nav__ctas">
-        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Hire Me</span></a></div>
-        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark mobile-nav__cta"><span class="pill-btn-span">Get In Touch</span></a></div>
+        <div class="mncta"><a href="/cdn-cgi/l/email-protection#6f010e1d0e160e010e014119061c07011a050e012f08020e0603410c0002501c1a0d050a0c1b5227061d0a4a5d5f220a" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Hire Me</span></a></div>
+        <div class="mncta"><a href="/cdn-cgi/l/email-protection#e08e81928199818e818ece968993888e958a818ea0878d81898cce838f8d" class="pill-btn pill-btn--dark mobile-nav__cta"><span class="pill-btn-span">Get In Touch</span></a></div>
       </div>
     </div>
   </nav>
@@ -89,106 +89,208 @@
 
     <div class="hero-spacer"></div>
 
-    <section class="flow" id="process">
+    <section class="flow" id="process" aria-label="How I work — a four-stage journey">
       <div class="flow__wrapper">
 
-        <!-- Layer 1 — parallax background: floating cards scattered in depth.
-             Moves at 0.3x via JS; each card drifts at its own 0.2x–0.45x speed.
-             data-step = which step it belongs to (drives opacity);
-             data-speed = its parallax speed; data-y = its target viewport top (vh).
-             Decorative duplicate of the real sections below → aria-hidden. -->
-        <div class="flow__bg" aria-hidden="true">
+        <!-- Airy light sky; hue cross-fades between stages (driven by JS) -->
+        <div class="flow__sky" aria-hidden="true"></div>
+        <div class="flow__horizon" aria-hidden="true"></div>
 
-          <!-- Step 1 · Projects -->
-          <div class="flow-float" data-step="1" data-speed="0.43" data-y="14" style="left:50%;top:14vh">
-            <h3 class="flow-card__title">Market Data Platform</h3>
-            <p class="flow-card__desc">28-pipeline NSE market-data ingestion layer feeding 12+ datasets.</p>
-            <div class="flow-card__tags"><span class="flow-card__tag">Python</span><span class="flow-card__tag">pandas</span><span class="flow-card__tag">ETL</span></div>
-          </div>
-          <div class="flow-float" data-step="1" data-speed="0.27" data-y="33" style="left:72%;top:33vh">
-            <h3 class="flow-card__title">Product Explorer</h3>
-            <p class="flow-card__desc">Real-time scraping app streaming a book catalog over WebSockets.</p>
-            <div class="flow-card__tags"><span class="flow-card__tag">TypeScript</span><span class="flow-card__tag">NestJS</span><span class="flow-card__tag">Redis</span></div>
-          </div>
-          <div class="flow-float" data-step="1" data-speed="0.36" data-y="44" style="left:37%;top:44vh">
-            <h3 class="flow-card__title">Fraud Detection</h3>
-            <p class="flow-card__desc">Catches 95% of fraud at 0.995 ROC-AUC on 6.4M transactions.</p>
-            <div class="flow-card__tags"><span class="flow-card__tag">Python</span><span class="flow-card__tag">scikit-learn</span></div>
-          </div>
-          <div class="flow-float" data-step="1" data-speed="0.21" data-y="60" style="left:60%;top:60vh">
-            <h3 class="flow-card__title">NSE Stock Prediction</h3>
-            <p class="flow-card__desc">Next-minute price direction over 9.4M NSE ticks across 31 stocks.</p>
-            <div class="flow-card__tags"><span class="flow-card__tag">Python</span><span class="flow-card__tag">Backtesting</span></div>
-          </div>
-
-          <!-- Step 2 · Skills -->
-          <div class="flow-float" data-step="2" data-speed="0.40" data-y="16" style="left:46%;top:16vh">
-            <h3 class="flow-card__title">Backend &amp; Data</h3>
-            <div class="flow-card__tags"><span class="flow-card__tag">Python</span><span class="flow-card__tag">FastAPI</span><span class="flow-card__tag">PostgreSQL</span><span class="flow-card__tag">Redis</span><span class="flow-card__tag">Docker</span></div>
-          </div>
-          <div class="flow-float" data-step="2" data-speed="0.25" data-y="38" style="left:70%;top:38vh">
-            <h3 class="flow-card__title">Scraping &amp; Automation</h3>
-            <div class="flow-card__tags"><span class="flow-card__tag">Playwright</span><span class="flow-card__tag">Scrapy</span><span class="flow-card__tag">asyncio</span><span class="flow-card__tag">anti-bot</span></div>
-          </div>
-          <div class="flow-float" data-step="2" data-speed="0.33" data-y="56" style="left:53%;top:56vh">
-            <h3 class="flow-card__title">ML &amp; Analytics</h3>
-            <div class="flow-card__tags"><span class="flow-card__tag">pandas</span><span class="flow-card__tag">scikit-learn</span><span class="flow-card__tag">PyTorch</span><span class="flow-card__tag">FAISS</span></div>
-          </div>
-
-          <!-- Step 3 · Blog -->
-          <div class="flow-float" data-step="3" data-speed="0.31" data-y="18" style="left:50%;top:18vh">
-            <h3 class="flow-card__title">How I Scraped 20 Years of NSE Insider Filings</h3>
-            <span class="flow-card__read">Read →</span>
-          </div>
-          <div class="flow-float" data-step="3" data-speed="0.45" data-y="41" style="left:72%;top:41vh">
-            <h3 class="flow-card__title">Building Resumable ETL Pipelines That Repair, Not Corrupt</h3>
-            <span class="flow-card__read">Read →</span>
-          </div>
-          <div class="flow-float" data-step="3" data-speed="0.23" data-y="53" style="left:41%;top:53vh">
-            <h3 class="flow-card__title">Predicting Next-Minute Price Direction on 9.4M NSE Ticks</h3>
-            <span class="flow-card__read">Read →</span>
-          </div>
-
-          <!-- Step 4 · Services -->
-          <div class="flow-float" data-step="4" data-speed="0.38" data-y="15" style="left:50%;top:15vh">
-            <h3 class="flow-card__title">Data Pipeline Engineering</h3>
-            <p class="flow-card__desc">Incremental, resumable ETL that repairs on rerun instead of corrupting history.</p>
-          </div>
-          <div class="flow-float" data-step="4" data-speed="0.24" data-y="33" style="left:72%;top:33vh">
-            <h3 class="flow-card__title">Web Scraping &amp; Acquisition</h3>
-            <p class="flow-card__desc">Resilient scrapers with anti-bot handling, backoff, and validation before data lands.</p>
-          </div>
-          <div class="flow-float" data-step="4" data-speed="0.34" data-y="47" style="left:39%;top:47vh">
-            <h3 class="flow-card__title">Backend API Development</h3>
-            <p class="flow-card__desc">REST &amp; real-time APIs over PostgreSQL with auth, queues, and caching.</p>
-          </div>
-          <div class="flow-float" data-step="4" data-speed="0.44" data-y="59" style="left:62%;top:59vh">
-            <h3 class="flow-card__title">ML &amp; Quantitative Analysis</h3>
-            <p class="flow-card__desc">Feature engineering, modelling, and statistically validated signals.</p>
-          </div>
+        <!-- Horizontal track: 4 full-viewport stages slide left as you scroll -->
+        <div class="flow__track">
+      <article class="flow-panel" data-panel="0" data-screen-label="Data Collection">
+        <div class="flow-panel__floats" aria-hidden="true">
+        <article class="flow-card flow-card--project flow-card--focal" data-from="top" data-to="left" data-depth="0.4" data-tilt="-3" style="left:55%;top:16%">
+          <div class="flow-card__shot" aria-hidden="true"></div><h3 class="flow-card__name">Market Data Platform</h3>
+          <p class="flow-card__line">28-pipeline NSE ingestion layer feeding 12+ datasets.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">Python</span><span class="flow-card__tag">ETL</span><span class="flow-card__tag">scraping</span></div>
+        </article>
+        <article class="flow-card flow-card--project" data-from="right" data-to="bottom-right" data-depth="0.27" data-tilt="5" style="left:80%;top:40%">
+          <div class="flow-card__shot" aria-hidden="true"></div><h3 class="flow-card__name">Product Explorer</h3>
+          <p class="flow-card__line">Real-time scraper streaming a catalog over WebSockets.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">NestJS</span><span class="flow-card__tag">scraping</span></div>
+        </article>
+        <article class="flow-card flow-card--project" data-from="bottom-left" data-to="top" data-depth="0.35" data-tilt="-5" style="left:45%;top:50%">
+          <div class="flow-card__shot" aria-hidden="true"></div><h3 class="flow-card__name">Signal Scraper</h3>
+          <p class="flow-card__line">Scraped & ranked 1,359 strategies to 412 vetted signals.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">Playwright</span><span class="flow-card__tag">Python</span></div>
+        </article>
+        <article class="flow-card flow-card--tool" data-from="top-right" data-to="right" data-depth="0.47" data-tilt="4" style="left:84%;top:11%">
+          <h3 class="flow-card__tool">Playwright</h3>
+          <p class="flow-card__line">Async stealth scraping with session-cookie injection.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">scraping</span></div>
+        </article>
+        <article class="flow-card flow-card--tool" data-from="bottom" data-to="top-left" data-depth="0.22" data-tilt="-4" style="left:66%;top:58%">
+          <h3 class="flow-card__tool">Scrapy</h3>
+          <p class="flow-card__line">Forked 16-publisher crawler — resume + HTTP caching.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">crawler</span></div>
+        </article>
+        <article class="flow-card flow-card--tool" data-from="right" data-to="bottom" data-depth="0.32" data-tilt="6" style="left:90%;top:56%">
+          <h3 class="flow-card__tool">asyncio</h3>
+          <p class="flow-card__line">Rate-limit recovery with resumable JSON checkpoints.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">async</span></div>
+        </article>
+        </div>
+        <div class="flow-panel__content">
+          <span class="flow-panel__index">01</span>
+          <h2 class="flow-panel__title">Data<br>Collection</h2>
+          <p class="flow-panel__sub">Pulling clean data out of sources that fight back — filing portals and social feeds scraped with Playwright and Scrapy, behind scrapers that resume after failure and back off when a source rate-limits them.</p>
+          <div class="flow-panel__pills"><span class="flow-panel__pill">Playwright</span><span class="flow-panel__pill">Scrapy</span><span class="flow-panel__pill">asyncio</span><span class="flow-panel__pill">Python</span><span class="flow-panel__pill">anti-bot</span></div>
+        </div>
+        <div class="flow-panel__side" aria-hidden="true"><span>Z01</span><span>1,665</span></div>
+      </article>
+      <article class="flow-panel" data-panel="1" data-screen-label="Processing & Storage">
+        <div class="flow-panel__floats" aria-hidden="true">
+        <article class="flow-card flow-card--tool flow-card--focal" data-from="top" data-to="left" data-depth="0.4" data-tilt="-3" style="left:55%;top:16%">
+          <h3 class="flow-card__tool">pandas</h3>
+          <p class="flow-card__line">Incremental pipeline resumes each of ~1,665 tickers from its last bar.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">ETL</span><span class="flow-card__tag">data</span></div>
+        </article>
+        <article class="flow-card flow-card--tool" data-from="right" data-to="bottom-right" data-depth="0.28" data-tilt="4" style="left:81%;top:41%">
+          <h3 class="flow-card__tool">PostgreSQL</h3>
+          <p class="flow-card__line">8-entity schema with search, filtering & pagination.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">SQL</span></div>
+        </article>
+        <article class="flow-card flow-card--tool" data-from="left" data-to="top" data-depth="0.34" data-tilt="-5" style="left:46%;top:51%">
+          <h3 class="flow-card__tool">Redis</h3>
+          <p class="flow-card__line">Cached reads + background workers keep data fresh.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">caching</span></div>
+        </article>
+        <article class="flow-card flow-card--tool" data-from="top-right" data-to="right" data-depth="0.46" data-tilt="5" style="left:85%;top:11%">
+          <h3 class="flow-card__tool">Dedup</h3>
+          <p class="flow-card__line">Composite-key anti-join kills double-counts across windows.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">data quality</span></div>
+        </article>
+        <article class="flow-card flow-card--project" data-from="bottom" data-to="top-left" data-depth="0.23" data-tilt="-4" style="left:65%;top:58%">
+          <div class="flow-card__shot" aria-hidden="true"></div><h3 class="flow-card__name">Market Data Platform</h3>
+          <p class="flow-card__line">Data-quality safeguards repair gaps instead of corrupting.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">ETL</span><span class="flow-card__tag">dedup</span></div>
+        </article>
+        <article class="flow-card flow-card--tool" data-from="right" data-to="bottom" data-depth="0.31" data-tilt="6" style="left:90%;top:57%">
+          <h3 class="flow-card__tool">Docker</h3>
+          <p class="flow-card__line">Containerized services for reproducible deploys.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">devops</span></div>
+        </article>
+        </div>
+        <div class="flow-panel__content">
+          <span class="flow-panel__index">02</span>
+          <h2 class="flow-panel__title">Processing<br>&amp; Storage</h2>
+          <p class="flow-panel__sub">Keeping high-volume pipelines reliable over 20 years of history — incremental loads that resume from the last saved point, cleanup that repairs instead of corrupts, and Redis-cached reads behind a relational schema.</p>
+          <div class="flow-panel__pills"><span class="flow-panel__pill">pandas</span><span class="flow-panel__pill">PostgreSQL</span><span class="flow-panel__pill">Redis</span><span class="flow-panel__pill">SQL</span><span class="flow-panel__pill">Docker</span></div>
+        </div>
+        <div class="flow-panel__side" aria-hidden="true"><span>Z02</span><span>20 yrs</span></div>
+      </article>
+      <article class="flow-panel" data-panel="2" data-screen-label="ML & Analysis">
+        <div class="flow-panel__floats" aria-hidden="true">
+        <article class="flow-card flow-card--project flow-card--focal" data-from="top" data-to="left" data-depth="0.4" data-tilt="-3" style="left:55%;top:16%">
+          <div class="flow-card__shot" aria-hidden="true"></div><h3 class="flow-card__name">Fraud Detection</h3>
+          <p class="flow-card__line">Catches 95% of fraud at 0.995 ROC-AUC on 6.4M transactions.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">scikit-learn</span><span class="flow-card__tag">ml</span></div>
+        </article>
+        <article class="flow-card flow-card--project" data-from="right" data-to="bottom-right" data-depth="0.28" data-tilt="5" style="left:81%;top:41%">
+          <div class="flow-card__shot" aria-hidden="true"></div><h3 class="flow-card__name">Stock Prediction</h3>
+          <p class="flow-card__line">Next-minute price direction over 9.4M NSE ticks.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">ml</span><span class="flow-card__tag">quant</span></div>
+        </article>
+        <article class="flow-card flow-card--project" data-from="bottom-left" data-to="top" data-depth="0.35" data-tilt="-5" style="left:45%;top:50%">
+          <div class="flow-card__shot" aria-hidden="true"></div><h3 class="flow-card__name">Quote Retrieval</h3>
+          <p class="flow-card__line">Fine-tuned embeddings + FAISS over ~2,500 quotes.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">NLP</span><span class="flow-card__tag">embeddings</span></div>
+        </article>
+        <article class="flow-card flow-card--tool" data-from="top-right" data-to="right" data-depth="0.47" data-tilt="4" style="left:85%;top:11%">
+          <h3 class="flow-card__tool">scikit-learn</h3>
+          <p class="flow-card__line">Class-weight-balanced models tuned for rare-case recall.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">ml</span></div>
+        </article>
+        <article class="flow-card flow-card--tool" data-from="bottom" data-to="top-left" data-depth="0.22" data-tilt="-4" style="left:66%;top:58%">
+          <h3 class="flow-card__tool">FAISS</h3>
+          <p class="flow-card__line">Top-k nearest-neighbor retrieval over 384-dim vectors.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">embeddings</span></div>
+        </article>
+        <article class="flow-card flow-card--tool" data-from="right" data-to="bottom" data-depth="0.32" data-tilt="6" style="left:90%;top:56%">
+          <h3 class="flow-card__tool">SciPy</h3>
+          <p class="flow-card__line">Hypothesis tests across 211K trades confirm a real signal.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">stats</span></div>
+        </article>
+        </div>
+        <div class="flow-panel__content">
+          <span class="flow-panel__index">03</span>
+          <h2 class="flow-panel__title">ML &amp;<br>Analysis</h2>
+          <p class="flow-panel__sub">Turning data into model-ready signals — fraud detection across 6.4M rows, next-minute price prediction over 9.4M NSE ticks, and meaning-based search across thousands of quotes, each validated before it ships.</p>
+          <div class="flow-panel__pills"><span class="flow-panel__pill">scikit-learn</span><span class="flow-panel__pill">PyTorch</span><span class="flow-panel__pill">FAISS</span><span class="flow-panel__pill">pandas</span><span class="flow-panel__pill">NumPy</span></div>
+        </div>
+        <div class="flow-panel__side" aria-hidden="true"><span>Z03</span><span>9.4M</span></div>
+      </article>
+      <article class="flow-panel" data-panel="3" data-screen-label="Build & Ship">
+        <div class="flow-panel__floats" aria-hidden="true">
+        <article class="flow-card flow-card--project flow-card--focal" data-from="top" data-to="left" data-depth="0.4" data-tilt="-3" style="left:55%;top:16%">
+          <div class="flow-card__shot" aria-hidden="true"></div><h3 class="flow-card__name">DekhLaw Platform</h3>
+          <p class="flow-card__line">~30 Node.js endpoints + Twilio calling, on Railway & Vercel.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">Node.js</span><span class="flow-card__tag">backend</span></div>
+        </article>
+        <article class="flow-card flow-card--project" data-from="right" data-to="bottom-right" data-depth="0.28" data-tilt="5" style="left:81%;top:41%">
+          <div class="flow-card__shot" aria-hidden="true"></div><h3 class="flow-card__name">Product Explorer</h3>
+          <p class="flow-card__line">React/Next.js frontend rendering live results over WebSockets.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">Next.js</span><span class="flow-card__tag">fullstack</span></div>
+        </article>
+        <article class="flow-card flow-card--project" data-from="bottom-left" data-to="top" data-depth="0.35" data-tilt="-5" style="left:45%;top:50%">
+          <div class="flow-card__shot" aria-hidden="true"></div><h3 class="flow-card__name">Trading Bot</h3>
+          <p class="flow-card__line">CLI bot placing market/limit/stop orders on Binance testnet.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">Python</span><span class="flow-card__tag">backend</span></div>
+        </article>
+        <article class="flow-card flow-card--project" data-from="top-right" data-to="right" data-depth="0.47" data-tilt="4" style="left:85%;top:11%">
+          <div class="flow-card__shot" aria-hidden="true"></div><h3 class="flow-card__name">Directory App</h3>
+          <p class="flow-card__line">Cross-platform RN app, 12 screens on a FastAPI backend.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">React Native</span></div>
+        </article>
+        <article class="flow-card flow-card--tool" data-from="bottom" data-to="top-left" data-depth="0.22" data-tilt="-4" style="left:66%;top:58%">
+          <h3 class="flow-card__tool">NestJS</h3>
+          <p class="flow-card__line">Event-driven backend — Redis queues + WebSocket streaming.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">backend</span></div>
+        </article>
+        <article class="flow-card flow-card--tool" data-from="right" data-to="bottom" data-depth="0.31" data-tilt="6" style="left:90%;top:56%">
+          <h3 class="flow-card__tool">Docker / CI</h3>
+          <p class="flow-card__line">Containerized services with health-checked deploys.</p>
+          <div class="flow-card__tags"><span class="flow-card__tag">devops</span></div>
+        </article>
+        </div>
+        <div class="flow-panel__content">
+          <span class="flow-panel__index">04</span>
+          <h2 class="flow-panel__title">Build<br>&amp; Ship</h2>
+          <p class="flow-panel__sub">Shipping whole products solo — ~30 Node.js endpoints with Twilio calling on a production legal-tech platform, a NestJS app streaming over WebSockets, and a Next.js site, owned from database to deploy.</p>
+          <div class="flow-panel__pills"><span class="flow-panel__pill">Node.js</span><span class="flow-panel__pill">NestJS</span><span class="flow-panel__pill">React</span><span class="flow-panel__pill">Next.js</span><span class="flow-panel__pill">Docker</span></div>
+        </div>
+        <div class="flow-panel__side" aria-hidden="true"><span>Z04</span><span>30+</span></div>
+      </article>
         </div>
 
-        <!-- Layer 2 — numbered steps, foreground bottom-left (exact reference markup) -->
-        <div class="flow__steps">
-          <div class="flow__step flow__step--active" data-step="1">
-            <div class="flow__header"><div class="flow__number"><span>01</span></div><h3 class="flow__title"><a href="#projects">Projects</a></h3></div>
-            <div class="flow__body"><div class="flow__body-inner"><div class="flow__track"><div class="flow__track-bar"><div class="flow__track-fill" style="transform: scaleY(0);"></div></div></div>
-              <p class="flow__description">Data pipelines, backends, and ML systems shipped end to end.</p></div></div>
-          </div>
-          <div class="flow__step" data-step="2">
-            <div class="flow__header"><div class="flow__number"><span>02</span></div><h3 class="flow__title"><a href="#skills">Skills</a></h3></div>
-            <div class="flow__body"><div class="flow__body-inner"><div class="flow__track"><div class="flow__track-bar"><div class="flow__track-fill" style="transform: scaleY(0);"></div></div></div>
-              <p class="flow__description">Tools and technologies I use in production.</p></div></div>
-          </div>
-          <div class="flow__step" data-step="3">
-            <div class="flow__header"><div class="flow__number"><span>03</span></div><h3 class="flow__title"><a href="#blog">Blog</a></h3></div>
-            <div class="flow__body"><div class="flow__body-inner"><div class="flow__track"><div class="flow__track-bar"><div class="flow__track-fill" style="transform: scaleY(0);"></div></div></div>
-              <p class="flow__description">Writing about what I build and how I debug it.</p></div></div>
-          </div>
-          <div class="flow__step" data-step="4">
-            <div class="flow__header"><div class="flow__number"><span>04</span></div><h3 class="flow__title"><a href="#services">Services</a></h3></div>
-            <div class="flow__body"><div class="flow__body-inner"><div class="flow__track"><div class="flow__track-bar"><div class="flow__track-fill" style="transform: scaleY(0);"></div></div></div>
-              <p class="flow__description">What I can do for you.</p></div></div>
+        <!-- Journey spine — pinned at the bottom, stays put while stages slide -->
+        <div class="flow-journey" aria-hidden="false">
+          <svg class="flow-journey__svg" viewBox="0 0 1200 150" preserveAspectRatio="none" aria-hidden="true">
+            <path class="flow-journey__line" d="M0 75 L1200 75"></path>
+            <path class="flow-journey__fill" d="M0 75 L1200 75"></path>
+          </svg>
+          <div class="flow-journey__nodes">
+        <button class="flow-journey__node" type="button" data-i="0" aria-label="Go to Data Collection">
+          <span class="flow-journey__zone">ZONE 01</span>
+          <span class="flow-journey__dot"></span>
+          <span class="flow-journey__name">Data Collection</span>
+        </button>
+        <button class="flow-journey__node" type="button" data-i="1" aria-label="Go to Processing & Storage">
+          <span class="flow-journey__zone">ZONE 02</span>
+          <span class="flow-journey__dot"></span>
+          <span class="flow-journey__name">Processing & Storage</span>
+        </button>
+        <button class="flow-journey__node" type="button" data-i="2" aria-label="Go to ML & Analysis">
+          <span class="flow-journey__zone">ZONE 03</span>
+          <span class="flow-journey__dot"></span>
+          <span class="flow-journey__name">ML & Analysis</span>
+        </button>
+        <button class="flow-journey__node" type="button" data-i="3" aria-label="Go to Build & Ship">
+          <span class="flow-journey__zone">ZONE 04</span>
+          <span class="flow-journey__dot"></span>
+          <span class="flow-journey__name">Build & Ship</span>
+        </button>
           </div>
         </div>
 
@@ -311,7 +413,7 @@
 
     <section class="cta-section">
       <h2 class="cta-section__title reveal"><span>Let's build something</span><span>together.</span></h2>
-      <div class="flx"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--light"><span class="pill-btn-span">Get In Touch</span></a></div>
+      <div class="flx"><a href="/cdn-cgi/l/email-protection#325c5340534b535c535c1c445b415a5c4758535c72555f535b5e1c515d5f" class="pill-btn pill-btn--light"><span class="pill-btn-span">Get In Touch</span></a></div>
     </section>
 
   </div>
@@ -334,7 +436,7 @@
   </div>
 </footer>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
   document.addEventListener('DOMContentLoaded', function () {
     if (typeof VANTA === 'undefined' || typeof THREE === 'undefined') return;
     function makeVanta() {
@@ -363,5 +465,6 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
 <script src="main.js" defer></script>
+<script src="flow.js" defer></script>
 </body>
 </html>

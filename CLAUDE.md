@@ -169,3 +169,151 @@ Keep this section updated after every change. Format:
   = -90/-270/-450/-630px (= 0.3 × scrolled) confirming the 0.3x layer parallax; opacity per
   step = {active:1, neighbour:0.2, far:0.12}; cards render scattered in depth with only the
   active step crisp and neighbours receding behind it.
+
+### 2026-06-16 (flow rebuilt as a three.js horizontal parallax journey)
+- Reference re-confirmed from the user's video (the "Board Arca" WebGL parallax site): a
+  horizontal, scroll-driven journey — airy light sky, a big shifting stage title, a focal 3D
+  object with smaller elements floating around it at depth, side vertical labels, and a wavy
+  path with labelled station-nodes pinned at the bottom whose active node enlarges in indigo.
+  User direction: use three.js for the parallax + scrolling; keep the Projects ("Selected
+  work") and Skills sections unchanged. Light palette (indigo on light blue) per earlier answer.
+- index.html: the flow section is now a 500vh outer / 100vh sticky wrapper. Inside: .flow__sky
+  (gradient, hue cross-fades in JS) + .flow__horizon glow; a transparent three.js canvas
+  (.flow__gl, created in flow.js); .flow__track (flex, 400vw) of four .flow-panel stages —
+  Data Collection / Processing & Storage / ML & Analysis / Build & Ship — each with content
+  (index, big title, subtitle, tool pills), 6 floating .flow-card (project + tool, one --focal),
+  and .flow-panel__side vertical labels; and .flow-journey (wavy SVG path + 4 station nodes)
+  pinned bottom. All card content mapped from master_profile.yaml by panel tag.
+- styles.css: replaced the old .flow parallax-scene block entirely with the journey styles
+  (track/panels/cards/sky/journey + a mobile fallback that drops the pin + GL and stacks the
+  four stages vertically with per-stage gradients and static, full-width cards).
+- flow.js (NEW, vanilla + three.js r134 global already loaded for Vanta): one rAF loop maps
+  vertical scroll within the section to horizontal track translateX, cross-fades the sky hue,
+  drives each card's fly-in → rest (idle sine float) → fly-out choreography with per-card
+  depth parallax + lerp smoothing, advances the journey nodes + draws the path fill
+  (stroke-dashoffset), and renders the three.js scene: a camera dollying along X past four
+  rotating focal forms (icosahedron/torus/torus-knot/octahedron, indigo) through an indigo
+  particle depth field — real 3D parallax. Click a node to jump (uses window.__lenis). Skips
+  GL + pin on mobile and prefers-reduced-motion.
+- main.js: removed the old flow step/parallax block (now in flow.js); exposed window.__lenis;
+  reworked the hero exit so the title/subtitle mirror their entrance — they flew in from the
+  right, so on scroll they exit to the LEFT with a slight upward lift + opposite tilt, giving a
+  smooth hand-off into the flow. Projects/Skills/Services/Blog/CTA/footer untouched.
+
+### 2026-06-16 (flow transition — fix card cut-off + disconnected feel; tips polish)
+- Root cause of the "cards cut off mid-scroll between zones": `.flow-panel{overflow:hidden}`
+  clipped each stage's cards at the panel boundary — which is exactly the seam between zones —
+  so flying cards were sliced at the hand-off (and right-edge cards were clipped even at rest).
+  styles.css: removed the per-panel overflow clip; the outer `.flow__wrapper{overflow:hidden}`
+  still clips at the true screen edge, so cards now cross the seam unbroken.
+- Root cause of the "disconnected" feel: the old fly-in/out windows barely overlapped, so the
+  screen briefly emptied between zones. flow.js cardState() reworked — entry/exit windows are
+  now LONG and overlap the neighbouring zone (e0 .14→e1 .36 / x0 .66→x1 .88), with smoothstep
+  opacity (no hard clamps) and smaller travel (0.55×→0.4×). Zone A fades out while Zone B fades
+  in over the same scroll band as panel B physically slides in → one continuous hand-off, never
+  an empty screen. Verified the crossfade math: at the zone midpoint both zones' cards sit at
+  ~0.5–0.6 opacity.
+- Tips-file polish (premium feel without touching CSS vars/colours or removing animation):
+  • subtle depth — cards now scale 0.9→1 on entry / 1→0.94 on exit (lerp-smoothed `csc`), a
+    small "peak" micro-interaction as each card settles;
+  • continuous travel — per-card depth parallax bumped 140→220 and applied across the whole
+    visible window (not just entry/exit), so even at rest the scene reads as one space you move
+    through rather than four discrete slides;
+  • opacity hierarchy — stage titles hold full opacity near centre then smoothstep-fade (gone by
+    |dd|≥.85) so the outgoing + incoming titles stay readable through the hand-off (no mid-dip);
+  • journey nodes — added hover feedback (dot ring + zone label highlight) as a clear, polished
+    micro-interaction on the one interactive element in the section.
+- No HTML/markup changes; no CSS variables or colours changed; all four stages + GL scene + the
+  journey spine behave as before, just without the seam clip and with the overlapping hand-off.
+
+### 2026-06-16 (hero + zone titles reuse the hero appear animation; opposite exits)
+- Reference appear animation = the .hero__title/.hero__subtitle reveal: from opacity 0 +
+  `perspective(1000px) translate(50%) translate3d(-222.2px,88px,0) rotateY(60deg) rotateX(35deg)`
+  to identity. The DISAPPEAR is now defined as the OPPOSITE of that appear (rotations reversed),
+  redirected per-section.
+- Hero title exit (main.js fadeHero): opposite-of-appear redirected UPWARD —
+  translate3d(0,-e*12vh,0) rotateY(-e*60deg) rotateX(-e*35deg) + fade. Reversing the entrance
+  rotations gives a matching 3D exit; the up displacement (12vh) is deliberately small (a gentle
+  lift, far less than the entrance's horizontal throw). Entrance reveal untouched.
+- Zone titles (flow.js, .flow-panel__content): now a scroll-driven copy of the hero appear.
+  APPEAR (dd<0) uses the EXACT hero entrance values (translate(f*50%) translate3d(f*-222.2px,
+  f*88px) rotateY(f*60) rotateX(f*35), f=smooth(min(|dd|,1))→0 at centre). DISAPPEAR (dd>0) is the
+  opposite redirected LEFT: translate(f*-50%) translate3d(f*-222.2px,0) rotateY(f*-60) rotateX(f*-35).
+  -58% folded into the translate3d Y (via calc) keeps the block vertically centred; opacity holds
+  full near centre then eases out (readable hand-off). Replaces the earlier horizontal-only attempt.
+
+### 2026-06-16 (exit rotation axis fix + scroll-cue jump fix)
+- Same-axis exit: the entrance rotateY(60) rotateX(35) is matrix Ry·Rx; negating both signs in the
+  SAME order (the previous exit) is NOT its inverse, so the tilt pivoted on the other diagonal. The
+  true "same axis, opposite direction" is the inverse Rx(-35)·Ry(-60) — the rotateX/rotateY ORDER is
+  swapped. Applied to both the hero title exit (main.js, + upward 12vh translate) and the zone-title
+  disappear (flow.js leaving branch, + leftward translate). Entrances unchanged.
+  [SUPERSEDED below — the 3D exit rotation itself read as messy.]
+
+### 2026-06-16 (exit = the entrance mirrored, on the SAME elements)
+- Root cause of the exit drifting to the wrong corner: the entrance animates .hero__title and
+  .hero__subtitle INDIVIDUALLY (each translate(50%) is its own-width-relative; each rotates about its
+  own centre), but the exit was transforming the PARENT .hero__content — a bigger box with a
+  different centre/pivot, so the mirror was skewed. Fixed by driving the exit on the SAME elements
+  (heroRevealEls = .hero__title, .hero__subtitle) instead of the container.
+- Exit transform = each element's entrance mirrored vertically + horizontally = every value negated
+  in the same order: translate(-e*50%) translate3d(e*222.2px,-e*88px,0) rotateY(-e*60) rotateX(-e*35)
+  (this negate-all IS the point-reflection of the 3D tilt). With the correct per-element pivot it now
+  leaves to the TOP-LEFT as the true reverse of the bottom-right entrance. transition:none while
+  exiting so it tracks scroll; on return to top all inline props are cleared so the CSS entrance owns it.
+- Zone titles (flow.js): already a self-consistent mirror — entrance and exit are both applied to the
+  one .flow-panel__content block, leaving = the exact negation of entering (top-left, mirrored tilt).
+  Restored the rotation on the leaving branch to match (rotateY(f*-60) rotateX(f*-35)).
+- Hero scroll-cue ("scroll to see how I work") no longer jumps: it is centred by transform:
+  translate(-50%), and the old exit set transform:translateY(...) which wiped that centring — so it
+  jumped half its width sideways the moment scrolling started, and back when it returned to top. The
+  container is now never transformed. Its exit is instead the REVERSE of its arrival: the label
+  (.hsbtn-in, which rose up from below the clip) slides back DOWN, driven inline + scroll-tracked
+  (transition:none); the underline retracts via a new .is-exiting class (styles.css,
+  `.hero.show .hero__scroll-btn.is-exiting>span:after{scaleX(0)}`, specificity beats the draw-in rule).
+  Reset (transition/transform removed, class dropped) at the top hands control back to the CSS arrival.
+
+### 2026-06-16 (exit mirrors both translate3d axes — final spec)
+- Iterated from y-only → x-only → both axes flipped, rotation always kept at its entrance value
+  (rotateY(60), rotateX(35) never negated).
+- Caught a bug on the first "both axes flipped" pass: translate(50%) and translate3d-x are opposite
+  in sign in the entrance and nearly cancel (the entrance barely drifts in x — the bottom-right read
+  comes mostly from the y offset + 3D tilt). Flipping only translate3d-x while leaving translate(50%)
+  positive broke that cancellation, so the two terms stacked and the exit drifted right instead of
+  mirroring. Fix: translate(%) is flipped too, so the cancellation pattern mirrors correctly.
+- Hero title exit (main.js, heroRevealEls): translate(-e*50%) translate3d(e*222.2px,-e*88px,0)
+  rotateY(e*60deg) rotateX(e*35deg) — both x-contributing terms (translate% and translate3d-x) and
+  the y term flipped from their entrance signs; rotation stays at entrance values. Net effect: the
+  title exits diagonally to the opposite corner from where it entered.
+- Zone titles (flow.js, .flow-panel__content leaving branch): same change — txSelf = -f*50 (was
+  +f*50), txPx = +f*222.2, tyPx = -f*88, rotation unchanged.
+- Verified with `node --check` on both files.
+
+### 2026-06-16 (zone text animation removed — stays static)
+- User asked to remove the zone-title appear/disappear animation entirely and have it stick at its
+  current position. Removed the per-frame opacity + transform block in flow.js's loop() that drove
+  `.flow-panel__content` (the hero-entrance-style fly-in/out + fade); the now-empty panels.forEach
+  was also dead code and removed.
+- `.flow-panel__content` is no longer touched by JS at all — it sits at its CSS base position
+  (styles.css: position:absolute; top:50%; transform:translateY(-58%)), fully opaque, static
+  through the whole horizontal scroll. Cards (.flow-card) and the journey spine are unaffected.
+- Verified with `node --check`.
+
+### 2026-06-16 (zone text: stays screen-fixed, swaps instantly mid-scroll)
+- Previous change (removing the fly-in/out animation) left `.flow-panel__content` static
+  relative to its `.flow-panel` — which still rides the horizontal `.flow__track`, so the text
+  was sliding off-screen with the panel instead of staying put. User wanted it pinned on screen
+  and to swap to the next stage's text mid-scroll (at the zone boundary), not slide away.
+- flow.js loop(): added a per-frame counter-translateX on each panel's `.flow-panel__content`
+  equal to -(pi*vw + trackX) — i.e. the exact negative of that panel's current screen offset
+  (its flex slot pi*vw plus the track's live translateX) — composed with the existing
+  translateY(-58%) centering. This cancels the track's scroll motion so the text always renders
+  at its CSS `left` position regardless of how far the track has slid. Only the active panel's
+  content is shown (`display:none` on the rest); active = clamp(Math.round(global),0,N-1), which
+  flips exactly at each zone's midpoint — an instant cut, no animation. Hoisted the existing
+  `active` calc (previously computed later, just for the journey nodes) up to before this block
+  and reused it for both.
+- No HTML/CSS changes — mobile is unaffected (its `transform:none!important` rule on
+  `.flow-panel__content` already guards against inline transforms, and the mobile code path
+  returns before this loop logic ever runs).
+- Verified with `node --check`.
