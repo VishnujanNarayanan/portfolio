@@ -317,3 +317,73 @@ Keep this section updated after every change. Format:
   `.flow-panel__content` already guards against inline transforms, and the mobile code path
   returns before this loop logic ever runs).
 - Verified with `node --check`.
+
+### 2026-06-16 (zone-title swap → per-letter staggered up-slide)
+- Replaced the instant display:none cut between zone texts with a SplitText-style per-letter
+  transition (per the user's reference markup: char spans + aria-label, aria-hidden visual split).
+- flow.js: new splitTitle() wraps every glyph of each .flow-panel__title as
+  <span class="flow-char">(clip)<span class="char">(moves)</span></span>, sets each .char's
+  transition-delay inline via --d (ci*0.03s, increasing left→right), preserves <br>, and moves the
+  full text onto an aria-label (visual spans aria-hidden) so SR output is unchanged. Runs once at init
+  for all four titles.
+- Swap is now class-driven, not display-toggled: loop() flips .flow-panel--active / --passed only
+  when `active` (= clamp(round(global))) changes — i.e. exactly at the zone midpoint — tracked via
+  lastActive so the CSS transition isn't re-triggered every frame. The per-frame counter-translateX
+  that keeps the text screen-fixed is unchanged and still runs every frame; display:none removed so
+  the leaving + entering titles are both present for the hand-off (parked ones are clipped/opacity-0,
+  so no visible overlap).
+- styles.css (after .flow-panel__pill): .flow-char clips (overflow hidden + descender padding trick);
+  .char slides on a plain .55s cubic-bezier transition with transition-delay:var(--d). Active panel →
+  .char at translateY(0); not-yet-reached panels park BELOW (+115%); --passed panels leave UP (-115%)
+  — so advancing the active zone runs a staggered up-slide out + up-slide in. index/sub/pills ride the
+  same active/passed states as a grouped slide+fade with their own small delays (.06/.16/.24s).
+- Mobile: added resets inside the existing @media(max-width:820px) flow block forcing .char transform
+  none + .flow-char overflow visible + index/sub/pills visible, since the loop (which adds --active)
+  never runs on mobile.
+- Verified with `node --check` on flow.js.
+
+### 2026-06-16 (zone-title reel — matched reference feel + pre-line whitespace)
+- User shared the reference's `.text-nav-link` CSS: font-size 5.25rem / line-height .94 /
+  `text-shadow:0 5.25rem` (a CLONE of the text one line below) + `[split-text]{white-space:pre-line}`
+  + transition `.6s cubic-bezier(.19,1,.22,1)`. The reveal: the slot is never empty — a duplicate
+  fills it as the letters roll. text-shadow only duplicates the SAME text (a same-text hover reel);
+  our zone titles change text, so per the user's choice ("next zone's text rolls in") the slot is
+  filled by the NEXT zone's real letters, not a self-clone.
+- This already happens via coincident per-letter masks: on a zone change the OUTGOING (passed) letters
+  roll 0→-115% up-and-out while the INCOMING (active) letters roll +115%→0 up-from-below, same timing,
+  in masks pinned to the same screen slot — so the slot stays filled (verified the math: at mid-roll
+  the slot shows the bottom of the outgoing letter + top of the incoming, a continuous reel).
+- styles.css: adopted the reference feel — `.char` transition is now `.6s cubic-bezier(.19,1,.22,1)`
+  (was .55s/.16,1,.3,1). Added `white-space:pre-line` to `.flow-panel__title`. Removed the
+  `.flow-char--space{width:.28em}` nbsp hack.
+- flow.js splitTitle(): spaces are now real " " text nodes and `<br>` becomes a "\n" text node;
+  pre-line renders both (matches the reference's [split-text] handling) — no space spans, no wasted
+  transitions on spaces, two-line titles preserved. Per-letter `--d` stagger (ci*0.03s) and the
+  aria-label/aria-hidden split are unchanged.
+- Mobile reset block unchanged (still forces .char transform none + .flow-char overflow visible).
+- Verified with `node --check` on flow.js.
+
+### 2026-06-16 (zone-title letters also fade in/out)
+- User: the title text's entry/exit should fade. Added opacity to the per-letter reel — `.char` now
+  defaults opacity:0 and transitions opacity alongside transform (same .6s cubic-bezier(.19,1,.22,1)
+  + per-letter --d stagger). Active → opacity 1; passed/upcoming → opacity 0. So each letter now
+  fades in as it rolls up into the slot and fades out as it rolls up and away.
+- Mobile reset updated to force .char opacity:1!important (the loop that adds --active never runs on
+  mobile, and the new default is opacity:0).
+- CSS only; no JS change. styles.css edited.
+
+### 2026-06-16 (fix hero↔flow + zone shade step — unify sky to hero bg)
+- Reported: hero and zone transitions show a "different shade of colour background." Cause (pre-existing,
+  from the journey rebuild, not the letter work): the hero is transparent over the Vanta scene
+  (backgroundColor 0xd0e1eb = rgb 208,225,235), but the flow's opaque `.flow__sky` was painted from a
+  LIGHTER set (TOP[0] #dbe6f4) and each zone used a different TOP/MID/BOT — so there was a step at
+  hero→flow and again between zones.
+- flow.js: TOP/MID/BOT now hold ONE shared gradient for all four zones, anchored to the hero colour —
+  TOP = rgb(208,225,235) (exactly the Vanta bg, so the hero seam vanishes), easing slightly lighter to
+  MID (223,233,242) / BOT (238,243,248) for soft depth. paintSky() cross-fade now produces no visible
+  shift (all zones identical) — kills the zone-to-zone shade jump too.
+- styles.css `.flow__sky` static gradient updated to match (#d0e1eb → #dfe9f2 → #eef3f8) so the
+  pre-JS / first paint matches as well.
+- Note: per the "never change colours" hard rule these are project-added sky values (not reference
+  design tokens); changed on explicit user request to remove the seam. Vanta config + CSS variables
+  untouched. Verified `node --check`.

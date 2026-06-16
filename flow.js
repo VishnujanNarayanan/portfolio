@@ -35,9 +35,13 @@
   function smooth(t) { return t * t * (3 - 2 * t); }
 
   /* ---------- Sky hue cross-fade between stages ---------- */
-  var TOP = [[219, 230, 244], [223, 228, 240], [231, 227, 243], [224, 233, 240]];
-  var MID = [[232, 238, 247], [235, 238, 244], [238, 236, 247], [236, 242, 244]];
-  var BOT = [[244, 245, 249], [245, 246, 248], [246, 244, 251], [246, 248, 248]];
+  // All four zones share ONE gradient anchored to the hero's Vanta background
+  // (rgb 208,225,235 = 0xd0e1eb) so hero→flow and zone→zone have no shade step.
+  // TOP (viewport top, the hero seam) is exactly the hero colour; it eases a
+  // touch lighter toward the bottom for soft depth — identical across zones.
+  var TOP = [[208, 225, 235], [208, 225, 235], [208, 225, 235], [208, 225, 235]];
+  var MID = [[223, 233, 242], [223, 233, 242], [223, 233, 242], [223, 233, 242]];
+  var BOT = [[238, 243, 248], [238, 243, 248], [238, 243, 248], [238, 243, 248]];
   function rgb(c1, c2, t) {
     return "rgb(" + Math.round(lerp(c1[0], c2[0], t)) + "," +
       Math.round(lerp(c1[1], c2[1], t)) + "," + Math.round(lerp(c1[2], c2[2], t)) + ")";
@@ -200,7 +204,58 @@
     renderer.render(scene, camera);
   }
 
+  /* ---------- Split each zone title into per-letter spans ----------
+     Mirrors the SplitText markup: the visible split is aria-hidden and the
+     full text is preserved on an aria-label so screen readers still read it.
+     Structure per glyph: <span class="flow-char">(clip)<span class="char">(moves)</span></span>.
+     Each .char carries an inline transition-delay (--d) that increases L→R so
+     the letters stagger; the up/down slide itself is plain CSS (see styles.css). */
+  function splitTitle(h) {
+    var label = h.textContent.replace(/\s+/g, " ").trim();
+    var frag = document.createDocumentFragment();
+    var ci = 0;
+    Array.prototype.forEach.call(h.childNodes, function (node) {
+      if (node.nodeType === 3) {                 // text → split into chars
+        var text = node.textContent;
+        for (var k = 0; k < text.length; k++) {
+          var ch = text[k];
+          if (ch === " ") {
+            // Real whitespace text node — white-space:pre-line on the title
+            // preserves it (matches the reference's [split-text] handling), so
+            // no nbsp/width hack and no transition is wasted on spaces.
+            frag.appendChild(document.createTextNode(" "));
+          } else {
+            var clip = document.createElement("span");
+            clip.className = "flow-char";
+            clip.setAttribute("aria-hidden", "true");
+            var inner = document.createElement("span");
+            inner.className = "char";
+            inner.textContent = ch;
+            inner.style.setProperty("--d", (ci * 0.03).toFixed(3) + "s");
+            clip.appendChild(inner);
+            frag.appendChild(clip);
+            ci++;
+          }
+        }
+      } else if (node.nodeType === 1 && node.tagName === "BR") {
+        // <br> → newline; pre-line turns it into a real line break between the
+        // inline-block letters, so each title keeps its two-line layout.
+        frag.appendChild(document.createTextNode("\n"));
+      } else {
+        frag.appendChild(node.cloneNode(true));
+      }
+    });
+    h.textContent = "";
+    h.setAttribute("aria-label", label);
+    h.appendChild(frag);
+  }
+  panels.forEach(function (panel) {
+    var title = panel.querySelector(".flow-panel__title");
+    if (title) splitTitle(title);
+  });
+
   /* ---------- Main loop ---------- */
+  var lastActive = -1;
   var vh = window.innerHeight;
   function loop() {
     var rect = flow.getBoundingClientRect();
@@ -217,17 +272,25 @@
     paintSky(global);
 
     var active = clamp(Math.round(global), 0, N - 1);
-    // The text block stays put on screen instead of riding the track: each
-    // panel's content gets a counter-translateX that cancels its panel's
-    // current screen offset (pi*vw + trackX), so it always renders at its
-    // CSS `left` position regardless of scroll. Only the active stage's
-    // text is shown, swapping instantly at the zone midpoint (no animation).
+    // The text block stays put on screen instead of riding the track: every
+    // frame each panel's content gets a counter-translateX that cancels its
+    // panel's current screen offset (pi*vw + trackX), so it always renders at
+    // its CSS `left` position regardless of how far the track has slid.
     panels.forEach(function (panel, pi) {
       var content = panel.querySelector(".flow-panel__content");
-      if (!content) return;
-      content.style.display = pi === active ? "" : "none";
-      content.style.transform = "translateY(-58%) translateX(" + (-(pi * vw + trackX)) + "px)";
+      if (content) content.style.transform = "translateY(-58%) translateX(" + (-(pi * vw + trackX)) + "px)";
     });
+    // Which zone's text is shown is class-driven, so the swap is a real CSS
+    // transition (the per-letter up-slide), not an instant cut. Flip the
+    // classes only when `active` actually changes — at the zone midpoint
+    // (Math.round) — so we never re-trigger the transition mid-flight.
+    if (active !== lastActive) {
+      panels.forEach(function (panel, pi) {
+        panel.classList.toggle("flow-panel--active", pi === active);
+        panel.classList.toggle("flow-panel--passed", pi < active);
+      });
+      lastActive = active;
+    }
 
     var now = Date.now();
     cards.forEach(function (c) {
