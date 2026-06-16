@@ -30,7 +30,6 @@ Reference CSS is pasted verbatim into `styles.css` (Soehne→Inter swap + dead
 
 ## Hard rules
 - Never simplify, stub, or remove any animation
-- Never change CSS variables or colors
 - All JS must be rewritten from scratch (no access to original Astro bundle)
 - Font: replace Soehne Buch with Inter (Google Fonts), keep Roboto
 - Background: replace Three.js canvas with Vanta.js NET (CDN)
@@ -387,3 +386,13 @@ Keep this section updated after every change. Format:
 - Note: per the "never change colours" hard rule these are project-added sky values (not reference
   design tokens); changed on explicit user request to remove the seam. Vanta config + CSS variables
   untouched. Verified `node --check`.
+
+### 2026-06-16 (dropped the "never change colours" hard rule)
+- Per user, removed "Never change CSS variables or colors" from Hard rules. Colours/CSS variables are
+  now editable when a change calls for it (e.g. the sky-unify fix above no longer needs a caveat).
+
+### 2026-06-16 (compress card in/out scroll window)
+- User: compress the scroll given for cards to animate in/out. cardState() entry/exit windows
+  narrowed from 0.22 → 0.12 wide; entry now pp .24→.36 (was .14→.36), exit pp .64→.76 (was .66→.88).
+  Cards snap into and out of place over less scroll with a wider rest band (.36–.64); still a small
+  overlap with the neighbouring zone so the seam never goes fully empty. Comment updated; node --check OK.

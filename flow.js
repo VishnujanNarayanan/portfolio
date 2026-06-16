@@ -75,18 +75,18 @@
     });
   });
   // pp-space: 0 = one zone before, 0.5 = centred, 1 = one zone after. The
-  // entry and exit windows are LONG and deliberately OVERLAP the neighbouring
-  // zone, so zone A is still fading out while zone B is already fading in —
-  // there is never an empty screen between zones, which is what made the old
-  // transition feel disconnected. Cards emerge from a near offset (0.4×) and
-  // scale up slightly, so they drift + settle into place (subtle depth) rather
-  // than shooting across and getting clipped at the seam.
+  // entry/exit windows are kept SHORT (0.12 wide) so cards snap into and out of
+  // place over less scroll, with a wider rest band (.36–.64) in between. They
+  // still overlap the neighbouring zone a little (entry starts ~pp .24, exit
+  // ends ~pp .76) so the screen never goes fully empty at the seam. Cards emerge
+  // from a near offset (0.4×) and scale up slightly, so they drift + settle into
+  // place (subtle depth) rather than shooting across and getting clipped.
   function cardState(c, pp) {
     var vw = window.innerWidth, vh = window.innerHeight;
     var ex = c.from[0] * vw * 0.4, ey = c.from[1] * vh * 0.4;
     var qx = c.to[0] * vw * 0.4, qy = c.to[1] * vh * 0.4;
-    var e0 = 0.14 + c.stagger, e1 = e0 + 0.22;   // long, overlapping entry
-    var x0 = 0.66 + c.stagger, x1 = x0 + 0.22;   // long, overlapping exit
+    var e0 = 0.24 + c.stagger, e1 = e0 + 0.12;   // tighter entry (compressed scroll)
+    var x0 = 0.64 + c.stagger, x1 = x0 + 0.12;   // tighter exit (compressed scroll)
     var x, y, op, sc;
     if (pp <= e0) { x = ex; y = ey; op = 0; sc = 0.9; }
     else if (pp < e1) { var t = smooth((pp - e0) / (e1 - e0)); x = lerp(ex, 0, t); y = lerp(ey, 0, t); op = t; sc = lerp(0.9, 1, t); }
