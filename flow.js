@@ -46,7 +46,7 @@
     return {
       REST: { ex: 0, sx: 0, tx: 0, ty: 0, ry: 0, rx: 0 },
       APPEAR: { ex: vw * 0.22, sx: 50, tx: -222.2, ty: 88, ry: 60, rx: 35 },
-      EXIT: { ex: 0, sx: -50, tx: 222.2, ty: -88, ry: -35, rx: -60 }
+      EXIT: { ex: 0, sx: -50, tx: 222.2, ty: -88, ry: 60, rx: 35 }
     };
   }
   function lerpPose(a, b, t) {

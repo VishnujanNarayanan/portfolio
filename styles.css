@@ -104,7 +104,7 @@ body.nav-open{overflow:hidden}
    eases everything back to the resting .hero.show state. The .hero.show prefix
    gives the specificity to beat the resting/arrival rules. Easing is a fast-
    start curve (no slow ease-in ramp) so motion begins the instant it triggers. */
-.hero.show.hero--leaving .hero__title,.hero.show.hero--leaving .hero__subtitle{opacity:0;transform:perspective(1000px) translate(-50%) translate3d(222.2px,-88px,0) rotateY(-35deg) rotateX(-60deg);transition:opacity .35s cubic-bezier(.2,0,0,1),transform .35s cubic-bezier(.2,0,0,1)}
+.hero.show.hero--leaving .hero__title,.hero.show.hero--leaving .hero__subtitle{opacity:0;transform:perspective(1000px) translate(-50%) translate3d(222.2px,-88px,0) rotateY(60deg) rotateX(35deg);transition:opacity .35s cubic-bezier(.2,0,0,1),transform .35s cubic-bezier(.2,0,0,1)}
 /* scroll cue leaves with it: label slides back down out of the clip, underline retracts */
 .hero.show.hero--leaving .hsbtn-in{transform:translate3d(0,calc(100% + 7px),0);transition:transform .6s cubic-bezier(.2,0,0,1)}
 .hero.show.hero--leaving .hero__scroll-btn>span:after{transform:scaleX(0) translateZ(0);transition:transform .4s var(--ease-default)}
