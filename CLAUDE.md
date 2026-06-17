@@ -568,3 +568,62 @@ Keep this section updated after every change. Format:
   enter from APPEAR, leave to EXIT; UP: the mirror — enter from EXIT, leave back to APPEAR. `from`
   captures the live pose so a mid-flight reversal continues without jumping. Steady non-active panels
   rest at EXIT (pi<active) or APPEAR (pi>active), opacity 0. node --check OK.
+
+### 2026-06-17 (forward entrance = timed 3D appear-near-mid + scroll-driven slide to rest)
+- User: on forward scroll the appear should make the text appear near mid, THEN be scroll-driven to its
+  position and sticky — keeping all current animations.
+- flow.js: the forward-entering _anim is now scrollX:true. Added scrollPose(AP,mx,f,s) = the hero
+  APPEAR 3D part (sx/tx/ty/ry/rx) scaled by a TIMER factor f (1→0 over ENTER_MS — "appears near mid"),
+  with the horizontal slide ex driven by SCROLL factor s=fwdS(pi,global)=smooth(clamp((d+0.5)/0.5)) from
+  MID_X(=vw*.28)→0 (rest at d=0, sticky d≥0). Per-frame: scrollX branch resolves 3D on the timer + X on
+  scroll, opacity 1 (no fade), clears _anim only when el≥dur AND s≥1. poseOf() handles scrollX so a
+  mid-flight reversal captures the live hybrid pose. Backward entrance (timed EXIT→REST) and exits are
+  unchanged (scrollX:false). node --check OK.
+
+### 2026-06-17 (appear lands nearer rest; backward entrance now scroll-parallaxes too)
+- User: the appear landed too far toward the middle (halve the distance), and backward scroll didn't
+  trigger the text's scroll parallax (it was a fully timed entrance).
+- flow.js: MID_X vw*0.28 → vw*0.14 (appear lands ~half as far from rest). The ENTERING _anim is now
+  scrollX:true in BOTH directions, carrying back:!fwd + srcKind (APPEAR fwd / EXIT back). Generalized
+  the helpers: scrollPose(src,…) takes the 3D source pose; slideS(pi,global,back) gives the scroll
+  slide factor — forward enters from the d=-0.5 side (rest by d≥0), backward from the d=+0.5 side (rest
+  by d≤0), sticky at rest either way; srcPose(P,a) resolves the kind. So scrolling up the returning
+  title resolves its EXIT 3D on the timer while sliding to rest under scroll control, mirroring the
+  forward entrance. Leaving (exit) stays timed both directions. node --check OK.
+
+### 2026-06-17 (zone title = pure scroll-scrubbed pose → exact reverse on scroll-up)
+- User: the backward behaviour was wrong — it triggered the previous text's scroll entrance instead of
+  REVERSING the forward transition. Root cause: the title used timed/threshold-fired _anim with
+  per-direction logic, which doesn't reverse cleanly.
+- flow.js: scrapped the _anim/poseOf/slideS/srcPose machinery. The title pose+opacity is now titlePose(d)
+  — a PURE FUNCTION of scroll position d=global-pi: d≤-.5+GAP hidden at mid; -.5<d<0 ENTER (APPEAR 3D
+  resolves over W3D=.18 → appears near mid, slide mid→rest over the entry half, no fade); 0≤d≤.5 REST
+  sticky; .5<d<.5+EXIT_W(.3) EXIT (fly to opposite corner + fade); beyond, gone. Because it's purely
+  scrubbed, scrolling up walks the identical curve backwards — the entrance plays in reverse (slide out
+  + un-appear), the exit un-exits — no separate per-direction animation, no "previous text" entrance.
+  Per-frame just calls titlePose(global-pi); active/passed class toggle (for index/sub/pills) kept.
+  Restored var now=Date.now() for the mobile card block. node --check OK.
+- Trade-off: dropped the timed-snappy/threshold-delay model (incompatible with exact reversibility);
+  snappiness now comes from short scrub windows (W3D/EXIT_W), tunable in titlePose().
+
+### 2026-06-17 (zone title: threshold-driven appear + exit, scroll-driven slide)
+- User: switch the appear and exit back to THRESHOLD-driven (timed); keep the sliding part scroll-driven;
+  keep the current appear/exit positions; touch nothing else.
+- flow.js: replaced the pure-scroll titlePose() with slideFactor(d) (the mid→rest sticky slide, still
+  scroll-driven) + threshold timers. On the active flip, the newly-active panel gets _appearT=now and the
+  newly-passed panel _exitT=now (upcoming cleared). Per frame: active = scrollPose(APPEAR, MID_X, f,
+  slideFactor(d)) where f=1-easeOut((now-_appearT)/ENTER_MS=420) is the TIMED 3D appear and the slide is
+  scroll-driven; passed = lerpPose(REST,EXIT, te=easeOut((now-_exitT)/EXIT_MS=280)) + opacity 1-te (timed
+  fly-out + fade); upcoming hidden at mid. Poses (APPEAR/REST/EXIT, MID_X=vw*.14) unchanged. Removed the
+  duplicate var now. node --check OK.
+
+### 2026-06-17 (zone title appear/exit now direction-aware mirrors — keep threshold-timed)
+- User: forward is fine, but scrolling back the returning previous zone should play the REVERSE of its
+  forward EXIT, and the current zone leaving up should play the REVERSE of its forward APPEAR.
+- flow.js: kept the threshold-timed appear/exit + scroll-driven slide, added direction tags. On each
+  crossing fwd=active>lastActive; the becoming-active panel records _dir(fwd/back)+_appearT, the just-left
+  panel records _ldir(fwd/back)+_leaveT. Per frame: active+_dir=fwd → scrollPose(APPEAR,MID_X,f,slideFactor)
+  (unchanged forward appear); active+_dir=back → lerpPose(EXIT,REST,tb)+op tb (fade-in = reverse of exit);
+  pi<active → lerpPose(REST,EXIT,te)+op 1-te (forward fly-out); pi>active & _ldir=back → lerpPose(REST,
+  APPEAR,tu)+op 1→0 (reverse of appear); else upcoming hidden at APPEAR. ENTER_MS=420/EXIT_MS=280, poses
+  unchanged. node --check OK.
