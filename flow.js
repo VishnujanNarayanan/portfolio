@@ -405,21 +405,24 @@
       var base = "translateY(-58%) translateX(" + (-(pi * vw + trackX)) + "px)";
       var p, op;
       if (pi === active) {
-        if (panel._dir === "back") {                     // reverse of its exit: EXIT → REST, fade in
-          var tb = easeOut(clamp((now - panel._appearT) / ENTER_MS, 0, 1));
+        var tb = panel._dir === "back" ? easeOut(clamp((now - panel._appearT) / ENTER_MS, 0, 1)) : 1;
+        if (panel._dir === "back" && tb < 1) {           // reverse of its exit, in progress: EXIT → REST, fade in
           p = lerpPose(P.EXIT, P.REST, tb); op = tb;
-        } else {                                         // forward appear: timed 3D + scroll slide
-          var f = panel._appearT ? 1 - easeOut(clamp((now - panel._appearT) / ENTER_MS, 0, 1)) : 0;
+        } else {                                         // appear/settled: 3D (timed fwd) + scroll-driven slide
+          var f = (panel._dir === "fwd" && panel._appearT) ? 1 - easeOut(clamp((now - panel._appearT) / ENTER_MS, 0, 1)) : 0;
           p = scrollPose(P.APPEAR, MID_X, f, slideFactor(global - pi)); op = 1;
         }
       } else if (pi < active) {                          // passed (left going forward): REST → EXIT, fade out
         var te = panel._leaveT ? easeOut(clamp((now - panel._leaveT) / EXIT_MS, 0, 1)) : 1;
         p = lerpPose(P.REST, P.EXIT, te); op = 1 - te;
-      } else if (panel._ldir === "back" && panel._leaveT) { // left going backward: reverse appear, REST → APPEAR
-        var tu = easeOut(clamp((now - panel._leaveT) / EXIT_MS, 0, 1));
-        p = lerpPose(P.REST, P.APPEAR, tu); op = tu < 1 ? 1 : 0;
-      } else {                                           // upcoming — hidden at APPEAR origin
-        p = P.APPEAR; op = 0;
+      } else if (panel._ldir === "back" && panel._leaveT) { // left going backward = reverse of appear:
+        // the slide rest→mid already happened via scroll while it was active (slideFactor),
+        // so here we only RE-RAISE the 3D (fu: 0→1) at mid — the reverse of the appear — while
+        // fading out, so the extreme rotated APPEAR pose never flashes at full opacity on exit.
+        var fu = easeOut(clamp((now - panel._leaveT) / EXIT_MS, 0, 1));
+        p = scrollPose(P.APPEAR, MID_X, fu, slideFactor(global - pi)); op = 1 - fu;
+      } else {                                           // upcoming — hidden at the APPEAR origin (mid)
+        p = scrollPose(P.APPEAR, MID_X, 1, 0); op = 0;
       }
       content.style.transform = poseStr(base, p);
       content.style.opacity = op;

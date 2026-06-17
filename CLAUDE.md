@@ -627,3 +627,26 @@ Keep this section updated after every change. Format:
   pi<active → lerpPose(REST,EXIT,te)+op 1-te (forward fly-out); pi>active & _ldir=back → lerpPose(REST,
   APPEAR,tu)+op 1→0 (reverse of appear); else upcoming hidden at APPEAR. ENTER_MS=420/EXIT_MS=280, poses
   unchanged. node --check OK.
+
+### 2026-06-17 (fix backward-leave hitch — reverse of appear, continuous handoff)
+- User: scrolling back, the current zone's exit still wasn't the reverse of its appear — a "hitch".
+- Cause: while a panel is still ACTIVE and you scroll up, the forward-appear's scroll-driven slide
+  (slideFactor) already walks it rest→mid; but the backward-leave then used lerpPose(REST,APPEAR,tu)
+  which RESTARTS at REST → a jump. Also slide(scroll) + lerp(timed) don't compose.
+- flow.js: backward-leave now continues the SAME scrollPose(APPEAR, MID_X, fu, slideFactor(d)) — the
+  slide rest→mid already happened via scroll during the active phase, so the leave only re-raises the 3D
+  (fu:0→1 timed) at mid = the exact reverse of the appear. Made every handoff pose coincide: upcoming =
+  scrollPose(APPEAR,MID_X,1,0) (matches both fwd-enter start and back-leave end); the active branch now
+  falls through to the scrollPose(+slideFactor) governance once the back-enter (EXIT→REST) completes
+  (tb≥1), so a zone entered-backward-then-left-backward also slides continuously. node --check OK.
+
+### 2026-06-17 (backward-leave: fade out so the rotated APPEAR pose doesn't flash)
+- User: still a slight hitch on backward leave — a flash of the current text rotated in an awkward
+  position at the leave threshold (the forward enter/rest look fine).
+- Cause: the backward-leave re-raises the 3D to the full (extreme) APPEAR pose at mid and held op=1
+  until fu=1 then popped to 0 — so the extreme rotated pose showed at full opacity right before hiding.
+  (Forward enter rotates IN toward upright so the same pose reads as arriving, not awkward.)
+- flow.js: backward-leave op is now 1-fu (fades out as the 3D un-resolves) instead of 1-then-pop, so the
+  rotated pose is never visible at full opacity. Motion (reverse-of-appear) unchanged. node --check OK.
+- If the rotated exit still reads wrong directionally, options: gentler exit pose, or fade faster
+  (op = 1 - clamp(fu*1.5,0,1)). Not applied yet — awaiting feedback.
