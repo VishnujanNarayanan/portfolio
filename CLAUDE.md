@@ -487,3 +487,166 @@ Keep this section updated after every change. Format:
   narrowed to BOX_W=9.5×BOX_H=6 so the image stays on the right half. Camera still dollies in x for
   background (geometry/particles) parallax; images are positioned camera-relative (camera.x + u.off).
 - node --check flow.js OK. Still needs a real-GPU browser over HTTP to view (headless WebGL caveat).
+
+### 2026-06-17 (zone title: slide in from mid-right → stick, replacing the per-letter reel)
+- User: change the zone title's entry/exit — it should enter from the RIGHT like the image but not the
+  far right (from the mid-half), move LEFT with the image, REACH its rest position while the image is
+  still moving, and then STICK there.
+- flow.js: removed the per-letter reel entirely (deleted splitTitle() + its caller; titles now render
+  as plain text). The main loop's title block now drives the WHOLE .flow-panel__content as a scroll
+  position: baseline is still the counter-translateX that pins it to its CSS `left` rest spot, and ON
+  TOP of that, per-panel distance d=global-pi maps entry/exit — d≤-0.5 parked at ENTER_X (=vw*0.22,
+  mid-right) op0; d:-0.5→0 slides ENTER_X→0 + fades in (smoothstep), reaching rest at the zone midpoint
+  while the image keeps sliding to centre (d:0→0.5 the title holds, sticky); d:0.5→1 slides to
+  EXIT_X (=-vw*0.34, off-screen left) + fades out, handing off to the next title entering from the
+  right over the same band. index/sub/pills keep their grouped fade via the active/passed classes.
+- styles.css: dropped the dead .flow-char/.char reel rules (desktop + the mobile reset) since no per-
+  letter spans exist anymore; kept white-space:pre-line so the <br> two-line titles still break.
+- Mobile unaffected (early-return before the loop; .flow-panel__content transform/opacity still forced
+  by the !important mobile rule). Verified node --check flow.js OK.
+
+### 2026-06-17 (zone title exit → hero fly-out pose, quicker)
+- User: make the zone title's EXIT like the hero text exit, but quicker. Entry/rest unchanged
+  (mid-right slide → stick). Hero exit pose (from styles.css .hero--leaving): opacity→0,
+  perspective(1000px) translate(-50%) translate3d(222.2px,-88px,0) rotateY(-35deg) rotateX(-60deg)
+  — an opposite-corner 3D throw.
+- flow.js: the leaving branch (d>0.5) now applies that exact hero pose on top of the screen-pin base,
+  scrubbed by tx=smooth(clamp((d-0.5)/EXIT_SPAN,0,1)) with EXIT_SPAN=0.3 (was the full 0.5 band) so it
+  completes over the first ~third of the leaving band → reads quicker than the hero's 0.35s timed exit.
+  At tx=0 the pose is identity, so it joins the rest branch seamlessly. Replaced the old simple
+  slide-left EXIT_X with this; opacity = 1-tx. node --check OK.
+
+### 2026-06-17 (zone title exit → threshold-fired, snappy timed fly-out)
+- User: the exit shouldn't be scroll-driven — it should be THRESHOLD-driven and snappy, fired at the
+  same threshold where the images swap (the zone midpoint, where active=round(global) flips).
+- flow.js: split the title forEach by panel vs `active` instead of by scrubbed `d` bands. pi>active =
+  upcoming (parked mid-right, op0); pi===active = scroll-driven ENTRY (d<0 slides ENTER_X→0 + fades)
+  then sticky rest (d≥0); pi<active = PASSED → snappy fly-out. The passed branch fires once at the
+  crossing (panel._exitStart=now set only if unset; cleared whenever the panel is active/upcoming, so
+  scrolling back up resets it) and ramps tx=easeOut(clamp((now-_exitStart)/EXIT_MS,0,1)), EXIT_MS=280
+  — a fixed-duration timed animation independent of scroll, applying the hero fly-out pose
+  (translate(-50%) translate3d(222.2,-88) rotateY(-35) rotateX(-60) + opacity 1-tx) on the screen-pin
+  base. Hoisted `now=Date.now()` to the top of loop() (removed the duplicate lower decl). node --check OK.
+
+### 2026-06-17 (zone title entry → hero APPEAR at the threshold, no fade-in)
+- User: at that same swap threshold the NEXT zone's title should play the hero text APPEAR animation;
+  remove the fade-in.
+- flow.js: entry is no longer scroll-driven. Now BOTH entry and exit are threshold-fired timed
+  animations at the active=round(global) flip (same point the images swap): the newly-active panel
+  plays the hero APPEAR pose (translate(50%) translate3d(-222.2,88) rotateY(60) rotateX(35) → identity)
+  over ENTER_MS=420, fired once via panel._enterStart (set when active, cleared otherwise so it re-fires
+  on scroll-up). NO fade-in — opacity is forced 1 the moment it's active (upcoming panels sit at
+  opacity 0, transform=base, hidden until their threshold), so the title appears at once and rotates
+  into rest rather than fading. Exit branch unchanged (hero fly-out + fade, EXIT_MS=280). Removed the
+  old ENTER_X mid-right slide. node --check OK.
+
+### 2026-06-17 (zone title entry = slide-in + hero appear, combined)
+- User asked why the mid-right slide-in was removed (the prior change replaced it with the hero appear).
+  Per the user's choice, the entry now COMBINES both as one threshold-fired entrance: the active panel's
+  content gets an extra translateX(f*ENTER_X) (ENTER_X=vw*0.22, mid-right slide decaying to rest)
+  layered on top of the hero appear pose (translate(50%) translate3d(-222.2,88) rotateY(60) rotateX(35)),
+  all scaled by f=1-easeOut(time/ENTER_MS). Still no fade-in (opacity forced 1 when active). Exit
+  unchanged. node --check OK.
+
+### 2026-06-17 (zone title entry: brief delay after threshold to kill overlap)
+- User: at the threshold there's a subtle overlap between outgoing/incoming title; add a small delay so
+  the new text shows slightly after the threshold (still threshold-fired, not scroll-position-fired).
+- flow.js: _enterStart is still armed at the threshold crossing, but the appear now starts from
+  elapsed = now - _enterStart - ENTER_DELAY; while elapsed<0 the new title is held hidden (opacity 0),
+  so the outgoing fly-out clears first. ENTER_DELAY=90ms (the user said 5ms, but that's below one
+  ~16ms frame so it wouldn't render as a delay; used 90ms as a subtle-but-visible value, single
+  constant to tweak). node --check OK.
+
+### 2026-06-17 (zone title transitions are direction-aware — reverse on scroll-up)
+- User: scrolling back up should REVERSE the title transition; it was identical forward/backward.
+- flow.js: replaced the _enterStart/_exitStart side logic with a pose model. Added buildPoses(vw)
+  {REST, APPEAR (hero entrance origin: ex=vw*.22 slide + translate(50%) translate3d(-222.2,88)
+  rotateY60 rotateX35), EXIT (opposite-corner fly-out)}, plus lerpPose/poseStr and poseOf() (a panel's
+  live pose now — interpolated if mid-flight, else steady by side). On each active flip the direction
+  (fwd = active>lastActive) picks poses: entering panel anim from=poseOf(...) → REST (no fade, after
+  ENTER_DELAY=90); leaving panel anim from=REST → (fwd?EXIT:APPEAR) (fade out, EXIT_MS=280). So DOWN:
+  enter from APPEAR, leave to EXIT; UP: the mirror — enter from EXIT, leave back to APPEAR. `from`
+  captures the live pose so a mid-flight reversal continues without jumping. Steady non-active panels
+  rest at EXIT (pi<active) or APPEAR (pi>active), opacity 0. node --check OK.
+
+### 2026-06-17 (forward entrance = timed 3D appear-near-mid + scroll-driven slide to rest)
+- User: on forward scroll the appear should make the text appear near mid, THEN be scroll-driven to its
+  position and sticky — keeping all current animations.
+- flow.js: the forward-entering _anim is now scrollX:true. Added scrollPose(AP,mx,f,s) = the hero
+  APPEAR 3D part (sx/tx/ty/ry/rx) scaled by a TIMER factor f (1→0 over ENTER_MS — "appears near mid"),
+  with the horizontal slide ex driven by SCROLL factor s=fwdS(pi,global)=smooth(clamp((d+0.5)/0.5)) from
+  MID_X(=vw*.28)→0 (rest at d=0, sticky d≥0). Per-frame: scrollX branch resolves 3D on the timer + X on
+  scroll, opacity 1 (no fade), clears _anim only when el≥dur AND s≥1. poseOf() handles scrollX so a
+  mid-flight reversal captures the live hybrid pose. Backward entrance (timed EXIT→REST) and exits are
+  unchanged (scrollX:false). node --check OK.
+
+### 2026-06-17 (appear lands nearer rest; backward entrance now scroll-parallaxes too)
+- User: the appear landed too far toward the middle (halve the distance), and backward scroll didn't
+  trigger the text's scroll parallax (it was a fully timed entrance).
+- flow.js: MID_X vw*0.28 → vw*0.14 (appear lands ~half as far from rest). The ENTERING _anim is now
+  scrollX:true in BOTH directions, carrying back:!fwd + srcKind (APPEAR fwd / EXIT back). Generalized
+  the helpers: scrollPose(src,…) takes the 3D source pose; slideS(pi,global,back) gives the scroll
+  slide factor — forward enters from the d=-0.5 side (rest by d≥0), backward from the d=+0.5 side (rest
+  by d≤0), sticky at rest either way; srcPose(P,a) resolves the kind. So scrolling up the returning
+  title resolves its EXIT 3D on the timer while sliding to rest under scroll control, mirroring the
+  forward entrance. Leaving (exit) stays timed both directions. node --check OK.
+
+### 2026-06-17 (zone title = pure scroll-scrubbed pose → exact reverse on scroll-up)
+- User: the backward behaviour was wrong — it triggered the previous text's scroll entrance instead of
+  REVERSING the forward transition. Root cause: the title used timed/threshold-fired _anim with
+  per-direction logic, which doesn't reverse cleanly.
+- flow.js: scrapped the _anim/poseOf/slideS/srcPose machinery. The title pose+opacity is now titlePose(d)
+  — a PURE FUNCTION of scroll position d=global-pi: d≤-.5+GAP hidden at mid; -.5<d<0 ENTER (APPEAR 3D
+  resolves over W3D=.18 → appears near mid, slide mid→rest over the entry half, no fade); 0≤d≤.5 REST
+  sticky; .5<d<.5+EXIT_W(.3) EXIT (fly to opposite corner + fade); beyond, gone. Because it's purely
+  scrubbed, scrolling up walks the identical curve backwards — the entrance plays in reverse (slide out
+  + un-appear), the exit un-exits — no separate per-direction animation, no "previous text" entrance.
+  Per-frame just calls titlePose(global-pi); active/passed class toggle (for index/sub/pills) kept.
+  Restored var now=Date.now() for the mobile card block. node --check OK.
+- Trade-off: dropped the timed-snappy/threshold-delay model (incompatible with exact reversibility);
+  snappiness now comes from short scrub windows (W3D/EXIT_W), tunable in titlePose().
+
+### 2026-06-17 (zone title: threshold-driven appear + exit, scroll-driven slide)
+- User: switch the appear and exit back to THRESHOLD-driven (timed); keep the sliding part scroll-driven;
+  keep the current appear/exit positions; touch nothing else.
+- flow.js: replaced the pure-scroll titlePose() with slideFactor(d) (the mid→rest sticky slide, still
+  scroll-driven) + threshold timers. On the active flip, the newly-active panel gets _appearT=now and the
+  newly-passed panel _exitT=now (upcoming cleared). Per frame: active = scrollPose(APPEAR, MID_X, f,
+  slideFactor(d)) where f=1-easeOut((now-_appearT)/ENTER_MS=420) is the TIMED 3D appear and the slide is
+  scroll-driven; passed = lerpPose(REST,EXIT, te=easeOut((now-_exitT)/EXIT_MS=280)) + opacity 1-te (timed
+  fly-out + fade); upcoming hidden at mid. Poses (APPEAR/REST/EXIT, MID_X=vw*.14) unchanged. Removed the
+  duplicate var now. node --check OK.
+
+### 2026-06-17 (zone title appear/exit now direction-aware mirrors — keep threshold-timed)
+- User: forward is fine, but scrolling back the returning previous zone should play the REVERSE of its
+  forward EXIT, and the current zone leaving up should play the REVERSE of its forward APPEAR.
+- flow.js: kept the threshold-timed appear/exit + scroll-driven slide, added direction tags. On each
+  crossing fwd=active>lastActive; the becoming-active panel records _dir(fwd/back)+_appearT, the just-left
+  panel records _ldir(fwd/back)+_leaveT. Per frame: active+_dir=fwd → scrollPose(APPEAR,MID_X,f,slideFactor)
+  (unchanged forward appear); active+_dir=back → lerpPose(EXIT,REST,tb)+op tb (fade-in = reverse of exit);
+  pi<active → lerpPose(REST,EXIT,te)+op 1-te (forward fly-out); pi>active & _ldir=back → lerpPose(REST,
+  APPEAR,tu)+op 1→0 (reverse of appear); else upcoming hidden at APPEAR. ENTER_MS=420/EXIT_MS=280, poses
+  unchanged. node --check OK.
+
+### 2026-06-17 (fix backward-leave hitch — reverse of appear, continuous handoff)
+- User: scrolling back, the current zone's exit still wasn't the reverse of its appear — a "hitch".
+- Cause: while a panel is still ACTIVE and you scroll up, the forward-appear's scroll-driven slide
+  (slideFactor) already walks it rest→mid; but the backward-leave then used lerpPose(REST,APPEAR,tu)
+  which RESTARTS at REST → a jump. Also slide(scroll) + lerp(timed) don't compose.
+- flow.js: backward-leave now continues the SAME scrollPose(APPEAR, MID_X, fu, slideFactor(d)) — the
+  slide rest→mid already happened via scroll during the active phase, so the leave only re-raises the 3D
+  (fu:0→1 timed) at mid = the exact reverse of the appear. Made every handoff pose coincide: upcoming =
+  scrollPose(APPEAR,MID_X,1,0) (matches both fwd-enter start and back-leave end); the active branch now
+  falls through to the scrollPose(+slideFactor) governance once the back-enter (EXIT→REST) completes
+  (tb≥1), so a zone entered-backward-then-left-backward also slides continuously. node --check OK.
+
+### 2026-06-17 (backward-leave: fade out so the rotated APPEAR pose doesn't flash)
+- User: still a slight hitch on backward leave — a flash of the current text rotated in an awkward
+  position at the leave threshold (the forward enter/rest look fine).
+- Cause: the backward-leave re-raises the 3D to the full (extreme) APPEAR pose at mid and held op=1
+  until fu=1 then popped to 0 — so the extreme rotated pose showed at full opacity right before hiding.
+  (Forward enter rotates IN toward upright so the same pose reads as arriving, not awkward.)
+- flow.js: backward-leave op is now 1-fu (fades out as the 3D un-resolves) instead of 1-then-pop, so the
+  rotated pose is never visible at full opacity. Motion (reverse-of-appear) unchanged. node --check OK.
+- If the rotated exit still reads wrong directionally, options: gentler exit pose, or fade faster
+  (op = 1 - clamp(fu*1.5,0,1)). Not applied yet — awaiting feedback.

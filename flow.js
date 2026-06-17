@@ -36,6 +36,44 @@
   function easeIn(t) { return t * t * t; }
   function smooth(t) { return t * t * (3 - 2 * t); }
 
+  /* ---------- Zone-title poses ----------
+     A title pose = where the .flow-panel__content sits relative to its rest spot:
+       ex  extra px slide on X (the mid slide-in layered onto the appear)
+       sx  translate %        tx/ty translate3d px      ry/rx rotateY/rotateX deg
+     REST = identity. APPEAR = the hero entrance origin (3D, bottom-right).
+     EXIT = the hero fly-out target (opposite corner). */
+  function buildPoses(vw) {
+    return {
+      REST: { ex: 0, sx: 0, tx: 0, ty: 0, ry: 0, rx: 0 },
+      APPEAR: { ex: vw * 0.22, sx: 50, tx: -222.2, ty: 88, ry: 60, rx: 35 },
+      EXIT: { ex: 0, sx: -50, tx: 222.2, ty: -88, ry: 60, rx: 35 }
+    };
+  }
+  function lerpPose(a, b, t) {
+    return {
+      ex: lerp(a.ex, b.ex, t), sx: lerp(a.sx, b.sx, t), tx: lerp(a.tx, b.tx, t),
+      ty: lerp(a.ty, b.ty, t), ry: lerp(a.ry, b.ry, t), rx: lerp(a.rx, b.rx, t)
+    };
+  }
+  function poseStr(base, p) {
+    return base + " translateX(" + p.ex + "px) perspective(1000px) translate(" + p.sx +
+      "%) translate3d(" + p.tx + "px," + p.ty + "px,0) rotateY(" + p.ry + "deg) rotateX(" + p.rx + "deg)";
+  }
+  // Hybrid entrance pose: the APPEAR 3D part (sx/tx/ty/ry/rx) resolved by factor f
+  // (1=full → 0=resolved), the horizontal slide from mid (mx) to rest by factor s.
+  function scrollPose(src, mx, f, s) {
+    return {
+      ex: lerp(mx, 0, s), sx: f * src.sx, tx: f * src.tx,
+      ty: f * src.ty, ry: f * src.ry, rx: f * src.rx
+    };
+  }
+  // Scroll-driven slide factor: stays at mid until d=-0.5+GAP, slides mid→rest by
+  // d=0, then sticky. (The 3D appear + the exit are TIMED, fired at the threshold.)
+  function slideFactor(d) {
+    var GAP = 0.05;
+    return smooth(clamp((d + 0.5 - GAP) / (0.5 - GAP), 0, 1));
+  }
+
   /* ---------- Sky hue cross-fade between stages ---------- */
   // All four zones share ONE gradient anchored to the hero's Vanta background
   // (rgb 208,225,235 = 0xd0e1eb) so hero→flow and zone→zone have no shade step.
@@ -314,56 +352,6 @@
     renderer.render(scene, camera);
   }
 
-  /* ---------- Split each zone title into per-letter spans ----------
-     Mirrors the SplitText markup: the visible split is aria-hidden and the
-     full text is preserved on an aria-label so screen readers still read it.
-     Structure per glyph: <span class="flow-char">(clip)<span class="char">(moves)</span></span>.
-     Each .char carries an inline transition-delay (--d) that increases L→R so
-     the letters stagger; the up/down slide itself is plain CSS (see styles.css). */
-  function splitTitle(h) {
-    var label = h.textContent.replace(/\s+/g, " ").trim();
-    var frag = document.createDocumentFragment();
-    var ci = 0;
-    Array.prototype.forEach.call(h.childNodes, function (node) {
-      if (node.nodeType === 3) {                 // text → split into chars
-        var text = node.textContent;
-        for (var k = 0; k < text.length; k++) {
-          var ch = text[k];
-          if (ch === " ") {
-            // Real whitespace text node — white-space:pre-line on the title
-            // preserves it (matches the reference's [split-text] handling), so
-            // no nbsp/width hack and no transition is wasted on spaces.
-            frag.appendChild(document.createTextNode(" "));
-          } else {
-            var clip = document.createElement("span");
-            clip.className = "flow-char";
-            clip.setAttribute("aria-hidden", "true");
-            var inner = document.createElement("span");
-            inner.className = "char";
-            inner.textContent = ch;
-            inner.style.setProperty("--d", (ci * 0.03).toFixed(3) + "s");
-            clip.appendChild(inner);
-            frag.appendChild(clip);
-            ci++;
-          }
-        }
-      } else if (node.nodeType === 1 && node.tagName === "BR") {
-        // <br> → newline; pre-line turns it into a real line break between the
-        // inline-block letters, so each title keeps its two-line layout.
-        frag.appendChild(document.createTextNode("\n"));
-      } else {
-        frag.appendChild(node.cloneNode(true));
-      }
-    });
-    h.textContent = "";
-    h.setAttribute("aria-label", label);
-    h.appendChild(frag);
-  }
-  panels.forEach(function (panel) {
-    var title = panel.querySelector(".flow-panel__title");
-    if (title) splitTitle(title);
-  });
-
   /* ---------- Main loop ---------- */
   var lastActive = -1;
   var vh = window.innerHeight;
@@ -382,30 +370,67 @@
     paintSky(global);
 
     var active = clamp(Math.round(global), 0, N - 1);
-    // The text block stays put on screen instead of riding the track: every
-    // frame each panel's content gets a counter-translateX that cancels its
-    // panel's current screen offset (pi*vw + trackX), so it always renders at
-    // its CSS `left` position regardless of how far the track has slid.
-    panels.forEach(function (panel, pi) {
-      var content = panel.querySelector(".flow-panel__content");
-      if (content) content.style.transform = "translateY(-58%) translateX(" + (-(pi * vw + trackX)) + "px)";
-    });
-    // Which zone's text is shown is class-driven, so the swap is a real CSS
-    // transition (the per-letter up-slide), not an instant cut. Flip the
-    // classes only when `active` actually changes — at the zone midpoint
-    // (Math.round) — so we never re-trigger the transition mid-flight.
+    var now = Date.now();
+    var P = buildPoses(vw);
+    // Title motion. Each panel's content is screen-pinned (counter-translateX
+    // cancels its panel's screen offset pi*vw+trackX, so its baseline is its CSS
+    // `left` rest spot). Appear + exit are THRESHOLD-driven (timed, fired at the
+    // swap crossing) and DIRECTION-AWARE so scrolling up plays the mirror:
+    //   forward enter  : APPEAR → REST  (timed 3D + scroll-driven slide, no fade)
+    //   forward leave  : REST  → EXIT   (timed fly-out + fade out)
+    //   backward enter : EXIT  → REST   (timed, fade in)  = reverse of its forward exit
+    //   backward leave : REST  → APPEAR (timed)            = reverse of its forward appear
+    // On each crossing we tag the two panels that change with the direction + a
+    // start time; everything else is computed from those each frame.
+    var MID_X = vw * 0.14;       // where the forward appear lands before the scroll-slide
+    var ENTER_MS = 420;          // timed appear (3D fwd / EXIT→REST back)
+    var EXIT_MS = 280;           // timed leave (fly-out fwd / REST→APPEAR back)
     if (active !== lastActive) {
+      var fwd = active > lastActive;                     // scroll direction at this crossing
       panels.forEach(function (panel, pi) {
+        if (pi === active) {                             // becoming active → appear
+          panel._dir = fwd ? "fwd" : "back"; panel._appearT = now; panel._leaveT = 0;
+        } else if (pi === lastActive) {                  // just left → exit
+          panel._ldir = fwd ? "fwd" : "back"; panel._leaveT = now; panel._appearT = 0;
+        }
+        // index / sub / pills keep their grouped fade via the active/passed classes.
         panel.classList.toggle("flow-panel--active", pi === active);
         panel.classList.toggle("flow-panel--passed", pi < active);
       });
       lastActive = active;
     }
+    panels.forEach(function (panel, pi) {
+      var content = panel.querySelector(".flow-panel__content");
+      if (!content) return;
+      var base = "translateY(-58%) translateX(" + (-(pi * vw + trackX)) + "px)";
+      var p, op;
+      if (pi === active) {
+        var tb = panel._dir === "back" ? easeOut(clamp((now - panel._appearT) / ENTER_MS, 0, 1)) : 1;
+        if (panel._dir === "back" && tb < 1) {           // reverse of its exit, in progress: EXIT → REST, fade in
+          p = lerpPose(P.EXIT, P.REST, tb); op = tb;
+        } else {                                         // appear/settled: 3D (timed fwd) + scroll-driven slide
+          var f = (panel._dir === "fwd" && panel._appearT) ? 1 - easeOut(clamp((now - panel._appearT) / ENTER_MS, 0, 1)) : 0;
+          p = scrollPose(P.APPEAR, MID_X, f, slideFactor(global - pi)); op = 1;
+        }
+      } else if (pi < active) {                          // passed (left going forward): REST → EXIT, fade out
+        var te = panel._leaveT ? easeOut(clamp((now - panel._leaveT) / EXIT_MS, 0, 1)) : 1;
+        p = lerpPose(P.REST, P.EXIT, te); op = 1 - te;
+      } else if (panel._ldir === "back" && panel._leaveT) { // left going backward = reverse of appear:
+        // the slide rest→mid already happened via scroll while it was active (slideFactor),
+        // so here we only RE-RAISE the 3D (fu: 0→1) at mid — the reverse of the appear — while
+        // fading out, so the extreme rotated APPEAR pose never flashes at full opacity on exit.
+        var fu = easeOut(clamp((now - panel._leaveT) / EXIT_MS, 0, 1));
+        p = scrollPose(P.APPEAR, MID_X, fu, slideFactor(global - pi)); op = 1 - fu;
+      } else {                                           // upcoming — hidden at the APPEAR origin (mid)
+        p = scrollPose(P.APPEAR, MID_X, 1, 0); op = 0;
+      }
+      content.style.transform = poseStr(base, p);
+      content.style.opacity = op;
+    });
 
     // On desktop the GL image planes replace the DOM card floats (hidden via
     // CSS), so skip their per-frame transforms entirely. Mobile never reaches
     // this loop (it returns early in boot), so the card code still serves it.
-    var now = Date.now();
     if (!THREEok) cards.forEach(function (c) {
       var pp = 0.5 + (global - c.panel) * 0.5;
       var st = cardState(c, pp);
