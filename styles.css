@@ -258,7 +258,7 @@ header .header__nav-left a{color:#050419;font-size:16px}
 /* Background swap (dynamic-bg-swap): hero now shows the light flow-sky gradient as its
    zoom-out image; the shader (#vanta-bg) is the global background revealed behind it AND
    shown through the flow (flow__sky forced transparent — beats flow.js's inline paint). */
-.hero .hero__bg{position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,#d0e1eb 0%,#dfe9f2 55%,#eef3f8 100%)}
+.hero .hero__bg{position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,#ecf4ed 0%,#f2f7f2 55%,#f8faf6 100%)}
 .flow .flow__sky{background:transparent!important}
 
 /* Flow titles over the dark shader background → white */
