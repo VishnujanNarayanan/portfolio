@@ -347,7 +347,7 @@
       var g = images[k], u = g.userData;
       var targetX = (k === sel) ? (REST_X * (0.5 - local)) : (k < sel ? OFF_L : OFF_R);
       if (u.off === undefined) u.off = targetX;
-      u.off += (targetX - u.off) * 0.18;                  // tracks scroll within a zone; quick at the flip
+      u.off += (targetX - u.off) * 0.08;                  // tracks scroll; softer catch-up so the flip swaps less abruptly
       g.position.x = camera.position.x + u.off;
       g.position.y = u.baseY + Math.sin(t * u.fp + u.ph) * u.amp;
       g.rotation.x = lerp(g.rotation.x, my * 0.06, 0.08) + Math.sin(t * 0.3 + k) * 0.01;
