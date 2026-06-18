@@ -159,8 +159,8 @@
     lineEl.setAttribute("d", d);
     fillEl.setAttribute("d", d);
     fillLen = fillEl.getTotalLength();
-    fillEl.style.strokeDasharray = fillLen;
-    fillEl.style.strokeDashoffset = fillLen;
+    fillEl.style.strokeDasharray = "none";
+    fillEl.style.strokeDashoffset = 0;  // spine is always fully drawn (no progress fill)
     for (var s = 0; s <= 240; s++) {
       var p = fillEl.getPointAtLength(s / 240 * fillLen);
       curveXY.push({ x: p.x, y: p.y });
@@ -487,7 +487,6 @@
     } else {
       nodeEls.forEach(function (n, i) { n.classList.toggle("flow-journey__node--active", i === active); });
     }
-    if (fillEl) fillEl.style.strokeDashoffset = fillLen * (1 - progress);
 
     if (dbg) updateDebug(progress, global);
 
