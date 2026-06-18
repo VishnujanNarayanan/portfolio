@@ -198,7 +198,8 @@ body.nav-open{overflow:hidden}
 .flow-journey__line{fill:none;stroke:rgba(57,50,220,.22);stroke-width:2}
 .flow-journey__fill{fill:none;stroke:var(--color-highlight);stroke-width:2.5;stroke-linecap:round}
 .flow-journey__nodes{position:absolute;inset:0;overflow:visible}
-.flow-journey__node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:7px;background:none;border:0;padding:0;pointer-events:auto;cursor:pointer}
+.flow-journey__node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:7px;background:none;border:0;padding:0;pointer-events:auto;cursor:pointer;opacity:0;transition:opacity .3s var(--ease-default)}
+.flow-journey__node--in{opacity:1}
 .flow-journey__zone{font-family:var(--font-ui);font-size:9px;letter-spacing:.22em;color:var(--color-text-subtle);opacity:.7;transition:opacity .3s,color .3s}
 .flow-journey__dot{width:11px;height:11px;border-radius:50%;background:#fff;border:2px solid rgba(57,50,220,.4);transition:width .35s var(--ease-default),height .35s var(--ease-default),background-color .35s,border-color .35s,box-shadow .35s}
 .flow-journey__name{font-family:var(--font-ui);font-size:11px;letter-spacing:.02em;color:var(--color-text-muted);white-space:nowrap;opacity:0;transform:translateY(-4px);transition:opacity .35s,transform .35s,color .35s}
