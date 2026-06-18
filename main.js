@@ -211,17 +211,21 @@
       var a = vh(ix, iy), b = vh(ix + 1, iy), c2 = vh(ix, iy + 1), d = vh(ix + 1, iy + 1);
       return (a * (1 - ux) + b * ux) * (1 - uy) + (c2 * (1 - ux) + d * ux) * uy;
     }
+    // Metaballs (round, closed iso-loops) laid out on a JITTERED GRID so they cover the
+    // viewport evenly (no clustered/empty areas), each drifting only a little within its
+    // cell. Overlapping neighbours merge → some branching, while loops stay rounded.
     var BLOBS = [];
     function seedBlobs() {
-      BLOBS = [];
-      for (var i = 0; i < 7; i++) {
+      BLOBS = []; var gx = 4, gy = 3, i, j;
+      for (j = 0; j < gy; j++) for (i = 0; i < gx; i++) {
         BLOBS.push({
-          bx: Math.random(), by: Math.random(),
-          ox: 0.12 + Math.random() * 0.22, oy: 0.12 + Math.random() * 0.22,
-          sx: 0.06 + Math.random() * 0.12, sy: 0.06 + Math.random() * 0.12,
+          bx: (i + 0.5) / gx + (Math.random() - 0.5) * 0.14,
+          by: (j + 0.5) / gy + (Math.random() - 0.5) * 0.14,
+          ox: 0.05 + Math.random() * 0.05, oy: 0.05 + Math.random() * 0.05,  // small orbit → stays even
+          sx: 0.05 + Math.random() * 0.1, sy: 0.05 + Math.random() * 0.1,
           px: Math.random() * 6.28, py: Math.random() * 6.28,
-          r: 0.16 + Math.random() * 0.14,
-          pulse: 0.5 + Math.random() * 0.9,
+          r: 0.14 + Math.random() * 0.07,
+          pulse: 0.4 + Math.random() * 0.7,
           pph: Math.random() * 6.28
         });
       }
@@ -239,13 +243,13 @@
     }
     seedBlobs(); resize();
     window.addEventListener("resize", resize, { passive: true });
-    var LEVELS = [0.2, 0.36, 0.54, 0.74, 0.95];        // fewer nested lines (was 6)
+    var LEVELS = [0.22, 0.36, 0.52, 0.7];              // fewer, rounded nested loops
     function lerp(a, b, t) { return a + (b - a) * t; }
     // marching squares over the shared field → closed, non-overlapping contours
     function drawContours(g, stroke) {
       g.clearRect(0, 0, W, H);
       g.lineCap = "round"; g.lineJoin = "round";
-      g.strokeStyle = stroke; g.lineWidth = 0.7;
+      g.strokeStyle = stroke; g.lineWidth = 0.45;
       var li, lv, r, c;
       for (li = 0; li < LEVELS.length; li++) {
         lv = LEVELS[li];
@@ -278,21 +282,20 @@
     var t = 0, last = 0;
     function frame(now) {
       var dt = last ? Math.min((now - last) / 1000, 0.05) : 0; last = now;
-      t += dt * 0.28;                                    // slow drift (−30%)
-      var md = Math.min(W, H), wf = 2.6 / md, warp = md * 0.18; // domain-warp strength
+      t += dt * 0.5;                                     // drift speed
+      var md = Math.min(W, H), wf = 2.6 / md, warp = md * 0.08; // gentle warp → rounded, not perfect circles
       var bx = [], by = [], br = [], bw = [], i, c, r;
       for (i = 0; i < BLOBS.length; i++) {
         var b = BLOBS[i];
         bx[i] = (b.bx + Math.cos(t * b.sx * 6.28 + b.px) * b.ox) * W;
         by[i] = (b.by + Math.sin(t * b.sy * 6.28 + b.py) * b.oy) * H;
         br[i] = b.r * md;
-        bw[i] = 0.55 + 0.45 * Math.sin(t * b.pulse + b.pph);
+        bw[i] = 0.6 + 0.4 * Math.sin(t * b.pulse + b.pph);
       }
       for (r = 0; r <= rows; r++) {
         field[r] = field[r] || [];
         for (c = 0; c <= cols; c++) {
           var px = c * CELL, py = r * CELL;
-          // warp the sample point with noise so iso-lines aren't clean circles/ovals
           var wx = px + (noise2(px * wf + t * 0.1, py * wf) - 0.5) * 2 * warp;
           var wy = py + (noise2(px * wf + 5.2, py * wf - t * 0.1) - 0.5) * 2 * warp;
           var sum = 0;
