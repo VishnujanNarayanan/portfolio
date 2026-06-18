@@ -374,6 +374,7 @@
     var P = buildPoses(vw);
     // Title motion. Each panel's content is screen-pinned (counter-translateX
     // cancels its panel's screen offset pi*vw+trackX, so its baseline is its CSS
+<<<<<<< Updated upstream
     // `left` rest spot regardless of how far the track slid). Both entry and exit
     // are THRESHOLD-driven, fired at the swap threshold (active=round(global)
     // flips at the zone midpoint — the same point the images swap), each a snappy
@@ -387,6 +388,18 @@
     var ENTER_DELAY = 90;        // hold the new title hidden briefly after the threshold
     var ENTER_MS = 420;          // entrance (appear / reverse-exit)
     var EXIT_MS = 280;           // snappy departure (exit / reverse-appear)
+=======
+    // `left` rest spot). Appear + exit are THRESHOLD-driven (timed, fired at the
+    // swap crossing) and DIRECTION-AWARE so scrolling up plays the mirror:
+    //   forward enter  : APPEAR → REST  (timed, no fade)
+    //   forward leave  : REST  → EXIT   (timed fly-out + fade out)
+    //   backward enter : EXIT  → REST   (timed, fade in)  = reverse of its forward exit
+    //   backward leave : REST  → APPEAR (timed)            = reverse of its forward appear
+    // These are all purely TIMED now — no scroll-driven slide (the appear's horizontal
+    // slide is baked into the APPEAR pose's `ex` and resolves on the timer).
+    var ENTER_MS = 420;          // timed appear (APPEAR→REST fwd / EXIT→REST back)
+    var EXIT_MS = 280;           // timed leave (REST→EXIT fwd / REST→APPEAR back)
+>>>>>>> Stashed changes
     if (active !== lastActive) {
       var fwd = active > lastActive;                     // scroll direction at this crossing
       var entering = panels[active], leaving = panels[lastActive];
@@ -409,6 +422,7 @@
       var content = panel.querySelector(".flow-panel__content");
       if (!content) return;
       var base = "translateY(-58%) translateX(" + (-(pi * vw + trackX)) + "px)";
+<<<<<<< Updated upstream
       var a = panel._anim;
       if (a) {
         var el = now - a.t0 - a.delay;
@@ -425,6 +439,24 @@
         var sp = pi === active ? P.REST : (pi < active ? P.EXIT : P.APPEAR);
         content.style.transform = poseStr(base, sp);
         content.style.opacity = pi === active ? 1 : 0;
+=======
+      var p, op;
+      if (pi === active) {                               // appearing (or settled at REST)
+        var ta = panel._appearT ? easeOut(clamp((now - panel._appearT) / ENTER_MS, 0, 1)) : 1;
+        if (panel._dir === "back") {                     // reverse of its exit: EXIT → REST, fade in
+          p = lerpPose(P.EXIT, P.REST, ta); op = ta;
+        } else {                                         // forward appear: APPEAR → REST, no fade
+          p = lerpPose(P.APPEAR, P.REST, ta); op = 1;
+        }
+      } else if (pi < active) {                          // passed (left going forward): REST → EXIT, fade out
+        var te = panel._leaveT ? easeOut(clamp((now - panel._leaveT) / EXIT_MS, 0, 1)) : 1;
+        p = lerpPose(P.REST, P.EXIT, te); op = 1 - te;
+      } else if (panel._ldir === "back" && panel._leaveT) { // left going backward = reverse of appear: REST → APPEAR, fade out
+        var fu = easeOut(clamp((now - panel._leaveT) / EXIT_MS, 0, 1));
+        p = lerpPose(P.REST, P.APPEAR, fu); op = 1 - fu;
+      } else {                                           // upcoming — hidden at the APPEAR origin
+        p = P.APPEAR; op = 0;
+>>>>>>> Stashed changes
       }
     });
 

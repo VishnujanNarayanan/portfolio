@@ -568,3 +568,116 @@ Keep this section updated after every change. Format:
   enter from APPEAR, leave to EXIT; UP: the mirror — enter from EXIT, leave back to APPEAR. `from`
   captures the live pose so a mid-flight reversal continues without jumping. Steady non-active panels
   rest at EXIT (pi<active) or APPEAR (pi>active), opacity 0. node --check OK.
+<<<<<<< Updated upstream
+=======
+
+### 2026-06-17 (forward entrance = timed 3D appear-near-mid + scroll-driven slide to rest)
+- User: on forward scroll the appear should make the text appear near mid, THEN be scroll-driven to its
+  position and sticky — keeping all current animations.
+- flow.js: the forward-entering _anim is now scrollX:true. Added scrollPose(AP,mx,f,s) = the hero
+  APPEAR 3D part (sx/tx/ty/ry/rx) scaled by a TIMER factor f (1→0 over ENTER_MS — "appears near mid"),
+  with the horizontal slide ex driven by SCROLL factor s=fwdS(pi,global)=smooth(clamp((d+0.5)/0.5)) from
+  MID_X(=vw*.28)→0 (rest at d=0, sticky d≥0). Per-frame: scrollX branch resolves 3D on the timer + X on
+  scroll, opacity 1 (no fade), clears _anim only when el≥dur AND s≥1. poseOf() handles scrollX so a
+  mid-flight reversal captures the live hybrid pose. Backward entrance (timed EXIT→REST) and exits are
+  unchanged (scrollX:false). node --check OK.
+
+### 2026-06-17 (appear lands nearer rest; backward entrance now scroll-parallaxes too)
+- User: the appear landed too far toward the middle (halve the distance), and backward scroll didn't
+  trigger the text's scroll parallax (it was a fully timed entrance).
+- flow.js: MID_X vw*0.28 → vw*0.14 (appear lands ~half as far from rest). The ENTERING _anim is now
+  scrollX:true in BOTH directions, carrying back:!fwd + srcKind (APPEAR fwd / EXIT back). Generalized
+  the helpers: scrollPose(src,…) takes the 3D source pose; slideS(pi,global,back) gives the scroll
+  slide factor — forward enters from the d=-0.5 side (rest by d≥0), backward from the d=+0.5 side (rest
+  by d≤0), sticky at rest either way; srcPose(P,a) resolves the kind. So scrolling up the returning
+  title resolves its EXIT 3D on the timer while sliding to rest under scroll control, mirroring the
+  forward entrance. Leaving (exit) stays timed both directions. node --check OK.
+
+### 2026-06-17 (zone title = pure scroll-scrubbed pose → exact reverse on scroll-up)
+- User: the backward behaviour was wrong — it triggered the previous text's scroll entrance instead of
+  REVERSING the forward transition. Root cause: the title used timed/threshold-fired _anim with
+  per-direction logic, which doesn't reverse cleanly.
+- flow.js: scrapped the _anim/poseOf/slideS/srcPose machinery. The title pose+opacity is now titlePose(d)
+  — a PURE FUNCTION of scroll position d=global-pi: d≤-.5+GAP hidden at mid; -.5<d<0 ENTER (APPEAR 3D
+  resolves over W3D=.18 → appears near mid, slide mid→rest over the entry half, no fade); 0≤d≤.5 REST
+  sticky; .5<d<.5+EXIT_W(.3) EXIT (fly to opposite corner + fade); beyond, gone. Because it's purely
+  scrubbed, scrolling up walks the identical curve backwards — the entrance plays in reverse (slide out
+  + un-appear), the exit un-exits — no separate per-direction animation, no "previous text" entrance.
+  Per-frame just calls titlePose(global-pi); active/passed class toggle (for index/sub/pills) kept.
+  Restored var now=Date.now() for the mobile card block. node --check OK.
+- Trade-off: dropped the timed-snappy/threshold-delay model (incompatible with exact reversibility);
+  snappiness now comes from short scrub windows (W3D/EXIT_W), tunable in titlePose().
+
+### 2026-06-17 (zone title: threshold-driven appear + exit, scroll-driven slide)
+- User: switch the appear and exit back to THRESHOLD-driven (timed); keep the sliding part scroll-driven;
+  keep the current appear/exit positions; touch nothing else.
+- flow.js: replaced the pure-scroll titlePose() with slideFactor(d) (the mid→rest sticky slide, still
+  scroll-driven) + threshold timers. On the active flip, the newly-active panel gets _appearT=now and the
+  newly-passed panel _exitT=now (upcoming cleared). Per frame: active = scrollPose(APPEAR, MID_X, f,
+  slideFactor(d)) where f=1-easeOut((now-_appearT)/ENTER_MS=420) is the TIMED 3D appear and the slide is
+  scroll-driven; passed = lerpPose(REST,EXIT, te=easeOut((now-_exitT)/EXIT_MS=280)) + opacity 1-te (timed
+  fly-out + fade); upcoming hidden at mid. Poses (APPEAR/REST/EXIT, MID_X=vw*.14) unchanged. Removed the
+  duplicate var now. node --check OK.
+
+### 2026-06-17 (zone title appear/exit now direction-aware mirrors — keep threshold-timed)
+- User: forward is fine, but scrolling back the returning previous zone should play the REVERSE of its
+  forward EXIT, and the current zone leaving up should play the REVERSE of its forward APPEAR.
+- flow.js: kept the threshold-timed appear/exit + scroll-driven slide, added direction tags. On each
+  crossing fwd=active>lastActive; the becoming-active panel records _dir(fwd/back)+_appearT, the just-left
+  panel records _ldir(fwd/back)+_leaveT. Per frame: active+_dir=fwd → scrollPose(APPEAR,MID_X,f,slideFactor)
+  (unchanged forward appear); active+_dir=back → lerpPose(EXIT,REST,tb)+op tb (fade-in = reverse of exit);
+  pi<active → lerpPose(REST,EXIT,te)+op 1-te (forward fly-out); pi>active & _ldir=back → lerpPose(REST,
+  APPEAR,tu)+op 1→0 (reverse of appear); else upcoming hidden at APPEAR. ENTER_MS=420/EXIT_MS=280, poses
+  unchanged. node --check OK.
+
+### 2026-06-17 (fix backward-leave hitch — reverse of appear, continuous handoff)
+- User: scrolling back, the current zone's exit still wasn't the reverse of its appear — a "hitch".
+- Cause: while a panel is still ACTIVE and you scroll up, the forward-appear's scroll-driven slide
+  (slideFactor) already walks it rest→mid; but the backward-leave then used lerpPose(REST,APPEAR,tu)
+  which RESTARTS at REST → a jump. Also slide(scroll) + lerp(timed) don't compose.
+- flow.js: backward-leave now continues the SAME scrollPose(APPEAR, MID_X, fu, slideFactor(d)) — the
+  slide rest→mid already happened via scroll during the active phase, so the leave only re-raises the 3D
+  (fu:0→1 timed) at mid = the exact reverse of the appear. Made every handoff pose coincide: upcoming =
+  scrollPose(APPEAR,MID_X,1,0) (matches both fwd-enter start and back-leave end); the active branch now
+  falls through to the scrollPose(+slideFactor) governance once the back-enter (EXIT→REST) completes
+  (tb≥1), so a zone entered-backward-then-left-backward also slides continuously. node --check OK.
+
+### 2026-06-17 (backward-leave: fade out so the rotated APPEAR pose doesn't flash)
+- User: still a slight hitch on backward leave — a flash of the current text rotated in an awkward
+  position at the leave threshold (the forward enter/rest look fine).
+- Cause: the backward-leave re-raises the 3D to the full (extreme) APPEAR pose at mid and held op=1
+  until fu=1 then popped to 0 — so the extreme rotated pose showed at full opacity right before hiding.
+  (Forward enter rotates IN toward upright so the same pose reads as arriving, not awkward.)
+- flow.js: backward-leave op is now 1-fu (fades out as the 3D un-resolves) instead of 1-then-pop, so the
+  rotated pose is never visible at full opacity. Motion (reverse-of-appear) unchanged. node --check OK.
+- If the rotated exit still reads wrong directionally, options: gentler exit pose, or fade faster
+  (op = 1 - clamp(fu*1.5,0,1)). Not applied yet — awaiting feedback.
+
+### 2026-06-18 (journey nodes flow ALONG the fixed curve with scroll)
+- First attempt translated the whole spine (line+nodes) horizontally — wrong: user wants the CURVE
+  FIXED and the NODES to traverse along it ("flow on top of where the line was laid out"), in unison,
+  left on forward scroll / right on reverse, keeping the progress fill. Reverted that (buildPath +
+  translate).
+- flow.js loop(): per frame each node's x is driven directly by scroll —
+  vbX = VBW/2 + (i - global)*SPACING (SPACING=VBW*0.42) — so the active node (global==i) sits dead-
+  CENTRE and all four slide along as one (forward→left, back→right). y is read off the FIXED curve via
+  yAtX() (a 240-sample {x,y} lookup of the spine built once at init, clamped flat past the ends for
+  off-screen nodes). The strokeDashoffset progress fill is unchanged.
+- Follow-up (same day): first cut used frac=(i+1-global)*step (step=1/(N+1)) so the active node sat at
+  frac 0.2 (left) and spacing was tight → "activates too early / spacing too close". Re-centred on the
+  node (active node centred at global==i, so Math.round(global) activation now coincides with centring)
+  and widened spacing to 0.42*VBW. node --check OK.
+- Follow-up: dropped the progress fill entirely — the spine is now ALWAYS fully drawn (strokeDasharray
+  none, strokeDashoffset 0 at init; removed the per-frame strokeDashoffset update). Only the nodes move.
+  node --check OK.
+
+### 2026-06-18 (zone title: keep the appear/exit animations, drop only the SCROLL-driven part)
+- User clarified: keep the zone-title animations, just remove the scroll-RELATED behaviour. So the
+  appear/exit/direction-aware-mirror animations stay, but they're now purely TIMED (threshold-fired at
+  the zone crossing) — no scroll-driven slide. flow.js loop() title block: every branch is now a plain
+  timed lerpPose between REST and APPEAR/EXIT (forward enter APPEAR→REST no-fade; forward leave
+  REST→EXIT fade; backward enter EXIT→REST fade-in; backward leave REST→APPEAR fade-out; upcoming hidden
+  at APPEAR). Removed scrollPose()+slideFactor() usage and the MID_X scroll-slide; the appear's small
+  horizontal slide is baked into APPEAR.ex and resolves on the ENTER_MS timer. scrollPose/slideFactor
+  now unused (left in place). node --check OK.
+>>>>>>> Stashed changes
