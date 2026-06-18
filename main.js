@@ -76,9 +76,9 @@
       // end of the zoom it matches the grey contour lines (deterministic, not a greyscaled blue).
       if (heroImg) {
         var ga = 1 - e;                                  // gradient alpha fades out
-        heroImg.style.backgroundColor = "#9a9c9e";       // the (darker) grey it lands on
+        heroImg.style.backgroundColor = "#989c8e";       // greenish-grey (theme tint) it lands on
         heroImg.style.backgroundImage =
-          "linear-gradient(180deg,rgba(208,225,235," + ga + ") 0%,rgba(223,233,242," + ga + ") 55%,rgba(238,243,248," + ga + ") 100%)";
+          "linear-gradient(180deg,rgba(236,244,237," + ga + ") 0%,rgba(242,247,242," + ga + ") 55%,rgba(248,250,246," + ga + ") 100%)";
       }
       // Scroll cue plays its entrance in reverse the moment scrolling starts.
       if (scrollCue) scrollCue.classList.toggle("is-exiting", y > 0);
@@ -211,21 +211,22 @@
       var a = vh(ix, iy), b = vh(ix + 1, iy), c2 = vh(ix, iy + 1), d = vh(ix + 1, iy + 1);
       return (a * (1 - ux) + b * ux) * (1 - uy) + (c2 * (1 - ux) + d * ux) * uy;
     }
-    // Metaballs (round, closed iso-loops) laid out on a JITTERED GRID so they cover the
-    // viewport evenly (no clustered/empty areas), each drifting only a little within its
-    // cell. Overlapping neighbours merge → some branching, while loops stay rounded.
+    // Metaballs (round, closed iso-loops) on a JITTERED GRID that EXTENDS BEYOND the
+    // viewport (span -0.2..1.2) so blobs also live off-screen — contours then run off the
+    // edges and merge/split at the borders too, not just in the centre (no big containing
+    // outer loop). Larger orbits + heavy jitter → more random merging/splitting everywhere.
     var BLOBS = [];
     function seedBlobs() {
-      BLOBS = []; var gx = 4, gy = 3, i, j;
+      BLOBS = []; var gx = 5, gy = 4, i, j, SPAN = 1.4, OFF = -0.2;
       for (j = 0; j < gy; j++) for (i = 0; i < gx; i++) {
         BLOBS.push({
-          bx: (i + 0.5) / gx + (Math.random() - 0.5) * 0.14,
-          by: (j + 0.5) / gy + (Math.random() - 0.5) * 0.14,
-          ox: 0.05 + Math.random() * 0.05, oy: 0.05 + Math.random() * 0.05,  // small orbit → stays even
-          sx: 0.05 + Math.random() * 0.1, sy: 0.05 + Math.random() * 0.1,
+          bx: OFF + (i + 0.5) / gx * SPAN + (Math.random() - 0.5) * 0.22,
+          by: OFF + (j + 0.5) / gy * SPAN + (Math.random() - 0.5) * 0.22,
+          ox: 0.07 + Math.random() * 0.13, oy: 0.07 + Math.random() * 0.13,  // larger orbit → real merging/splitting
+          sx: 0.04 + Math.random() * 0.14, sy: 0.04 + Math.random() * 0.14,
           px: Math.random() * 6.28, py: Math.random() * 6.28,
-          r: 0.14 + Math.random() * 0.07,
-          pulse: 0.4 + Math.random() * 0.7,
+          r: 0.12 + Math.random() * 0.1,
+          pulse: 0.35 + Math.random() * 0.9,
           pph: Math.random() * 6.28
         });
       }
@@ -307,7 +308,7 @@
         }
       }
       drawContours(ctx, "rgba(210,255,0,0.3)");          // global: lime
-      if (hctx) drawContours(hctx, "#9a9c9e");           // hero: same grey as the end bg → lines vanish at full zoom
+      if (hctx) drawContours(hctx, "#989c8e");           // hero: same greenish-grey as end bg → lines vanish at full zoom
       if (!reduce) requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
