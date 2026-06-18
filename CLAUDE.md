@@ -568,8 +568,6 @@ Keep this section updated after every change. Format:
   enter from APPEAR, leave to EXIT; UP: the mirror — enter from EXIT, leave back to APPEAR. `from`
   captures the live pose so a mid-flight reversal continues without jumping. Steady non-active panels
   rest at EXIT (pi<active) or APPEAR (pi>active), opacity 0. node --check OK.
-<<<<<<< Updated upstream
-=======
 
 ### 2026-06-17 (forward entrance = timed 3D appear-near-mid + scroll-driven slide to rest)
 - User: on forward scroll the appear should make the text appear near mid, THEN be scroll-driven to its
@@ -680,4 +678,3 @@ Keep this section updated after every change. Format:
   at APPEAR). Removed scrollPose()+slideFactor() usage and the MID_X scroll-slide; the appear's small
   horizontal slide is baked into APPEAR.ex and resolves on the ENTER_MS timer. scrollPose/slideFactor
   now unused (left in place). node --check OK.
->>>>>>> Stashed changes
