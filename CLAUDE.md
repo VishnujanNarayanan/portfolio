@@ -665,3 +665,6 @@ Keep this section updated after every change. Format:
   frac 0.2 (left) and spacing was tight → "activates too early / spacing too close". Re-centred on the
   node (active node centred at global==i, so Math.round(global) activation now coincides with centring)
   and widened spacing to 0.42*VBW. node --check OK.
+- Follow-up: dropped the progress fill entirely — the spine is now ALWAYS fully drawn (strokeDasharray
+  none, strokeDashoffset 0 at init; removed the per-frame strokeDashoffset update). Only the nodes move.
+  node --check OK.
