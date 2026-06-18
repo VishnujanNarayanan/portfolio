@@ -678,3 +678,38 @@ Keep this section updated after every change. Format:
   at APPEAR). Removed scrollPose()+slideFactor() usage and the MID_X scroll-slide; the appear's small
   horizontal slide is baked into APPEAR.ex and resolves on the ENTER_MS timer. scrollPose/slideFactor
   now unused (left in place). node --check OK.
+
+### 2026-06-18 (background → custom Three.js shader in Lando palette)
+- Replaced the Vanta NET background with a custom Three.js fullscreen fragment-shader scene to
+  match the Lando (OFF+BRAND) reference look. Lando's actual bg is a proprietary three.js r174
+  WebGL shader bundle (canvas.gl) we don't have source for — so this recreates the FEEL, not a copy.
+- index.html: removed the vanta.net CDN <script>; the inline DOMContentLoaded init now builds a
+  WebGLRenderer + fullscreen quad ShaderMaterial appended into #vanta-bg. Frag shader = 5-octave
+  fbm flow, palette dark-green #282c20 / deeper #1b1e17 / lime #d2ff00 / off-white-green #dde1d2:
+  vertical base gradient → fbm-warped dark → sparse lime threads (smoothstep glow) + faint off-white
+  highlights + vignette. rAF loop drives u_time; resize updates u_res. Canvas gets .gl-bg class.
+- styles.css: body background rgb(208,225,235)/var(--color-bg) → #282c20 (Lando --color--dark-green).
+  Existing `#vanta-bg canvas{opacity:1}` already overrides the global canvas{opacity:0} so the new
+  canvas shows. #vanta-bg container rule unchanged (fixed, inset:0, z-index:-1).
+- Only index.html changed; project/blog pages still use the old Vanta bg (not requested).
+
+### 2026-06-18 (hero = zoom-out image; flow bg revealed around it)
+- Made the hero behave like a Lando-style full-screen IMAGE that zooms out on scroll, revealing
+  the flow section's background around all four edges.
+- index.html: moved #vanta-bg (the custom shader canvas) from a body-level fixed layer to INSIDE
+  .hero, so it scales together with the hero as one rectangle.
+- styles.css: #vanta-bg now position:absolute;inset:0;z-index:0 (fills the hero, was fixed z-index:-1);
+  .hero__content position:relative;z-index:1 (over the shader). body background → #d0e1eb (flow
+  __sky top colour) so the area revealed as the hero shrinks reads as the flow background.
+- main.js updateHeroExit: scales the WHOLE .hero (origin centre) 1→0.5 over one viewport and shifts
+  it up (shift=-(scale*vh/2)*e) so the finished rectangle occupies the upper half (bottom edge on the
+  mid line). The shader shrinks with it from all edges; flow-colour body grows to fill the rest.
+  Phase-2 lift unchanged. node --check OK.
+
+### 2026-06-18 (header reacts to hero zoom-out: colour flip + shrink-to-edges)
+- During the hero zoom-out the header no longer slides up/vanishes. main.js:
+  • onScroll keeps the header .show while scrollY < innerHeight (the zoom phase).
+  • updateHeroExit (driven by progress e): nav-left links + both .pill-btn-span texts colour
+    white→black (Math.round(255*(1-e))); .header__nav-left scales 1→0.65 origin left, .header__nav-right
+    scales 1→0.65 origin right (shrink anchored to the page edges); the dark "Get In Touch" pill bg
+    interpolates #050419→#d0e1eb so its (now-black) text stays legible. All reverse on scroll-up.
