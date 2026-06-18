@@ -45,17 +45,54 @@
     // Purely scroll-linked, so scrolling back up reverses it exactly. The 3D text
     // entrance still plays on load at scroll 0 (scale 1, no transform on .hero).
     var heroContent = hero.querySelector(".hero__content");
-    var EXIT_MIN_SCALE = 0.82;      // how far it recedes at the end of the zoom
+    var heroImg = hero.querySelector("#vanta-bg");  // the shader image that greys out
+    var scrollCue = hero.querySelector(".hero__scroll-btn");  // vanishes (reverse of its entrance) on scroll
+    // Header pieces that react to the zoom-out (color flip + shrink-to-edges).
+    var hdr        = document.querySelector("header");
+    var navLeft    = hdr && hdr.querySelector(".header__nav-left");
+    var navRight   = hdr && hdr.querySelector(".header__nav-right");
+    var navTexts   = hdr ? hdr.querySelectorAll(".header__nav-left a, .pill-btn-span") : [];
+    var darkPill   = hdr && hdr.querySelector(".pill-btn--dark");
+    var EXIT_MIN_SCALE = 0.38;      // how far the whole page-rectangle recedes (smaller = more zoom-out)
     function updateHeroExit() {
-      var ZOOM_END = window.innerHeight;             // zoom completes over one viewport
+      var vh = window.innerHeight;
+      var ZOOM_END = vh;                             // zoom completes over one viewport
       var y = window.scrollY;
       var p = Math.max(0, Math.min(y / ZOOM_END, 1)); // zoom progress 0 → 1
       var e = p * p * (3 - 2 * p);                    // smoothstep
       var scale = 1 - (1 - EXIT_MIN_SCALE) * e;       // 1 → EXIT_MIN_SCALE (no opacity change)
-      if (heroContent) heroContent.style.transform = "scale(" + scale + ")";
+      // Scale the WHOLE hero so it shrinks as a rectangle from all edges toward the
+      // viewport CENTRE (origin 50% 50%) — the finished image sits dead-centre with an
+      // equal flow-bg gap on every side.
+      var originY = 0.5 * vh;
       // Phase 2: after the zoom, the hero scrolls up with the page (rides off the top).
       var lift = Math.max(0, y - ZOOM_END);
-      hero.style.transform = "translateY(" + (-lift) + "px)";
+      if (heroContent) heroContent.style.transform = "";
+      hero.style.transformOrigin = "50% " + originY + "px";
+      hero.style.transform = "translateY(" + (-lift) + "px) scale(" + scale + ")";
+      // The further it zooms out, the greyer the image gets (desaturate + dim toward grey).
+      if (heroImg) heroImg.style.filter = "grayscale(" + e + ") brightness(" + (1 - 0.25 * e) + ")";
+      // Scroll cue plays its entrance in reverse the moment scrolling starts.
+      if (scrollCue) scrollCue.classList.toggle("is-exiting", y > 0);
+
+      // Header reacts to the zoom-out (driven by the same progress e):
+      //  - text colour flips white → black (opposite colour) as the light flow bg appears;
+      //  - the left nav + right CTAs SHRINK in place, anchored to their page edges,
+      //    instead of the header sliding up and vanishing;
+      //  - the dark "Get In Touch" pill inverts its bg (dark → light) so it stays legible.
+      // Header reaches its end state faster — over 2/5 of the zoom scroll distance.
+      var hp = Math.max(0, Math.min(y / (ZOOM_END * 0.4), 1));
+      var he = hp * hp * (3 - 2 * hp);                   // smoothstep
+      var c = Math.round(255 * (1 - he));                // 255 (white) → 0 (black)
+      var rgb = "rgb(" + c + "," + c + "," + c + ")";
+      navTexts.forEach(function (t) { t.style.color = rgb; });
+      var hs = 1 - 0.12 * he;                            // shrink 1 → 0.88 (subtle)
+      if (navLeft)  { navLeft.style.transformOrigin  = "left center";  navLeft.style.transform  = "scale(" + hs + ")"; }
+      if (navRight) { navRight.style.transformOrigin = "right center"; navRight.style.transform = "scale(" + hs + ")"; }
+      if (darkPill) {                                    // dark #050419 → light #d0e1eb
+        var dr = Math.round(5 + (208 - 5) * he), dg = Math.round(4 + (225 - 4) * he), db = Math.round(25 + (235 - 25) * he);
+        darkPill.style.backgroundColor = "rgb(" + dr + "," + dg + "," + db + ")";
+      }
     }
     window.addEventListener("scroll", updateHeroExit, { passive: true });
     window.addEventListener("resize", updateHeroExit, { passive: true });
@@ -104,7 +141,9 @@
     var ticking = false;
     function onScroll() {
       var y = window.scrollY;
-      if (y < 80) {
+      if (y < window.innerHeight) {
+        // During the hero zoom-out the header stays put and shrinks (see updateHeroExit)
+        // instead of hiding on scroll-down.
         header.classList.add("show");
       } else if (y > lastY + 4) {
         header.classList.remove("show"); // scrolling down

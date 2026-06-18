@@ -22,13 +22,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
 <script>document.documentElement.classList.remove("no-js");</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Person","@id":"https://vishnujannarayanan.com/#person","name":"Vishnujan Narayanan","jobTitle":"Data & Backend Engineer","url":"https://vishnujannarayanan.com/","email":"narayanan.vishnujan@gmail.com","address":{"@type":"PostalAddress","addressLocality":"Kochi","addressRegion":"Kerala","addressCountry":"IN"},"sameAs":["https://github.com/VishnujanNarayanan","http://www.linkedin.com/in/vishnujan-narayanan"]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","@id":"https://vishnujannarayanan.com/#website","name":"Vishnujan Narayanan","url":"https://vishnujannarayanan.com/","inLanguage":"en-US","publisher":{"@id":"https://vishnujannarayanan.com/#person"}}</script>
 </head>
 <body>
-<div id="vanta-bg"></div>
 <div class="mobile-nav__overlay"></div>
 <header class="show">
   <nav class="header__nav-left">
@@ -37,9 +35,6 @@
     <a href="#services">Services</a>
     <a href="blog/index.html">Blog</a>
   </nav>
-  <div class="header__logo">
-    <a href="index.html" class="header__logo_link" aria-label="Vishnujan Narayanan — Home"><span class="logo-text">VJ</span></a>
-  </div>
   <nav class="header__nav-right">
     <div class="header__ctas">
       <a href="/cdn-cgi/l/email-protection#acc2cddecdd5cdc2cdc282dac5dfc4c2d9c6cdc2eccbc1cdc5c082cfc3c193dfd9cec6c9cfd891e4c5dec9899e9ce1c9" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Hire Me</span></a>
@@ -88,6 +83,7 @@
   <div class="top">
 
     <section class="hero">
+      <div id="vanta-bg"></div>
       <div class="hero__content">
         <h1 class="hero__title"><span>Building Systems</span><span>That Scale</span></h1>
         <p class="hero__subtitle"><span>Data engineer building and running ~28 Python ingestion pipelines that keep an Indian stock-market dataset current — NSE prices, F&amp;O data, 20 years of insider filings, news, and market-sentiment across ~1,665 listed companies.</span></p>
@@ -445,30 +441,76 @@
 </footer>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  // Custom Three.js fullscreen shader background — Lando (OFF+BRAND) palette:
+  // dark-green base (#282c20) with slow flowing lime (#d2ff00) accents.
   document.addEventListener('DOMContentLoaded', function () {
-    if (typeof VANTA === 'undefined' || typeof THREE === 'undefined') return;
-    function makeVanta() {
-      return VANTA.NET({
-        el: "#vanta-bg",
-        THREE: THREE,
-        color: 0x3932DC,
-        backgroundColor: 0xd0e1eb,
-        points: 6.0,
-        maxDistance: 180.0,
-        spacing: 200.0,
-        showDots: true
-      });
-    }
-    window._vanta = makeVanta();
-    // destroy/reinit on resize (per CLAUDE.md)
-    var rt;
-    window.addEventListener('resize', function () {
-      clearTimeout(rt);
-      rt = setTimeout(function () {
-        if (window._vanta && window._vanta.destroy) window._vanta.destroy();
-        window._vanta = makeVanta();
-      }, 250);
+    if (typeof THREE === 'undefined') return;
+    var host = document.getElementById('vanta-bg');
+    if (!host) return;
+
+    var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.domElement.classList.add('gl-bg');
+    host.appendChild(renderer.domElement);
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.Camera();
+
+    var uniforms = {
+      u_time: { value: 0 },
+      u_res:  { value: new THREE.Vector2(1, 1) }
+    };
+
+    var frag = [
+      'precision highp float;',
+      'uniform float u_time; uniform vec2 u_res;',
+      // palette
+      'const vec3 DARK = vec3(0.157,0.173,0.125);',  // #282c20
+      'const vec3 DARK2= vec3(0.106,0.118,0.090);',  // deeper green
+      'const vec3 LIME = vec3(0.824,1.000,0.000);',  // #d2ff00
+      'const vec3 OFF  = vec3(0.866,0.882,0.823);',  // #dde1d2
+      'float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
+      'float noise(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.0-2.0*f);',
+      '  return mix(mix(hash(i),hash(i+vec2(1,0)),u.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),u.x),u.y);}',
+      'float fbm(vec2 p){float v=0.0,a=0.5;for(int i=0;i<5;i++){v+=a*noise(p);p*=2.0;a*=0.5;}return v;}',
+      'void main(){',
+      '  vec2 uv=gl_FragCoord.xy/u_res.xy;',
+      '  vec2 p=uv*vec2(u_res.x/u_res.y,1.0)*1.6;',
+      '  float t=u_time*0.04;',
+      '  vec2 q=vec2(fbm(p+t),fbm(p-t+5.2));',
+      '  float f=fbm(p+q*1.5+vec2(t*0.6,-t*0.4));',
+      '  vec3 col=mix(DARK2,DARK,smoothstep(0.0,1.0,uv.y));',  // vertical base gradient
+      '  col=mix(col,DARK,f);',
+      '  float glow=smoothstep(0.62,0.95,f);',                 // sparse lime threads
+      '  col=mix(col,LIME,glow*0.45);',
+      '  col+=OFF*smoothstep(0.80,1.0,f)*0.06;',               // faint off-white highlights
+      '  float vig=smoothstep(1.25,0.2,length(uv-0.5));',      // vignette
+      '  col*=mix(0.78,1.05,vig);',
+      '  gl_FragColor=vec4(col,1.0);',
+      '}'
+    ].join('\n');
+
+    var mat = new THREE.ShaderMaterial({
+      uniforms: uniforms,
+      vertexShader: 'void main(){gl_Position=vec4(position,1.0);}',
+      fragmentShader: frag
     });
+    scene.add(new THREE.Mesh(new THREE.PlaneBufferGeometry(2, 2), mat));
+
+    function resize() {
+      var w = window.innerWidth, h = window.innerHeight;
+      renderer.setSize(w, h);
+      uniforms.u_res.value.set(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    var start = performance.now();
+    (function loop(now) {
+      uniforms.u_time.value = (now - start) * 0.001;
+      renderer.render(scene, camera);
+      requestAnimationFrame(loop);
+    })(start);
   });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
