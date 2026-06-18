@@ -28,6 +28,7 @@
   var nodeEls = Array.prototype.slice.call(flow.querySelectorAll(".flow-journey__node"));
   var lineEl = flow.querySelector(".flow-journey__line");
   var fillEl = flow.querySelector(".flow-journey__fill");
+  var nodesEl = flow.querySelector(".flow-journey__nodes");
   var N = panels.length || 4;
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
@@ -152,6 +153,7 @@
     return d;
   }
   var fillLen = 0;
+  var curveXY = [];  // sampled {x,y} of the fixed spine, for y-at-x lookup
   if (lineEl && fillEl) {
     var d = buildPath();
     lineEl.setAttribute("d", d);
@@ -159,6 +161,26 @@
     fillLen = fillEl.getTotalLength();
     fillEl.style.strokeDasharray = fillLen;
     fillEl.style.strokeDashoffset = fillLen;
+    for (var s = 0; s <= 240; s++) {
+      var p = fillEl.getPointAtLength(s / 240 * fillLen);
+      curveXY.push({ x: p.x, y: p.y });
+    }
+  }
+  // Curve y for a given viewBox x (clamped to the spine ends — off-curve nodes
+  // are off-screen anyway and just ride flat past the edge).
+  function yAtX(x) {
+    if (!curveXY.length) return VBH / 2;
+    if (x <= curveXY[0].x) return curveXY[0].y;
+    var last = curveXY[curveXY.length - 1];
+    if (x >= last.x) return last.y;
+    for (var i = 1; i < curveXY.length; i++) {
+      if (curveXY[i].x >= x) {
+        var a = curveXY[i - 1], b = curveXY[i];
+        var t = (x - a.x) / (b.x - a.x || 1);
+        return a.y + (b.y - a.y) * t;
+      }
+    }
+    return last.y;
   }
   nodeEls.forEach(function (n, i) {
     n.style.left = (NODE_PTS[i].x * 100) + "%";
@@ -449,7 +471,22 @@
 
     if (THREEok) renderGL(progress);
 
-    nodeEls.forEach(function (n, i) { n.classList.toggle("flow-journey__node--active", i === active); });
+    // The spine (curve) is fixed; the nodes flow ALONG it in unison — left as you
+    // scroll forward, right as you scroll back. Each node's x is driven directly
+    // by scroll so the active node (global == i) sits dead-centre, and its y is
+    // read off the fixed curve. The progress fill below still runs independently.
+    if (nodesEl && curveXY.length) {
+      var jw = journey.clientWidth || vw;
+      var SPACING = VBW * 0.42;               // viewBox gap between adjacent nodes
+      nodeEls.forEach(function (n, i) {
+        var vbX = VBW / 2 + (i - global) * SPACING;
+        n.style.left = (vbX / VBW * jw).toFixed(1) + "px";
+        n.style.top = yAtX(vbX).toFixed(1) + "px";
+        n.classList.toggle("flow-journey__node--active", i === active);
+      });
+    } else {
+      nodeEls.forEach(function (n, i) { n.classList.toggle("flow-journey__node--active", i === active); });
+    }
     if (fillEl) fillEl.style.strokeDashoffset = fillLen * (1 - progress);
 
     if (dbg) updateDebug(progress, global);
