@@ -650,3 +650,18 @@ Keep this section updated after every change. Format:
   rotated pose is never visible at full opacity. Motion (reverse-of-appear) unchanged. node --check OK.
 - If the rotated exit still reads wrong directionally, options: gentler exit pose, or fade faster
   (op = 1 - clamp(fu*1.5,0,1)). Not applied yet — awaiting feedback.
+
+### 2026-06-18 (journey nodes flow ALONG the fixed curve with scroll)
+- First attempt translated the whole spine (line+nodes) horizontally — wrong: user wants the CURVE
+  FIXED and the NODES to traverse along it ("flow on top of where the line was laid out"), in unison,
+  left on forward scroll / right on reverse, keeping the progress fill. Reverted that (buildPath +
+  translate).
+- flow.js loop(): per frame each node's x is driven directly by scroll —
+  vbX = VBW/2 + (i - global)*SPACING (SPACING=VBW*0.42) — so the active node (global==i) sits dead-
+  CENTRE and all four slide along as one (forward→left, back→right). y is read off the FIXED curve via
+  yAtX() (a 240-sample {x,y} lookup of the spine built once at init, clamped flat past the ends for
+  off-screen nodes). The strokeDashoffset progress fill is unchanged.
+- Follow-up (same day): first cut used frac=(i+1-global)*step (step=1/(N+1)) so the active node sat at
+  frac 0.2 (left) and spacing was tight → "activates too early / spacing too close". Re-centred on the
+  node (active node centred at global==i, so Math.round(global) activation now coincides with centring)
+  and widened spacing to 0.42*VBW. node --check OK.
