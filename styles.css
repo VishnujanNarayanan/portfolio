@@ -128,7 +128,10 @@ body.nav-open{overflow:hidden}
 
 /* Give the hero its own full screen: the flow must start below the
    fold so its cards never paint over the fixed hero before you scroll. */
-.hero-spacer{min-height:100svh}
+/* 200svh reserves room for the two-phase hero exit: ~1 viewport of pinned
+   zoom-out, then ~1 viewport for the hero to scroll up off the top before the
+   flow section begins (see updateHeroExit in main.js). */
+.hero-spacer{min-height:200svh}
 
 /* ============================================================
    Flow — three.js parallax journey (2026-06-16)
