@@ -36,34 +36,29 @@
       }
     }, 1700);
 
-    // Hero exit is now TRIGGERED by scroll, not scrubbed: once the user scrolls
-    // past a threshold we add .hero--leaving and CSS plays a fixed-duration exit
-    // (title/subtitle fly out to the opposite corner, scroll cue slides down).
-    // Return uses a much larger threshold (RETURN_AT) than the leave threshold
-    // (LEAVE_AT) so it kicks in well before the user is back at the very top —
-    // gated to only fire while actually scrolling UP (goingUp), since RETURN_AT
-    // > LEAVE_AT would otherwise immediately cancel the exit on the way down.
-    var heroLeaving = false;
-    var lastY = window.scrollY;
-    var LEAVE_AT = 40, RETURN_AT = 550;
+    // Hero exit is a scroll-SCRUBBED zoom-out (Lando-style), in two phases, no fade:
+    //   Phase 1 (0 → ZOOM_END): the fixed hero stays pinned and its content scales
+    //     DOWN (camera pulling back) from 1 to EXIT_MIN_SCALE. It never fades.
+    //   Phase 2 (past ZOOM_END): once the zoom is done the hero un-pins and rides
+    //     UP with the page (translateY tracks scroll) so it scrolls off the top,
+    //     handing over to the flow below.
+    // Purely scroll-linked, so scrolling back up reverses it exactly. The 3D text
+    // entrance still plays on load at scroll 0 (scale 1, no transform on .hero).
+    var heroContent = hero.querySelector(".hero__content");
+    var EXIT_MIN_SCALE = 0.82;      // how far it recedes at the end of the zoom
     function updateHeroExit() {
+      var ZOOM_END = window.innerHeight;             // zoom completes over one viewport
       var y = window.scrollY;
-      var goingUp = y < lastY;
-      if (!heroLeaving && y > LEAVE_AT) {
-        heroLeaving = true;
-        hero.classList.remove("hero--returning");
-        hero.classList.add("hero--leaving");
-      } else if (heroLeaving && goingUp && y < RETURN_AT) {
-        heroLeaving = false;
-        hero.classList.remove("hero--leaving");
-        // .hero--returning gives the title+subtitle a fast, synced transition
-        // (no 0.3s subtitle stagger, no 1.5s entrance duration) so the return
-        // reads as one complete motion instead of a slow, half-finished one.
-        hero.classList.add("hero--returning");
-      }
-      lastY = y;
+      var p = Math.max(0, Math.min(y / ZOOM_END, 1)); // zoom progress 0 → 1
+      var e = p * p * (3 - 2 * p);                    // smoothstep
+      var scale = 1 - (1 - EXIT_MIN_SCALE) * e;       // 1 → EXIT_MIN_SCALE (no opacity change)
+      if (heroContent) heroContent.style.transform = "scale(" + scale + ")";
+      // Phase 2: after the zoom, the hero scrolls up with the page (rides off the top).
+      var lift = Math.max(0, y - ZOOM_END);
+      hero.style.transform = "translateY(" + (-lift) + "px)";
     }
     window.addEventListener("scroll", updateHeroExit, { passive: true });
+    window.addEventListener("resize", updateHeroExit, { passive: true });
     updateHeroExit();
   }
 
