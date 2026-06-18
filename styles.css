@@ -144,7 +144,7 @@ body.nav-open{overflow:hidden}
 
 /* Airy light sky (hue cross-fades via JS) + soft indigo horizon glow */
 .flow__sky{position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,#d0e1eb 0%,#dfe9f2 55%,#eef3f8 100%)}
-.flow__horizon{position:absolute;left:0;right:0;bottom:0;height:55%;z-index:0;pointer-events:none;background:radial-gradient(120% 80% at 50% 100%,rgba(57,50,220,.10) 0%,rgba(57,50,220,0) 60%)}
+.flow__horizon{position:absolute;left:0;right:0;bottom:0;height:55%;z-index:0;pointer-events:none;background:radial-gradient(120% 80% at 50% 100%,rgba(210,255,0,.08) 0%,rgba(210,255,0,0) 60%)}
 
 /* three.js canvas — between sky and content */
 .flow__gl{position:absolute;inset:0;z-index:1;width:100%;height:100%;pointer-events:none}
@@ -287,3 +287,6 @@ header .header__nav-left a{color:#050419;font-size:16px}
 
 /* Hero contour canvas (darker shade, same field as #bg-contours) */
 .hero .hero__bg #hero-contours{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+
+/* Remove floating zone side labels (Z01 / 1,665 …) from every zone */
+.flow .flow-panel__side{display:none}
