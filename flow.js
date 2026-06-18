@@ -313,9 +313,10 @@
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
-  function renderGL(progress) {
+  function renderGL(progress, globalRaw) {
     if (!renderer) return;
     var global = progress * (N - 1);
+    if (globalRaw === undefined) globalRaw = global;
     var gx = progress * (N - 1) * GAP;
     camera.position.x = gx;
     camera.position.y = Math.sin(progress * Math.PI * 2) * 0.55;
@@ -331,11 +332,15 @@
     // exact instant the text swaps — the lerp resolves the jump as the quick
     // switch: the outgoing image shoots off to the LEFT (allowed to use that side
     // during the change) and the incoming one comes in from the RIGHT.
-    var imgActive = clamp(Math.round(global), 0, N - 1);
-    var local = global - imgActive;                       // [-0.5, 0.5] within the zone
+    // Use the UNCLAMPED global so the first/last images get entry/exit travel
+    // outside the [0,N-1] band. sel can reach -0 (round(-0.5)) up to N (round of
+    // the upper clamp), so the first image is mid-entry during the lead-in and the
+    // last image becomes "passed" (exits left) at the very end.
+    var sel = Math.round(globalRaw);
+    var local = globalRaw - sel;                          // [-0.5, 0.5], incl. the edge overscroll
     for (var k = 0; k < images.length; k++) {
       var g = images[k], u = g.userData;
-      var targetX = (k === imgActive) ? (REST_X * (0.5 - local)) : (k < imgActive ? OFF_L : OFF_R);
+      var targetX = (k === sel) ? (REST_X * (0.5 - local)) : (k < sel ? OFF_L : OFF_R);
       if (u.off === undefined) u.off = targetX;
       u.off += (targetX - u.off) * 0.18;                  // tracks scroll within a zone; quick at the flip
       g.position.x = camera.position.x + u.off;
@@ -364,7 +369,7 @@
   }
 
   /* ---------- Main loop ---------- */
-  var lastActive = -1;
+  var lastSel = -1;
   var vh = window.innerHeight;
   function loop() {
     var rect = flow.getBoundingClientRect();
@@ -372,6 +377,13 @@
     var scrolled = clamp(-rect.top, 0, total);
     var progress = total > 0 ? scrolled / total : 0;
     var global = progress * (N - 1);
+    // Unclamped global for the IMAGE + TITLE edge motion: lets the first zone enter
+    // from the right during the lead-in scroll (before the section reaches the top)
+    // and the last zone keep exiting left past the section end — so every zone covers
+    // the same travel distance and plays the same appear/exit. Clamped to a full zone
+    // of overscroll on each side: at -1 the first zone waits off-right (pre-entry),
+    // crossing -0.5 fires its appear + image entry; at N the last zone has exited.
+    var globalRaw = total > 0 ? clamp((-rect.top) / total * (N - 1), -1, N) : 0;
 
     journey.classList.toggle("is-live", rect.top <= 1 && rect.bottom > vh * 0.6);
 
@@ -380,7 +392,23 @@
     track.style.transform = "translate3d(" + trackX + "px,0,0)";
     paintSky(global);
 
-    var active = clamp(Math.round(global), 0, N - 1);
+    // rawSel drives the title threshold crossings (and steady-state side): it can
+    // reach -1 (first zone not yet entered) and N (last zone exited), so the first
+    // zone plays its appear on scroll-in and the last zone plays its exit on
+    // scroll-out — mirroring the image entry/exit. `active` stays clamped for the
+    // journey nodes only.
+    // Edge thresholds biased inward (from the default ±0.5 crossings) so the first
+    // zone's appear fires a bit LATER (after it's on screen, not at the off-screen
+    // overscroll edge) and the last zone's exit fires a bit EARLIER (while still on
+    // screen). Interior crossings stay at the half-integers; only the pre-entry
+    // (-1→0) and exit (N-1→N) shift.
+    var ENTER_LATE = 0.25;       // appear fires at globalRaw -0.5 + this (later, = -0.25)
+    var EXIT_EARLY = 0.40;       // exit fires at globalRaw N-0.5 - this (earlier)
+    var rawSel;
+    if (globalRaw < -0.5 + ENTER_LATE) rawSel = -1;             // first zone not yet entered
+    else if (globalRaw >= N - 0.5 - EXIT_EARLY) rawSel = N;     // last zone has exited
+    else rawSel = clamp(Math.round(globalRaw), 0, N - 1);
+    var active = clamp(rawSel, 0, N - 1);
     var now = Date.now();
     var P = buildPoses(vw);
     // Title motion. Each panel's content is screen-pinned (counter-translateX
@@ -398,23 +426,25 @@
     var ENTER_DELAY = 90;        // hold the new title hidden briefly after the threshold
     var ENTER_MS = 420;          // entrance (appear / reverse-exit)
     var EXIT_MS = 280;           // snappy departure (exit / reverse-appear)
-    if (active !== lastActive) {
-      var fwd = active > lastActive;                     // scroll direction at this crossing
-      var entering = panels[active], leaving = panels[lastActive];
+    if (rawSel !== lastSel) {
+      var fwd = rawSel > lastSel;                        // scroll direction at this crossing
+      var entering = panels[rawSel], leaving = panels[lastSel];
       if (entering) entering._anim = {
-        t0: now, delay: ENTER_DELAY, dur: ENTER_MS, fade: false,
-        from: poseOf(entering, P, lastActive, active), to: P.REST
+        // No hold when there's no outgoing title to clear (first zone) — it'd just
+        // add a gap; the delay only matters when an old title needs to exit first.
+        t0: now, delay: leaving ? ENTER_DELAY : 0, dur: ENTER_MS, fade: false,
+        from: poseOf(entering, P, lastSel, rawSel), to: P.REST
       };
       if (leaving) leaving._anim = {
         t0: now, delay: 0, dur: EXIT_MS, fade: true,
-        from: poseOf(leaving, P, lastActive, lastActive), to: fwd ? P.EXIT : P.APPEAR
+        from: poseOf(leaving, P, lastSel, lastSel), to: fwd ? P.EXIT : P.APPEAR
       };
       // index / sub / pills keep their grouped fade via the active/passed classes.
       panels.forEach(function (panel, pi) {
-        panel.classList.toggle("flow-panel--active", pi === active);
-        panel.classList.toggle("flow-panel--passed", pi < active);
+        panel.classList.toggle("flow-panel--active", pi === rawSel);
+        panel.classList.toggle("flow-panel--passed", pi < rawSel);
       });
-      lastActive = active;
+      lastSel = rawSel;
     }
     panels.forEach(function (panel, pi) {
       var content = panel.querySelector(".flow-panel__content");
@@ -432,10 +462,10 @@
           content.style.opacity = a.fade ? 1 - t : 1;    // entering = no fade-in
           if (el >= a.dur) panel._anim = null;           // settle to steady next frame
         }
-      } else {                                           // steady state by side of `active`
-        var sp = pi === active ? P.REST : (pi < active ? P.EXIT : P.APPEAR);
+      } else {                                           // steady state by side of `rawSel`
+        var sp = pi === rawSel ? P.REST : (pi < rawSel ? P.EXIT : P.APPEAR);
         content.style.transform = poseStr(base, sp);
-        content.style.opacity = pi === active ? 1 : 0;
+        content.style.opacity = pi === rawSel ? 1 : 0;
       }
     });
 
@@ -458,7 +488,7 @@
       c.el.style.opacity = st.op;
     });
 
-    if (THREEok) renderGL(progress);
+    if (THREEok) renderGL(progress, globalRaw);
 
     // The spine (curve) is fixed; the nodes flow ALONG it in unison — left as you
     // scroll forward, right as you scroll back. Each node's x is driven directly
