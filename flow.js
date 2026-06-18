@@ -307,25 +307,7 @@
     // Hero image plane per panel
     panels.forEach(createImageObject);
 
-    // Existing geometric forms kept as smaller secondary accents behind the image
-    var geos = [
-      new THREE.IcosahedronGeometry(3.2, 1),
-      new THREE.TorusGeometry(2.7, 0.92, 26, 90),
-      new THREE.TorusKnotGeometry(2.1, 0.62, 150, 22),
-      new THREE.OctahedronGeometry(3.3, 0)
-    ];
-    for (var i = 0; i < N; i++) {
-      var grp = new THREE.Group();
-      var g = geos[i % geos.length];
-      var mat = new THREE.MeshStandardMaterial({ color: 0x7b73ff, metalness: 0.28, roughness: 0.4, transparent: true, opacity: 0.55, flatShading: true });
-      grp.add(new THREE.Mesh(g, mat));
-      grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: 0x3932dc, transparent: true, opacity: 0.22 })));
-      grp.position.set(i * GAP - 6.5, 2.4, -12);
-      grp.scale.setScalar(0.55);
-      grp.userData.spin = 0.14 + i * 0.025;
-      scene.add(grp); focal.push(grp);
-    }
-
+    // (Background geometric forms — icosahedron / torus / knot / octahedron — removed.)
 
     clock = new THREE.Clock();
     resizeGL();

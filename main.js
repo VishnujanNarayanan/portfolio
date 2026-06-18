@@ -45,14 +45,15 @@
     // Purely scroll-linked, so scrolling back up reverses it exactly. The 3D text
     // entrance still plays on load at scroll 0 (scale 1, no transform on .hero).
     var heroContent = hero.querySelector(".hero__content");
-    var heroImg = hero.querySelector("#vanta-bg");  // the shader image that greys out
+    var heroImg = hero.querySelector(".hero__bg");  // the (light gradient) image that greys out
     var scrollCue = hero.querySelector(".hero__scroll-btn");  // vanishes (reverse of its entrance) on scroll
     // Header pieces that react to the zoom-out (color flip + shrink-to-edges).
     var hdr        = document.querySelector("header");
     var navLeft    = hdr && hdr.querySelector(".header__nav-left");
     var navRight   = hdr && hdr.querySelector(".header__nav-right");
-    var navTexts   = hdr ? hdr.querySelectorAll(".header__nav-left a, .pill-btn-span") : [];
+    var navTexts   = hdr ? hdr.querySelectorAll(".header__nav-left a, .pill-btn--glass .pill-btn-span") : [];
     var darkPill   = hdr && hdr.querySelector(".pill-btn--dark");
+    var darkPillTx = darkPill && darkPill.querySelector(".pill-btn-span");
     var EXIT_MIN_SCALE = 0.38;      // how far the whole page-rectangle recedes (smaller = more zoom-out)
     function updateHeroExit() {
       var vh = window.innerHeight;
@@ -83,7 +84,10 @@
       // Header reaches its end state faster — over 2/5 of the zoom scroll distance.
       var hp = Math.max(0, Math.min(y / (ZOOM_END * 0.4), 1));
       var he = hp * hp * (3 - 2 * hp);                   // smoothstep
-      var c = Math.round(255 * (1 - he));                // 255 (white) → 0 (black)
+      // Hero is LIGHT at the top, world is DARK after zoom-out → flip nav/Hire-Me text
+      // black → white. The dark "Get In Touch" pill goes the opposite way (its bg lightens
+      // dark → light while its text darkens white → black) so it stays legible throughout.
+      var c = Math.round(255 * he);                      // 0 (black) → 255 (white)
       var rgb = "rgb(" + c + "," + c + "," + c + ")";
       navTexts.forEach(function (t) { t.style.color = rgb; });
       var hs = 1 - 0.12 * he;                            // shrink 1 → 0.88 (subtle)
@@ -93,6 +97,7 @@
         var dr = Math.round(5 + (208 - 5) * he), dg = Math.round(4 + (225 - 4) * he), db = Math.round(25 + (235 - 25) * he);
         darkPill.style.backgroundColor = "rgb(" + dr + "," + dg + "," + db + ")";
       }
+      if (darkPillTx) { var c2 = Math.round(255 * (1 - he)); darkPillTx.style.color = "rgb(" + c2 + "," + c2 + "," + c2 + ")"; }
     }
     window.addEventListener("scroll", updateHeroExit, { passive: true });
     window.addEventListener("resize", updateHeroExit, { passive: true });
@@ -171,6 +176,111 @@
     updateMarquee();
     requestAnimationFrame(tick);
   }
+
+  /* ---------- Global background: animated topographic lime contours ----------
+     One fixed full-viewport plane shared by the hero zoom-out reveal AND the flow
+     section (so they read as the same continuous background). The contours are
+     iso-lines (marching squares) of a moving scalar field built from drifting,
+     pulsing metaballs — so they are CLOSED loops, never overlap (iso-lines of one
+     field can't cross), and grow / shrink / vanish as the blobs pulse and move. */
+  (function () {
+    var cv = document.createElement("canvas");
+    cv.id = "bg-contours";
+    document.body.appendChild(cv);
+    var ctx = cv.getContext("2d");
+    var W = 0, H = 0, DPR = 1, CELL = 26, cols = 0, rows = 0, field = [];
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+    // Drifting metaballs: each has a base position, an orbit, a radius and a pulse.
+    var BLOBS = [];
+    function seedBlobs() {
+      BLOBS = [];
+      for (var i = 0; i < 7; i++) {
+        BLOBS.push({
+          bx: Math.random(), by: Math.random(),
+          ox: 0.12 + Math.random() * 0.22, oy: 0.12 + Math.random() * 0.22,
+          sx: 0.06 + Math.random() * 0.12, sy: 0.06 + Math.random() * 0.12,
+          px: Math.random() * 6.28, py: Math.random() * 6.28,
+          r: 0.16 + Math.random() * 0.14,           // radius (fraction of min dim)
+          pulse: 0.5 + Math.random() * 0.9,          // pulse speed → blobs fade in/out
+          pph: Math.random() * 6.28
+        });
+      }
+    }
+    function resize() {
+      DPR = Math.min(window.devicePixelRatio || 1, 2);
+      W = window.innerWidth; H = window.innerHeight;
+      cv.width = W * DPR; cv.height = H * DPR;
+      cv.style.width = W + "px"; cv.style.height = H + "px";
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      cols = Math.ceil(W / CELL) + 1; rows = Math.ceil(H / CELL) + 1;
+    }
+    seedBlobs(); resize();
+    window.addEventListener("resize", resize, { passive: true });
+    var LEVELS = [0.18, 0.3, 0.42, 0.56, 0.72, 0.9];   // iso-levels → nested contours
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    var t = 0, last = 0;
+    function frame(now) {
+      var dt = last ? Math.min((now - last) / 1000, 0.05) : 0; last = now;
+      t += dt * 0.4;                                     // slow, gentle drift
+      var md = Math.min(W, H);
+      // 1) sample the scalar field on the grid
+      var bx = [], by = [], br = [], bw = [], i, c, r;
+      for (i = 0; i < BLOBS.length; i++) {
+        var b = BLOBS[i];
+        bx[i] = (b.bx + Math.cos(t * b.sx * 6.28 + b.px) * b.ox) * W;
+        by[i] = (b.by + Math.sin(t * b.sy * 6.28 + b.py) * b.oy) * H;
+        br[i] = b.r * md;
+        bw[i] = 0.55 + 0.45 * Math.sin(t * b.pulse + b.pph); // pulsing weight (→ vanish)
+      }
+      for (r = 0; r <= rows; r++) {
+        field[r] = field[r] || [];
+        for (c = 0; c <= cols; c++) {
+          var px = c * CELL, py = r * CELL, sum = 0;
+          for (i = 0; i < BLOBS.length; i++) {
+            var dx = px - bx[i], dy = py - by[i], rr = br[i];
+            sum += bw[i] * Math.exp(-(dx * dx + dy * dy) / (2 * rr * rr));
+          }
+          field[r][c] = sum;
+        }
+      }
+      // 2) marching squares per iso-level → closed, non-overlapping contours
+      ctx.clearRect(0, 0, W, H);
+      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      for (var li = 0; li < LEVELS.length; li++) {
+        var lv = LEVELS[li];
+        ctx.beginPath();
+        for (r = 0; r < rows; r++) {
+          for (c = 0; c < cols; c++) {
+            var x0 = c * CELL, y0 = r * CELL, x1 = x0 + CELL, y1 = y0 + CELL;
+            var tl = field[r][c], tr = field[r][c + 1], br2 = field[r + 1][c + 1], bl = field[r + 1][c];
+            var idx = (tl > lv ? 8 : 0) | (tr > lv ? 4 : 0) | (br2 > lv ? 2 : 0) | (bl > lv ? 1 : 0);
+            if (idx === 0 || idx === 15) continue;
+            // edge crossing points (linear interp)
+            var T = { x: lerp(x0, x1, (lv - tl) / (tr - tl)), y: y0 };
+            var R = { x: x1, y: lerp(y0, y1, (lv - tr) / (br2 - tr)) };
+            var B = { x: lerp(x0, x1, (lv - bl) / (br2 - bl)), y: y1 };
+            var L = { x: x0, y: lerp(y0, y1, (lv - tl) / (bl - tl)) };
+            function seg(a, b2) { ctx.moveTo(a.x, a.y); ctx.lineTo(b2.x, b2.y); }
+            switch (idx) {
+              case 1: case 14: seg(L, B); break;
+              case 2: case 13: seg(B, R); break;
+              case 3: case 12: seg(L, R); break;
+              case 4: case 11: seg(T, R); break;
+              case 6: case 9:  seg(T, B); break;
+              case 7: case 8:  seg(L, T); break;
+              case 5:  seg(L, T); seg(B, R); break;
+              case 10: seg(L, B); seg(T, R); break;
+            }
+          }
+        }
+        ctx.strokeStyle = "rgba(210,255,0,0.3)";          // uniform colour…
+        ctx.lineWidth = 0.7;                              // …and uniform, thin width
+        ctx.stroke();
+      }
+      if (!reduce) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
 
   /* ---------- IntersectionObserver reveals ---------- */
   var revealTargets = document.querySelectorAll(".reveal, .feature-item__content");
