@@ -99,6 +99,79 @@
     updateHeroExit();
   }
 
+  /* ---------- Tool-logo marquee behind the hero (scroll-driven) ---------- */
+  var marquee = document.querySelector(".tool-marquee");
+  if (marquee) {
+    var TOOLS = [
+      "python/python-original", "javascript/javascript-original", "typescript/typescript-original",
+      "react/react-original", "nextjs/nextjs-original", "nodejs/nodejs-original",
+      "nestjs/nestjs-original", "tailwindcss/tailwindcss-original", "docker/docker-original",
+      "postgresql/postgresql-original", "redis/redis-original", "git/git-original",
+      "github/github-original", "amazonwebservices/amazonwebservices-original-wordmark",
+      "vercel/vercel-original", "fastapi/fastapi-original", "pandas/pandas-original",
+      "selenium/selenium-original", "playwright/playwright-original",
+      "pytorch/pytorch-original", "tensorflow/tensorflow-original", "scikitlearn/scikitlearn-original"
+    ];
+    var CDN = "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/";
+    var HALF = Math.ceil(TOOLS.length / 2);
+    var ROWS = [
+      { dir: -1, speed: 90,  set: TOOLS.slice(0, HALF) },  // top row: first half of the tools
+      { dir:  1, speed: 115, set: TOOLS.slice(HALF) }       // bottom row: the rest (no overlap)
+    ];
+    var COPIES = 4;                                          // repeats per row → seamless loop
+    var rowEls = ROWS.map(function (cfg) {
+      var row = document.createElement("div");
+      row.className = "tool-marquee__row";
+      for (var d = 0; d < COPIES; d++) {
+        cfg.set.forEach(function (t) {
+          var img = document.createElement("img");
+          img.src = CDN + t + ".svg";
+          img.alt = "";
+          row.appendChild(img);
+        });
+      }
+      marquee.appendChild(row);
+      return { el: row, dir: cfg.dir, speed: cfg.speed, offset: 0, setW: 1, count: cfg.set.length };
+    });
+    // Cache each row's EXACT repeat stride = distance from the first item of copy 0 to the
+    // first item of copy 1 (includes the inter-item gap). Using scrollWidth/COPIES was off by
+    // the missing trailing gap, so the seam didn't line up → a jump at the wrap point.
+    // Only re-measured on load/resize (per-frame measuring caused jitter while logos loaded).
+    function measure() {
+      rowEls.forEach(function (r) {
+        var a = r.el.children[0], b = r.el.children[r.count];
+        r.setW = (b && a) ? (b.offsetLeft - a.offsetLeft) || 1 : 1;
+      });
+    }
+    // Vertical position + fade follow scroll; horizontal motion is time-based (constant).
+    function updateMarquee() {
+      var y = window.scrollY, vh = window.innerHeight;
+      marquee.style.opacity = Math.max(0, Math.min(y / (vh * 0.55), 1));
+      // Phase 1 (still zooming, y < vh): stay put. Phase 2 (zoom done): ride UP with the hero.
+      var lift = Math.max(0, y - vh);
+      marquee.style.transform = "translate3d(0," + (-lift) + "px,0)";
+    }
+    var lastT = 0;
+    function tick(now) {
+      var dt = lastT ? Math.min((now - lastT) / 1000, 0.05) : 0;  // clamp so a tab-resume can't jump
+      lastT = now;
+      rowEls.forEach(function (r) {
+        var setW = r.setW;
+        r.offset += r.dir * r.speed * dt;
+        var wrapped = ((r.offset % setW) + setW) % setW; // 0 → setW, seamless wrap
+        r.el.style.transform = "translate3d(" + (wrapped - setW) + "px,0,0)";
+      });
+      requestAnimationFrame(tick);
+    }
+    function onResize() { measure(); updateMarquee(); }
+    window.addEventListener("scroll", updateMarquee, { passive: true });
+    window.addEventListener("resize", onResize, { passive: true });
+    window.addEventListener("load", onResize);          // re-measure once logos affect layout
+    measure();
+    updateMarquee();
+    requestAnimationFrame(tick);
+  }
+
   /* ---------- IntersectionObserver reveals ---------- */
   var revealTargets = document.querySelectorAll(".reveal, .feature-item__content");
   if ("IntersectionObserver" in window && revealTargets.length) {
@@ -134,30 +207,9 @@
     c.style.maxHeight = c.scrollHeight + "px";
   });
 
-  /* ---------- Header show/hide on scroll direction ---------- */
+  /* ---------- Header: always visible (never hides on scroll) ---------- */
   var header = document.querySelector("header");
-  if (header) {
-    var lastY = window.scrollY;
-    var ticking = false;
-    function onScroll() {
-      var y = window.scrollY;
-      if (y < window.innerHeight) {
-        // During the hero zoom-out the header stays put and shrinks (see updateHeroExit)
-        // instead of hiding on scroll-down.
-        header.classList.add("show");
-      } else if (y > lastY + 4) {
-        header.classList.remove("show"); // scrolling down
-      } else if (y < lastY - 4) {
-        header.classList.add("show"); // scrolling up
-      }
-      lastY = y;
-      ticking = false;
-    }
-    window.addEventListener("scroll", function () {
-      if (!ticking) { requestAnimationFrame(onScroll); ticking = true; }
-    }, { passive: true });
-    header.classList.add("show");
-  }
+  if (header) header.classList.add("show");
 
   /* ---------- Mobile nav toggle ---------- */
   var menuBtn = document.querySelector(".menu-btn");
