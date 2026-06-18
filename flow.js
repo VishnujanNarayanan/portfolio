@@ -230,7 +230,6 @@
     if (h > BOX_H) { h = BOX_H; w = BOX_H * aspect; }
     var u = grp.userData;
     u.img.geometry.dispose(); u.img.geometry = new THREE.PlaneGeometry(w, h);
-    u.edge.geometry.dispose(); u.edge.geometry = new THREE.EdgesGeometry(new THREE.PlaneGeometry(w, h));
     u.recv.geometry.dispose(); u.recv.geometry = new THREE.PlaneGeometry(w * 1.5, h * 1.5);
   }
 
@@ -248,12 +247,7 @@
     img.castShadow = true;
     grp.add(img);
 
-    // Soft frame edge so the plane reads as a physical object even as a placeholder
-    var edge = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.PlaneGeometry(BOX_W, BOX_H)),
-      new THREE.LineBasicMaterial({ color: 0x3932dc, transparent: true, opacity: 0.25 })
-    );
-    grp.add(edge);
+    var edge = null;   // edge frame removed (was indigo)
 
     var shadowMat = new THREE.ShadowMaterial({ opacity: 0.3 });
     var receiver = new THREE.Mesh(new THREE.PlaneGeometry(BOX_W * 1.5, BOX_H * 1.5), shadowMat);
@@ -299,7 +293,7 @@
     sc.left = -10; sc.right = 10; sc.top = 8; sc.bottom = -8; sc.near = 1; sc.far = 40;
     scene.add(keyLight);
     scene.add(keyLight.target);
-    var rim = new THREE.DirectionalLight(0x3932dc, 0.5); rim.position.set(-7, -3, 5); scene.add(rim);
+    var rim = new THREE.DirectionalLight(0x8aa800, 0.5); rim.position.set(-7, -3, 5); scene.add(rim);
 
     // Warm point light driven by the hanging HTML bulb; travels with the camera.
     bulbLight = new THREE.PointLight(0xfff0d0, 0.0, 60, 2); bulbLight.position.set(9, 7, 9); scene.add(bulbLight);
