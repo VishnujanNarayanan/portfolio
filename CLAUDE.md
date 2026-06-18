@@ -668,3 +668,13 @@ Keep this section updated after every change. Format:
 - Follow-up: dropped the progress fill entirely — the spine is now ALWAYS fully drawn (strokeDasharray
   none, strokeDashoffset 0 at init; removed the per-frame strokeDashoffset update). Only the nodes move.
   node --check OK.
+
+### 2026-06-18 (zone title: keep the appear/exit animations, drop only the SCROLL-driven part)
+- User clarified: keep the zone-title animations, just remove the scroll-RELATED behaviour. So the
+  appear/exit/direction-aware-mirror animations stay, but they're now purely TIMED (threshold-fired at
+  the zone crossing) — no scroll-driven slide. flow.js loop() title block: every branch is now a plain
+  timed lerpPose between REST and APPEAR/EXIT (forward enter APPEAR→REST no-fade; forward leave
+  REST→EXIT fade; backward enter EXIT→REST fade-in; backward leave REST→APPEAR fade-out; upcoming hidden
+  at APPEAR). Removed scrollPose()+slideFactor() usage and the MID_X scroll-slide; the appear's small
+  horizontal slide is baked into APPEAR.ex and resolves on the ENTER_MS timer. scrollPose/slideFactor
+  now unused (left in place). node --check OK.
