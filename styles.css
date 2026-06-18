@@ -248,3 +248,9 @@ body.nav-open{overflow:hidden}
 /* Header over the hero: white "Hire Me" + white, slightly larger left nav links. */
 .pill-btn--glass{color:#fff}
 header .header__nav-left a{color:#fff;font-size:16px}
+
+/* Tool-logo marquee behind the hero (z-index 2 < hero 3; later opaque sections cover it).
+   Rows scroll horizontally with page scroll; fades in as the hero zooms out. */
+.tool-marquee{position:fixed;inset:0;z-index:2;pointer-events:none;display:flex;flex-direction:column;justify-content:center;gap:clamp(12px,2.4vh,34px);overflow:hidden;opacity:0;will-change:transform}
+.tool-marquee__row{display:flex;align-items:center;gap:clamp(22px,3vw,54px);white-space:nowrap;will-change:transform}
+.tool-marquee__row img{height:clamp(38px,6vh,74px);width:auto;opacity:.82}
