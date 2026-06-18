@@ -172,8 +172,13 @@
     lineEl.setAttribute("d", d);
     fillEl.setAttribute("d", d);
     fillLen = fillEl.getTotalLength();
-    fillEl.style.strokeDasharray = "none";
-    fillEl.style.strokeDashoffset = 0;  // spine is always fully drawn (no progress fill)
+    // Spine is scroll-drawn left→right (not just faded in): both the faint base
+    // line and the highlight start fully hidden (offset = full length) and the
+    // loop reels the dashoffset to 0 as you scroll into the section.
+    lineEl.style.strokeDasharray = fillLen;
+    lineEl.style.strokeDashoffset = fillLen;
+    fillEl.style.strokeDasharray = fillLen;
+    fillEl.style.strokeDashoffset = fillLen;
     for (var s = 0; s <= 240; s++) {
       var p = fillEl.getPointAtLength(s / 240 * fillLen);
       curveXY.push({ x: p.x, y: p.y });
@@ -494,6 +499,27 @@
     // scroll forward, right as you scroll back. Each node's x is driven directly
     // by scroll so the active node (global == i) sits dead-centre, and its y is
     // read off the fixed curve. The progress fill below still runs independently.
+    // Scroll-bound creation: the spine draws on left→right over the first slice of
+    // the section's scroll, then holds fully drawn. Bound to clamped progress so it
+    // reverses (un-draws) when you scroll back out the top.
+    var drawP = 0, drawnX = 0;
+    if (lineEl && fillEl && fillLen) {
+      // Completes at the half-way point of zone 2 (global == 1 → progress 1/3).
+      var DRAW_SPAN = 0.33;                   // fraction of section scroll to fully draw
+      var lin = clamp(progress / DRAW_SPAN, 0, 1);
+      // Power ease-out: decelerates continuously from the first frame (fast at the
+      // start, crawling at the end), so it visibly "eases into" the slow end rather
+      // than holding one speed then dropping. Slope starts at EASE×, ends at ~0.
+      // Endpoints fixed (0→1), so total draw time over DRAW_SPAN is unchanged.
+      var EASE = 2.5;
+      drawP = 1 - Math.pow(1 - lin, EASE);
+      var off = (fillLen * (1 - drawP)).toFixed(1);
+      lineEl.style.strokeDashoffset = off;
+      fillEl.style.strokeDashoffset = off;
+      // viewBox x of the drawing frontier — nodes left of it have been "created".
+      drawnX = curveXY.length ? curveXY[clamp(Math.round(drawP * (curveXY.length - 1)), 0, curveXY.length - 1)].x : 0;
+    }
+
     if (nodesEl && curveXY.length) {
       var jw = journey.clientWidth || vw;
       var SPACING = VBW * 0.42;               // viewBox gap between adjacent nodes
@@ -501,6 +527,9 @@
         var vbX = VBW / 2 + (i - global) * SPACING;
         n.style.left = (vbX / VBW * jw).toFixed(1) + "px";
         n.style.top = yAtX(vbX).toFixed(1) + "px";
+        // Pop in one-by-one as the drawing frontier sweeps past each node (so the
+        // first node appears, then the second…); once fully drawn all are present.
+        n.classList.toggle("flow-journey__node--in", drawP >= 1 || vbX <= drawnX + 6);
         n.classList.toggle("flow-journey__node--active", i === active);
       });
     } else {
