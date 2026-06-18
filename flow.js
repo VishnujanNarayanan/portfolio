@@ -74,6 +74,19 @@
     var GAP = 0.05;
     return smooth(clamp((d + 0.5 - GAP) / (0.5 - GAP), 0, 1));
   }
+  // A panel's live title pose right now: interpolated if a timed _anim is in
+  // flight, else the steady pose for its side of the active index. Lets a new
+  // animation capture the current pose as its `from` so a mid-flight reversal
+  // doesn't jump.
+  function poseOf(panel, P, activeIdx, pi) {
+    var a = panel._anim;
+    if (a) {
+      var el = Date.now() - a.t0 - a.delay;
+      if (el < 0) return a.from;
+      return lerpPose(a.from, a.to, easeOut(clamp(el / a.dur, 0, 1)));
+    }
+    return pi === activeIdx ? P.REST : (pi < activeIdx ? P.EXIT : P.APPEAR);
+  }
 
   /* ---------- Sky hue cross-fade between stages ---------- */
   // All four zones share ONE gradient anchored to the hero's Vanta background
@@ -396,26 +409,32 @@
     var P = buildPoses(vw);
     // Title motion. Each panel's content is screen-pinned (counter-translateX
     // cancels its panel's screen offset pi*vw+trackX, so its baseline is its CSS
-    // `left` rest spot). Appear + exit are THRESHOLD-driven (timed, fired at the
-    // swap crossing) and DIRECTION-AWARE so scrolling up plays the mirror:
-    //   forward enter  : APPEAR → REST  (timed 3D + scroll-driven slide, no fade)
-    //   forward leave  : REST  → EXIT   (timed fly-out + fade out)
-    //   backward enter : EXIT  → REST   (timed, fade in)  = reverse of its forward exit
-    //   backward leave : REST  → APPEAR (timed)            = reverse of its forward appear
-    // On each crossing we tag the two panels that change with the direction + a
-    // start time; everything else is computed from those each frame.
-    var MID_X = vw * 0.14;       // where the forward appear lands before the scroll-slide
-    var ENTER_MS = 420;          // timed appear (3D fwd / EXIT→REST back)
-    var EXIT_MS = 280;           // timed leave (fly-out fwd / REST→APPEAR back)
+    // `left` rest spot regardless of how far the track slid). Both entry and exit
+    // are THRESHOLD-driven, fired at the swap threshold (active=round(global)
+    // flips at the zone midpoint — the same point the images swap), each a snappy
+    // fixed-duration timed animation, DIRECTION-AWARE so scrolling back up plays
+    // the reverse: scrolling DOWN the new title enters from APPEAR (no fade) and
+    // the old leaves to EXIT (fade out); scrolling UP the mirror — the returning
+    // title enters from EXIT and the leaving one goes back to APPEAR. The entering
+    // title is held hidden for ENTER_DELAY after the threshold so the outgoing one
+    // clears first (kills the subtle overlap). Animations are set up on the active
+    // flip below; `from` captures the live pose so a mid-flight reversal doesn't jump.
+    var ENTER_DELAY = 90;        // hold the new title hidden briefly after the threshold
+    var ENTER_MS = 420;          // entrance (appear / reverse-exit)
+    var EXIT_MS = 280;           // snappy departure (exit / reverse-appear)
     if (active !== lastActive) {
       var fwd = active > lastActive;                     // scroll direction at this crossing
+      var entering = panels[active], leaving = panels[lastActive];
+      if (entering) entering._anim = {
+        t0: now, delay: ENTER_DELAY, dur: ENTER_MS, fade: false,
+        from: poseOf(entering, P, lastActive, active), to: P.REST
+      };
+      if (leaving) leaving._anim = {
+        t0: now, delay: 0, dur: EXIT_MS, fade: true,
+        from: poseOf(leaving, P, lastActive, lastActive), to: fwd ? P.EXIT : P.APPEAR
+      };
+      // index / sub / pills keep their grouped fade via the active/passed classes.
       panels.forEach(function (panel, pi) {
-        if (pi === active) {                             // becoming active → appear
-          panel._dir = fwd ? "fwd" : "back"; panel._appearT = now; panel._leaveT = 0;
-        } else if (pi === lastActive) {                  // just left → exit
-          panel._ldir = fwd ? "fwd" : "back"; panel._leaveT = now; panel._appearT = 0;
-        }
-        // index / sub / pills keep their grouped fade via the active/passed classes.
         panel.classList.toggle("flow-panel--active", pi === active);
         panel.classList.toggle("flow-panel--passed", pi < active);
       });
@@ -425,29 +444,23 @@
       var content = panel.querySelector(".flow-panel__content");
       if (!content) return;
       var base = "translateY(-58%) translateX(" + (-(pi * vw + trackX)) + "px)";
-      var p, op;
-      if (pi === active) {
-        var tb = panel._dir === "back" ? easeOut(clamp((now - panel._appearT) / ENTER_MS, 0, 1)) : 1;
-        if (panel._dir === "back" && tb < 1) {           // reverse of its exit, in progress: EXIT → REST, fade in
-          p = lerpPose(P.EXIT, P.REST, tb); op = tb;
-        } else {                                         // appear/settled: 3D (timed fwd) + scroll-driven slide
-          var f = (panel._dir === "fwd" && panel._appearT) ? 1 - easeOut(clamp((now - panel._appearT) / ENTER_MS, 0, 1)) : 0;
-          p = scrollPose(P.APPEAR, MID_X, f, slideFactor(global - pi)); op = 1;
+      var a = panel._anim;
+      if (a) {
+        var el = now - a.t0 - a.delay;
+        if (el < 0) {                                    // delay window — hold at the `from` pose
+          content.style.transform = poseStr(base, a.from);
+          content.style.opacity = a.fade ? 1 : 0;        // leaving stays visible; entering hidden
+        } else {
+          var t = easeOut(clamp(el / a.dur, 0, 1));
+          content.style.transform = poseStr(base, lerpPose(a.from, a.to, t));
+          content.style.opacity = a.fade ? 1 - t : 1;    // entering = no fade-in
+          if (el >= a.dur) panel._anim = null;           // settle to steady next frame
         }
-      } else if (pi < active) {                          // passed (left going forward): REST → EXIT, fade out
-        var te = panel._leaveT ? easeOut(clamp((now - panel._leaveT) / EXIT_MS, 0, 1)) : 1;
-        p = lerpPose(P.REST, P.EXIT, te); op = 1 - te;
-      } else if (panel._ldir === "back" && panel._leaveT) { // left going backward = reverse of appear:
-        // the slide rest→mid already happened via scroll while it was active (slideFactor),
-        // so here we only RE-RAISE the 3D (fu: 0→1) at mid — the reverse of the appear — while
-        // fading out, so the extreme rotated APPEAR pose never flashes at full opacity on exit.
-        var fu = easeOut(clamp((now - panel._leaveT) / EXIT_MS, 0, 1));
-        p = scrollPose(P.APPEAR, MID_X, fu, slideFactor(global - pi)); op = 1 - fu;
-      } else {                                           // upcoming — hidden at the APPEAR origin (mid)
-        p = scrollPose(P.APPEAR, MID_X, 1, 0); op = 0;
+      } else {                                           // steady state by side of `active`
+        var sp = pi === active ? P.REST : (pi < active ? P.EXIT : P.APPEAR);
+        content.style.transform = poseStr(base, sp);
+        content.style.opacity = pi === active ? 1 : 0;
       }
-      content.style.transform = poseStr(base, p);
-      content.style.opacity = op;
     });
 
     // On desktop the GL image planes replace the DOM card floats (hidden via
