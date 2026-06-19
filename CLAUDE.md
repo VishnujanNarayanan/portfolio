@@ -833,3 +833,13 @@ Keep this section updated after every change. Format:
   — the last panel can never overflow regardless of count. Rail now `flex:1 1 auto;min-width:--strip`
   so the vertical label centres in a wide collapsed strip yet resolves to --strip when open. Removed
   the intro/heading rules + mobile `.writing__intro`; `.writing__pad{display:none}` on mobile.
+
+### 2026-06-19 (Writing accordion — sticky-hover via JS to kill the jitter)
+- Pure CSS :hover on the resizing strips flickered: opening a panel shifts the layout under the
+  cursor, re-triggering :hover on a neighbour (feedback loop). Also confirmed animating flex-grow
+  makes it worse, so kept the basis-only model.
+- styles.css: open state now keys off `.wpanel.is-open` (plus `:focus-within` for keyboard) instead
+  of `.wstack:hover .wpanel`. Removed the :hover open/close + content-opacity hover rules.
+- main.js: new sticky-hover block — `mouseenter` on a panel sets `.is-open` (cleared from siblings);
+  `.wstack` `mouseleave` reverts to the first panel. mouseenter fires once on cross-in, so a panel
+  resizing under the cursor never re-fires → no flicker. First panel open on init. node --check OK.

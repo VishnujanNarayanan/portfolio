@@ -323,8 +323,12 @@ header .header__nav-left a{color:#050419;font-size:16px}
 
 .wpanel{
   position:relative;display:flex;overflow:hidden;min-width:0;
-  flex:1 1 0;                         /* collapsed: share the leftover width equally */
-  transition:flex-grow .6s cubic-bezier(.6,.05,.05,1),flex-basis .6s cubic-bezier(.6,.05,.05,1);
+  flex:1 1 0;                         /* grow:1 shrink:1 stay CONSTANT — only the basis below changes */
+  will-change:flex-basis;
+  /* Animate ONLY flex-basis (not flex-grow): grow/shrink stay constant so the free-space
+     redistribution is monotonic — no per-frame wobble/vibration. Slow, gentle ease-in-out
+     (eases at BOTH start and end). */
+  transition:flex-basis .8s cubic-bezier(.65,0,.35,1);
 }
 .wpanel:nth-child(1){background:#161d2e}
 .wpanel:nth-child(2){background:#1b2236}
@@ -336,13 +340,14 @@ header .header__nav-left a{color:#050419;font-size:16px}
 .wpanel:nth-child(8){background:#374a7c}
 .wpanel:nth-child(9){background:#3b518a}
 
-/* Open state: a fixed content column (no grow); first panel open by default, the
-   hovered/focused panel takes over. Exactly one open at a time; the rest share. */
-.wpanel:first-child{flex:0 0 calc(var(--strip) + var(--cw))}
-.wstack:hover .wpanel:first-child,
-.wstack:focus-within .wpanel:first-child{flex:1 1 0}
-.wstack .wpanel:hover,
-.wstack .wpanel:focus-within{flex:0 0 calc(var(--strip) + var(--cw))}
+/* Open state: ONLY flex-basis changes (grow/shrink constant at 1/1). The open panel
+   carries +(--strip + --cw) of basis, so it ends up exactly one content column wider
+   than the others while every panel still shares the leftover space — fills the width,
+   never overflows, and animates smoothly.
+   Which panel is open is driven by the `is-open` class set in main.js on mouseenter
+   (sticky — survives the resize, so no hover-flicker). :focus-within covers keyboard. */
+.wpanel.is-open,
+.wpanel:focus-within{flex-basis:calc(var(--strip) + var(--cw))}
 
 /* Rail — the strip that always shows (vertical label top, number bottom).
    Fills the collapsed panel (so the label centres); resolves to --strip when the
@@ -359,12 +364,9 @@ header .header__nav-left a{color:#050419;font-size:16px}
 .wpanel__content{flex:0 0 var(--cw);width:var(--cw);box-sizing:border-box;
   display:flex;flex-direction:column;justify-content:center;gap:20px;
   padding:clamp(32px,3vw,52px) clamp(28px,2.6vw,44px);
-  opacity:0;transition:opacity .45s ease .08s}
-.wpanel:first-child .wpanel__content{opacity:1}
-.wstack:hover .wpanel:first-child .wpanel__content,
-.wstack:focus-within .wpanel:first-child .wpanel__content{opacity:0}
-.wstack .wpanel:hover .wpanel__content,
-.wstack .wpanel:focus-within .wpanel__content{opacity:1}
+  opacity:0;transition:opacity .5s ease-in-out .15s}
+.wpanel.is-open .wpanel__content,
+.wpanel:focus-within .wpanel__content{opacity:1}
 
 .wpanel__meta{display:flex;gap:16px;font-family:"Roboto",sans-serif;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.55)}
 .wpanel__meta span:first-child{color:#4d8bff}

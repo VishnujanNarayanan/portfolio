@@ -338,7 +338,26 @@
     revealTargets.forEach(function (el) { el.classList.add("show"); });
   }
 
-  /* Writing panels are a CSS-only hover/focus accordion — no JS needed. */
+  /* ---------- Writing accordion: sticky hover (no flicker) ----------
+     CSS opens whichever .wpanel has .is-open. We set it on mouseenter and leave it
+     until another panel is entered (or the cursor leaves the group → first panel).
+     mouseenter fires once on cross-in, so the panel resizing under the cursor never
+     re-triggers it — that's what stops the hover-flicker/jitter a pure :hover has.
+     :focus-within still covers keyboard. */
+  (function () {
+    var wstack = document.querySelector(".wstack");
+    if (!wstack) return;
+    var panels = Array.prototype.slice.call(wstack.querySelectorAll(".wpanel"));
+    if (!panels.length) return;
+    function open(p) {
+      panels.forEach(function (x) { x.classList.toggle("is-open", x === p); });
+    }
+    open(panels[0]);                                   // first open by default
+    panels.forEach(function (p) {
+      p.addEventListener("mouseenter", function () { open(p); });
+    });
+    wstack.addEventListener("mouseleave", function () { open(panels[0]); });
+  })();
 
   /* ---------- Accordion (Services + any .faq-item) ---------- */
   document.querySelectorAll(".faq-item__header").forEach(function (btn) {
