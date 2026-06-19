@@ -311,6 +311,8 @@
          column (not the whole page) to reveal the post; exactly one is open at a
          time (first by default). CSS-only; stacks as plain blocks on mobile. -->
     <section class="writing" id="blog" aria-label="Writing">
+      <!-- Pinned stage: panels fly in from the right, scroll-driven (main.js) -->
+      <div class="writing__pin">
       <!-- Left side intentionally empty for now -->
       <div class="writing__pad" aria-hidden="true"></div>
 
@@ -412,6 +414,7 @@
         </article>
 
       </div>
+      </div><!-- /.writing__pin -->
     </section>
 
     <section class="features" id="projects">
