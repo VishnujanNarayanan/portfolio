@@ -59,10 +59,6 @@
       var vh = window.innerHeight;
       var ZOOM_END = vh;                             // zoom completes over one viewport
       var y = window.scrollY;
-      // While zooming (y < vh) the nav colour is driven smoothly by the inline
-      // interpolation below, so suppress the per-letter transition; past the zoom
-      // the flow threshold (header--on-light) owns the letter-by-letter flip.
-      if (hdr) hdr.classList.toggle("header--zooming", y < vh);
       var p = Math.max(0, Math.min(y / ZOOM_END, 1)); // zoom progress 0 → 1
       var e = p * p * (3 - 2 * p);                    // smoothstep
       var scale = 1 - (1 - EXIT_MIN_SCALE) * e;       // 1 → EXIT_MIN_SCALE (no opacity change)
@@ -368,23 +364,45 @@
   var header = document.querySelector("header");
   if (header) header.classList.add("show");
 
-  /* ---------- Split the top nav links into per-letter spans ----------
-     So the flow's background-transition can flip them to black LETTER BY LETTER
-     (each .nav-char carries a staggered --d transition-delay). flow.js toggles
-     header.header--on-light at the threshold; the CTAs transition normally. */
-  Array.prototype.forEach.call(document.querySelectorAll(".header__nav-left a"), function (a) {
-    var text = a.textContent;
-    a.setAttribute("aria-label", text);
-    a.textContent = "";
-    for (var i = 0; i < text.length; i++) {
-      var s = document.createElement("span");
-      s.className = "nav-char";
-      s.setAttribute("aria-hidden", "true");
-      s.textContent = text[i];
-      s.style.setProperty("--d", (i * 0.03).toFixed(3) + "s");
-      a.appendChild(s);
-    }
-  });
+  /* ---------- Split the top nav links into a per-letter VERTICAL REEL ----------
+     Each letter is a clipped .nav-char holding two stacked copies: __a (current
+     colour, on top) and __b (black, waiting just below). At the flow bg threshold
+     At the flow bg threshold flow.js calls window.__navLight(true), which rolls each
+     letter up (translateY -100%) so the black copy takes its place. Hire Me / Get In
+     Touch are excluded (they get a different animation). */
+  (function buildNavReel() {
+    var LETTER_STEP = 0.015;    // per-letter stagger
+    var WORD_GAP = 0.06;        // extra delay so each word starts after the one to its left
+    var navClips = [], gi = 0, Dmax = 0;
+    Array.prototype.forEach.call(document.querySelectorAll(".header__nav-left a"), function (a, w) {
+      var text = a.textContent;
+      a.setAttribute("aria-label", text);
+      a.textContent = "";
+      for (var i = 0; i < text.length; i++) {
+        var clip = document.createElement("span");
+        clip.className = "nav-char";
+        clip.setAttribute("aria-hidden", "true");
+        var top = document.createElement("span"); top.className = "nav-char__a"; top.textContent = text[i];
+        var bot = document.createElement("span"); bot.className = "nav-char__b"; bot.textContent = text[i];
+        clip.appendChild(top); clip.appendChild(bot);
+        a.appendChild(clip);
+        var fd = gi * LETTER_STEP + w * WORD_GAP;        // forward delay (left->right, word by word)
+        clip.style.setProperty("--d", fd.toFixed(3) + "s");
+        navClips.push({ clip: clip, fd: fd });
+        if (fd > Dmax) Dmax = fd;
+        gi++;
+      }
+    });
+    // Direction-aware: forward = left->right, word by word; reverse = mirror (Dmax-fd)
+    // so the last letter of the last word leads and it unrolls back to the first word.
+    window.__navLight = function (on) {
+      for (var k = 0; k < navClips.length; k++) {
+        var c = navClips[k];
+        c.clip.style.setProperty("--d", (on ? c.fd : (Dmax - c.fd)).toFixed(3) + "s");
+      }
+      if (header) header.classList.toggle("header--on-light", on);
+    };
+  })();
 
   /* ---------- Mobile nav toggle ---------- */
   var menuBtn = document.querySelector(".menu-btn");
