@@ -729,3 +729,117 @@ Keep this section updated after every change. Format:
 - Untouched: --color-highlight #3932DC (already blue/indigo), the blue-grey light tokens
   (#fcfcfc/#d9e8f1/#eff4f4), the warm bulb PointLight 0xfff0d0, and lando-reference.html (reference).
 - node --check passed on main.js + flow.js.
+
+### 2026-06-19 (Writing section as scroll-triggered staggered panels — blog_reference)
+- New branch `blog-panels`. Inserted a Writing section (`.writing#blog`) immediately AFTER the
+  flow section (before `.features#projects`), per user request, adapting blog_reference's
+  "PP Neue Montréal" scroll-triggered staggered panel animation.
+- Structure: `.wpanels` column of four full-height `.wpanel`s (intro + 3 blog posts). Each panel
+  = `.wpanel__grid` (120px rail / 1px divider / content). On scroll-in the `.wpanel__content`
+  slides translateX(80px)→0 + fades and `.wpanel__divider` slides translateX(-12px)→0 + fades,
+  3000ms cubic-bezier(.25,.46,.45,.94), 100ms stagger (panels nth-child 2/3/4 → delay 0/100/200ms),
+  driven by the `.active` class. Panel 0 (`.wpanel--intro`) is always visible (transition:none).
+  Panels are pointer-events:none; only the inner `.wpanel__link` "Read" links are interactive
+  (pointer-events:auto) — matches the reference's no-hover-on-panels note.
+- Theme adapted to the site's blue palette (reference's bright per-panel colours → deepening navy
+  #141a2b → #1b2236 → #243049 → #2d3c63, white text, #4d8bff accent on meta/divider/links). Fonts
+  use Inter weights (300/400/500) in place of the PP Neue Montreal weight variants. Left rail shows
+  index top + vertical category bottom.
+- Content from the existing blog posts (titles + excerpts + read-times pulled from blog/index.html):
+  intro panel links to blog/index.html; three post panels link to the three blog/<slug>/ pages.
+- Removed the OLD `.faq#blog` "Writing" accordion section (was section 7, between Services and CTA)
+  to avoid a duplicate id="blog" and duplicated blog content. Nav/footer Blog links point to
+  blog/index.html (separate page), unaffected.
+- main.js: new IntersectionObserver block (threshold 0.3, animate-once, unobserve) adds `.active`
+  with i*100ms stagger; no-IO fallback adds .active immediately. Mobile (≤820px): panels auto-height,
+  stacked, content/divider forced visible (transform:none, transition:none) — no JS animation needed.
+- styles.css supplemental block appended; node --check main.js OK; single id="blog" verified.
+
+### 2026-06-19 (Writing rebuilt as sticky horizontal-stacking panels)
+- The first cut stacked panels VERTICALLY (full-height blocks scrolled past one after another).
+  User clarified from the reference image: panels must STACK ON TOP of each other horizontally —
+  each slides in from the right and piles over the previous, leaving earlier panels as thin
+  vertical colour strips. Rebuilt accordingly (replaces the IntersectionObserver staggered version).
+- index.html: `.writing#blog` now has `style="--n:4"` → `.writing__pin` (sticky 100vh) → `.wstack`
+  (absolute) → four absolutely-positioned `.wpanel`s. Each panel = `.wpanel__rail` (number +
+  vertical label, the sliver left visible when covered) + `.wpanel__content`. Removed the
+  grid/divider markup.
+- styles.css: `.writing{--strip:clamp(54px,5.5vw,86px); height:calc(100vh + (var(--n)-1)*100vh)}`
+  (one screenful of scroll per slide-in). `.wpanel` absolute, left=`i*--strip` via nth-child,
+  z-index ascending (later on top), nth-child 2-4 start `translateX(100vw)`. Rail flex 0 0 --strip
+  with `.wpanel__num` (bottom) + `.wpanel__vert` (vertical writing-mode). Mobile (≤820px): pin/stack
+  dropped — panels become plain full-width vertical blocks, rail hidden, transforms cleared.
+- main.js: replaced the IO staggered block with a scroll-scrubbed stack. Maps scroll past the pinned
+  section to g∈[0,N-1]; panel i (i≥1) translateX = (1-easeOut(clamp(g-(i-1),0,1)))*(innerWidth - i*strip)
+  → slides off-right→rest and reverses smoothly. Skips/clears transforms when innerWidth≤820.
+- node --check main.js OK.
+
+### 2026-06-19 (Writing → hover-driven horizontal accordion)
+- User: it should be HOVER-driven (expand on hover) like the reference, not scroll-driven. Replaced
+  the sticky scroll-stack with a CSS-only horizontal accordion (removed the main.js scroll block — no
+  JS now; left a one-line note).
+- index.html: dropped the `.writing__pin` sticky wrapper + `style="--n:4"`; `.writing` > `.wstack`
+  (flex row) > four `.wpanel`s, each rail + content unchanged.
+- styles.css: `.wstack{display:flex;height:clamp(560px,86vh,920px)}`; `.wpanel{flex:0 1 var(--strip)}`
+  (collapsed strip clamp 56–92px). Open logic: first panel `flex-grow:1` by default; on
+  `.wstack:hover`/`:focus-within` the first closes and the `:hover`/`:focus-within` panel grows to
+  fill. Content is fixed-width (`--cw:min(720px,58vw)`, clipped by `overflow:hidden`) and fades
+  opacity 0↔1 with the same open states (keyboard-accessible via :focus-within on the inner links).
+  Mobile (≤820px): accordion dropped — `.wstack` block, panels full-width, content opacity 1, rails
+  hidden.
+- node --check main.js OK.
+
+### 2026-06-19 (Writing accordion → right-anchored, fixed-width expansion)
+- User clarified from 3 reference screenshots: the strip group is ANCHORED RIGHT with a heading on
+  the left, and opening a panel expands it by only ONE fixed content column (not the full page);
+  exactly one panel is open at a time.
+- index.html: dropped the intro-as-panel. `.writing` now = `.writing__intro` (left heading "Notes
+  from the build" + lead + "All writing" link) + `.wstack` (3 post strips). 
+- styles.css: `.writing{display:flex;overflow:hidden;--strip:clamp(64px,7vw,108px);
+  --cw:clamp(320px,32vw,460px)}`; `.writing__intro{flex:1}` pushes `.wstack{flex:0 0 auto}` to the
+  right edge. Panels `flex:0 0 var(--strip)`; open = `flex-basis:calc(var(--strip)+var(--cw))`.
+  First open by default; on `.wstack:hover`/`:focus-within` the first closes and the hovered/focused
+  panel opens — total width constant (one open at a time), so the group neither grows nor reflows
+  the page. Content fixed-width `--cw`, clipped while collapsed, fades opacity 0↔1 with the open
+  state. Rail = vertical label (top) + number (bottom). Mobile (≤820px): block layout, heading +
+  full-width post blocks, all open, rails hidden.
+
+### 2026-06-19 (Writing accordion — right-anchor hardening + cache note)
+- A screenshot showed the strips not reaching the right edge with a narrow clipped heading. Verified
+  via an isolated headless render that the existing CSS was actually correct (full-width section,
+  .wstack right-anchored, panel 1 open) — the broken look matched an OLDER cached styles.css applied
+  to the new HTML (the file was rewritten several times). Root cause = browser cache; fix = hard
+  refresh.
+- Hardened anyway so right-anchoring can't depend on the intro growing: `.wstack` now has
+  `margin-left:auto` (forces it to the right edge) and `.writing__intro{flex:1 1 0%}` (grows from 0,
+  no min-content lock). Mobile resets `.wstack{margin-left:0}`. No HTML/JS change.
+
+### 2026-06-19 (Writing — added placeholder panels to match reference's longer set)
+- User: reference has ~9 panels; the 3-strip version looked sparse. Added 6 placeholder posts
+  (panels 04–09: Backend / Scraping / Data eng / Quant-ML / Backend / DevOps) after the 3 real
+  ones — 9 total. Placeholder excerpts (prefixed "Placeholder —"), links point to blog/index.html
+  until real pages exist. Extended `.wpanel:nth-child` backgrounds to 9 navy→blue steps. With more
+  strips the group now fills the right side like the reference (heading left, strips anchored right).
+
+### 2026-06-19 (Writing — empty left + fill-width strips so last panel can't overflow)
+- User: the heading/intro text was sitting in the left area that should be empty (remove it), and
+  with 9 fixed-width panels the LAST panel ran off the right edge.
+- index.html: removed `.writing__intro` (heading/lead/link); left side is now an empty
+  `.writing__pad` spacer.
+- styles.css: switched the strips from fixed-width to FILL-the-width. `.writing__pad{flex:0 0
+  clamp(40px,10vw,220px)}` (empty gap); `.wstack{flex:1 1 auto;min-width:0}`. Panels collapsed =
+  `flex:1 1 0` (share leftover width equally); open = `flex:0 0 calc(--strip + --cw)` (fixed content
+  column). Because collapsed panels share whatever space remains, the set always fits the container
+  — the last panel can never overflow regardless of count. Rail now `flex:1 1 auto;min-width:--strip`
+  so the vertical label centres in a wide collapsed strip yet resolves to --strip when open. Removed
+  the intro/heading rules + mobile `.writing__intro`; `.writing__pad{display:none}` on mobile.
+
+### 2026-06-19 (Writing accordion — sticky-hover via JS to kill the jitter)
+- Pure CSS :hover on the resizing strips flickered: opening a panel shifts the layout under the
+  cursor, re-triggering :hover on a neighbour (feedback loop). Also confirmed animating flex-grow
+  makes it worse, so kept the basis-only model.
+- styles.css: open state now keys off `.wpanel.is-open` (plus `:focus-within` for keyboard) instead
+  of `.wstack:hover .wpanel`. Removed the :hover open/close + content-opacity hover rules.
+- main.js: new sticky-hover block — `mouseenter` on a panel sets `.is-open` (cleared from siblings);
+  `.wstack` `mouseleave` reverts to the first panel. mouseenter fires once on cross-in, so a panel
+  resizing under the cursor never re-fires → no flicker. First panel open on init. node --check OK.
