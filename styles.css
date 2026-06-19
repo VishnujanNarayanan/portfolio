@@ -330,15 +330,15 @@ header .header__nav-left a{color:#050419;font-size:16px}
      (eases at BOTH start and end). */
   transition:flex-basis .8s cubic-bezier(.65,0,.35,1);
 }
-.wpanel:nth-child(1){background:#161d2e}
-.wpanel:nth-child(2){background:#1b2236}
-.wpanel:nth-child(3){background:#202840}
-.wpanel:nth-child(4){background:#243049}
+.wpanel:nth-child(1){background:#3b518a}
+.wpanel:nth-child(2){background:#374a7c}
+.wpanel:nth-child(3){background:#32436f}
+.wpanel:nth-child(4){background:#2d3c63}
 .wpanel:nth-child(5){background:#293754}
-.wpanel:nth-child(6){background:#2d3c63}
-.wpanel:nth-child(7){background:#32436f}
-.wpanel:nth-child(8){background:#374a7c}
-.wpanel:nth-child(9){background:#3b518a}
+.wpanel:nth-child(6){background:#243049}
+.wpanel:nth-child(7){background:#202840}
+.wpanel:nth-child(8){background:#1b2236}
+.wpanel:nth-child(9){background:#161d2e}
 
 /* Open state: ONLY flex-basis changes (grow/shrink constant at 1/1). The open panel
    carries +(--strip + --cw) of basis, so it ends up exactly one content column wider
