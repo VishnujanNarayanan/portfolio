@@ -356,6 +356,7 @@
   var lastSel = -1;
   var darkSubs = [];   // zone 3-4 sub paragraphs; colour scroll-driven black→grey
   var lightSubs = [];  // zone 1-2 sub paragraphs; colour scroll-driven grey→white
+  var navOn = false;   // top-nav reel state; fired once per threshold crossing
   var vh = window.innerHeight;
   function loop() {
     var rect = flow.getBoundingClientRect();
@@ -386,10 +387,16 @@
     var LIGHT_START = 0.7 / 3;
     var lightT = clamp((progress - LIGHT_START) / (1 - LIGHT_START), 0, 1);
     window.__flowLight = lightT;
-    // Top nav (Projects/Skills/Services/Blog) flips to black letter-by-letter once
-    // the bg transition is ~1/5 underway (threshold-driven, not scroll-scrubbed —
-    // the CSS per-letter transition plays the reveal). The CTAs transition normally.
-    if (hdr) hdr.classList.toggle("header--on-light", lightT >= 0.2);
+    // Top nav (Projects/Skills/Services/Blog) rolls to black in a per-letter reel
+    // once the bg transition is ~1/5 underway. Threshold-driven: fired ONCE per
+    // crossing so __navLight can set direction-aware delays (forward = left word
+    // first; reverse = last word / last letter first). CTAs are excluded.
+    var navWantOn = lightT >= 0.2;
+    if (navWantOn !== navOn) {
+      navOn = navWantOn;
+      if (window.__navLight) window.__navLight(navOn);
+      else if (hdr) hdr.classList.toggle("header--on-light", navOn);
+    }
     // Journey wheel/spine darkens with scroll from the HALF of zone 3 (zone 3 spans
     // global 1.5→2.5, half = global 2 → progress 2/3) to the end, so it reads on the
     // light bg: bright blue 77,139,255 → deep blue 35,29,122.
