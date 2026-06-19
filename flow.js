@@ -225,42 +225,32 @@
                                   // here (right) to centre over a zone
   var OFF_L = -22;                // off-screen left — where a passed image exits
   var OFF_R = 22;                 // off-screen right — where the next image waits
-  // Mouse-tilt: normalized pointer (-1..1); image rotation is lerped toward it.
-  var mx = 0, my = 0;
 
-  // Resize a group's image plane (+ its edge frame and shadow receiver) so the
-  // plane keeps the texture's real aspect ratio while fitting inside BOX_W×BOX_H.
+  // Resize a group's image plane so it keeps the texture's real aspect ratio
+  // while fitting inside BOX_W×BOX_H.
   function fitPlane(grp, aspect) {
     var w = BOX_W, h = BOX_W / aspect;
     if (h > BOX_H) { h = BOX_H; w = BOX_H * aspect; }
     var u = grp.userData;
     u.img.geometry.dispose(); u.img.geometry = new THREE.PlaneGeometry(w, h);
-    u.recv.geometry.dispose(); u.recv.geometry = new THREE.PlaneGeometry(w * 1.5, h * 1.5);
   }
 
   // One hero image plane per panel, loaded from panel.dataset.img. A missing
   // file degrades to a solid indigo placeholder plane so the scene still works
-  // before real assets are dropped into images/flow/. Behind each image sits a
-  // ShadowMaterial receiver so the (shadow-casting) key light reads as a soft
-  // drop shadow; its opacity later fades with distance from the active panel.
+  // before real assets are dropped into images/flow/.
   function createImageObject(panel, i) {
     var grp = new THREE.Group();
     grp.position.set(i * GAP, 0, IMG_Z);
 
-    var mat = new THREE.MeshStandardMaterial({ color: 0x7b73ff, roughness: 0.62, metalness: 0.05, side: THREE.DoubleSide });
+    // Unlit so the texture shows at its true colours (no light shading / colour
+    // cast / emissive tint). Placeholder colour until the texture loads.
+    var mat = new THREE.MeshBasicMaterial({ color: 0x7b73ff, side: THREE.DoubleSide });
     var img = new THREE.Mesh(new THREE.PlaneGeometry(BOX_W, BOX_H), mat);
-    img.castShadow = true;
     grp.add(img);
 
     var edge = null;   // edge frame removed (was indigo)
 
-    var shadowMat = new THREE.ShadowMaterial({ opacity: 0.3 });
-    var receiver = new THREE.Mesh(new THREE.PlaneGeometry(BOX_W * 1.5, BOX_H * 1.5), shadowMat);
-    receiver.position.z = -1.2;
-    receiver.receiveShadow = true;
-    grp.add(receiver);
-
-    grp.userData = { baseY: 0, amp: 0.4 + (i % 3) * 0.12, fp: 0.5 + i * 0.07, ph: Math.random() * Math.PI * 2, shadowMat: shadowMat, img: img, edge: edge, recv: receiver };
+    grp.userData = { baseY: 0, amp: 0.4 + (i % 3) * 0.12, fp: 0.5 + i * 0.07, ph: Math.random() * Math.PI * 2, img: img, edge: edge };
     scene.add(grp); images.push(grp);
 
     var src = panel.getAttribute("data-img");
@@ -284,18 +274,12 @@
     wrapper.insertBefore(canvas, track);
     renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     if ("sRGBEncoding" in THREE) renderer.outputEncoding = THREE.sRGBEncoding;
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(55, 1, 0.1, 220);
     camera.position.set(0, 0, 17);
     scene.add(new THREE.AmbientLight(0xffffff, 0.85));
     keyLight = new THREE.DirectionalLight(0xffffff, 0.7); keyLight.position.set(6, 9, 12);
-    keyLight.castShadow = true;
-    keyLight.shadow.mapSize.set(1024, 1024);
-    var sc = keyLight.shadow.camera;
-    sc.left = -10; sc.right = 10; sc.top = 8; sc.bottom = -8; sc.near = 1; sc.far = 40;
     scene.add(keyLight);
     scene.add(keyLight.target);
     var rim = new THREE.DirectionalLight(0x8aa800, 0.5); rim.position.set(-7, -3, 5); scene.add(rim);
@@ -350,14 +334,8 @@
       u.off += (targetX - u.off) * 0.08;                  // tracks scroll; softer catch-up so the flip swaps less abruptly
       g.position.x = camera.position.x + u.off;
       g.position.y = u.baseY + Math.sin(t * u.fp + u.ph) * u.amp;
-      g.rotation.x = lerp(g.rotation.x, my * 0.06, 0.08) + Math.sin(t * 0.3 + k) * 0.01;
-      g.rotation.y = lerp(g.rotation.y, mx * 0.09, 0.08) + Math.sin(t * 0.22 + k) * 0.015;
-      var near = clamp(1 - Math.abs(u.off) / 16, 0, 1);   // 1 near centre, 0 off-screen
-      u.shadowMat.opacity = 0.12 + 0.26 * near;
-      if (u.img.material.emissive) {
-        u.img.material.emissive.setHex(0x4a3a10);
-        u.img.material.emissiveIntensity = 0.10 * near * bulbPulse;
-      }
+      g.rotation.x = Math.sin(t * 0.3 + k) * 0.01;        // gentle idle sway only (no mouse reaction)
+      g.rotation.y = Math.sin(t * 0.22 + k) * 0.015;
     }
 
     for (var i = 0; i < focal.length; i++) {
@@ -587,13 +565,6 @@
   });
   if (THREEok) {
     try { initGL(); flow.classList.add("flow--gl"); } catch (e) { THREEok = false; }
-  }
-  // Mouse-tilt input (desktop GL only): normalize pointer to -1..1.
-  if (THREEok) {
-    window.addEventListener("pointermove", function (e) {
-      mx = (e.clientX / window.innerWidth) * 2 - 1;
-      my = (e.clientY / window.innerHeight) * 2 - 1;
-    }, { passive: true });
   }
   if (DEBUG) {
     dbg = document.createElement("pre");
