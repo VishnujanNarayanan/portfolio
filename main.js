@@ -59,6 +59,10 @@
       var vh = window.innerHeight;
       var ZOOM_END = vh;                             // zoom completes over one viewport
       var y = window.scrollY;
+      // While zooming (y < vh) the nav colour is driven smoothly by the inline
+      // interpolation below, so suppress the per-letter transition; past the zoom
+      // the flow threshold (header--on-light) owns the letter-by-letter flip.
+      if (hdr) hdr.classList.toggle("header--zooming", y < vh);
       var p = Math.max(0, Math.min(y / ZOOM_END, 1)); // zoom progress 0 → 1
       var e = p * p * (3 - 2 * p);                    // smoothstep
       var scale = 1 - (1 - EXIT_MIN_SCALE) * e;       // 1 → EXIT_MIN_SCALE (no opacity change)
@@ -247,8 +251,9 @@
     var LEVELS = [0.22, 0.36, 0.52, 0.7];              // fewer, rounded nested loops
     function lerp(a, b, t) { return a + (b - a) * t; }
     // marching squares over the shared field → closed, non-overlapping contours
-    function drawContours(g, stroke) {
+    function drawContours(g, stroke, bgFill) {
       g.clearRect(0, 0, W, H);
+      if (bgFill) { g.fillStyle = bgFill; g.fillRect(0, 0, W, H); }
       g.lineCap = "round"; g.lineJoin = "round";
       g.strokeStyle = stroke; g.lineWidth = 0.45;
       var li, lv, r, c;
@@ -307,7 +312,17 @@
           field[r][c] = sum;
         }
       }
-      drawContours(ctx, "rgba(77,139,255,0.3)");          // global: blue
+      // Flow lightening (shared from flow.js): lt 0 = dark navy world (lines stay
+      // blue), lt 1 = light bg by end of zone 4 (canvas filled light, lines INVERT
+      // to the darker site blue so they read on the light bg). lt 0 → no fill, so
+      // the navy shader shows through unchanged outside/before the flow.
+      var lt = window.__flowLight || 0;
+      var bgFill = lt > 0
+        ? "rgb(" + Math.round(lerp(27, 208, lt)) + "," + Math.round(lerp(34, 225, lt)) + "," + Math.round(lerp(54, 235, lt)) + ")"
+        : null;
+      var lineCol = "rgba(" + Math.round(lerp(77, 57, lt)) + "," + Math.round(lerp(139, 50, lt)) +
+        "," + Math.round(lerp(255, 220, lt)) + "," + lerp(0.3, 0.5, lt).toFixed(2) + ")";
+      drawContours(ctx, lineCol, bgFill);                // global: blue → inverted dark-blue on light
       if (hctx) drawContours(hctx, "#969ba8");           // hero: same blue-grey as end bg → lines vanish at full zoom
       if (!reduce) requestAnimationFrame(frame);
     }
@@ -352,6 +367,24 @@
   /* ---------- Header: always visible (never hides on scroll) ---------- */
   var header = document.querySelector("header");
   if (header) header.classList.add("show");
+
+  /* ---------- Split the top nav links into per-letter spans ----------
+     So the flow's background-transition can flip them to black LETTER BY LETTER
+     (each .nav-char carries a staggered --d transition-delay). flow.js toggles
+     header.header--on-light at the threshold; the CTAs transition normally. */
+  Array.prototype.forEach.call(document.querySelectorAll(".header__nav-left a"), function (a) {
+    var text = a.textContent;
+    a.setAttribute("aria-label", text);
+    a.textContent = "";
+    for (var i = 0; i < text.length; i++) {
+      var s = document.createElement("span");
+      s.className = "nav-char";
+      s.setAttribute("aria-hidden", "true");
+      s.textContent = text[i];
+      s.style.setProperty("--d", (i * 0.03).toFixed(3) + "s");
+      a.appendChild(s);
+    }
+  });
 
   /* ---------- Mobile nav toggle ---------- */
   var menuBtn = document.querySelector(".menu-btn");
