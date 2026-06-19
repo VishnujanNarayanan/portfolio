@@ -713,3 +713,19 @@ Keep this section updated after every change. Format:
     white→black (Math.round(255*(1-e))); .header__nav-left scales 1→0.65 origin left, .header__nav-right
     scales 1→0.65 origin right (shrink anchored to the page edges); the dark "Get In Touch" pill bg
     interpolates #050419→#d0e1eb so its (now-black) text stays legible. All reverse on scroll-up.
+
+### 2026-06-19 (theme recoloured green/lime → blue)
+- Switched the accent/background theme from the Lando green-lime palette to blue, keeping the
+  light/dark behaviour and all neutral greys (greys stay grey, just blue-tinted where they were
+  green-tinted). Mappings applied across styles.css, main.js, index.html, flow.js:
+  • dark base #282c20 → #1b2236 (navy): body + .subpage-body bg; index.html shader DARK/DARK2
+    vec3(0.157,0.173,0.125)/(0.106,0.118,0.090) → (0.106,0.133,0.212)/(0.075,0.094,0.161).
+  • lime accent #d2ff00 + rgba(210,255,0,*) → bright blue #4d8bff + rgba(77,139,255,*): flow zone
+    titles, journey line/fill/dots/active/hover, .flow__horizon glow, main.js global contour colour,
+    flow.js rim DirectionalLight 0x8aa800 → 0x4d8bff.
+  • greenish-grey #989c8e → blue-grey #969ba8 (hero zoom-out landing bg + hero contour colour).
+  • faint-green near-white hero gradient rgba(236,244,237)/(242,247,242)/(248,250,246) →
+    faint-blue rgba(236,240,248)/(242,245,250)/(248,250,253).
+- Untouched: --color-highlight #3932DC (already blue/indigo), the blue-grey light tokens
+  (#fcfcfc/#d9e8f1/#eff4f4), the warm bulb PointLight 0xfff0d0, and lando-reference.html (reference).
+- node --check passed on main.js + flow.js.

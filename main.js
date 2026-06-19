@@ -76,9 +76,9 @@
       // end of the zoom it matches the grey contour lines (deterministic, not a greyscaled blue).
       if (heroImg) {
         var ga = 1 - e;                                  // gradient alpha fades out
-        heroImg.style.backgroundColor = "#989c8e";       // greenish-grey (theme tint) it lands on
+        heroImg.style.backgroundColor = "#969ba8";       // blue-grey (theme tint) it lands on
         heroImg.style.backgroundImage =
-          "linear-gradient(180deg,rgba(236,244,237," + ga + ") 0%,rgba(242,247,242," + ga + ") 55%,rgba(248,250,246," + ga + ") 100%)";
+          "linear-gradient(180deg,rgba(236,240,248," + ga + ") 0%,rgba(242,245,250," + ga + ") 55%,rgba(248,250,253," + ga + ") 100%)";
       }
       // Scroll cue plays its entrance in reverse the moment scrolling starts.
       if (scrollCue) scrollCue.classList.toggle("is-exiting", y > 0);
@@ -184,14 +184,14 @@
     requestAnimationFrame(tick);
   }
 
-  /* ---------- Global background: animated topographic lime contours ----------
+  /* ---------- Global background: animated topographic blue contours ----------
      One fixed full-viewport plane shared by the hero zoom-out reveal AND the flow
      section (so they read as the same continuous background). The contours are
      iso-lines (marching squares) of a moving scalar field built from drifting,
      pulsing metaballs — so they are CLOSED loops, never overlap (iso-lines of one
      field can't cross), and grow / shrink / vanish as the blobs pulse and move. */
   (function () {
-    var cv = document.createElement("canvas");          // global plane (lime, dark bg)
+    var cv = document.createElement("canvas");          // global plane (blue, dark bg)
     cv.id = "bg-contours";
     document.body.appendChild(cv);
     var ctx = cv.getContext("2d");
@@ -307,8 +307,8 @@
           field[r][c] = sum;
         }
       }
-      drawContours(ctx, "rgba(210,255,0,0.3)");          // global: lime
-      if (hctx) drawContours(hctx, "#989c8e");           // hero: same greenish-grey as end bg → lines vanish at full zoom
+      drawContours(ctx, "rgba(77,139,255,0.3)");          // global: blue
+      if (hctx) drawContours(hctx, "#969ba8");           // hero: same blue-grey as end bg → lines vanish at full zoom
       if (!reduce) requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
