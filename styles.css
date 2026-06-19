@@ -307,18 +307,18 @@ header .header__nav-left a{color:#050419;font-size:16px}
    ============================================================ */
 .writing{
   --strip:clamp(64px,7vw,108px);     /* collapsed strip width */
-  --cw:clamp(320px,32vw,460px);      /* fixed width a panel opens by */
+  --cw:clamp(260px,22vw,360px);      /* fixed width a panel opens by */
   --h:clamp(540px,82vh,880px);
   position:relative;z-index:2;background:#141a2b;color:#fff;
   display:flex;align-items:stretch;overflow:hidden;
 }
 
-/* Empty left spacer — keeps a gap so the strips sit on the right */
-.writing__pad{flex:0 0 clamp(40px,10vw,220px)}
+/* Empty left — a real gap so the strips sit on the right (right-anchoring). */
+.writing__pad{flex:0 0 clamp(120px,26vw,520px)}
 
-/* Strip group fills the remaining width. Collapsed panels SHARE that width (flex-grow),
-   the open panel takes a fixed content column — so the set always fits and the last
-   panel can never overflow off the page, regardless of how many panels there are. */
+/* Strip group fills the remaining width on the right. Collapsed panels SHARE that width
+   (flex-grow:1 below), so the group always stays full — it never shrinks and one panel always
+   reads as open. The open panel takes a fixed content column on top of its share. */
 .wstack{flex:1 1 auto;min-width:0;display:flex;height:var(--h)}
 
 .wpanel{
