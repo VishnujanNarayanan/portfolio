@@ -282,7 +282,7 @@
     keyLight = new THREE.DirectionalLight(0xffffff, 0.7); keyLight.position.set(6, 9, 12);
     scene.add(keyLight);
     scene.add(keyLight.target);
-    var rim = new THREE.DirectionalLight(0x8aa800, 0.5); rim.position.set(-7, -3, 5); scene.add(rim);
+    var rim = new THREE.DirectionalLight(0x4d8bff, 0.5); rim.position.set(-7, -3, 5); scene.add(rim);
 
     // Warm point light driven by the hanging HTML bulb; travels with the camera.
     bulbLight = new THREE.PointLight(0xfff0d0, 0.0, 60, 2); bulbLight.position.set(9, 7, 9); scene.add(bulbLight);

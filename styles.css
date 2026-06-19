@@ -10,9 +10,9 @@
    like the reference's fixed Three.js canvas). Light blue-grey scene. */
 #app{position:fixed;inset:0;width:100vw;height:100vh;z-index:-1;pointer-events:none}
 #vanta-bg{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
-body{background-color:#282c20}
+body{background-color:#1b2236}
 /* content pages sit on a solid surface (no Vanta behind text) */
-.subpage-body{background-color:#282c20}
+.subpage-body{background-color:#1b2236}
 
 /* Text logo replacing the Vectr SVG */
 .logo-text{font-family:"Inter",sans-serif;font-weight:700;font-size:24px;letter-spacing:-1px;color:var(--color-dark);line-height:1;display:inline-block}
@@ -144,7 +144,7 @@ body.nav-open{overflow:hidden}
 
 /* Airy light sky (hue cross-fades via JS) + soft indigo horizon glow */
 .flow__sky{position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,#d0e1eb 0%,#dfe9f2 55%,#eef3f8 100%)}
-.flow__horizon{position:absolute;left:0;right:0;bottom:0;height:55%;z-index:0;pointer-events:none;background:radial-gradient(120% 80% at 50% 100%,rgba(210,255,0,.08) 0%,rgba(210,255,0,0) 60%)}
+.flow__horizon{position:absolute;left:0;right:0;bottom:0;height:55%;z-index:0;pointer-events:none;background:radial-gradient(120% 80% at 50% 100%,rgba(77,139,255,.08) 0%,rgba(77,139,255,0) 60%)}
 
 /* three.js canvas — between sky and content */
 .flow__gl{position:absolute;inset:0;z-index:1;width:100%;height:100%;pointer-events:none}
@@ -263,16 +263,16 @@ header .header__nav-left a{color:#050419;font-size:16px}
 .flow .flow__sky{background:transparent!important}
 
 /* Flow titles over the dark shader background → white */
-.flow .flow-panel__title{color:#d2ff00}
+.flow .flow-panel__title{color:#4d8bff}
 
-/* Journey wheel/spine → Lando lime (over the dark flow background) */
-.flow-journey__line{stroke:rgba(210,255,0,.25)}
-.flow-journey__fill{stroke:#d2ff00}
-.flow-journey__dot{border-color:rgba(210,255,0,.5)}
-.flow-journey__node--active .flow-journey__dot{background:#d2ff00;border-color:#d2ff00;box-shadow:0 0 0 6px rgba(210,255,0,.16)}
-.flow-journey__node--active .flow-journey__zone{color:#d2ff00}
-.flow-journey__node:hover .flow-journey__zone{color:#d2ff00}
-.flow-journey__node:not(.flow-journey__node--active):hover .flow-journey__dot{border-color:#d2ff00;box-shadow:0 0 0 5px rgba(210,255,0,.12)}
+/* Journey wheel/spine → bright blue (over the dark flow background) */
+.flow-journey__line{stroke:rgba(77,139,255,.25)}
+.flow-journey__fill{stroke:#4d8bff}
+.flow-journey__dot{border-color:rgba(77,139,255,.5)}
+.flow-journey__node--active .flow-journey__dot{background:#4d8bff;border-color:#4d8bff;box-shadow:0 0 0 6px rgba(77,139,255,.16)}
+.flow-journey__node--active .flow-journey__zone{color:#4d8bff}
+.flow-journey__node:hover .flow-journey__zone{color:#4d8bff}
+.flow-journey__node:not(.flow-journey__node--active):hover .flow-journey__dot{border-color:#4d8bff;box-shadow:0 0 0 5px rgba(77,139,255,.12)}
 .flow-journey__name{color:rgba(255,255,255,.75)}
 .flow-journey__node--active .flow-journey__name{color:#fff}
 
@@ -281,7 +281,7 @@ header .header__nav-left a{color:#050419;font-size:16px}
 .flow .flow-panel__sub{color:rgba(255,255,255,.82)}
 .flow .flow-panel__pill{color:#fff;border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.08)}
 
-/* Global topographic lime-contour background plane (canvas drawn in main.js):
+/* Global topographic blue-contour background plane (canvas drawn in main.js):
    one fixed layer shared by the hero zoom-out reveal and the flow section. Sits above
    the shader (#vanta-bg, z-1) and below all content. */
 #bg-contours{position:fixed;inset:0;z-index:0;pointer-events:none;width:100%;height:100%}

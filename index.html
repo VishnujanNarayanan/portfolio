@@ -445,8 +445,8 @@
 </footer>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-  // Custom Three.js fullscreen shader background — Lando (OFF+BRAND) palette:
-  // dark-green base (#282c20) with slow flowing lime (#d2ff00) accents.
+  // Custom Three.js fullscreen shader background — blue palette:
+  // dark navy base (#1b2236) with slow flowing bright-blue (#4d8bff) accents.
   document.addEventListener('DOMContentLoaded', function () {
     if (typeof THREE === 'undefined') return;
     var host = document.getElementById('vanta-bg');
@@ -469,8 +469,8 @@
       'precision highp float;',
       'uniform float u_time; uniform vec2 u_res;',
       // palette — clean dark gradient (no smoky fbm clouds)
-      'const vec3 DARK = vec3(0.157,0.173,0.125);',  // #282c20
-      'const vec3 DARK2= vec3(0.106,0.118,0.090);',  // deeper green
+      'const vec3 DARK = vec3(0.106,0.133,0.212);',  // #1b2236 navy
+      'const vec3 DARK2= vec3(0.075,0.094,0.161);',  // deeper navy
       'void main(){',
       '  vec2 uv=gl_FragCoord.xy/u_res.xy;',
       '  vec3 col=mix(DARK2,DARK,smoothstep(0.0,1.0,uv.y));',  // soft vertical gradient
