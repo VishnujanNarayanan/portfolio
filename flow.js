@@ -29,6 +29,7 @@
   var lineEl = flow.querySelector(".flow-journey__line");
   var fillEl = flow.querySelector(".flow-journey__fill");
   var nodesEl = flow.querySelector(".flow-journey__nodes");
+  var hdr = document.querySelector("header");   // top nav flips to black at the bg threshold
   var N = panels.length || 4;
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
@@ -353,6 +354,8 @@
 
   /* ---------- Main loop ---------- */
   var lastSel = -1;
+  var darkSubs = [];   // zone 3-4 sub paragraphs; colour scroll-driven black→grey
+  var lightSubs = [];  // zone 1-2 sub paragraphs; colour scroll-driven grey→white
   var vh = window.innerHeight;
   function loop() {
     var rect = flow.getBoundingClientRect();
@@ -374,6 +377,39 @@
     var trackX = -progress * (N - 1) * vw;
     track.style.transform = "translate3d(" + trackX + "px,0,0)";
     paintSky(global);
+    // Progressive lighten: the flow bg is the dark navy world until 1/5 INTO zone 2
+    // (zone 2 spans global 0.5→1.5, so 1/5 in = global 0.7 → progress 0.7/3), then
+    // lightens to the hero's initial light shade by the END of zone 4 (progress 1).
+    // lightT (0→1) is shared with main.js (window.__flowLight) which lightens the
+    // contour-canvas bg + inverts the lines. Here it also flips the foreground text:
+    // title/index bright→deep blue, sub white→grey, readable as the bg turns light.
+    var LIGHT_START = 0.7 / 3;
+    var lightT = clamp((progress - LIGHT_START) / (1 - LIGHT_START), 0, 1);
+    window.__flowLight = lightT;
+    // Top nav (Projects/Skills/Services/Blog) flips to black letter-by-letter once
+    // the bg transition is ~1/5 underway (threshold-driven, not scroll-scrubbed —
+    // the CSS per-letter transition plays the reveal). The CTAs transition normally.
+    if (hdr) hdr.classList.toggle("header--on-light", lightT >= 0.2);
+    // Journey wheel/spine darkens with scroll from the HALF of zone 3 (zone 3 spans
+    // global 1.5→2.5, half = global 2 → progress 2/3) to the end, so it reads on the
+    // light bg: bright blue 77,139,255 → deep blue 35,29,122.
+    var jDark = clamp((progress - 2 / 3) / (1 - 2 / 3), 0, 1);
+    flow.style.setProperty("--journey-rgb",
+      Math.round(lerp(77, 35, jDark)) + "," + Math.round(lerp(139, 29, jDark)) + "," + Math.round(lerp(255, 122, jDark)));
+    // Zone 3-4 sub text fades from a slightly-lighter black → a slightly-darker grey
+    // across zone 3 to the end (zone 3 starts at global 1.5 → progress 0.5).
+    var subT = clamp((progress - 0.5) / 0.5, 0, 1);
+    var subCol = "rgb(" + Math.round(lerp(40, 105, subT)) + "," + Math.round(lerp(40, 105, subT)) + "," + Math.round(lerp(46, 112, subT)) + ")";
+    for (var si = 0; si < darkSubs.length; si++) darkSubs[si].style.color = subCol;
+    // Zone 1-2 sub text: the OTHER side of mid grey — slightly-lighter-grey → a
+    // slightly-darker-white across zone 1 to the end of zone 2 (progress 0 → 0.5).
+    var subT2 = clamp(progress / 0.5, 0, 1);
+    var subCol2 = "rgb(" + Math.round(lerp(150, 236, subT2)) + "," + Math.round(lerp(150, 236, subT2)) + "," + Math.round(lerp(156, 240, subT2)) + ")";
+    for (var sj = 0; sj < lightSubs.length; sj++) lightSubs[sj].style.color = subCol2;
+    // NOTE: only the LINES + bg (main.js, via __flowLight) transition with scroll.
+    // The TEXT colours are NOT scroll-lerped — they're set once per panel by zone
+    // index (see setupZoneText below) so each title POPS UP already in its final
+    // colour when its zone appears (zones 3-4 = deep blue / grey on the light bg).
 
     // rawSel drives the title threshold crossings (and steady-state side): it can
     // reach -1 (first zone not yet entered) and N (last zone exited), so the first
@@ -571,6 +607,31 @@
     dbg.style.cssText = "position:fixed;left:8px;bottom:8px;z-index:9999;margin:0;padding:8px 10px;background:rgba(5,4,25,.85);color:#9cff9c;font:11px/1.4 monospace;white-space:pre;pointer-events:none;border-radius:6px;max-width:90vw";
     document.body.appendChild(dbg);
   }
+  // Text colours are set once per zone (NOT scroll-lerped): zones 1-2 keep the
+  // dark-bg colours (bright blue title, white index/sub via CSS defaults); zones
+  // 3-4, which sit over the lightened bg, are set to their final deep-blue / grey
+  // so each title POPS UP already in that colour when its zone appears.
+  (function setupZoneText() {
+    panels.forEach(function (panel, pi) {
+      var sub = panel.querySelector(".flow-panel__sub");
+      if (pi < 2) {                                      // zones 1-2: sub colour scroll-driven (light side)
+        if (sub) lightSubs.push(sub);
+        return;
+      }
+      var ttl = panel.querySelector(".flow-panel__title");
+      var idx = panel.querySelector(".flow-panel__index");
+      if (ttl) ttl.style.color = "#231d7a";              // deep blue (darker than #3932DC)
+      if (idx) idx.style.color = "#231d7a";
+      if (sub) darkSubs.push(sub);                       // colour driven by scroll in loop()
+      // pills get the same black shade (text + border) and a light chip bg so
+      // they read on the light background instead of staying white-on-white.
+      Array.prototype.forEach.call(panel.querySelectorAll(".flow-panel__pill"), function (p) {
+        p.style.color = "#050419";
+        p.style.borderColor = "rgba(5,4,25,.3)";
+        p.style.background = "rgba(255,255,255,.5)";
+      });
+    });
+  })();
   paintSky(0);
   requestAnimationFrame(loop);
 })();
