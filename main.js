@@ -338,25 +338,65 @@
     revealTargets.forEach(function (el) { el.classList.add("show"); });
   }
 
-  /* ---------- Writing accordion: sticky hover (no flicker) ----------
-     CSS opens whichever .wpanel has .is-open. We set it on mouseenter and leave it
-     until another panel is entered (or the cursor leaves the group → first panel).
-     mouseenter fires once on cross-in, so the panel resizing under the cursor never
-     re-triggers it — that's what stops the hover-flicker/jitter a pure :hover has.
-     :focus-within still covers keyboard. */
+  /* ---------- Writing — Part 1: scroll-driven gapless reveal ----------
+     The section is pinned (.writing__pin) with extra scroll length (--enter). As that
+     scroll advances, cards reveal left→right: each card emerges and its BODY stretches
+     to the right to fill the space (no gap, no overlap) until the NEXT card emerges and
+     takes over the remainder — so the strips are always flush, settling to equal width.
+     Nothing opens yet; Stage 2 (rearrange into the accordion) is deferred and the old
+     sticky-hover accordion is parked until then. */
   (function () {
-    var wstack = document.querySelector(".wstack");
-    if (!wstack) return;
+    var section = document.querySelector(".writing");
+    var wstack = section && section.querySelector(".wstack");
+    if (!section || !wstack) return;
     var panels = Array.prototype.slice.call(wstack.querySelectorAll(".wpanel"));
     if (!panels.length) return;
-    function open(p) {
-      panels.forEach(function (x) { x.classList.toggle("is-open", x === p); });
+    var N = panels.length;
+    function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function setup() {
+      // Drive widths via flex-basis per frame, so kill the CSS flex-basis transition (it
+      // would lag the scroll) and clear any leftover transform/z-index from older versions.
+      panels.forEach(function (p) { p.style.transition = "none"; p.style.transform = ""; p.style.zIndex = ""; });
     }
-    open(panels[0]);                                   // first open by default
-    panels.forEach(function (p) {
-      p.addEventListener("mouseenter", function () { open(p); });
-    });
-    wstack.addEventListener("mouseleave", function () { open(panels[0]); });
+    function render() {
+      if (window.innerWidth <= 820) {
+        panels.forEach(function (p) { p.style.flexBasis = ""; p.style.flexGrow = ""; p.style.flexShrink = ""; });
+        return;
+      }
+      var vh = window.innerHeight;
+      var rect = section.getBoundingClientRect();
+      // Start EARLY: begins ~1.15 viewports before the section locks at the top, finishes as
+      // it reaches the top (the remaining pinned scroll is reserved for Stage 2).
+      var p = clamp((vh * 1.15 - rect.top) / (vh * 1.15), 0, 1);
+      var W = wstack.getBoundingClientRect().width;
+      var per = W / N;                                 // final equal width
+      // F sweeps -1 → N-1. m = the card currently SETTLING (retracting from full to its slot),
+      // m+1 = the card EMERGING from the right edge to fill the remainder. The two always sum
+      // with the settled cards to exactly W → flush, gapless, no overlap.
+      var F = -1 + p * N, m = Math.floor(F), frac = F - m;
+      var rightOfM = lerp(W, (m + 1) * per, frac);      // right edge of the settling card
+      // Snap each card's RIGHT edge to an integer pixel and take widths as the difference
+      // between consecutive snapped edges → the strips are always exactly contiguous (no
+      // sub-pixel hairline seam can open up between them).
+      var accRaw = 0, accSnap = 0;
+      panels.forEach(function (pan, i) {
+        var w = i < m ? per
+              : i === m ? rightOfM - m * per            // settling: full → slot
+              : i === m + 1 ? W - rightOfM              // emerging: 0 → fills remainder
+              : 0;                                      // not yet revealed
+        if (w < 0) w = 0;
+        accRaw += w;
+        var snap = Math.round(accRaw);                  // integer right edge
+        pan.style.flexBasis = (snap - accSnap) + "px";
+        pan.style.flexGrow = "0"; pan.style.flexShrink = "0";
+        accSnap = snap;
+      });
+    }
+    setup();
+    function frame() { render(); requestAnimationFrame(frame); }
+    requestAnimationFrame(frame);
+    window.addEventListener("resize", setup, { passive: true });
   })();
 
   /* ---------- Accordion (Services + any .faq-item) ---------- */
