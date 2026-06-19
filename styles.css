@@ -309,9 +309,12 @@ header .header__nav-left a{color:#050419;font-size:16px}
   --strip:clamp(64px,7vw,108px);     /* collapsed strip width */
   --cw:clamp(260px,22vw,360px);      /* fixed width a panel opens by */
   --h:clamp(540px,82vh,880px);
-  position:relative;z-index:2;background:#141a2b;color:#fff;
+  position:relative;z-index:2;background:transparent;color:#fff;
   display:flex;align-items:stretch;overflow:hidden;
 }
+/* Empty left pad stays transparent so the fixed #bg-contours plane (the flow
+   section's organic-line background) shows through as a continuation. Only the
+   strips carry their own solid backgrounds, so the contours read on the left only. */
 
 /* Empty left — a real gap so the strips sit on the right (right-anchoring). */
 .writing__pad{flex:0 0 clamp(120px,26vw,520px)}
