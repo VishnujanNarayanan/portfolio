@@ -309,9 +309,12 @@ header .header__nav-left a{color:#050419;font-size:16px}
   --strip:clamp(64px,7vw,108px);     /* collapsed strip width */
   --cw:clamp(260px,22vw,360px);      /* fixed width a panel opens by */
   --h:clamp(540px,82vh,880px);
-  position:relative;z-index:2;background:#141a2b;color:#fff;
+  position:relative;z-index:2;background:transparent;color:#fff;
   display:flex;align-items:stretch;overflow:hidden;
 }
+/* Empty left pad stays transparent so the fixed #bg-contours plane (the flow
+   section's organic-line background) shows through as a continuation. Only the
+   strips carry their own solid backgrounds, so the contours read on the left only. */
 
 /* Empty left — a real gap so the strips sit on the right (right-anchoring). */
 .writing__pad{flex:0 0 clamp(120px,26vw,520px)}
@@ -330,15 +333,15 @@ header .header__nav-left a{color:#050419;font-size:16px}
      (eases at BOTH start and end). */
   transition:flex-basis .8s cubic-bezier(.65,0,.35,1);
 }
-.wpanel:nth-child(1){background:#161d2e}
-.wpanel:nth-child(2){background:#1b2236}
-.wpanel:nth-child(3){background:#202840}
-.wpanel:nth-child(4){background:#243049}
+.wpanel:nth-child(1){background:#3b518a}
+.wpanel:nth-child(2){background:#374a7c}
+.wpanel:nth-child(3){background:#32436f}
+.wpanel:nth-child(4){background:#2d3c63}
 .wpanel:nth-child(5){background:#293754}
-.wpanel:nth-child(6){background:#2d3c63}
-.wpanel:nth-child(7){background:#32436f}
-.wpanel:nth-child(8){background:#374a7c}
-.wpanel:nth-child(9){background:#3b518a}
+.wpanel:nth-child(6){background:#243049}
+.wpanel:nth-child(7){background:#202840}
+.wpanel:nth-child(8){background:#1b2236}
+.wpanel:nth-child(9){background:#161d2e}
 
 /* Open state: ONLY flex-basis changes (grow/shrink constant at 1/1). The open panel
    carries +(--strip + --cw) of basis, so it ends up exactly one content column wider
