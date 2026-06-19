@@ -338,6 +338,8 @@
     revealTargets.forEach(function (el) { el.classList.add("show"); });
   }
 
+  /* Writing panels are a CSS-only hover/focus accordion — no JS needed. */
+
   /* ---------- Accordion (Services + any .faq-item) ---------- */
   document.querySelectorAll(".faq-item__header").forEach(function (btn) {
     btn.addEventListener("click", function () {
