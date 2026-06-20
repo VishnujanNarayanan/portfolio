@@ -338,13 +338,16 @@
     revealTargets.forEach(function (el) { el.classList.add("show"); });
   }
 
-  /* ---------- Writing — the two-part intro, now ONE threshold-driven timed event ----------
-     Same visuals as before (Part 1: gapless fly-in to equal width with the --ph taper; Part 2:
-     the right→left rise/arrange into the accordion, first panel open). The ONLY change vs. the
-     scroll-driven version: a SINGLE threshold — the instant the section reaches the top of the
-     viewport (handing off from flow) — fires the whole sequence on a TIMER (Part 1 then Part 2,
-     one continuous motion over DUR seconds, regardless of scroll speed). Scrolling back out the
-     top reverses it; once landed it hands off to the live sticky-hover accordion. */
+  /* ---------- Writing — threshold-driven timed intro, ONE overlapping right→left timeline ----------
+     A SINGLE threshold (the section's top crossing mid-viewport, handing off from flow) fires the
+     whole sequence on a TIMER over DUR seconds. Two waves overlap, both sweeping RIGHT→LEFT:
+       • ARRIVAL — reversed gapless reveal: rightmost panel lands first (as the big absorber, then
+         shrinks to size), the rest reveal leftward; the leftmost (opener) is NOT present until the
+         reveal reaches it last.
+       • RISE+SETTLE — each panel begins rising the moment it itself arrives (so rises overlap the
+         arrivals still in flight and the settles in front of them), then settles into place.
+     Scrolling back out the top reverses it; once landed it hands off to the live sticky-hover
+     accordion. Stacking (rightmost on top) is the CSS default — unchanged. */
   (function () {
     var section = document.querySelector(".writing");
     var wstack = section && section.querySelector(".wstack");
@@ -352,13 +355,26 @@
     var panels = Array.prototype.slice.call(wstack.querySelectorAll(".wpanel"));
     if (!panels.length) return;
     var N = panels.length;
-    var DUR = 1.5;                                      // whole sequence duration (s) — timed, not scrolled
-    var SPLIT = 0.4;                                    // fraction of the timeline given to Part 1
-    var WIN2 = 0.42;                                    // each panel's Part-2 arrange window
-    var stag2 = (1 - WIN2) / Math.max(N - 1, 1);       // right→left stagger (leftmost lands at t=1)
+    var DUR = 2.6;                                      // whole sequence duration (s) — timed, not scrolled
+    // ONE OVERLAPPING right→left timeline (no Part-1/Part-2 boundary). Two waves run at once:
+    //   ARRIVAL — a reversed gapless reveal: the RIGHTMOST panel lands first, the rest reveal
+    //     leftward, the leftmost (panel 0, the opener) being the big absorber that arrives last.
+    //   RISE+SETTLE — a panel STARTS rising the moment it itself arrives (rise stagger === arrival
+    //     stagger), so later panels begin adjusting earlier and rises overlap freely with the
+    //     settles in front of them rather than waiting one-settle-per-rise.
+    // Panel order j = (N-1)-i, j=0 = rightmost. rise-start(j) === arrival(j) === T_ARR*(j+1)/N;
+    // settle-start(j) === rise-start(j)+R_DUR. All times are raw units normalised by L so the
+    // timed progress T∈[0,1] covers the whole thing.
+    var T_ARR = 1.5;                                    // raw time for all arrivals (single right→left sweep)
+    var R_DUR = 0.42;                                   // one panel's rise window (raw) — slow
+    var S_DUR = 0.28;                                   // one panel's settle window (raw) — quick settle into place
+    var R_STEP = T_ARR / N;                             // rise stagger === arrival stagger → each panel rises the moment it arrives
+    var riseStart0 = T_ARR / N;                         // rightmost rises as soon as it itself has arrived (not after N panels to its left)
+    var L = riseStart0 + (N - 1) * R_STEP + R_DUR + S_DUR;  // total raw length → normalises T∈[0,1]
     function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
     function lerp(a, b, t) { return a + (b - a) * t; }
     function smooth(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
+    function smoother(t) { t = clamp(t, 0, 1); return t * t * t * (t * (t * 6 - 15) + 10); }  // ease-in + ease-out (pronounced)
     function easeOut(t) { t = clamp(t, 0, 1); return 1 - Math.pow(1 - t, 3); }   // nonzero slope at 0 → immediate start
 
     // Resolved geometry (clamps → px), cached; recomputed on resize.
@@ -423,79 +439,74 @@
       });
     }
 
-    // PART 1 — gapless fly-in to equal width. The taper is the STATIC band (rendered exactly the
-    // way Part 2 renders its start), so the box height / clip / bleed / text all match Part 2's
-    // first frame → the seam between the parts is continuous (no jump).
-    function part1(p) {
-      var W = G.W, per = W / N;
-      var F = -1 + p * N, m = Math.floor(F), frac = F - m;
-      var rightOfM = lerp(W, (m + 1) * per, frac);
-      var accRaw = 0, accSnap = 0;
+    // PAINT(T) — the whole sequence in ONE overlapping pass. For each panel we know three
+    // progresses derived from the single timed clock t = T*L:
+    //   • settle/target width (per → stripW) from its settle window;
+    //   • a gapless ARRIVAL reveal (rightmost first) that grows each panel from 0 to its target,
+    //     with panel 0 as the residual absorber (so freed settle-space and un-arrived space both
+    //     flow into the opening panel) — guarantees the widths always sum to W with no gaps;
+    //   • a RISE clip (trapezoid: LEFT edge first, then RIGHT edge to full height).
+    function paint(T) {
+      var W = G.W, per = G.per, t = T * L;
+      var pA = clamp(t / T_ARR, 0, 1);
+      var af = pA * N;                                  // revealed count from the RIGHT (fractional)
+      var fl = Math.min(Math.floor(af), N - 1);         // frontier index (distance-from-right)
+      var frac = clamp(af - fl, 0, 1);                  // progress of the frontier hand-off
+
+      // settle width of an already-revealed strip (per → stripW over its own settle window).
+      function settleWidth(i) {
+        var j = (N - 1) - i;
+        var sS = riseStart0 + j * R_STEP + R_DUR;       // settle starts right after this panel's rise
+        var setP = clamp((t - sS) / S_DUR, 0, 1);
+        return lerp(per, G.stripW, smoother(setP));     // ease IN + ease INTO place
+      }
+
+      // Reversed gapless reveal. The RIGHTMOST panel (d=0) appears FIRST as the big absorber and
+      // shrinks to per as the frontier sweeps LEFT; the LEFTMOST panel (panel 0) appears LAST and
+      // ends as the opener — it is NOT special-cased and is never present until the frontier reaches
+      // it. The frontier panel (d==fl) holds the remainder R; the next one (d==fl+1) grows into it;
+      // as revealed strips settle (shrink) the freed width flows left into R → the opener.
+      var rightSettled = 0, widths = new Array(N);
       panels.forEach(function (pan, i) {
-        var w = i < m ? per : i === m ? rightOfM - m * per : i === m + 1 ? W - rightOfM : 0;
-        if (w < 0) w = 0;
-        accRaw += w;
-        var snap = Math.round(accRaw);
-        var bw = snap - accSnap;
-        pan.style.flexGrow = "0"; pan.style.flexShrink = "0";
-        pan.style.flexBasis = bw + "px";
-        accSnap = snap;
-        var insetPct = (1 - G.ph[i] / 100) / 2 * 100;     // full static taper (matches Part 2 start)
-        paintPanel(pan, i, bw, insetPct, insetPct, 18);
-        if (i === 0) { var c = pan.querySelector(".wpanel__content"); if (c) c.style.opacity = "0"; }
+        if ((N - 1 - i) < fl) { var w = settleWidth(i); widths[i] = w; rightSettled += w; }
       });
-    }
-
-    // PART 2 — one-by-one from the RIGHT, two beats per panel:
-    //   (a) RISE: the panel grows tapered→full height as a TRAPEZOID — its LEFT edge first
-    //       (top-left AND bottom-left splay out together), then its RIGHT edge scales up to
-    //       the same height (full height "scales across" to the right edge). clip-path, so
-    //       both corners move symmetrically (a rotate would only lift one).
-    //   (b) SETTLE: once its right edge is up, it eases into its final place — each closed
-    //       strip shrinks to its slot width; the FIRST panel absorbs the freed space (opens).
-    // Widths are explicit + integer-snapped left→right so the strips stay flush (sum = W).
-    function part2(p2) {
-      // settle factor per panel (begins only after that panel's rise) — used for the widths.
-      var settleW = panels.map(function (pan, i) {
-        var li = clamp((p2 - (N - 1 - i) * stag2) / WIN2, 0, 1);   // rightmost first
-        var f = smooth(clamp((li - 0.5) / 0.5, 0, 1));             // settle starts ~after the rise
-        return i === 0 ? 0 : lerp(G.per, G.stripW, f);             // strips shrink; panel 0 = residual
+      var R = W - rightSettled;                         // space to the LEFT of the settled block
+      var nextGrow = (fl + 1 <= N - 1) ? frac * (R - per) : 0;
+      if (nextGrow < 0) nextGrow = 0;
+      panels.forEach(function (pan, i) {
+        var d = (N - 1) - i;
+        if (d < fl) return;                             // already settled above
+        widths[i] = d === fl ? (R - nextGrow)           // active absorber → shrinks toward per
+          : d === fl + 1 ? nextGrow                     // next panel grows 0 → R-per
+            : 0;                                        // not yet revealed
       });
-      var stripsSum = 0;
-      for (var k = 1; k < N; k++) stripsSum += settleW[k];
-      settleW[0] = G.W - stripsSum;                                 // first panel absorbs the rest → opens
 
-      // How much the layout has OPENED UP so far (px) = the first panel's growth past equal
-      // width. The clip-path used for the rise also clips each panel's box-shadow bleed, so the
-      // right-edge seams reopen during Part 2 — counter it by bleeding each panel's colour to the
-      // right by a considerable BASE plus exactly that opened amount (1:1 px), and extend the
-      // clip's right edge so the bleed actually renders past the clip (instead of being cut off).
-      var opened = settleW[0] - G.per; if (opened < 0) opened = 0;
-      var bleed = 18 + opened;                                      // px
+      // bleed grows with how much the opener has OPENED UP, so the rise's clip can't reopen seams.
+      var opened = widths[0] - per; if (opened < 0) opened = 0;
+      var bleed = 18 + opened;
 
       var accRaw = 0, accSnap = 0;
       panels.forEach(function (pan, i) {
-        var li = clamp((p2 - (N - 1 - i) * stag2) / WIN2, 0, 1);
-        // (a) RISE clip
-        var r = clamp(li / 0.6, 0, 1);                              // rise done by li≈0.6
+        var j = (N - 1) - i;
+        var rS = riseStart0 + j * R_STEP;
+        var li = clamp((t - rS) / R_DUR, 0, 1);          // RISE progress for this panel
         var inset = (1 - G.ph[i] / 100) / 2;
-        var eL = easeOut(clamp(r / 0.6, 0, 1));                     // left edge first — immediate start (no pause at the seam)
-        var eR = easeOut(clamp((r - 0.3) / 0.7, 0, 1));            // right edge follows
+        var eL = easeOut(clamp(li / 0.55, 0, 1));        // LEFT edge first (top-left + bottom-left splay out)
+        var eR = easeOut(clamp((li - 0.25) / 0.75, 0, 1)); // RIGHT edge follows up to full height
         var tl = inset * (1 - eL) * 100;
         var tr = inset * (1 - eR) * 100;
-        // (b) SETTLE width (explicit, snapped → flush)
-        accRaw += settleW[i];
+        accRaw += widths[i];                             // explicit + integer-snapped → strips stay flush
         var snap = Math.round(accRaw);
         var bw = snap - accSnap;
         pan.style.flexGrow = "0"; pan.style.flexShrink = "0";
         pan.style.flexBasis = bw + "px";
         accSnap = snap;
         paintPanel(pan, i, bw, tl, tr, bleed);
-        // first panel's content fades in as it opens — but gated by its OWN rise (eR), so it
-        // never shows while the panel is still a clipped, tapered band.
+        // opener's content fades in as it opens, gated by its OWN rise (eR) so it never shows
+        // while still a clipped, tapered band.
         if (i === 0) {
           var c = pan.querySelector(".wpanel__content");
-          var openFrac = clamp((settleW[0] - G.per) / (G.openW - G.per), 0, 1);
+          var openFrac = clamp((widths[0] - per) / (G.openW - per), 0, 1);
           if (c) c.style.opacity = (openFrac * eR).toFixed(2);
         }
       });
@@ -524,8 +535,7 @@
 
       if (T >= 1) { setSettled(true); return; }                    // landed → live accordion
       setSettled(false);
-      if (T < SPLIT) part1(clamp(T / SPLIT, 0, 1));                 // Part 1 then …
-      else part2(clamp((T - SPLIT) / (1 - SPLIT), 0, 1));          // … Part 2, one continuous timeline
+      paint(T);                                                    // one overlapping right→left timeline
     }
 
     function resize() { geom(); settled = null; }       // force a clean re-apply after a resize
