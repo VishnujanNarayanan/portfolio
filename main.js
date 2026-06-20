@@ -201,6 +201,13 @@
     var heroBg = document.querySelector(".hero__bg");
     var hcv = null, hctx = null;
     if (heroBg) { hcv = document.createElement("canvas"); hcv.id = "hero-contours"; heroBg.appendChild(hcv); hctx = hcv.getContext("2d"); }
+    // Writing section: its OWN contour plane (same shared field), painted with a vertical
+    // gradient so the section reads as zone-4 (light blue, dark lines) at the TOP easing to
+    // zone-1 (dark navy, light-blue lines) at the BOTTOM — the flow's light→dark, frozen
+    // vertically. Inserted first so the strips paint on top of it.
+    var writingPin = document.querySelector(".writing__pin");
+    var wcv = null, wctx = null;
+    if (writingPin) { wcv = document.createElement("canvas"); wcv.id = "writing-contours"; writingPin.insertBefore(wcv, writingPin.firstChild); wctx = wcv.getContext("2d"); }
     var W = 0, H = 0, DPR = 1, CELL = 26, cols = 0, rows = 0, field = [];
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
     // tiny value noise (for domain-warping the field → breaks perfect circles/ovals)
@@ -239,7 +246,7 @@
     function resize() {
       DPR = Math.min(window.devicePixelRatio || 1, 2);
       W = window.innerWidth; H = window.innerHeight;
-      sizeCanvas(cv, ctx); if (hcv) sizeCanvas(hcv, hctx);
+      sizeCanvas(cv, ctx); if (hcv) sizeCanvas(hcv, hctx); if (wcv) sizeCanvas(wcv, wctx);
       cols = Math.ceil(W / CELL) + 1; rows = Math.ceil(H / CELL) + 1;
     }
     seedBlobs(); resize();
@@ -247,9 +254,13 @@
     var LEVELS = [0.22, 0.36, 0.52, 0.7];              // fewer, rounded nested loops
     function lerp(a, b, t) { return a + (b - a) * t; }
     // marching squares over the shared field → closed, non-overlapping contours
-    function drawContours(g, stroke, bgFill) {
+    function drawContours(g, stroke, bgFill, oy) {
       g.clearRect(0, 0, W, H);
       if (bgFill) { g.fillStyle = bgFill; g.fillRect(0, 0, W, H); }
+      // oy shifts the iso-lines into VIEWPORT space (the field is sampled in screen coords).
+      // A scrolling canvas passes oy = -rect.top so its lines coincide exactly with the fixed
+      // #bg-contours plane → the contour field reads as ONE continuous background across sections.
+      g.save(); if (oy) g.translate(0, oy);
       g.lineCap = "round"; g.lineJoin = "round";
       g.strokeStyle = stroke; g.lineWidth = 0.45;
       var li, lv, r, c;
@@ -280,6 +291,7 @@
         }
         g.stroke();
       }
+      g.restore();
     }
     var t = 0, last = 0;
     function frame(now) {
@@ -320,6 +332,19 @@
         "," + Math.round(lerp(255, 220, lt)) + "," + lerp(0.3, 0.5, lt).toFixed(2) + ")";
       drawContours(ctx, lineCol, bgFill);                // global: blue → inverted dark-blue on light
       if (hctx) drawContours(hctx, "#969ba8");           // hero: same blue-grey as end bg → lines vanish at full zoom
+      if (wctx && writingPin) {                          // writing: vertical light→dark wash (zone-4 top → zone-1 bottom)
+        var wtop = writingPin.getBoundingClientRect().top;   // section top in viewport space
+        // BG wash anchored to the section (canvas-local 0..H): light at top → dark at bottom.
+        var wbg = wctx.createLinearGradient(0, 0, 0, H);
+        wbg.addColorStop(0, "rgb(208,225,235)");         // TOP — zone-4 light blue
+        wbg.addColorStop(1, "rgb(27,34,54)");            // BOTTOM — zone-1 dark navy
+        // Lines are drawn translated by -wtop (viewport-locked, continuous with #bg-contours), so
+        // the stroke gradient must be anchored to the section IN THAT translated space (wtop..wtop+H).
+        var wln = wctx.createLinearGradient(0, wtop, 0, wtop + H);
+        wln.addColorStop(0, "rgba(57,50,220,0.5)");      // TOP — dark lines (read on light)
+        wln.addColorStop(1, "rgba(77,139,255,0.45)");    // BOTTOM — light-blue lines (read on dark)
+        drawContours(wctx, wln, wbg, -wtop);
+      }
       if (!reduce) requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
