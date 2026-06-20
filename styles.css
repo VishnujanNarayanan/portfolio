@@ -475,3 +475,26 @@ header .pill-char__b{position:absolute;left:0;top:100%}
 header .pill-btn.is-rolled .pill-char__a,header .pill-btn.is-rolled .pill-char__b{transform:translateY(-100%)}
 header .pill-btn--glass .pill-char__b{color:#050419}                 /* Hire Me — light-world black */
 header .pill-btn--dark .pill-char__b{color:var(--color-text-light)}  /* Get In Touch — light-world white */
+
+/* ============================================================
+   Nav-link per-letter HOVER WEIGHT REEL
+   Hovering a nav link makes the hovered letter (and its neighbours,
+   with a falloff) dynamically bolden. Roboto Flex (variable) lets the
+   weight interpolate continuously; a short transition keeps it snappy.
+   --w is set per .nav-char in main.js from the cursor distance.
+   ============================================================ */
+.header__nav-left a .nav-char{font-family:"Roboto Flex","Roboto",sans-serif;font-variation-settings:"wght" var(--w,400)}
+/* the glyph-bearing leaves carry the weight transition so the inherited --w change animates smoothly */
+.header__nav-left a .nav-char__a,.header__nav-left a .nav-char__b,.header__nav-left a .nav-char__c{transition:transform .5s var(--ease-default),font-variation-settings .14s var(--ease-default);transition-delay:var(--d,0s),0s}
+
+/* ============================================================
+   Header buttons — per-letter HOVER REEL (self-reel)
+   On hover each button rolls its letters up to a same-colour clone
+   (__c, color:inherit → always legible) with a per-letter stagger
+   (--hd, local to the button), composing with the scroll world-flip
+   reel (which still rolls __a/__b inside __face). Snappy + staggered.
+   ============================================================ */
+.header__nav-left a .nav-char__col,header .pill-char__col{display:block;position:relative;transition:transform .42s var(--ease-default);transition-delay:var(--hd,0s);will-change:transform}
+.header__nav-left a .nav-char__face,header .pill-char__face{display:block;position:relative;overflow:hidden}
+.header__nav-left a .nav-char__c,header .pill-char__c{display:block;position:absolute;left:0;top:100%;color:inherit}
+.header__nav-left a:hover .nav-char__col,.header__nav-left a:focus-visible .nav-char__col,header .pill-btn:hover .pill-char__col,header .pill-btn:focus-visible .pill-char__col{transform:translateY(-100%)}
