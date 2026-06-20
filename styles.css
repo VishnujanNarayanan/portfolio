@@ -336,9 +336,9 @@ header .header__nav-left a{color:#050419;font-size:16px}
   flex:1 1 0;                         /* grow:1 shrink:1 stay CONSTANT — only the basis below changes */
   align-self:center;height:var(--ph,100%);   /* subtle height taper: far-left slightly shorter */
   background:var(--bg);
-  /* Safety against sub-pixel seams during the fly-in: bleed each panel's own colour 2px to
-     the RIGHT so it always covers the hairline where it meets the next panel — no gaps. */
-  box-shadow:2px 0 0 0 var(--bg);
+  /* Safety against seams during the arrange: bleed each panel's own colour to the RIGHT so it
+     always covers where it meets the next panel — overlaps by more than a hairline. */
+  box-shadow:5px 0 0 0 var(--bg);
   will-change:flex-basis,transform;   /* transform = Part-1 scroll-driven fly-in (main.js) */
   /* Animate ONLY flex-basis (not flex-grow): grow/shrink stay constant so the free-space
      redistribution is monotonic — no per-frame wobble/vibration. Slow, gentle ease-in-out
