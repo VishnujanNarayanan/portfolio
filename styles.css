@@ -312,11 +312,11 @@ header .header__nav-left a{color:#050419;font-size:16px}
   --strip:clamp(64px,7vw,108px);     /* collapsed strip width */
   --cw:clamp(260px,22vw,360px);      /* fixed width a panel opens by */
   --h:clamp(540px,82vh,880px);
-  --enter:100vh;                     /* scroll length for the Part-1 fly-in */
+  --enter:100vh;                     /* extra scroll holding the pin while the reveal plays out */
   position:relative;z-index:2;background:transparent;color:#fff;
   height:calc(100vh + var(--enter));
 }
-/* Pinned stage holds the layout centred while the panels fly in (scroll-driven, main.js). */
+/* Pinned stage holds the layout centred while the panels fly in (timed reveal, main.js). */
 .writing__pin{position:sticky;top:0;height:100vh;
   display:flex;align-items:center;overflow:hidden;background:transparent}
 /* Empty left pad stays transparent so the fixed #bg-contours plane (the flow
@@ -336,13 +336,12 @@ header .header__nav-left a{color:#050419;font-size:16px}
   flex:1 1 0;                         /* grow:1 shrink:1 stay CONSTANT — only the basis below changes */
   align-self:center;height:var(--ph,100%);   /* subtle height taper: far-left slightly shorter */
   background:var(--bg);
-  /* Safety against seams during the arrange: bleed each panel's own colour to the RIGHT so it
-     always covers where it meets the next panel — overlaps by more than a hairline. */
+  /* Hairline safety: bleed each panel's own colour a few px to the RIGHT so the seam where it
+     meets the next panel is always covered (panels are contiguous at rest). */
   box-shadow:5px 0 0 0 var(--bg);
-  will-change:flex-basis,transform;   /* transform = Part-1 scroll-driven fly-in (main.js) */
-  /* Animate ONLY flex-basis (not flex-grow): grow/shrink stay constant so the free-space
-     redistribution is monotonic — no per-frame wobble/vibration. Slow, gentle ease-in-out
-     (eases at BOTH start and end). */
+  will-change:flex-basis,transform;   /* transform = the JS fly-in reveal (main.js) */
+  /* The hover accordion animates ONLY flex-basis (not flex-grow): grow/shrink stay constant so
+     the free-space redistribution is monotonic — no per-frame wobble. Gentle ease at both ends. */
   transition:flex-basis .8s cubic-bezier(.65,0,.35,1);
 }
 /* --ph = panel height: a GENTLE taper (far-left ~91% → front 100%) for a touch of depth. */
@@ -371,9 +370,12 @@ header .header__nav-left a{color:#050419;font-size:16px}
 .wpanel__rail{position:relative;flex:1 1 auto;min-width:var(--strip);
   border-left:1px solid rgba(255,255,255,.08);
   font-family:"Roboto",sans-serif;color:rgba(255,255,255,.6)}
-.wpanel__vert{position:absolute;left:50%;top:30px;transform:translateX(-50%) rotate(180deg);
+/* Label + number are PINNED to the --strip zone at the panel's left edge, so they hold a fixed
+   position as the panel resizes (during the reveal + when other panels open) — they never drift
+   with the rail's changing width. */
+.wpanel__vert{position:absolute;left:calc(var(--strip) / 2);top:30px;transform:translateX(-50%) rotate(180deg);
   writing-mode:vertical-rl;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;white-space:nowrap}
-.wpanel__num{position:absolute;left:0;right:0;bottom:26px;text-align:center;
+.wpanel__num{position:absolute;left:0;right:auto;width:var(--strip);bottom:26px;text-align:center;
   font-family:"Inter",sans-serif;font-weight:300;font-size:1.5rem;color:#4d8bff}
 
 /* Content — fixed width (clipped while collapsed); fades in as the panel opens */
