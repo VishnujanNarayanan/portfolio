@@ -338,13 +338,15 @@
     revealTargets.forEach(function (el) { el.classList.add("show"); });
   }
 
-  /* ---------- Writing — Part 1: scroll-driven gapless reveal ----------
-     The section is pinned (.writing__pin) with extra scroll length (--enter). As that
-     scroll advances, cards reveal left→right: each card emerges and its BODY stretches
-     to the right to fill the space (no gap, no overlap) until the NEXT card emerges and
-     takes over the remainder — so the strips are always flush, settling to equal width.
-     Nothing opens yet; Stage 2 (rearrange into the accordion) is deferred and the old
-     sticky-hover accordion is parked until then. */
+  /* ---------- Writing — two-part scroll-driven intro, then the accordion ----------
+     The section is pinned (.writing__pin) with extra scroll length (--enter).
+       PART 1 (approach scroll): cards fly in left→right and settle to EQUAL width with
+         the subtle height taper ("depth"), nothing open — the gapless reveal.
+       PART 2 (pinned scroll): the panels ARRANGE one-by-one FROM THE RIGHT — each rises
+         from its tapered (deeper, shorter) height to FULL height (left edge leads), coming
+         to the same plane; finally the first (left) panel OPENS. This lands exactly on the
+         main accordion rest state (all same height, first open), which then goes live
+         (sticky-hover) once settled. */
   (function () {
     var section = document.querySelector(".writing");
     var wstack = section && section.querySelector(".wstack");
@@ -352,51 +354,147 @@
     var panels = Array.prototype.slice.call(wstack.querySelectorAll(".wpanel"));
     if (!panels.length) return;
     var N = panels.length;
+    var WIN2 = 0.42;                                   // each panel's Part-2 arrange window
+    var stag2 = (1 - WIN2) / Math.max(N - 1, 1);       // right→left stagger (leftmost lands at p2=1)
     function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
     function lerp(a, b, t) { return a + (b - a) * t; }
-    function setup() {
-      // Drive widths via flex-basis per frame, so kill the CSS flex-basis transition (it
-      // would lag the scroll) and clear any leftover transform/z-index from older versions.
-      panels.forEach(function (p) { p.style.transition = "none"; p.style.transform = ""; p.style.zIndex = ""; });
+    function smooth(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
+    function easeOut(t) { t = clamp(t, 0, 1); return 1 - Math.pow(1 - t, 3); }
+
+    // Resolved geometry (clamps → px), cached; recomputed on resize.
+    var G = { W: 0, H: 0, openBasis: 0, per: 0, stripW: 0, openW: 0, ph: [] };
+    function geom() {
+      var wr = wstack.getBoundingClientRect();
+      G.W = wr.width; G.H = wr.height;
+      var rail = panels[0].querySelector(".wpanel__rail");
+      var content = panels[0].querySelector(".wpanel__content");
+      var strip = rail ? parseFloat(getComputedStyle(rail).minWidth) : 90;     // = --strip
+      var cw = content ? parseFloat(getComputedStyle(content).width) : 300;     // = --cw
+      G.openBasis = strip + cw;                          // the open panel's extra basis (main accordion)
+      G.per = G.W / N;                                   // equal width (Part-1 end)
+      G.stripW = (G.W - G.openBasis) / N;                // a closed strip's final width (accordion)
+      G.openW = G.openBasis + G.stripW;                  // the open (first) panel's final width
+      G.ph = panels.map(function (p) {
+        var v = parseFloat(getComputedStyle(p).getPropertyValue("--ph"));       // taper %, e.g. 91
+        return isNaN(v) ? 100 : v;
+      });
     }
-    function render() {
-      if (window.innerWidth <= 820) {
-        panels.forEach(function (p) { p.style.flexBasis = ""; p.style.flexGrow = ""; p.style.flexShrink = ""; });
-        return;
-      }
-      var vh = window.innerHeight;
-      var rect = section.getBoundingClientRect();
-      // Start EARLY: begins ~1.15 viewports before the section locks at the top, finishes as
-      // it reaches the top (the remaining pinned scroll is reserved for Stage 2).
-      var p = clamp((vh * 1.15 - rect.top) / (vh * 1.15), 0, 1);
-      var W = wstack.getBoundingClientRect().width;
-      var per = W / N;                                 // final equal width
-      // F sweeps -1 → N-1. m = the card currently SETTLING (retracting from full to its slot),
-      // m+1 = the card EMERGING from the right edge to fill the remainder. The two always sum
-      // with the settled cards to exactly W → flush, gapless, no overlap.
+
+    var settled = null;                                 // tri-state: null/false/true
+    function setSettled(on) {
+      if (on === settled) return;
+      settled = on;
+      panels.forEach(function (p, i) {
+        if (on) {                                        // hand off to the live CSS accordion
+          p.style.transition = ""; p.style.transform = ""; p.style.transformOrigin = ""; p.style.clipPath = "";
+          p.style.flexBasis = ""; p.style.flexGrow = ""; p.style.flexShrink = "";
+          p.style.height = G.H + "px";                   // uniform height (overrides the --ph taper)
+          p.classList.toggle("is-open", i === 0);
+          var c = p.querySelector(".wpanel__content"); if (c) c.style.opacity = "";
+        } else {
+          p.style.transition = "none"; p.classList.remove("is-open");
+        }
+      });
+    }
+
+    // PART 1 — gapless fly-in to equal width (heights via the CSS --ph taper).
+    function part1(p) {
+      panels.forEach(function (p2) { p2.style.height = ""; p2.style.transform = ""; p2.style.clipPath = ""; });  // CSS taper owns height
+      var W = G.W, per = W / N;
       var F = -1 + p * N, m = Math.floor(F), frac = F - m;
-      var rightOfM = lerp(W, (m + 1) * per, frac);      // right edge of the settling card
-      // Snap each card's RIGHT edge to an integer pixel and take widths as the difference
-      // between consecutive snapped edges → the strips are always exactly contiguous (no
-      // sub-pixel hairline seam can open up between them).
+      var rightOfM = lerp(W, (m + 1) * per, frac);
       var accRaw = 0, accSnap = 0;
       panels.forEach(function (pan, i) {
-        var w = i < m ? per
-              : i === m ? rightOfM - m * per            // settling: full → slot
-              : i === m + 1 ? W - rightOfM              // emerging: 0 → fills remainder
-              : 0;                                      // not yet revealed
+        var w = i < m ? per : i === m ? rightOfM - m * per : i === m + 1 ? W - rightOfM : 0;
         if (w < 0) w = 0;
         accRaw += w;
-        var snap = Math.round(accRaw);                  // integer right edge
+        var snap = Math.round(accRaw);
         pan.style.flexBasis = (snap - accSnap) + "px";
         pan.style.flexGrow = "0"; pan.style.flexShrink = "0";
         accSnap = snap;
       });
     }
-    setup();
+
+    // PART 2 — one-by-one from the RIGHT, two beats per panel:
+    //   (a) RISE: the panel grows tapered→full height as a TRAPEZOID — its LEFT edge first
+    //       (top-left AND bottom-left splay out together), then its RIGHT edge scales up to
+    //       the same height (full height "scales across" to the right edge). clip-path, so
+    //       both corners move symmetrically (a rotate would only lift one).
+    //   (b) SETTLE: once its right edge is up, it eases into its final place — each closed
+    //       strip shrinks to its slot width; the FIRST panel absorbs the freed space (opens).
+    // Widths are explicit + integer-snapped left→right so the strips stay flush (sum = W).
+    function part2(p2) {
+      // settle factor per panel (begins only after that panel's rise) — used for the widths.
+      var settleW = panels.map(function (pan, i) {
+        var li = clamp((p2 - (N - 1 - i) * stag2) / WIN2, 0, 1);   // rightmost first
+        var f = smooth(clamp((li - 0.5) / 0.5, 0, 1));             // settle starts ~after the rise
+        return i === 0 ? 0 : lerp(G.per, G.stripW, f);             // strips shrink; panel 0 = residual
+      });
+      var stripsSum = 0;
+      for (var k = 1; k < N; k++) stripsSum += settleW[k];
+      settleW[0] = G.W - stripsSum;                                 // first panel absorbs the rest → opens
+
+      var accRaw = 0, accSnap = 0;
+      panels.forEach(function (pan, i) {
+        var li = clamp((p2 - (N - 1 - i) * stag2) / WIN2, 0, 1);
+        // (a) RISE clip
+        var r = clamp(li / 0.6, 0, 1);                              // rise done by li≈0.6
+        var inset = (1 - G.ph[i] / 100) / 2;
+        var eL = smooth(clamp(r / 0.6, 0, 1));                      // left edge first
+        var eR = smooth(clamp((r - 0.3) / 0.7, 0, 1));             // right edge follows
+        var tl = (inset * (1 - eL) * 100).toFixed(2);
+        var tr = (inset * (1 - eR) * 100).toFixed(2);
+        pan.style.height = G.H + "px";
+        pan.style.clipPath =
+          "polygon(0% " + tl + "%, 100% " + tr + "%, 100% " + (100 - tr) + "%, 0% " + (100 - tl) + "%)";
+        // (b) SETTLE width (explicit, snapped → flush)
+        accRaw += settleW[i];
+        var snap = Math.round(accRaw);
+        pan.style.flexGrow = "0"; pan.style.flexShrink = "0";
+        pan.style.flexBasis = (snap - accSnap) + "px";
+        accSnap = snap;
+        // first panel's content fades in as it opens — but gated by its OWN rise (eR), so it
+        // never shows while the panel is still a clipped, tapered band.
+        if (i === 0) {
+          var c = pan.querySelector(".wpanel__content");
+          var openFrac = clamp((settleW[0] - G.per) / (G.openW - G.per), 0, 1);
+          if (c) c.style.opacity = (openFrac * eR).toFixed(2);
+        }
+      });
+    }
+
+    function render() {
+      if (window.innerWidth <= 820) {
+        if (settled !== null) { panels.forEach(function (p) {
+          ["transition", "transform", "transformOrigin", "clipPath", "flexBasis", "flexGrow", "flexShrink", "height"].forEach(function (k) { p.style[k] = ""; });
+          p.classList.remove("is-open");
+        }); settled = null; }
+        return;
+      }
+      var vh = window.innerHeight;
+      var rect = section.getBoundingClientRect();
+      var total2 = section.offsetHeight - vh;
+      var p2 = total2 > 0 ? clamp(-rect.top / total2, 0, 1) : 0;   // pinned-scroll progress (Part 2)
+      if (p2 >= 1) { setSettled(true); return; }                   // landed → live accordion
+      setSettled(false);
+      if (p2 > 0) {
+        part2(p2);
+      } else {
+        // PART 1: starts ~1.15 viewports before the section locks at the top.
+        part1(clamp((vh * 1.15 - rect.top) / (vh * 1.15), 0, 1));
+      }
+    }
+
+    function resize() { geom(); settled = null; }       // force a clean re-apply after a resize
+    geom();
     function frame() { render(); requestAnimationFrame(frame); }
     requestAnimationFrame(frame);
-    window.addEventListener("resize", setup, { passive: true });
+    window.addEventListener("resize", resize, { passive: true });
+
+    // Sticky-hover accordion — only active once settled (Part 2 complete).
+    function open(p) { if (settled) panels.forEach(function (x) { x.classList.toggle("is-open", x === p); }); }
+    panels.forEach(function (p) { p.addEventListener("mouseenter", function () { open(p); }); });
+    wstack.addEventListener("mouseleave", function () { open(panels[0]); });
   })();
 
   /* ---------- Accordion (Services + any .faq-item) ---------- */
