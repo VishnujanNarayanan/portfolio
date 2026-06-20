@@ -451,11 +451,11 @@
       var t0 = writingPin ? writingPin.getBoundingClientRect().top : 0;
       var t1 = (darkSecs.length ? darkSecs[0].el.getBoundingClientRect().top : t0 + H) + H * 0.35;
       // Blog section, two SEPARATE thresholds (t0 = blog top; -t0/H = the blog's scroll progress):
-      //  • nav reel (Projects/Skills/Services/Blog) re-whitens at 70% — the per-letter ripple;
+      //  • nav reel (Projects/Skills/Services/Blog) re-whitens at 58% — the per-letter ripple;
       //  • the CTA pills (Hire Me / Get In Touch) flip MUCH earlier, at 7% (a blog-only exception).
       // Both threshold-fired and reverse on scroll-up.
       var blogProg = (0 - t0) / (H || 1);
-      var navWantDark = blogProg >= 0.70;
+      var navWantDark = blogProg >= 0.58;
       if (navWantDark !== navDark) {
         navDark = navWantDark;
         if (window.__navLight) window.__navLight(!navDark, true);  // reel only (skipTheme) — pills handled below
