@@ -208,6 +208,18 @@
     var writingPin = document.querySelector(".writing__pin");
     var wcv = null, wctx = null;
     if (writingPin) { wcv = document.createElement("canvas"); wcv.id = "writing-contours"; writingPin.insertBefore(wcv, writingPin.firstChild); wctx = wcv.getContext("2d"); }
+    // The content sections AFTER the blog (Selected work / Skills / Services) continue the
+    // dark world: each gets its OWN contour canvas filled with zone-1 navy + light-blue lines,
+    // drawn viewport-aligned so the field runs continuously out of the blog's dark bottom and
+    // straight through them. Canvas is sized to the WHOLE section (handles tall / sticky / the
+    // accordion growing) and inserted first so the section content paints on top.
+    var darkSecs = [];
+    [".features", ".standards", ".faq"].forEach(function (sel) {
+      var el = document.querySelector(sel); if (!el) return;
+      var c = document.createElement("canvas"); c.className = "section-contours";
+      el.insertBefore(c, el.firstChild);
+      darkSecs.push({ el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0 });
+    });
     var W = 0, H = 0, DPR = 1, CELL = 26, cols = 0, rows = 0, field = [];
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
     // tiny value noise (for domain-warping the field → breaks perfect circles/ovals)
@@ -253,16 +265,10 @@
     window.addEventListener("resize", resize, { passive: true });
     var LEVELS = [0.22, 0.36, 0.52, 0.7];              // fewer, rounded nested loops
     function lerp(a, b, t) { return a + (b - a) * t; }
-    // marching squares over the shared field → closed, non-overlapping contours
-    function drawContours(g, stroke, bgFill, oy) {
-      g.clearRect(0, 0, W, H);
-      if (bgFill) { g.fillStyle = bgFill; g.fillRect(0, 0, W, H); }
-      // oy shifts the iso-lines into VIEWPORT space (the field is sampled in screen coords).
-      // A scrolling canvas passes oy = -rect.top so its lines coincide exactly with the fixed
-      // #bg-contours plane → the contour field reads as ONE continuous background across sections.
-      g.save(); if (oy) g.translate(0, oy);
-      g.lineCap = "round"; g.lineJoin = "round";
-      g.strokeStyle = stroke; g.lineWidth = 0.45;
+    // marching squares over the shared field → closed, non-overlapping contours.
+    // Pulled out so the section canvases (which fill their own full height) can reuse the
+    // exact same iso-line pass without going through drawContours' viewport-sized clear/fill.
+    function strokeIso(g) {
       var li, lv, r, c;
       for (li = 0; li < LEVELS.length; li++) {
         lv = LEVELS[li];
@@ -291,9 +297,42 @@
         }
         g.stroke();
       }
+    }
+    function drawContours(g, stroke, bgFill, oy) {
+      g.clearRect(0, 0, W, H);
+      if (bgFill) { g.fillStyle = bgFill; g.fillRect(0, 0, W, H); }
+      // oy shifts the iso-lines into VIEWPORT space (the field is sampled in screen coords).
+      // A scrolling canvas passes oy = -rect.top so its lines coincide exactly with the fixed
+      // #bg-contours plane → the contour field reads as ONE continuous background across sections.
+      g.save(); if (oy) g.translate(0, oy);
+      g.lineCap = "round"; g.lineJoin = "round";
+      g.strokeStyle = stroke; g.lineWidth = 0.45;
+      strokeIso(g);
       g.restore();
     }
-    var t = 0, last = 0;
+    // Light→dark wash shared by the blog canvas AND the Selected-work canvas. The transition is a
+    // single band in VIEWPORT space (t0 = blog top → t1 = partway into Selected work); each section
+    // samples it by its own on-screen position, so the fade is ONE continuous, gradual ramp that
+    // spans the whole blog and spills into the next section (no per-section restart, no hard corner).
+    // bg: zone-4 light blue → zone-1 navy. ln: dark indigo lines → light-blue lines (the inversion).
+    function washGrad(g, secTop, spanH, t0, t1) {
+      var bg = g.createLinearGradient(0, 0, 0, spanH);            // fill: canvas-local 0..spanH
+      var ln = g.createLinearGradient(0, secTop, 0, secTop + spanH);  // lines: section-anchored in translated space
+      var S = 20, i, span = (t1 - t0) || 1;
+      for (i = 0; i <= S; i++) {
+        var p = i / S, Y = secTop + p * spanH;                    // this stop's viewport y
+        var er = (Y - t0) / span; er = er < 0 ? 0 : er > 1 ? 1 : er;
+        var ss = er * er * er * (er * (er * 6 - 15) + 10);        // smootherstep…
+        var e = ss * ss * (3 - 2 * ss);                          // …∘ smoothstep → very gentle ends
+        bg.addColorStop(p, "rgb(" + Math.round(lerp(208, 27, e)) + "," +
+          Math.round(lerp(225, 34, e)) + "," + Math.round(lerp(235, 54, e)) + ")");
+        ln.addColorStop(p, "rgba(" + Math.round(lerp(57, 77, e)) + "," +
+          Math.round(lerp(50, 139, e)) + "," + Math.round(lerp(220, 255, e)) + "," +
+          lerp(0.5, 0.45, e).toFixed(3) + ")");
+      }
+      return { bg: bg, ln: ln };
+    }
+    var t = 0, last = 0, navDark = false;   // navDark = the re-darkened world has rolled the nav back to white
     function frame(now) {
       var dt = last ? Math.min((now - last) / 1000, 0.05) : 0; last = now;
       t += dt * 0.5;                                     // drift speed
@@ -332,18 +371,48 @@
         "," + Math.round(lerp(255, 220, lt)) + "," + lerp(0.3, 0.5, lt).toFixed(2) + ")";
       drawContours(ctx, lineCol, bgFill);                // global: blue → inverted dark-blue on light
       if (hctx) drawContours(hctx, "#969ba8");           // hero: same blue-grey as end bg → lines vanish at full zoom
-      if (wctx && writingPin) {                          // writing: vertical light→dark wash (zone-4 top → zone-1 bottom)
-        var wtop = writingPin.getBoundingClientRect().top;   // section top in viewport space
-        // BG wash anchored to the section (canvas-local 0..H): light at top → dark at bottom.
-        var wbg = wctx.createLinearGradient(0, 0, 0, H);
-        wbg.addColorStop(0, "rgb(208,225,235)");         // TOP — zone-4 light blue
-        wbg.addColorStop(1, "rgb(27,34,54)");            // BOTTOM — zone-1 dark navy
-        // Lines are drawn translated by -wtop (viewport-locked, continuous with #bg-contours), so
-        // the stroke gradient must be anchored to the section IN THAT translated space (wtop..wtop+H).
-        var wln = wctx.createLinearGradient(0, wtop, 0, wtop + H);
-        wln.addColorStop(0, "rgba(57,50,220,0.5)");      // TOP — dark lines (read on light)
-        wln.addColorStop(1, "rgba(77,139,255,0.45)");    // BOTTOM — light-blue lines (read on dark)
-        drawContours(wctx, wln, wbg, -wtop);
+      // Shared light→dark band, in viewport space: starts at the BLOG top (t0), finishes full-dark
+      // ~35% INTO the Selected-work section (t1 = features top + 0.35·H → the dark point lands at
+      // ~135% of the blog height). Both the blog canvas and the Selected-work canvas sample this one
+      // band, so the fade is a single continuous ramp that spills gradually into the next section.
+      var t0 = writingPin ? writingPin.getBoundingClientRect().top : 0;
+      var t1 = (darkSecs.length ? darkSecs[0].el.getBoundingClientRect().top : t0 + H) + H * 0.35;
+      // Top nav reel: once 70% of the BLOG section has scrolled past the fixed header, roll
+      // Projects/Skills/Services/Blog back to white with the SAME per-letter ripple the flow uses
+      // (window.__navLight). Threshold-fired + reverses on scroll-up. (t0 = blog top; it reaches
+      // -H once the blog has fully scrolled by, so -t0/H is the blog's scroll progress.)
+      var blogProg = (0 - t0) / (H || 1);
+      var wantDark = blogProg >= 0.70;
+      if (wantDark !== navDark) {
+        navDark = wantDark;
+        if (window.__navLight) window.__navLight(!navDark);  // dark world → white nav (on-light = false)
+      }
+      if (wctx && writingPin) {
+        var wtop = writingPin.getBoundingClientRect().top;
+        var ws = washGrad(wctx, wtop, H, t0, t1);
+        drawContours(wctx, ws.ln, ws.bg, -wtop);
+      }
+      // Dark content sections (Selected work / Skills / Services), viewport-aligned & continuous.
+      // Selected work straddles the band (its top still lightening); Skills/Services are past it →
+      // washGrad resolves to solid zone-1 navy + light-blue lines for them.
+      for (var ds = 0; ds < darkSecs.length; ds++) {
+        var sec = darkSecs[ds], sr = sec.el.getBoundingClientRect();
+        if (sr.bottom <= 0 || sr.top >= H) continue;       // off-screen → skip (cheap)
+        var sh = sec.el.offsetHeight;
+        if (sec.w !== W || sec.h !== sh) {                  // (re)size to the whole section box
+          sec.w = W; sec.h = sh;
+          sec.cv.width = W * DPR; sec.cv.height = sh * DPR;
+          sec.cv.style.width = W + "px"; sec.cv.style.height = sh + "px";
+          sec.ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        }
+        var sg = sec.ctx, dw = washGrad(sg, sr.top, sh, t0, t1);
+        sg.clearRect(0, 0, W, sh);
+        sg.fillStyle = dw.bg; sg.fillRect(0, 0, W, sh);
+        sg.save(); sg.translate(0, -sr.top);                // viewport-align the field
+        sg.lineCap = "round"; sg.lineJoin = "round";
+        sg.strokeStyle = dw.ln; sg.lineWidth = 0.45;
+        strokeIso(sg);
+        sg.restore();
       }
       if (!reduce) requestAnimationFrame(frame);
     }
