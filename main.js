@@ -86,11 +86,18 @@
       // nav reel. Default (hero zoom) keeps the reference's snappy .3s colour (bg tracks scroll).
       var trans = ease ? "color .5s var(--ease-default),background-color .5s var(--ease-default)"
                        : "color .3s var(--ease-default)";
-      var c = Math.round(255 * he);                       // 0 (black) → 255 (white)
-      var rgb = "rgb(" + c + "," + c + "," + c + ")";
-      navLinks.forEach(function (a) { a.style.transition = trans; a.style.color = rgb; });   // nav-link __a copy
-      if (hireSpan) { hireSpan.style.transition = trans; hireSpan.style.color = rgb; }        // Hire Me __a letters (black→white)
-      if (giSpan) { var c2 = Math.round(255 * (1 - he)); giSpan.style.transition = trans; giSpan.style.color = "rgb(" + c2 + "," + c2 + "," + c2 + ")"; }  // Get In Touch __a letters (white→black)
+      var rolled = ease ? (he < 0.5) : false;
+      // When rolling TO the light world (ease + rolled), do NOT update __a letter colours — __a
+      // must stay at its current (source) colour so the reel shows old→new, not new→new.
+      // Only update __a when unrolling back to the dark world, so the returning letter arrives
+      // in the correct dark-world colour.
+      if (!ease || !rolled) {
+        var c = Math.round(255 * he);                       // 0 (black) → 255 (white)
+        var rgb = "rgb(" + c + "," + c + "," + c + ")";
+        navLinks.forEach(function (a) { a.style.transition = trans; a.style.color = rgb; });
+        if (hireSpan) { hireSpan.style.transition = trans; hireSpan.style.color = rgb; }
+        if (giSpan) { var c2 = Math.round(255 * (1 - he)); giSpan.style.transition = trans; giSpan.style.color = "rgb(" + c2 + "," + c2 + "," + c2 + ")"; }
+      }
       if (darkPill) {                                     // Get In Touch pill bg: dark #050419 → light #d0e1eb
         var dr = Math.round(5 + (208 - 5) * he), dg = Math.round(4 + (225 - 4) * he), db = Math.round(25 + (235 - 25) * he);
         darkPill.style.transition = trans; darkPill.style.backgroundColor = "rgb(" + dr + "," + dg + "," + db + ")";
@@ -98,7 +105,6 @@
       // Reel roll — only on the discrete threshold flips (ease): the LIGHT world rolls both pills up
       // to their __b copy, in unison. During the hero zoom (no ease) stay unrolled so __a's colour
       // interpolates smoothly with the scroll.
-      var rolled = ease ? (he < 0.5) : false;
       if (glassPill) glassPill.classList.toggle("is-rolled", rolled);
       if (darkPill) darkPill.classList.toggle("is-rolled", rolled);
     }
