@@ -95,16 +95,17 @@
       var trans = ease ? "color .5s var(--ease-default),background-color .5s var(--ease-default)"
                        : "color .3s var(--ease-default)";
       var rolled = ease ? (he < 0.5) : false;
+      var c = Math.round(255 * he);                         // current text channel: 0 (black) → 255 (white)
+      var c2 = Math.round(255 * (1 - he));                  // Get In Touch is inverted
       // When rolling TO the light world (ease + rolled), do NOT update __a letter colours — __a
       // must stay at its current (source) colour so the reel shows old→new, not new→new.
       // Only update __a when unrolling back to the dark world, so the returning letter arrives
       // in the correct dark-world colour.
       if (!ease || !rolled) {
-        var c = Math.round(255 * he);                       // 0 (black) → 255 (white)
         var rgb = "rgb(" + c + "," + c + "," + c + ")";
         navLinks.forEach(function (a) { a.style.transition = trans; a.style.color = rgb; });
         if (hireSpan) { hireSpan.style.transition = trans; hireSpan.style.color = rgb; }
-        if (giSpan) { var c2 = Math.round(255 * (1 - he)); giSpan.style.transition = trans; giSpan.style.color = "rgb(" + c2 + "," + c2 + "," + c2 + ")"; }
+        if (giSpan) { giSpan.style.transition = trans; giSpan.style.color = "rgb(" + c2 + "," + c2 + "," + c2 + ")"; }
       }
       if (darkPill) {                                     // Get In Touch pill bg: dark #050419 → light #d0e1eb
         var dr = Math.round(5 + (208 - 5) * he), dg = Math.round(4 + (225 - 4) * he), db = Math.round(25 + (235 - 25) * he);
@@ -115,6 +116,20 @@
       // interpolates smoothly with the scroll.
       if (glassPill) glassPill.classList.toggle("is-rolled", rolled);
       if (darkPill) darkPill.classList.toggle("is-rolled", rolled);
+      // Hover-reel clone colour (--hc) = the FLIP target, ALWAYS kept current here:
+      //  • CTA pills roll to the literal OPPOSITE colour (white<->black).
+      //  • nav links roll to the opposite blue of the text (sky #4d8bff from white, deep blue
+      //    #231d7a — the zone-3/4 title blue — from black). At reel thresholds __navLight owns the
+      //    nav --hc; during the hero zoom (no ease) we set it here from the live text channel.
+      // The HERO same-colour reel is now GATED by the header.is-hero class (CSS forces currentColor
+      // while it's on), toggled in updateHeroExit — so --hc is set unconditionally, and the moment
+      // you scroll off the hero the clone already carries the flip colour (no wait for a threshold).
+      var WHITE = "#fcfcfc", BLACK = "#050419";
+      var hireVis = rolled ? 0   : c;    // visible channel: glass __b is black(0)
+      var giVis   = rolled ? 255 : c2;   // dark-pill __b is white(255)
+      if (hireSpan) hireSpan.style.setProperty("--hc", hireVis >= 128 ? BLACK : WHITE);   // opposite of current
+      if (giSpan)   giSpan.style.setProperty("--hc",   giVis   >= 128 ? BLACK : WHITE);
+      if (!ease) navLinks.forEach(function (a) { a.style.setProperty("--hc", c >= 128 ? "#4d8bff" : "#231d7a"); });
     }
     window.__headerTheme = setHeaderTheme;
     function updateHeroExit() {
@@ -144,6 +159,9 @@
       }
       // Scroll cue plays its entrance in reverse the moment scrolling starts.
       if (scrollCue) scrollCue.classList.toggle("is-exiting", y > 0);
+      // Hover-reel gate: on the hero (at the very top) the clone stays the SAME colour; the moment
+      // a scroll is detected it flips (CSS drops the currentColor override → --hc takes over).
+      if (hdr) hdr.classList.toggle("is-hero", y <= 0);
 
       // Header reacts to the zoom-out (driven by the same progress e):
       //  - text colour flips white → black (opposite colour) as the light flow bg appears;
@@ -776,8 +794,9 @@
   (function buildNavReel() {
     var LETTER_STEP = 0.015;    // per-letter stagger
     var WORD_GAP = 0.06;        // extra delay so each word starts after the one to its left
-    var navClips = [], gi = 0, Dmax = 0;
+    var navClips = [], navAs = [], gi = 0, Dmax = 0;
     Array.prototype.forEach.call(document.querySelectorAll(".header__nav-left a"), function (a, w) {
+      navAs.push(a);
       var text = a.textContent;
       a.setAttribute("aria-label", text);
       a.textContent = "";
@@ -837,6 +856,11 @@
         c.clip.style.setProperty("--d", (on ? c.fd : (Dmax - c.fd)).toFixed(3) + "s");
       }
       if (header) header.classList.toggle("header--on-light", on);
+      // Hover-reel clone colour for the nav (threshold-driven, so always the opposite blue here):
+      // on = light world (black text) → deep blue #231d7a (the zone-3/4 title blue); off = dark
+      // world (white text) → sky blue #4d8bff. (The initial-hero same-colour reel is owned by
+      // setHeaderTheme, which clears --hc during the zoom.)
+      for (var n = 0; n < navAs.length; n++) navAs[n].style.setProperty("--hc", on ? "#231d7a" : "#4d8bff");
       // Flip the Hire-Me + Get-In-Touch pills to match (COLOUR only, no size change): on = light
       // world (he 0), off = dark world (he 1). skipTheme lets a caller drive the reel WITHOUT the
       // pills — the blog section does this so the pills can flip on their own, earlier, threshold.

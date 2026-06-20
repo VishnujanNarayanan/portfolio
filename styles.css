@@ -496,5 +496,9 @@ header .pill-btn--dark .pill-char__b{color:var(--color-text-light)}  /* Get In T
    ============================================================ */
 .header__nav-left a .nav-char__col,header .pill-char__col{display:block;position:relative;transition:transform .42s var(--ease-default);transition-delay:var(--hd,0s);will-change:transform}
 .header__nav-left a .nav-char__face,header .pill-char__face{display:block;position:relative;overflow:hidden}
-.header__nav-left a .nav-char__c,header .pill-char__c{display:block;position:absolute;left:0;top:100%;color:inherit}
+/* clone colour: --hc is set in JS at the threshold worlds (sky blue from white text / dark blue
+   from black text); in the INITIAL HERO --hc is cleared → currentColor = same-colour self-reel. */
+.header__nav-left a .nav-char__c,header .pill-char__c{display:block;position:absolute;left:0;top:100%;color:var(--hc,currentColor)}
+/* HERO only (at the very top): force the clone to the SAME colour; once scrolled, --hc takes over. */
+header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{color:currentColor}
 .header__nav-left a:hover .nav-char__col,.header__nav-left a:focus-visible .nav-char__col,header .pill-btn:hover .pill-char__col,header .pill-btn:focus-visible .pill-char__col{transform:translateY(-100%)}
