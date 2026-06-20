@@ -65,11 +65,19 @@
       span.setAttribute("aria-label", txt); span.textContent = "";
       for (var i = 0; i < txt.length; i++) {
         var clip = document.createElement("span"); clip.className = "pill-char"; clip.setAttribute("aria-hidden", "true");
-        clip.style.setProperty("--d", (i * 0.03).toFixed(3) + "s");   // per-letter stagger, no word gap
+        clip.style.setProperty("--d", (i * 0.03).toFixed(3) + "s");   // world-flip stagger, no word gap
+        clip.style.setProperty("--hd", (i * 0.022).toFixed(3) + "s"); // hover-reel stagger (local to the pill)
         var ch = txt[i] === " " ? " " : txt[i];
+        // __col = hover roller; inside it __face (the world-flip clip: __a/__b) + __c (a same-colour
+        // self-reel clone, color:inherit → always legible). Hover rolls __col up to reveal __c.
+        var col = document.createElement("span"); col.className = "pill-char__col";
+        var face = document.createElement("span"); face.className = "pill-char__face";
         var a = document.createElement("span"); a.className = "pill-char__a"; a.textContent = ch;
         var b = document.createElement("span"); b.className = "pill-char__b"; b.textContent = ch;
-        clip.appendChild(a); clip.appendChild(b);
+        var cl = document.createElement("span"); cl.className = "pill-char__c"; cl.textContent = ch;
+        face.appendChild(a); face.appendChild(b);
+        col.appendChild(face); col.appendChild(cl);
+        clip.appendChild(col);
         span.appendChild(clip);
       }
       return span;   // colour is driven on the span; the __a letters inherit it
@@ -773,20 +781,53 @@
       var text = a.textContent;
       a.setAttribute("aria-label", text);
       a.textContent = "";
+      var linkClips = [];                                // this link's own letters (for the hover weight reel)
       for (var i = 0; i < text.length; i++) {
         var clip = document.createElement("span");
         clip.className = "nav-char";
         clip.setAttribute("aria-hidden", "true");
+        // __col = hover roller; inside it __face (the world-flip clip: __a/__b) + __c (a same-colour
+        // self-reel clone, color:inherit → always legible in either world). Hover rolls __col up to __c.
+        var col  = document.createElement("span"); col.className  = "nav-char__col";
+        var face = document.createElement("span"); face.className = "nav-char__face";
         var top = document.createElement("span"); top.className = "nav-char__a"; top.textContent = text[i];
         var bot = document.createElement("span"); bot.className = "nav-char__b"; bot.textContent = text[i];
-        clip.appendChild(top); clip.appendChild(bot);
+        var cl  = document.createElement("span"); cl.className  = "nav-char__c"; cl.textContent  = text[i];
+        face.appendChild(top); face.appendChild(bot);
+        col.appendChild(face); col.appendChild(cl);
+        clip.appendChild(col);
         a.appendChild(clip);
-        var fd = gi * LETTER_STEP + w * WORD_GAP;        // forward delay (left->right, word by word)
+        var fd = gi * LETTER_STEP + w * WORD_GAP;        // world-flip delay (left->right, word by word)
         clip.style.setProperty("--d", fd.toFixed(3) + "s");
+        clip.style.setProperty("--hd", (i * 0.022).toFixed(3) + "s");  // hover-reel stagger (local to this link)
         navClips.push({ clip: clip, fd: fd });
+        linkClips.push(clip);
         if (fd > Dmax) Dmax = fd;
         gi++;
       }
+      // Per-letter HOVER WEIGHT REEL: the letter under the cursor (and its neighbours, with a
+      // gaussian falloff) boldens. Roboto Flex interpolates the weight; CSS transitions it snappily.
+      var BASE_W = 400, PEAK_W = 900, SIGMA = 1.45;      // SIGMA in letter-units → how far the bold bleeds
+      var centers = null;                                // cached letter centre-x (recomputed on enter)
+      function measure() {
+        centers = linkClips.map(function (cl) { var r = cl.getBoundingClientRect(); return r.left + r.width / 2; });
+      }
+      function paint(cx) {
+        if (!centers) measure();
+        // nearest letter index by cursor x → fractional, so the peak tracks between letters
+        var nearest = 0, best = Infinity;
+        for (var k = 0; k < centers.length; k++) { var d = Math.abs(centers[k] - cx); if (d < best) { best = d; nearest = k; } }
+        for (var j = 0; j < linkClips.length; j++) {
+          var dist = j - nearest;
+          var f = Math.exp(-(dist * dist) / (2 * SIGMA * SIGMA));   // 1 at the hovered letter, falling off
+          linkClips[j].style.setProperty("--w", Math.round(BASE_W + (PEAK_W - BASE_W) * f));
+        }
+      }
+      a.addEventListener("pointerenter", function (e) { measure(); paint(e.clientX); });
+      a.addEventListener("pointermove", function (e) { paint(e.clientX); });
+      a.addEventListener("pointerleave", function () {
+        for (var j = 0; j < linkClips.length; j++) linkClips[j].style.setProperty("--w", BASE_W);
+      });
     });
     // Direction-aware: forward = left->right, word by word; reverse = mirror (Dmax-fd)
     // so the last letter of the last word leads and it unrolls back to the first word.

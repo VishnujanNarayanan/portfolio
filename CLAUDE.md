@@ -843,3 +843,37 @@ Keep this section updated after every change. Format:
 - main.js: new sticky-hover block — `mouseenter` on a panel sets `.is-open` (cleared from siblings);
   `.wstack` `mouseleave` reverts to the first panel. mouseenter fires once on cross-in, so a panel
   resizing under the cursor never re-fires → no flicker. First panel open on init. node --check OK.
+
+### 2026-06-20 (header reel colour fix + nav-link per-letter hover weight)
+- Fixed setHeaderTheme colour-snap: it set the __a letters to the destination colour at the same
+  moment it toggled .is-rolled, so the pill/nav reel played new→new instead of old→new (white
+  snapped to black, then animated black→black; Get In Touch did the mirror). Now the __a colour is
+  only updated when NOT rolling to the light world (`!ease || !rolled`) — rolling to light keeps the
+  source colour on __a (so it reels old→new), and unrolling back to dark still recolours __a so the
+  returning letter arrives correct.
+- Nav-link per-letter HOVER WEIGHT REEL (Projects/Skills/Services/Blog): hovering a link boldens the
+  letter under the cursor and its neighbours with a gaussian falloff (SIGMA 1.45 letters, BASE 400 →
+  PEAK 900). index.html loads Roboto Flex (variable, wght 100..900); styles.css gives .nav-char
+  font-family Roboto Flex + font-variation-settings "wght" var(--w,400) with a .14s transition (snappy
+  smooth interpolation). main.js buildNavReel: per-link pointerenter caches letter centre-x, pointermove
+  finds the nearest letter and sets each letter's --w by distance, pointerleave resets to 400. node
+  --check OK.
+
+### 2026-06-20 (header buttons — per-letter HOVER REEL on all of them)
+- Added a hover reel to every header button (nav links Projects/Skills/Services/Blog AND the two CTA
+  pills Hire Me / Get In Touch). Hovering rolls each letter up to a clone with a per-letter stagger.
+- Self-reel, not a world-flip: the clone (`__c`) is `color:inherit`, and since setHeaderTheme keeps
+  each link/pill `color` synced to the current world's visible text colour, `__c` is ALWAYS legible
+  in either world (white-on-dark at top, black-on-light after the flow flip) — a plain colour-flip
+  reel would have shown black-on-dark at the top. So hover = same-letter, same-colour vertical roll.
+- Structure (main.js buildNavReel + buildPillReel): each char is now
+  `.nav-char`(clip) › `.nav-char__col`(hover roller) › [`.nav-char__face`(world-flip clip: __a/__b) +
+  `.nav-char__c`(clone)]. The existing scroll world-flip still rolls __a/__b INSIDE __face; the hover
+  rolls __col — independent, so the two compose. Same for `.pill-char*`.
+- Stagger: new `--hd` (local per-button letter index × 0.022s) drives the hover-roll transition-delay,
+  separate from `--d` (the global world-flip stagger) so a later link (Blog) doesn't lag on hover.
+- styles.css: `.nav-char__col/.pill-char__col` transition transform .42s with delay var(--hd);
+  `__face` overflow:hidden position:relative; `__c` absolute top:100% color:inherit; hover/focus-visible
+  on the link/pill rolls __col translateY(-100%). Moved the font-variation-settings weight transition
+  onto the glyph leaves (__a/__b/__c) so the inherited --w weight change animates (it renders on the
+  leaves, not the .nav-char). node --check main.js OK.
