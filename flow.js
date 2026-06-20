@@ -388,10 +388,10 @@
     var lightT = clamp((progress - LIGHT_START) / (1 - LIGHT_START), 0, 1);
     window.__flowLight = lightT;
     // Top nav (Projects/Skills/Services/Blog) rolls to black in a per-letter reel
-    // once the bg transition is ~1/5 underway. Threshold-driven: fired ONCE per
+    // once the bg transition is ~27% underway. Threshold-driven: fired ONCE per
     // crossing so __navLight can set direction-aware delays (forward = left word
     // first; reverse = last word / last letter first). CTAs are excluded.
-    var navWantOn = lightT >= 0.2;
+    var navWantOn = lightT >= 0.27;
     if (navWantOn !== navOn) {
       navOn = navWantOn;
       if (window.__navLight) window.__navLight(navOn);
