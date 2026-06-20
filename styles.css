@@ -458,3 +458,20 @@ header .header__nav-left a{color:#050419;font-size:16px}
 .faq .faq-item .faq-item__icon{background:rgba(255,255,255,.1)}
 .faq .faq-item__icon svg path{stroke:var(--color-text-light)}
 @media (pointer:fine){.faq .faq-item .faq-item__header:hover .faq-item__icon{background:var(--color-highlight)}}
+
+/* ============================================================
+   CTA pill text reel (2026-06-20, branch cta-reel-sync)
+   Both header pills (Hire Me + Get In Touch) reel PER-LETTER on a
+   world flip (like the nav), but with NO word gap, and both pills
+   roll together (.is-rolled toggled on both at once) so they're in
+   unison. __a = current-world copy (colour inherited from the span,
+   set in main.js); __b = the alt (light-world) colour, fixed here.
+   ============================================================ */
+header .pill-btn-span{display:inline-flex;vertical-align:middle}
+header .pill-char{display:inline-block;position:relative;overflow:hidden;vertical-align:bottom;white-space:pre}
+header .pill-char__a,header .pill-char__b{display:block;transition:transform .5s var(--ease-default);transition-delay:var(--d,0s);will-change:transform}
+header .pill-char__a{color:inherit}
+header .pill-char__b{position:absolute;left:0;top:100%}
+header .pill-btn.is-rolled .pill-char__a,header .pill-btn.is-rolled .pill-char__b{transform:translateY(-100%)}
+header .pill-btn--glass .pill-char__b{color:#050419}                 /* Hire Me — light-world black */
+header .pill-btn--dark .pill-char__b{color:var(--color-text-light)}  /* Get In Touch — light-world white */
