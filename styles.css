@@ -344,14 +344,14 @@ header .header__nav-left a{color:#050419;font-size:16px}
   transition:flex-basis .8s cubic-bezier(.65,0,.35,1);
 }
 /* --ph = panel height: a GENTLE taper (far-left ~91% → front 100%) for a touch of depth. */
-.wpanel:nth-child(1){--bg:#3b518a;--ph:91%}
-.wpanel:nth-child(2){--bg:#374a7c;--ph:92.2%}
-.wpanel:nth-child(3){--bg:#32436f;--ph:93.5%}
-.wpanel:nth-child(4){--bg:#2d3c63;--ph:94.8%}
-.wpanel:nth-child(5){--bg:#293754;--ph:96%}
-.wpanel:nth-child(6){--bg:#243049;--ph:97.2%}
-.wpanel:nth-child(7){--bg:#202840;--ph:98.4%}
-.wpanel:nth-child(8){--bg:#1b2236;--ph:99.2%}
+.wpanel:nth-child(1){--bg:#3b518a;--ph:80%}
+.wpanel:nth-child(2){--bg:#374a7c;--ph:82.5%}
+.wpanel:nth-child(3){--bg:#32436f;--ph:85%}
+.wpanel:nth-child(4){--bg:#2d3c63;--ph:87.5%}
+.wpanel:nth-child(5){--bg:#293754;--ph:90%}
+.wpanel:nth-child(6){--bg:#243049;--ph:92.5%}
+.wpanel:nth-child(7){--bg:#202840;--ph:95%}
+.wpanel:nth-child(8){--bg:#1b2236;--ph:97.5%}
 .wpanel:nth-child(9){--bg:#161d2e;--ph:100%}
 
 /* Open state: ONLY flex-basis changes (grow/shrink constant at 1/1). The open panel

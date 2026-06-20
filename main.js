@@ -363,14 +363,25 @@
     //     stagger), so later panels begin adjusting earlier and rises overlap freely with the
     //     settles in front of them rather than waiting one-settle-per-rise.
     // Panel order j = (N-1)-i, j=0 = rightmost. rise-start(j) === arrival(j) === T_ARR*(j+1)/N;
-    // settle-start(j) === rise-start(j)+R_DUR. All times are raw units normalised by L so the
+    // settle-start(j) === rise-start(j)+rDur(j). Rise + settle windows both shrink with j (faster
+    // leftward). All times are raw units normalised by L so the
     // timed progress T∈[0,1] covers the whole thing.
-    var T_ARR = 1.5;                                    // raw time for all arrivals (single right→left sweep)
-    var R_DUR = 0.42;                                   // one panel's rise window (raw) — slow
-    var S_DUR = 0.28;                                   // one panel's settle window (raw) — quick settle into place
+    var T_ARR = 0.6;                                    // raw time for all arrivals (single right→left sweep)
+    // RISE has two INDEPENDENTLY-timed clip edges:
+    //   LEFT edge  — progressively SLOWER toward the left (its window GROWS with j).
+    //   RIGHT edge — CONSTANT window for EVERY panel (same rise rate left→right).
+    var L_DUR0 = 0.16;                                  // rightmost panel's LEFT-edge rise window — quickest
+    var L_DUR1 = 0.40;                                  // leftmost panel's LEFT-edge rise window — slowest
+    var R_DURC = 0.22;                                  // RIGHT-edge rise window — identical for all panels
+    var S_DUR0 = 0.28;                                  // FIRST (rightmost) panel's settle window (raw) — slowest
+    var S_DUR1 = 0.06;                                  // LAST (leftmost) panel's settle window — fastest
+    function ramp(a, b, j) { return lerp(a, b, N > 1 ? j / (N - 1) : 0); }      // progressively from a (j=0, rightmost) → b (j=N-1, leftmost)
+    function lDur(j) { return ramp(L_DUR0, L_DUR1, j); }  // LEFT edge gets progressively SLOWER leftward (window grows with j)
+    function rDur(j) { return lDur(j) + R_DURC; }       // rise is SEQUENTIAL: left edge fully first, THEN the right edge → drives settle-start + L
+    function sDur(j) { return ramp(S_DUR0, S_DUR1, j); }  // settle gets progressively QUICKER leftward (j↑)
     var R_STEP = T_ARR / N;                             // rise stagger === arrival stagger → each panel rises the moment it arrives
     var riseStart0 = T_ARR / N;                         // rightmost rises as soon as it itself has arrived (not after N panels to its left)
-    var L = riseStart0 + (N - 1) * R_STEP + R_DUR + S_DUR;  // total raw length → normalises T∈[0,1]
+    var L = riseStart0 + (N - 1) * R_STEP + rDur(N - 1) + sDur(N - 1);  // total raw length → normalises T∈[0,1]
     function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
     function lerp(a, b, t) { return a + (b - a) * t; }
     function smooth(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
@@ -456,8 +467,8 @@
       // settle width of an already-revealed strip (per → stripW over its own settle window).
       function settleWidth(i) {
         var j = (N - 1) - i;
-        var sS = riseStart0 + j * R_STEP + R_DUR;       // settle starts right after this panel's rise
-        var setP = clamp((t - sS) / S_DUR, 0, 1);
+        var sS = riseStart0 + j * R_STEP + rDur(j);     // settle starts right after this panel's rise
+        var setP = clamp((t - sS) / sDur(j), 0, 1);     // window shrinks with j → progressively faster settle
         return lerp(per, G.stripW, smoother(setP));     // ease IN + ease INTO place
       }
 
@@ -488,11 +499,10 @@
       var accRaw = 0, accSnap = 0;
       panels.forEach(function (pan, i) {
         var j = (N - 1) - i;
-        var rS = riseStart0 + j * R_STEP;
-        var li = clamp((t - rS) / R_DUR, 0, 1);          // RISE progress for this panel
+        var rS = riseStart0 + j * R_STEP;                // rise start per panel (staggered with arrival)
         var inset = (1 - G.ph[i] / 100) / 2;
-        var eL = easeOut(clamp(li / 0.55, 0, 1));        // LEFT edge first (top-left + bottom-left splay out)
-        var eR = easeOut(clamp((li - 0.25) / 0.75, 0, 1)); // RIGHT edge follows up to full height
+        var eL = easeOut(clamp((t - rS) / lDur(j), 0, 1));            // LEFT edge — fully first; progressively SLOWER toward the left
+        var eR = easeOut(clamp((t - rS - lDur(j)) / R_DURC, 0, 1));   // RIGHT edge — starts only after the left edge finishes; CONSTANT rate for all panels
         var tl = inset * (1 - eL) * 100;
         var tr = inset * (1 - eR) * 100;
         accRaw += widths[i];                             // explicit + integer-snapped → strips stay flush
@@ -512,7 +522,8 @@
       });
     }
 
-    var T = 0, lastT = 0;                               // single timed progress 0→1 + last frame stamp
+    var T = 0, lastT = 0, prepStart = 0;                // single timed progress 0→1 + last frame stamp; reverse-handoff timer
+    var PREP_MS = 800;                                  // matches the .wpanel flex-basis transition (.8s)
     function render(now) {
       if (window.innerWidth <= 820) {
         if (settled !== null) { panels.forEach(function (p, i) {
@@ -531,6 +542,22 @@
       var triggered = rect.top <= vh * 0.5;
       if (!lastT) lastT = now;
       var dt = Math.min((now - lastT) / 1000, 0.05); lastT = now;  // clamp dt (tab-switch safety)
+
+      // REVERSE HANDOFF: when scrolling back up out of the live accordion with a NON-first panel
+      // open, the reverse reveal (paint) assumes panel 0 is the opener — snapping there would jump.
+      // First ease the open panel back to the canonical panel-0-open state (the CSS flex-basis
+      // transition), holding the reverse, so it then animates backward continuously from there.
+      if (settled === true && !triggered) {
+        var openI = -1;
+        panels.forEach(function (p, i) { if (p.classList.contains("is-open")) openI = i; });
+        if (openI > 0) {
+          panels.forEach(function (p, i) { p.classList.toggle("is-open", i === 0); });
+          if (!prepStart) prepStart = now;
+        }
+        if (prepStart && now - prepStart < PREP_MS) return;        // hold reverse during the ease
+      }
+      if (triggered) prepStart = 0;                                // re-entering forward → reset
+
       T = clamp(T + (triggered ? 1 : -1) * dt / DUR, 0, 1);
 
       if (T >= 1) { setSettled(true); return; }                    // landed → live accordion
