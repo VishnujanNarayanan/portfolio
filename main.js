@@ -530,7 +530,7 @@
       });
     }
 
-    var T = 0, lastT = 0, prepStart = 0;                // single timed progress 0→1 + last frame stamp; reverse-handoff timer
+    var T = 0, lastT = 0, prepStart = 0, latched = false;  // single timed progress 0→1 + last frame stamp; reverse-handoff timer; one-shot latch
     var PREP_MS = 800;                                  // matches the .wpanel flex-basis transition (.8s)
     function render(now) {
       if (window.innerWidth <= 820) {
@@ -549,6 +549,7 @@
       // into view from flow) the WHOLE sequence plays on a TIMER over DUR seconds, regardless of
       // further scroll; scrolling back below it reverses.
       var triggered = rect.top <= vh * 0.5;
+      if (triggered) latched = true;                               // ONE-SHOT: once it has played in, it never reverses
       if (!lastT) lastT = now;
       var dt = Math.min((now - lastT) / 1000, 0.05); lastT = now;  // clamp dt (tab-switch safety)
 
@@ -556,7 +557,7 @@
       // open, the reverse reveal (paint) assumes panel 0 is the opener — snapping there would jump.
       // First ease the open panel back to the canonical panel-0-open state (the CSS flex-basis
       // transition), holding the reverse, so it then animates backward continuously from there.
-      if (settled === true && !triggered) {
+      if (settled === true && !latched) {
         var openI = -1;
         panels.forEach(function (p, i) { if (p.classList.contains("is-open")) openI = i; });
         if (openI > 0) {
@@ -567,7 +568,7 @@
       }
       if (triggered) prepStart = 0;                                // re-entering forward → reset
 
-      T = clamp(T + (triggered ? 1 : -1) * dt / DUR, 0, 1);
+      T = clamp(T + (latched ? 1 : -1) * dt / DUR, 0, 1);          // latched → always forward (no scroll-up reversal)
 
       if (T >= 1) { setSettled(true); return; }                    // landed → live accordion
       setSettled(false);
