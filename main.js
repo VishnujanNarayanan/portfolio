@@ -338,24 +338,215 @@
     revealTargets.forEach(function (el) { el.classList.add("show"); });
   }
 
-  /* ---------- Writing accordion: sticky hover (no flicker) ----------
-     CSS opens whichever .wpanel has .is-open. We set it on mouseenter and leave it
-     until another panel is entered (or the cursor leaves the group → first panel).
-     mouseenter fires once on cross-in, so the panel resizing under the cursor never
-     re-triggers it — that's what stops the hover-flicker/jitter a pure :hover has.
-     :focus-within still covers keyboard. */
+  /* ---------- Writing — threshold-driven timed intro, ONE overlapping right→left timeline ----------
+     A SINGLE threshold (the section's top crossing mid-viewport, handing off from flow) fires the
+     whole sequence on a TIMER over DUR seconds. Two waves overlap, both sweeping RIGHT→LEFT:
+       • ARRIVAL — reversed gapless reveal: rightmost panel lands first (as the big absorber, then
+         shrinks to size), the rest reveal leftward; the leftmost (opener) is NOT present until the
+         reveal reaches it last.
+       • RISE+SETTLE — each panel begins rising the moment it itself arrives (so rises overlap the
+         arrivals still in flight and the settles in front of them), then settles into place.
+     Scrolling back out the top reverses it; once landed it hands off to the live sticky-hover
+     accordion. Stacking (rightmost on top) is the CSS default — unchanged. */
   (function () {
-    var wstack = document.querySelector(".wstack");
-    if (!wstack) return;
+    var section = document.querySelector(".writing");
+    var wstack = section && section.querySelector(".wstack");
+    if (!section || !wstack) return;
     var panels = Array.prototype.slice.call(wstack.querySelectorAll(".wpanel"));
     if (!panels.length) return;
-    function open(p) {
-      panels.forEach(function (x) { x.classList.toggle("is-open", x === p); });
+    var N = panels.length;
+    var DUR = 2.6;                                      // whole sequence duration (s) — timed, not scrolled
+    // ONE OVERLAPPING right→left timeline (no Part-1/Part-2 boundary). Two waves run at once:
+    //   ARRIVAL — a reversed gapless reveal: the RIGHTMOST panel lands first, the rest reveal
+    //     leftward, the leftmost (panel 0, the opener) being the big absorber that arrives last.
+    //   RISE+SETTLE — a panel STARTS rising the moment it itself arrives (rise stagger === arrival
+    //     stagger), so later panels begin adjusting earlier and rises overlap freely with the
+    //     settles in front of them rather than waiting one-settle-per-rise.
+    // Panel order j = (N-1)-i, j=0 = rightmost. rise-start(j) === arrival(j) === T_ARR*(j+1)/N;
+    // settle-start(j) === rise-start(j)+R_DUR. All times are raw units normalised by L so the
+    // timed progress T∈[0,1] covers the whole thing.
+    var T_ARR = 1.5;                                    // raw time for all arrivals (single right→left sweep)
+    var R_DUR = 0.42;                                   // one panel's rise window (raw) — slow
+    var S_DUR = 0.28;                                   // one panel's settle window (raw) — quick settle into place
+    var R_STEP = T_ARR / N;                             // rise stagger === arrival stagger → each panel rises the moment it arrives
+    var riseStart0 = T_ARR / N;                         // rightmost rises as soon as it itself has arrived (not after N panels to its left)
+    var L = riseStart0 + (N - 1) * R_STEP + R_DUR + S_DUR;  // total raw length → normalises T∈[0,1]
+    function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function smooth(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
+    function smoother(t) { t = clamp(t, 0, 1); return t * t * t * (t * (t * 6 - 15) + 10); }  // ease-in + ease-out (pronounced)
+    function easeOut(t) { t = clamp(t, 0, 1); return 1 - Math.pow(1 - t, 3); }   // nonzero slope at 0 → immediate start
+
+    // Resolved geometry (clamps → px), cached; recomputed on resize.
+    var G = { W: 0, H: 0, openBasis: 0, per: 0, stripW: 0, openW: 0, ph: [] };
+    function geom() {
+      var wr = wstack.getBoundingClientRect();
+      G.W = wr.width; G.H = wr.height;
+      var rail = panels[0].querySelector(".wpanel__rail");
+      var content = panels[0].querySelector(".wpanel__content");
+      var strip = rail ? parseFloat(getComputedStyle(rail).minWidth) : 90;     // = --strip
+      var cw = content ? parseFloat(getComputedStyle(content).width) : 300;     // = --cw
+      G.openBasis = strip + cw;                          // the open panel's extra basis (main accordion)
+      G.per = G.W / N;                                   // equal width (Part-1 end)
+      G.stripW = (G.W - G.openBasis) / N;                // a closed strip's final width (accordion)
+      G.openW = G.openBasis + G.stripW;                  // the open (first) panel's final width
+      G.ph = panels.map(function (p) {
+        var v = parseFloat(getComputedStyle(p).getPropertyValue("--ph"));       // taper %, e.g. 91
+        return isNaN(v) ? 100 : v;
+      });
     }
-    open(panels[0]);                                   // first open by default
-    panels.forEach(function (p) {
-      p.addEventListener("mouseenter", function () { open(p); });
+
+    // Rail text (vertical label + number) per panel — repositioned to track the band edge.
+    var TXT = panels.map(function (p) {
+      return { vert: p.querySelector(".wpanel__vert"), num: p.querySelector(".wpanel__num") };
     });
+
+    // BOTH parts render a panel identically: a FULL-height box clipped to a (possibly tapered)
+    // band, with the right-edge bleed extended past the clip so seams can't reopen, AND the rail
+    // text pinned to the band's edge (not the box edge) so it never jumps when the box height /
+    // taper representation is the same across the Part-1 → Part-2 seam.
+    //   tlPct/trPct = top inset (%) of the left/right edge; bleed = px of right-bleed; w = px width.
+    function paintPanel(pan, i, w, tlPct, trPct, bleed) {
+      var rx = (100 + bleed / Math.max(w, 1) * 100).toFixed(2);
+      var tl = tlPct.toFixed(2), tr = trPct.toFixed(2);
+      pan.style.height = G.H + "px";
+      pan.style.boxShadow = bleed.toFixed(1) + "px 0 0 0 var(--bg)";
+      pan.style.clipPath =
+        "polygon(0% " + tl + "%, " + rx + "% " + tr + "%, " + rx + "% " + (100 - tr) + "%, 0% " + (100 - tl) + "%)";
+      // text sits in the LEFT band (the strip zone): follow the left edge's top/bottom inset.
+      var t = TXT[i], ins = tlPct / 100 * G.H;
+      if (t.vert) t.vert.style.top = (30 + ins).toFixed(1) + "px";
+      if (t.num) t.num.style.bottom = (26 + ins).toFixed(1) + "px";
+    }
+
+    var settled = null;                                 // tri-state: null/false/true
+    function setSettled(on) {
+      if (on === settled) return;
+      settled = on;
+      panels.forEach(function (p, i) {
+        if (on) {                                        // hand off to the live CSS accordion
+          p.style.transition = ""; p.style.transform = ""; p.style.transformOrigin = ""; p.style.clipPath = "";
+          p.style.flexBasis = ""; p.style.flexGrow = ""; p.style.flexShrink = "";
+          p.style.boxShadow = "";                        // back to the CSS base bleed
+          p.style.height = G.H + "px";                   // uniform height (overrides the --ph taper)
+          if (TXT[i].vert) TXT[i].vert.style.top = "";    // rail text back to CSS (box edges)
+          if (TXT[i].num) TXT[i].num.style.bottom = "";
+          p.classList.toggle("is-open", i === 0);
+          var c = p.querySelector(".wpanel__content"); if (c) c.style.opacity = "";
+        } else {
+          p.style.transition = "none"; p.classList.remove("is-open");
+        }
+      });
+    }
+
+    // PAINT(T) — the whole sequence in ONE overlapping pass. For each panel we know three
+    // progresses derived from the single timed clock t = T*L:
+    //   • settle/target width (per → stripW) from its settle window;
+    //   • a gapless ARRIVAL reveal (rightmost first) that grows each panel from 0 to its target,
+    //     with panel 0 as the residual absorber (so freed settle-space and un-arrived space both
+    //     flow into the opening panel) — guarantees the widths always sum to W with no gaps;
+    //   • a RISE clip (trapezoid: LEFT edge first, then RIGHT edge to full height).
+    function paint(T) {
+      var W = G.W, per = G.per, t = T * L;
+      var pA = clamp(t / T_ARR, 0, 1);
+      var af = pA * N;                                  // revealed count from the RIGHT (fractional)
+      var fl = Math.min(Math.floor(af), N - 1);         // frontier index (distance-from-right)
+      var frac = clamp(af - fl, 0, 1);                  // progress of the frontier hand-off
+
+      // settle width of an already-revealed strip (per → stripW over its own settle window).
+      function settleWidth(i) {
+        var j = (N - 1) - i;
+        var sS = riseStart0 + j * R_STEP + R_DUR;       // settle starts right after this panel's rise
+        var setP = clamp((t - sS) / S_DUR, 0, 1);
+        return lerp(per, G.stripW, smoother(setP));     // ease IN + ease INTO place
+      }
+
+      // Reversed gapless reveal. The RIGHTMOST panel (d=0) appears FIRST as the big absorber and
+      // shrinks to per as the frontier sweeps LEFT; the LEFTMOST panel (panel 0) appears LAST and
+      // ends as the opener — it is NOT special-cased and is never present until the frontier reaches
+      // it. The frontier panel (d==fl) holds the remainder R; the next one (d==fl+1) grows into it;
+      // as revealed strips settle (shrink) the freed width flows left into R → the opener.
+      var rightSettled = 0, widths = new Array(N);
+      panels.forEach(function (pan, i) {
+        if ((N - 1 - i) < fl) { var w = settleWidth(i); widths[i] = w; rightSettled += w; }
+      });
+      var R = W - rightSettled;                         // space to the LEFT of the settled block
+      var nextGrow = (fl + 1 <= N - 1) ? frac * (R - per) : 0;
+      if (nextGrow < 0) nextGrow = 0;
+      panels.forEach(function (pan, i) {
+        var d = (N - 1) - i;
+        if (d < fl) return;                             // already settled above
+        widths[i] = d === fl ? (R - nextGrow)           // active absorber → shrinks toward per
+          : d === fl + 1 ? nextGrow                     // next panel grows 0 → R-per
+            : 0;                                        // not yet revealed
+      });
+
+      // bleed grows with how much the opener has OPENED UP, so the rise's clip can't reopen seams.
+      var opened = widths[0] - per; if (opened < 0) opened = 0;
+      var bleed = 18 + opened;
+
+      var accRaw = 0, accSnap = 0;
+      panels.forEach(function (pan, i) {
+        var j = (N - 1) - i;
+        var rS = riseStart0 + j * R_STEP;
+        var li = clamp((t - rS) / R_DUR, 0, 1);          // RISE progress for this panel
+        var inset = (1 - G.ph[i] / 100) / 2;
+        var eL = easeOut(clamp(li / 0.55, 0, 1));        // LEFT edge first (top-left + bottom-left splay out)
+        var eR = easeOut(clamp((li - 0.25) / 0.75, 0, 1)); // RIGHT edge follows up to full height
+        var tl = inset * (1 - eL) * 100;
+        var tr = inset * (1 - eR) * 100;
+        accRaw += widths[i];                             // explicit + integer-snapped → strips stay flush
+        var snap = Math.round(accRaw);
+        var bw = snap - accSnap;
+        pan.style.flexGrow = "0"; pan.style.flexShrink = "0";
+        pan.style.flexBasis = bw + "px";
+        accSnap = snap;
+        paintPanel(pan, i, bw, tl, tr, bleed);
+        // opener's content fades in as it opens, gated by its OWN rise (eR) so it never shows
+        // while still a clipped, tapered band.
+        if (i === 0) {
+          var c = pan.querySelector(".wpanel__content");
+          var openFrac = clamp((widths[0] - per) / (G.openW - per), 0, 1);
+          if (c) c.style.opacity = (openFrac * eR).toFixed(2);
+        }
+      });
+    }
+
+    var T = 0, lastT = 0;                               // single timed progress 0→1 + last frame stamp
+    function render(now) {
+      if (window.innerWidth <= 820) {
+        if (settled !== null) { panels.forEach(function (p, i) {
+          ["transition", "transform", "transformOrigin", "clipPath", "flexBasis", "flexGrow", "flexShrink", "height", "boxShadow"].forEach(function (k) { p.style[k] = ""; });
+          if (TXT[i].vert) TXT[i].vert.style.top = ""; if (TXT[i].num) TXT[i].num.style.bottom = "";
+          p.classList.remove("is-open");
+        }); settled = null; }
+        T = 0; lastT = 0;
+        return;
+      }
+      var vh = window.innerHeight;
+      var rect = section.getBoundingClientRect();
+      // SINGLE THRESHOLD: as the section's top crosses the middle of the viewport (still rising
+      // into view from flow) the WHOLE sequence plays on a TIMER over DUR seconds, regardless of
+      // further scroll; scrolling back below it reverses.
+      var triggered = rect.top <= vh * 0.5;
+      if (!lastT) lastT = now;
+      var dt = Math.min((now - lastT) / 1000, 0.05); lastT = now;  // clamp dt (tab-switch safety)
+      T = clamp(T + (triggered ? 1 : -1) * dt / DUR, 0, 1);
+
+      if (T >= 1) { setSettled(true); return; }                    // landed → live accordion
+      setSettled(false);
+      paint(T);                                                    // one overlapping right→left timeline
+    }
+
+    function resize() { geom(); settled = null; }       // force a clean re-apply after a resize
+    geom();
+    function frame(now) { render(now || performance.now()); requestAnimationFrame(frame); }
+    requestAnimationFrame(frame);
+    window.addEventListener("resize", resize, { passive: true });
+
+    // Sticky-hover accordion — only active once settled (sequence complete).
+    function open(p) { if (settled) panels.forEach(function (x) { x.classList.toggle("is-open", x === p); }); }
+    panels.forEach(function (p) { p.addEventListener("mouseenter", function () { open(p); }); });
     wstack.addEventListener("mouseleave", function () { open(panels[0]); });
   })();
 

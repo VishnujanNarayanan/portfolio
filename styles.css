@@ -313,8 +313,11 @@ header .header__nav-left a{color:#050419;font-size:16px}
   --cw:clamp(260px,22vw,360px);      /* fixed width a panel opens by */
   --h:clamp(540px,82vh,880px);
   position:relative;z-index:2;background:transparent;color:#fff;
-  display:flex;align-items:stretch;overflow:hidden;
+  height:100vh;                      /* one normal screen — no pin, scroll passes straight through */
 }
+/* Stage holds the layout centred (timed reveal fires on a threshold, main.js — not scroll-pinned). */
+.writing__pin{position:relative;height:100vh;
+  display:flex;align-items:center;overflow:hidden;background:transparent}
 /* Empty left pad stays transparent so the fixed #bg-contours plane (the flow
    section's organic-line background) shows through as a continuation. Only the
    strips carry their own solid backgrounds, so the contours read on the left only. */
@@ -325,26 +328,31 @@ header .header__nav-left a{color:#050419;font-size:16px}
 /* Strip group fills the remaining width on the right. Collapsed panels SHARE that width
    (flex-grow:1 below), so the group always stays full — it never shrinks and one panel always
    reads as open. The open panel takes a fixed content column on top of its share. */
-.wstack{flex:1 1 auto;min-width:0;display:flex;height:var(--h)}
+.wstack{flex:1 1 auto;min-width:0;display:flex;align-items:center;height:var(--h)}
 
 .wpanel{
   position:relative;display:flex;overflow:hidden;min-width:0;
   flex:1 1 0;                         /* grow:1 shrink:1 stay CONSTANT — only the basis below changes */
-  will-change:flex-basis;
-  /* Animate ONLY flex-basis (not flex-grow): grow/shrink stay constant so the free-space
-     redistribution is monotonic — no per-frame wobble/vibration. Slow, gentle ease-in-out
-     (eases at BOTH start and end). */
+  align-self:center;height:var(--ph,100%);   /* subtle height taper: far-left slightly shorter */
+  background:var(--bg);
+  /* Hairline safety: bleed each panel's own colour a few px to the RIGHT so the seam where it
+     meets the next panel is always covered (panels are contiguous at rest). */
+  box-shadow:5px 0 0 0 var(--bg);
+  will-change:flex-basis,transform;   /* transform = the JS fly-in reveal (main.js) */
+  /* The hover accordion animates ONLY flex-basis (not flex-grow): grow/shrink stay constant so
+     the free-space redistribution is monotonic — no per-frame wobble. Gentle ease at both ends. */
   transition:flex-basis .8s cubic-bezier(.65,0,.35,1);
 }
-.wpanel:nth-child(1){background:#3b518a}
-.wpanel:nth-child(2){background:#374a7c}
-.wpanel:nth-child(3){background:#32436f}
-.wpanel:nth-child(4){background:#2d3c63}
-.wpanel:nth-child(5){background:#293754}
-.wpanel:nth-child(6){background:#243049}
-.wpanel:nth-child(7){background:#202840}
-.wpanel:nth-child(8){background:#1b2236}
-.wpanel:nth-child(9){background:#161d2e}
+/* --ph = panel height: a GENTLE taper (far-left ~91% → front 100%) for a touch of depth. */
+.wpanel:nth-child(1){--bg:#3b518a;--ph:91%}
+.wpanel:nth-child(2){--bg:#374a7c;--ph:92.2%}
+.wpanel:nth-child(3){--bg:#32436f;--ph:93.5%}
+.wpanel:nth-child(4){--bg:#2d3c63;--ph:94.8%}
+.wpanel:nth-child(5){--bg:#293754;--ph:96%}
+.wpanel:nth-child(6){--bg:#243049;--ph:97.2%}
+.wpanel:nth-child(7){--bg:#202840;--ph:98.4%}
+.wpanel:nth-child(8){--bg:#1b2236;--ph:99.2%}
+.wpanel:nth-child(9){--bg:#161d2e;--ph:100%}
 
 /* Open state: ONLY flex-basis changes (grow/shrink constant at 1/1). The open panel
    carries +(--strip + --cw) of basis, so it ends up exactly one content column wider
@@ -361,9 +369,12 @@ header .header__nav-left a{color:#050419;font-size:16px}
 .wpanel__rail{position:relative;flex:1 1 auto;min-width:var(--strip);
   border-left:1px solid rgba(255,255,255,.08);
   font-family:"Roboto",sans-serif;color:rgba(255,255,255,.6)}
-.wpanel__vert{position:absolute;left:50%;top:30px;transform:translateX(-50%) rotate(180deg);
+/* Label + number are PINNED to the --strip zone at the panel's left edge, so they hold a fixed
+   position as the panel resizes (during the reveal + when other panels open) — they never drift
+   with the rail's changing width. */
+.wpanel__vert{position:absolute;left:calc(var(--strip) / 2);top:30px;transform:translateX(-50%) rotate(180deg);
   writing-mode:vertical-rl;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;white-space:nowrap}
-.wpanel__num{position:absolute;left:0;right:0;bottom:26px;text-align:center;
+.wpanel__num{position:absolute;left:0;right:auto;width:var(--strip);bottom:26px;text-align:center;
   font-family:"Inter",sans-serif;font-weight:300;font-size:1.5rem;color:#4d8bff}
 
 /* Content — fixed width (clipped while collapsed); fades in as the panel opens */
@@ -388,10 +399,11 @@ header .header__nav-left a{color:#050419;font-size:16px}
 
 /* Mobile / no-hover: drop the accordion — heading + plain full-width post blocks, all open */
 @media (max-width:820px){
-  .writing{display:block;overflow:visible}
+  .writing{display:block;overflow:visible;height:auto}
+  .writing__pin{position:static;display:block;height:auto;overflow:visible}
   .writing__pad{display:none}
   .wstack{display:block;height:auto}
-  .wpanel{display:block;flex:none}
+  .wpanel{display:block;flex:none;transform:none!important;height:auto!important;align-self:auto;box-shadow:none}
   .wpanel__rail{display:none}
   .wpanel__content{flex:none;width:100%;opacity:1!important;padding:48px 28px;gap:16px;justify-content:flex-start}
   .wpanel:nth-child(odd){background:#1b2236}
