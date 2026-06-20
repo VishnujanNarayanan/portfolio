@@ -238,7 +238,7 @@ body.nav-open{overflow:hidden}
 /* ---- Flow 3D image objects (desktop GL replaces the DOM card floats) ---- */
 /* The reference's global `canvas{opacity:0}` (only `canvas.is-ready` is shown)
    was hiding our WebGL canvases — they never get .is-ready. Force them visible. */
-.flow__gl,#vanta-bg canvas,#bg-contours,#hero-contours{opacity:1}
+.flow__gl,#vanta-bg canvas,#bg-contours,#hero-contours,#writing-contours{opacity:1}
 @media (min-width:821px){.flow--gl .flow-panel__floats{display:none}}
 .flow-bulb{position:fixed;top:0;right:clamp(28px,7vw,120px);z-index:40;display:flex;flex-direction:column;align-items:center;pointer-events:none}
 .flow-bulb__cord{width:1.5px;height:clamp(70px,12vh,150px);background:linear-gradient(#050419,#1a1830 60%,#3932dc)}
@@ -318,6 +318,10 @@ header .header__nav-left a{color:#050419;font-size:16px}
 /* Stage holds the layout centred (timed reveal fires on a threshold, main.js — not scroll-pinned). */
 .writing__pin{position:relative;height:100vh;
   display:flex;align-items:center;overflow:hidden;background:transparent}
+/* Section-local contour plane (drawn in main.js, same field as #bg-contours). It carries a
+   VERTICAL light→dark wash that mirrors the flow's zone-4→zone-1 look: zone-4 light blue with
+   dark lines at the TOP, easing down to zone-1 dark navy with light-blue lines at the BOTTOM. */
+#writing-contours{position:absolute;inset:0;z-index:0;pointer-events:none;width:100%;height:100%}
 /* Empty left pad stays transparent so the fixed #bg-contours plane (the flow
    section's organic-line background) shows through as a continuation. Only the
    strips carry their own solid backgrounds, so the contours read on the left only. */
