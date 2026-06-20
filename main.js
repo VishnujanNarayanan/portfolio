@@ -51,10 +51,72 @@
     var hdr        = document.querySelector("header");
     var navLeft    = hdr && hdr.querySelector(".header__nav-left");
     var navRight   = hdr && hdr.querySelector(".header__nav-right");
-    var navTexts   = hdr ? hdr.querySelectorAll(".header__nav-left a, .pill-btn--glass .pill-btn-span") : [];
+    var navLinks   = hdr ? hdr.querySelectorAll(".header__nav-left a") : [];
+    var glassPill  = hdr && hdr.querySelector(".pill-btn--glass");
     var darkPill   = hdr && hdr.querySelector(".pill-btn--dark");
-    var darkPillTx = darkPill && darkPill.querySelector(".pill-btn-span");
+    // Per-LETTER vertical REEL on each CTA pill: each letter is a clip with two copies — __a (the
+    // current world, colour inherited from the span) and __b (the alt-world colour, fixed in CSS).
+    // Letters stagger left→right (--d = i·step) like the nav, but with NO word gap, and BOTH pills
+    // roll together (.is-rolled toggled on both at once) so the two buttons reel in unison.
+    function buildPillReel(pill) {
+      if (!pill) return null;
+      var span = pill.querySelector(".pill-btn-span"); if (!span) return null;
+      var txt = span.textContent;
+      span.setAttribute("aria-label", txt); span.textContent = "";
+      for (var i = 0; i < txt.length; i++) {
+        var clip = document.createElement("span"); clip.className = "pill-char"; clip.setAttribute("aria-hidden", "true");
+        clip.style.setProperty("--d", (i * 0.03).toFixed(3) + "s");   // world-flip stagger, no word gap
+        clip.style.setProperty("--hd", (i * 0.022).toFixed(3) + "s"); // hover-reel stagger (local to the pill)
+        var ch = txt[i] === " " ? " " : txt[i];
+        // __col = hover roller; inside it __face (the world-flip clip: __a/__b) + __c (a same-colour
+        // self-reel clone, color:inherit → always legible). Hover rolls __col up to reveal __c.
+        var col = document.createElement("span"); col.className = "pill-char__col";
+        var face = document.createElement("span"); face.className = "pill-char__face";
+        var a = document.createElement("span"); a.className = "pill-char__a"; a.textContent = ch;
+        var b = document.createElement("span"); b.className = "pill-char__b"; b.textContent = ch;
+        var cl = document.createElement("span"); cl.className = "pill-char__c"; cl.textContent = ch;
+        face.appendChild(a); face.appendChild(b);
+        col.appendChild(face); col.appendChild(cl);
+        clip.appendChild(col);
+        span.appendChild(clip);
+      }
+      return span;   // colour is driven on the span; the __a letters inherit it
+    }
+    var hireSpan = buildPillReel(glassPill);   // Hire Me letters (__a inherits white in the dark world)
+    var giSpan   = buildPillReel(darkPill);    // Get In Touch letters (__a inherits black in the dark world)
     var EXIT_MIN_SCALE = 0.38;      // how far the whole page-rectangle recedes (smaller = more zoom-out)
+    // Header THEME for a light(he=0) → dark(he=1) world: nav + Hire-Me text black→white and the
+    // dark "Get In Touch" pill inverting (bg #050419→#d0e1eb, text white→black) so it stays legible.
+    // Shared so the reel thresholds (flow + blog, via __navLight) can flip the SAME two pills the
+    // hero zoom does — exposed on window so the nav-reel IIFE can reach it.
+    function setHeaderTheme(he, ease) {
+      // ease = reel-threshold flip (discrete) → animate colour + pill bg over ~.5s to match the
+      // nav reel. Default (hero zoom) keeps the reference's snappy .3s colour (bg tracks scroll).
+      var trans = ease ? "color .5s var(--ease-default),background-color .5s var(--ease-default)"
+                       : "color .3s var(--ease-default)";
+      var rolled = ease ? (he < 0.5) : false;
+      // When rolling TO the light world (ease + rolled), do NOT update __a letter colours — __a
+      // must stay at its current (source) colour so the reel shows old→new, not new→new.
+      // Only update __a when unrolling back to the dark world, so the returning letter arrives
+      // in the correct dark-world colour.
+      if (!ease || !rolled) {
+        var c = Math.round(255 * he);                       // 0 (black) → 255 (white)
+        var rgb = "rgb(" + c + "," + c + "," + c + ")";
+        navLinks.forEach(function (a) { a.style.transition = trans; a.style.color = rgb; });
+        if (hireSpan) { hireSpan.style.transition = trans; hireSpan.style.color = rgb; }
+        if (giSpan) { var c2 = Math.round(255 * (1 - he)); giSpan.style.transition = trans; giSpan.style.color = "rgb(" + c2 + "," + c2 + "," + c2 + ")"; }
+      }
+      if (darkPill) {                                     // Get In Touch pill bg: dark #050419 → light #d0e1eb
+        var dr = Math.round(5 + (208 - 5) * he), dg = Math.round(4 + (225 - 4) * he), db = Math.round(25 + (235 - 25) * he);
+        darkPill.style.transition = trans; darkPill.style.backgroundColor = "rgb(" + dr + "," + dg + "," + db + ")";
+      }
+      // Reel roll — only on the discrete threshold flips (ease): the LIGHT world rolls both pills up
+      // to their __b copy, in unison. During the hero zoom (no ease) stay unrolled so __a's colour
+      // interpolates smoothly with the scroll.
+      if (glassPill) glassPill.classList.toggle("is-rolled", rolled);
+      if (darkPill) darkPill.classList.toggle("is-rolled", rolled);
+    }
+    window.__headerTheme = setHeaderTheme;
     function updateHeroExit() {
       var vh = window.innerHeight;
       var ZOOM_END = vh;                             // zoom completes over one viewport
@@ -91,20 +153,13 @@
       // Header reaches its end state faster — over 2/5 of the zoom scroll distance.
       var hp = Math.max(0, Math.min(y / (ZOOM_END * 0.4), 1));
       var he = hp * hp * (3 - 2 * hp);                   // smoothstep
-      // Hero is LIGHT at the top, world is DARK after zoom-out → flip nav/Hire-Me text
-      // black → white. The dark "Get In Touch" pill goes the opposite way (its bg lightens
-      // dark → light while its text darkens white → black) so it stays legible throughout.
-      var c = Math.round(255 * he);                      // 0 (black) → 255 (white)
-      var rgb = "rgb(" + c + "," + c + "," + c + ")";
-      navTexts.forEach(function (t) { t.style.color = rgb; });
-      var hs = 1 - 0.12 * he;                            // shrink 1 → 0.88 (subtle)
+      // Header colour theme: hero owns it DURING the zoom; past the zoom the reel thresholds
+      // (flow + blog, via window.__navLight → setHeaderTheme) own it, so the two pills flip with
+      // the nav reel and don't get re-frozen to dark-world by every scroll event here.
+      if (y <= ZOOM_END) setHeaderTheme(he);
+      var hs = 1 - 0.12 * he;                            // shrink 1 → 0.88 (subtle) — hero zoom only
       if (navLeft)  { navLeft.style.transformOrigin  = "left center";  navLeft.style.transform  = "scale(" + hs + ")"; }
       if (navRight) { navRight.style.transformOrigin = "right center"; navRight.style.transform = "scale(" + hs + ")"; }
-      if (darkPill) {                                    // dark #050419 → light #d0e1eb
-        var dr = Math.round(5 + (208 - 5) * he), dg = Math.round(4 + (225 - 4) * he), db = Math.round(25 + (235 - 25) * he);
-        darkPill.style.backgroundColor = "rgb(" + dr + "," + dg + "," + db + ")";
-      }
-      if (darkPillTx) { var c2 = Math.round(255 * (1 - he)); darkPillTx.style.color = "rgb(" + c2 + "," + c2 + "," + c2 + ")"; }
     }
     window.addEventListener("scroll", updateHeroExit, { passive: true });
     window.addEventListener("resize", updateHeroExit, { passive: true });
@@ -332,7 +387,7 @@
       }
       return { bg: bg, ln: ln };
     }
-    var t = 0, last = 0, navDark = false;   // navDark = the re-darkened world has rolled the nav back to white
+    var t = 0, last = 0, navDark = false, ctaDark = false;   // nav reel vs CTA pills flip at SEPARATE blog thresholds
     function frame(now) {
       var dt = last ? Math.min((now - last) / 1000, 0.05) : 0; last = now;
       t += dt * 0.5;                                     // drift speed
@@ -377,15 +432,20 @@
       // band, so the fade is a single continuous ramp that spills gradually into the next section.
       var t0 = writingPin ? writingPin.getBoundingClientRect().top : 0;
       var t1 = (darkSecs.length ? darkSecs[0].el.getBoundingClientRect().top : t0 + H) + H * 0.35;
-      // Top nav reel: once 70% of the BLOG section has scrolled past the fixed header, roll
-      // Projects/Skills/Services/Blog back to white with the SAME per-letter ripple the flow uses
-      // (window.__navLight). Threshold-fired + reverses on scroll-up. (t0 = blog top; it reaches
-      // -H once the blog has fully scrolled by, so -t0/H is the blog's scroll progress.)
+      // Blog section, two SEPARATE thresholds (t0 = blog top; -t0/H = the blog's scroll progress):
+      //  • nav reel (Projects/Skills/Services/Blog) re-whitens at 70% — the per-letter ripple;
+      //  • the CTA pills (Hire Me / Get In Touch) flip MUCH earlier, at 7% (a blog-only exception).
+      // Both threshold-fired and reverse on scroll-up.
       var blogProg = (0 - t0) / (H || 1);
-      var wantDark = blogProg >= 0.70;
-      if (wantDark !== navDark) {
-        navDark = wantDark;
-        if (window.__navLight) window.__navLight(!navDark);  // dark world → white nav (on-light = false)
+      var navWantDark = blogProg >= 0.70;
+      if (navWantDark !== navDark) {
+        navDark = navWantDark;
+        if (window.__navLight) window.__navLight(!navDark, true);  // reel only (skipTheme) — pills handled below
+      }
+      var ctaWantDark = blogProg >= 0.07;
+      if (ctaWantDark !== ctaDark) {
+        ctaDark = ctaWantDark;
+        if (window.__headerTheme) window.__headerTheme(ctaDark ? 1 : 0, true);  // dark world → white text / light pill
       }
       if (wctx && writingPin) {
         var wtop = writingPin.getBoundingClientRect().top;
@@ -721,29 +781,66 @@
       var text = a.textContent;
       a.setAttribute("aria-label", text);
       a.textContent = "";
+      var linkClips = [];                                // this link's own letters (for the hover weight reel)
       for (var i = 0; i < text.length; i++) {
         var clip = document.createElement("span");
         clip.className = "nav-char";
         clip.setAttribute("aria-hidden", "true");
+        // __col = hover roller; inside it __face (the world-flip clip: __a/__b) + __c (a same-colour
+        // self-reel clone, color:inherit → always legible in either world). Hover rolls __col up to __c.
+        var col  = document.createElement("span"); col.className  = "nav-char__col";
+        var face = document.createElement("span"); face.className = "nav-char__face";
         var top = document.createElement("span"); top.className = "nav-char__a"; top.textContent = text[i];
         var bot = document.createElement("span"); bot.className = "nav-char__b"; bot.textContent = text[i];
-        clip.appendChild(top); clip.appendChild(bot);
+        var cl  = document.createElement("span"); cl.className  = "nav-char__c"; cl.textContent  = text[i];
+        face.appendChild(top); face.appendChild(bot);
+        col.appendChild(face); col.appendChild(cl);
+        clip.appendChild(col);
         a.appendChild(clip);
-        var fd = gi * LETTER_STEP + w * WORD_GAP;        // forward delay (left->right, word by word)
+        var fd = gi * LETTER_STEP + w * WORD_GAP;        // world-flip delay (left->right, word by word)
         clip.style.setProperty("--d", fd.toFixed(3) + "s");
+        clip.style.setProperty("--hd", (i * 0.022).toFixed(3) + "s");  // hover-reel stagger (local to this link)
         navClips.push({ clip: clip, fd: fd });
+        linkClips.push(clip);
         if (fd > Dmax) Dmax = fd;
         gi++;
       }
+      // Per-letter HOVER WEIGHT REEL: the letter under the cursor (and its neighbours, with a
+      // gaussian falloff) boldens. Roboto Flex interpolates the weight; CSS transitions it snappily.
+      var BASE_W = 400, PEAK_W = 900, SIGMA = 1.45;      // SIGMA in letter-units → how far the bold bleeds
+      var centers = null;                                // cached letter centre-x (recomputed on enter)
+      function measure() {
+        centers = linkClips.map(function (cl) { var r = cl.getBoundingClientRect(); return r.left + r.width / 2; });
+      }
+      function paint(cx) {
+        if (!centers) measure();
+        // nearest letter index by cursor x → fractional, so the peak tracks between letters
+        var nearest = 0, best = Infinity;
+        for (var k = 0; k < centers.length; k++) { var d = Math.abs(centers[k] - cx); if (d < best) { best = d; nearest = k; } }
+        for (var j = 0; j < linkClips.length; j++) {
+          var dist = j - nearest;
+          var f = Math.exp(-(dist * dist) / (2 * SIGMA * SIGMA));   // 1 at the hovered letter, falling off
+          linkClips[j].style.setProperty("--w", Math.round(BASE_W + (PEAK_W - BASE_W) * f));
+        }
+      }
+      a.addEventListener("pointerenter", function (e) { measure(); paint(e.clientX); });
+      a.addEventListener("pointermove", function (e) { paint(e.clientX); });
+      a.addEventListener("pointerleave", function () {
+        for (var j = 0; j < linkClips.length; j++) linkClips[j].style.setProperty("--w", BASE_W);
+      });
     });
     // Direction-aware: forward = left->right, word by word; reverse = mirror (Dmax-fd)
     // so the last letter of the last word leads and it unrolls back to the first word.
-    window.__navLight = function (on) {
+    window.__navLight = function (on, skipTheme) {
       for (var k = 0; k < navClips.length; k++) {
         var c = navClips[k];
         c.clip.style.setProperty("--d", (on ? c.fd : (Dmax - c.fd)).toFixed(3) + "s");
       }
       if (header) header.classList.toggle("header--on-light", on);
+      // Flip the Hire-Me + Get-In-Touch pills to match (COLOUR only, no size change): on = light
+      // world (he 0), off = dark world (he 1). skipTheme lets a caller drive the reel WITHOUT the
+      // pills — the blog section does this so the pills can flip on their own, earlier, threshold.
+      if (!skipTheme && window.__headerTheme) window.__headerTheme(on ? 0 : 1, true);
     };
   })();
 
