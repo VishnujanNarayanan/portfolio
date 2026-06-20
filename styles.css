@@ -312,12 +312,11 @@ header .header__nav-left a{color:#050419;font-size:16px}
   --strip:clamp(64px,7vw,108px);     /* collapsed strip width */
   --cw:clamp(260px,22vw,360px);      /* fixed width a panel opens by */
   --h:clamp(540px,82vh,880px);
-  --enter:100vh;                     /* extra scroll holding the pin while the reveal plays out */
   position:relative;z-index:2;background:transparent;color:#fff;
-  height:calc(100vh + var(--enter));
+  height:100vh;                      /* one normal screen — no pin, scroll passes straight through */
 }
-/* Pinned stage holds the layout centred while the panels fly in (timed reveal, main.js). */
-.writing__pin{position:sticky;top:0;height:100vh;
+/* Stage holds the layout centred (timed reveal fires on a threshold, main.js — not scroll-pinned). */
+.writing__pin{position:relative;height:100vh;
   display:flex;align-items:center;overflow:hidden;background:transparent}
 /* Empty left pad stays transparent so the fixed #bg-contours plane (the flow
    section's organic-line background) shows through as a continuation. Only the
