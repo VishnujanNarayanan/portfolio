@@ -877,3 +877,40 @@ Keep this section updated after every change. Format:
   on the link/pill rolls __col translateY(-100%). Moved the font-variation-settings weight transition
   onto the glyph leaves (__a/__b/__c) so the inherited --w weight change animates (it renders on the
   leaves, not the .nav-char). node --check main.js OK.
+
+### 2026-06-20 (hover reel: opposite-blue flip after thresholds; hero keeps same-colour)
+- The header hover reel now rolls each letter to the OPPOSITE blue of its current colour: sky blue
+  (#4d8bff) when the text is white, dark blue (#3932DC) when the text is black. The INITIAL HERO
+  keeps the previous behaviour (same-colour self-reel).
+- Driven by a `--hc` custom prop on the clone (`.nav-char__c`/`.pill-char__c{color:var(--hc,currentColor)}`).
+  Unset → currentColor (same-colour, hero). Set at the threshold worlds:
+  • setHeaderTheme: in the `ease` (threshold) branch sets the PILLS' --hc from their current visible
+    colour (Hire Me: rolled→black→dblue / unrolled→c; Get In Touch inverted: rolled→white→sky /
+    unrolled→c2). In the no-ease branch (hero zoom) it CLEARS --hc on nav + both pills → same-colour.
+  • __navLight: owns the NAV --hc (threshold-driven) = on(light world, black)→#3932DC / off(dark,
+    white)→#4d8bff. buildNavReel now collects the <a>s (navAs) to set it.
+- c/c2 hoisted out of the colour-guard in setHeaderTheme so --hc can read them even when __a colour
+  is intentionally not updated (rolling to light). node --check OK; top render verified unchanged.
+
+### 2026-06-20 (hover accent: darker nav blue + CTA pills flip to opposite colour)
+- Nav-link hover dark-blue accent changed #3932DC → #231d7a (the deep zone-3/4 title blue from
+  flow.js:630). Sky blue (#4d8bff) for white text unchanged. Set in __navLight.
+- The two CTA pills (Hire Me / Get In Touch) no longer roll to a blue on hover — they roll to the
+  literal OPPOSITE colour (white<->black), computed in setHeaderTheme's ease branch from each pill's
+  current visible channel (Hire Me __b black / Get In Touch __b white).
+- KNOWN ISSUE flagged to user: Get In Touch sits on a SOLID contrasting bg (var(--color-dark) →
+  light), so its text's "opposite" colour ≈ its background → the hover clone is low-contrast/illegible
+  there. Hire Me (translucent glass) is fine. Pending user decision: full button-invert (swap bg too)
+  or keep GIT on a legible colour.
+
+### 2026-06-20 (hover flip: gate hero same-colour by class so it flips the moment you scroll)
+- Edge case: between the hero zoom ending and the first reel threshold, the hover clone stayed
+  same-colour (white→white) instead of flipping to light blue; it only corrected after a threshold.
+- Root cause: setHeaderTheme CLEARED --hc in its no-ease branch (hero), and past the zoom it isn't
+  called again, so --hc stayed cleared until __navLight fired.
+- Fix: --hc is now set UNCONDITIONALLY to the flip target (pills opposite white/black; nav sky/deep
+  blue from the live text channel in the no-ease branch). The hero same-colour reel is gated by a new
+  `header.is-hero` class (CSS `header.is-hero …__c{color:currentColor}` overrides the --hc colour).
+  updateHeroExit toggles `is-hero` ON only at the very top (scrollY<=0); the moment a scroll is
+  detected it drops off and the clone carries the flip colour — no wait for a threshold. styles.css +
+  main.js. node --check OK; top render unchanged.
