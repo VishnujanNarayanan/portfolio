@@ -238,7 +238,7 @@ body.nav-open{overflow:hidden}
 /* ---- Flow 3D image objects (desktop GL replaces the DOM card floats) ---- */
 /* The reference's global `canvas{opacity:0}` (only `canvas.is-ready` is shown)
    was hiding our WebGL canvases — they never get .is-ready. Force them visible. */
-.flow__gl,#vanta-bg canvas,#bg-contours,#hero-contours,#writing-contours{opacity:1}
+.flow__gl,#vanta-bg canvas,#bg-contours,#hero-contours,#writing-contours,.section-contours{opacity:1}
 @media (min-width:821px){.flow--gl .flow-panel__floats{display:none}}
 .flow-bulb{position:fixed;top:0;right:clamp(28px,7vw,120px);z-index:40;display:flex;flex-direction:column;align-items:center;pointer-events:none}
 .flow-bulb__cord{width:1.5px;height:clamp(70px,12vh,150px);background:linear-gradient(#050419,#1a1830 60%,#3932dc)}
@@ -415,3 +415,46 @@ header .header__nav-left a{color:#050419;font-size:16px}
   .wpanel__title{font-size:clamp(1.8rem,7vw,2.4rem)}
   .wpanel__text{font-size:.95rem}
 }
+
+/* ============================================================
+   Dark continuous backdrop — Selected Work / Skills / Services
+   (2026-06-20, branch extend-dark-bg-projects)
+   These three sections used to paint a light --color-bg box with
+   dark text. They now go TRANSPARENT so their per-section contour
+   canvas (#section-contours, drawn in main.js: zone-1 navy + light-
+   blue lines, viewport-aligned) runs the dark world continuously
+   out of the blog section through them. Text recolours to light.
+   ============================================================ */
+.features,.standards,.faq{background:transparent;background-color:transparent}
+/* per-section contour canvas sits behind the content */
+.section-contours{position:absolute;inset:0;z-index:0;pointer-events:none}
+/* keep each section's real content above its canvas */
+.features__sticky,.standards__container,.faq__container{position:relative;z-index:1}
+
+/* --- Selected Work (.features) --- */
+.features__sticky .features__title{color:var(--color-text-light)}
+.features .feature-item{border-left-color:rgba(255,255,255,.16)}
+.features .feature-item .feature-item__title{color:var(--color-text-light)}
+.features .feature-item .feature-item__description{color:#aeb4c6}
+.features .feature-item__num{color:#7f86a0}
+.features .proj-tag{border-color:rgba(255,255,255,.22);color:#c2c7d6}
+
+/* --- Skills (.standards) --- */
+.standards .standards__title{color:var(--color-text-light)}
+.standards .standards__description{color:#aeb4c6}
+.standards .skill-group__name{color:#9aa0b4}
+.standards .skill-tag{border-color:rgba(255,255,255,.22);color:#e6e8f0}
+.standards .placeholder-box{background:rgba(255,255,255,.05)}
+.standards .placeholder-box .logo-text{color:rgba(255,255,255,.28)}
+
+/* --- Services (.faq) --- */
+.faq{border-top-color:rgba(255,255,255,.12);border-bottom-color:rgba(255,255,255,.12)}
+.faq .faq__title{color:var(--color-text-light)}
+.faq .faq_split_bar{background-color:rgba(255,255,255,.12)}
+.faq .faq-item{border-bottom-color:rgba(255,255,255,.12)}
+.faq .faq-item .faq-item__question{color:var(--color-text-light)}
+.faq .faq-item .faq-item__answer{color:#aeb4c6}
+/* chevron pill: dark #050419 vanished on the navy — switch to a light glass pill, dark stroke */
+.faq .faq-item .faq-item__icon{background:rgba(255,255,255,.1)}
+.faq .faq-item__icon svg path{stroke:var(--color-text-light)}
+@media (pointer:fine){.faq .faq-item .faq-item__header:hover .faq-item__icon{background:var(--color-highlight)}}
