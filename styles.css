@@ -341,7 +341,7 @@ header .header__nav-left a{color:#050419;font-size:16px}
   will-change:flex-basis,transform;   /* transform = the JS fly-in reveal (main.js) */
   /* The hover accordion animates ONLY flex-basis (not flex-grow): grow/shrink stay constant so
      the free-space redistribution is monotonic — no per-frame wobble. Gentle ease at both ends. */
-  transition:flex-basis .8s cubic-bezier(.65,0,.35,1);
+  transition:flex-basis .95s cubic-bezier(.32,0,.16,1) 70ms;
 }
 /* --ph = panel height: a GENTLE taper (far-left ~91% → front 100%) for a touch of depth. */
 .wpanel:nth-child(1){--bg:#3b518a;--ph:80%}
