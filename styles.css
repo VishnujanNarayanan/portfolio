@@ -372,9 +372,9 @@ header .header__nav-left a{color:#050419;font-size:16px}
 /* Label + number are PINNED to the --strip zone at the panel's left edge, so they hold a fixed
    position as the panel resizes (during the reveal + when other panels open) — they never drift
    with the rail's changing width. */
-.wpanel__vert{position:absolute;left:calc(var(--strip) / 2);top:30px;transform:translateX(-50%) rotate(180deg);
+.wpanel__vert{position:absolute;left:calc(var(--strip) / 2);top:30px;transform:translateX(-50%) rotate(180deg);will-change:opacity;
   writing-mode:vertical-rl;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;white-space:nowrap}
-.wpanel__num{position:absolute;left:0;right:auto;width:var(--strip);bottom:26px;text-align:center;
+.wpanel__num{position:absolute;left:0;right:auto;width:var(--strip);bottom:26px;text-align:center;will-change:opacity;
   font-family:"Inter",sans-serif;font-weight:300;font-size:1.5rem;color:#4d8bff}
 
 /* Content — fixed width (clipped while collapsed); fades in as the panel opens */

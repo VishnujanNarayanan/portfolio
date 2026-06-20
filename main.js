@@ -440,8 +440,8 @@
           p.style.flexBasis = ""; p.style.flexGrow = ""; p.style.flexShrink = "";
           p.style.boxShadow = "";                        // back to the CSS base bleed
           p.style.height = G.H + "px";                   // uniform height (overrides the --ph taper)
-          if (TXT[i].vert) TXT[i].vert.style.top = "";    // rail text back to CSS (box edges)
-          if (TXT[i].num) TXT[i].num.style.bottom = "";
+          if (TXT[i].vert) { TXT[i].vert.style.top = ""; TXT[i].vert.style.opacity = ""; }  // rail text back to CSS (box edges, fully visible)
+          if (TXT[i].num) { TXT[i].num.style.bottom = ""; TXT[i].num.style.opacity = ""; }
           p.classList.toggle("is-open", i === 0);
           var c = p.querySelector(".wpanel__content"); if (c) c.style.opacity = "";
         } else {
@@ -512,6 +512,14 @@
         pan.style.flexBasis = bw + "px";
         accSnap = snap;
         paintPanel(pan, i, bw, tl, tr, bleed);
+        // RAIL TEXT: hidden through the entire rise — it only fades in once THIS panel has SETTLED
+        // (its own settle window, after its rise). Plain opacity fade, no transform/clip. Reverses
+        // on scroll-up (setP falls back to 0 → fades out).
+        var setP = clamp((t - rS - rDur(j)) / sDur(j), 0, 1);
+        var op = smooth(setP).toFixed(3);
+        var tx = TXT[i];
+        if (tx.num) tx.num.style.opacity = op;
+        if (tx.vert) tx.vert.style.opacity = op;
         // opener's content fades in as it opens, gated by its OWN rise (eR) so it never shows
         // while still a clipped, tapered band.
         if (i === 0) {
@@ -528,7 +536,8 @@
       if (window.innerWidth <= 820) {
         if (settled !== null) { panels.forEach(function (p, i) {
           ["transition", "transform", "transformOrigin", "clipPath", "flexBasis", "flexGrow", "flexShrink", "height", "boxShadow"].forEach(function (k) { p.style[k] = ""; });
-          if (TXT[i].vert) TXT[i].vert.style.top = ""; if (TXT[i].num) TXT[i].num.style.bottom = "";
+          if (TXT[i].vert) { TXT[i].vert.style.top = ""; TXT[i].vert.style.opacity = ""; }
+          if (TXT[i].num) { TXT[i].num.style.bottom = ""; TXT[i].num.style.opacity = ""; }
           p.classList.remove("is-open");
         }); settled = null; }
         T = 0; lastT = 0;
