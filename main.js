@@ -37,8 +37,10 @@
     }, 1700);
 
     // Hero exit is a scroll-SCRUBBED sequence, in three phases, no fade:
-    //   Phase A (0 → vh): the hero rides UP off the top, uncovering the office video
-    //     (.hero-video) that sits fixed underneath it. No zoom yet.
+    //   Phase A (0 → vh): the hero and the video scroll up together as a rigid pair —
+    //     the video (.hero-video) sits directly BELOW the hero with its top edge glued
+    //     to the hero's bottom edge, so it rises into view from below (1:1 with scroll)
+    //     rather than being uncovered in place. No zoom yet.
     //   Phase B (vh → 2vh): once the video fully covers the screen, the Lando zoom-out
     //     applies to the VIDEO — it scales DOWN from centre, 1 → EXIT_MIN_SCALE.
     //   Phase C (2vh → 3vh): the zoomed video rides UP with the page, handing over to
@@ -137,21 +139,22 @@
     function updateHeroExit() {
       var vh = window.innerHeight;
       var y = window.scrollY;
-      // Phase A (0 → vh): the hero rides UP off the top, uncovering the video beneath it.
-      var pA = Math.max(0, Math.min(y / vh, 1));
-      var eA = pA * pA * (3 - 2 * pA);                 // smoothstep
+      // Phase A (0 → vh): the hero rides UP 1:1 with scroll (linear, so the video glued
+      // to its bottom edge tracks it exactly). Past vh it's parked off the top.
       if (heroContent) heroContent.style.transform = "";
-      hero.style.transform = "translateY(" + (-eA * vh) + "px)";
+      hero.style.transform = "translateY(" + (-Math.min(y, vh)) + "px)";
       // Phases B/C act on the video once it fully covers the screen (y ≥ vh):
       //   B (vh → 2vh): zoom OUT from the centre (camera pull-back), 1 → EXIT_MIN_SCALE.
       //   C (2vh → 3vh): ride UP with the page, handing over to the flow below.
       if (heroVid) {
+        // Y: below the fold (top edge at the hero's bottom) → 0 (full screen) over phase A,
+        // locked at 0 through the zoom, then rides up off the top in phase C.
+        var vTy = (y < vh) ? (vh - y) : -Math.max(0, y - 2 * vh);
         var pB = Math.max(0, Math.min((y - vh) / vh, 1));
         var eB = pB * pB * (3 - 2 * pB);               // smoothstep
         var scale = 1 - (1 - EXIT_MIN_SCALE) * eB;     // 1 → EXIT_MIN_SCALE (no opacity change)
-        var vLift = Math.max(0, y - 2 * vh);
         heroVid.style.transformOrigin = "50% 50%";
-        heroVid.style.transform = "translateY(" + (-vLift) + "px) scale(" + scale + ")";
+        heroVid.style.transform = "translateY(" + vTy + "px) scale(" + scale + ")";
       }
       // Scroll cue plays its entrance in reverse the moment scrolling starts.
       if (scrollCue) scrollCue.classList.toggle("is-exiting", y > 0);
