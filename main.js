@@ -236,7 +236,6 @@
     // pen tip travelling each stroke — true letter-by-letter writing, fully reversible.
     var segs = [].slice.call(layer.querySelectorAll(".cert-cta__seg"));
     if (!segs.length) return;
-    var MIN = 0.3;                 // EXIT_MIN_SCALE — must match the hero block
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var lens = [], total = 1;
     function measure() {
@@ -250,12 +249,11 @@
     }
     function update() {
       var vh = window.innerHeight, y = window.scrollY;
-      // Phase B edge zoom-out (vh→2vh) and phase C ride-up (>2vh), exactly as the video.
+      // The CTA rides UP with the video (phase C, >2vh) but never shrinks — it keeps the same
+      // size throughout (no scale), so it stays big and on the same spot, just lifting away.
+      var vTy = -Math.max(0, y - 2 * vh);
+      layer.style.transform = "translateY(" + vTy + "px)";
       var pB = Math.max(0, Math.min((y - vh) / vh, 1));
-      var eB = pB * pB * (3 - 2 * pB);
-      var scale = (y < vh) ? 1 : (1 - (1 - MIN) * eB);
-      var vTy = (y < vh) ? (vh - y) : -Math.max(0, y - 2 * vh);
-      layer.style.transform = "translateY(" + vTy + "px) scale(" + scale + ")";
       // Write progress: starts at the zoom-out midpoint (pB .5) → done as it finishes (pB 1).
       var p = reduce ? (pB > 0.5 ? 1 : 0) : Math.max(0, Math.min((pB - 0.5) / 0.5, 1));
       var inked = p * total, acc = 0;
