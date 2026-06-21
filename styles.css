@@ -253,7 +253,15 @@ header .header__nav-left a{color:#050419;font-size:16px}
 
 /* Tool-logo marquee behind the hero (z-index 2 < hero 3; later opaque sections cover it).
    Rows scroll horizontally with page scroll; fades in as the hero zooms out. */
-.hero-video{position:fixed;inset:0;z-index:2;width:100%;height:100%;object-fit:cover;background:#000;pointer-events:none;will-change:transform}.tool-marquee{position:fixed;inset:0;z-index:1;pointer-events:none;display:flex;flex-direction:column;justify-content:center;gap:clamp(12px,2.4vh,34px);overflow:hidden;opacity:0;will-change:transform}
+.hero-video{position:fixed;inset:0;z-index:2;width:100%;height:100%;object-fit:cover;background:#000;pointer-events:none;will-change:transform}
+/* Handwritten "checkout my certificates" CTA over the receding video (revealed midway
+   through the zoom-out; opacity scrubbed by main.js, mounted by animated-signature). */
+.hero-cert-cta{position:fixed;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;text-decoration:none;pointer-events:none;opacity:0;will-change:opacity}
+.hero-cert-cta.is-armed{pointer-events:auto}
+.hero-cert-cta__sign{display:block;width:min(58vw,660px);color:#fcfcfc;filter:drop-shadow(0 3px 18px rgba(0,0,0,.5));transition:transform .3s var(--ease-default)}
+.hero-cert-cta__sign svg{display:block;width:100%;height:auto}
+.hero-cert-cta.is-armed:hover .hero-cert-cta__sign{transform:scale(1.03)}
+.tool-marquee{position:fixed;inset:0;z-index:1;pointer-events:none;display:flex;flex-direction:column;justify-content:center;gap:clamp(12px,2.4vh,34px);overflow:hidden;opacity:0;will-change:transform}
 .tool-marquee__row{display:flex;align-items:center;gap:clamp(22px,3vw,54px);white-space:nowrap;will-change:transform}
 .tool-marquee__row img{height:clamp(38px,6vh,74px);width:auto;opacity:.82}
 

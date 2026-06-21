@@ -58,6 +58,88 @@
       if (heroVid.paused) { var pr = heroVid.play(); if (pr && pr.catch) pr.catch(function () {}); }
     }
     var scrollCue = hero.querySelector(".hero__scroll-btn");  // vanishes (reverse of its entrance) on scroll
+    // "checkout my certificates" handwritten CTA over the video — drawn (animated-signature)
+    // and revealed MIDWAY through the edge zoom-out. Mounted ONCE, lazily, the first time the
+    // scroll crosses the midway point, so its draw-in plays exactly as it fades in.
+    var certCta = document.querySelector(".hero-cert-cta");
+    // The animated-signature library plays its OWN timed draw once — we don't want that.
+    // Instead we harvest its glyph PATHS (the handwriting geometry from the Momo Signature
+    // font), then draw them ourselves by scrubbing stroke-dashoffset against scroll — so the
+    // writing advances letter-by-letter as you scroll down and un-writes as you scroll up.
+    var certBuilt = false, certClip = null, certVB = null, lastDrawP = 0;
+    function buildCertDraw() {
+      if (certBuilt || !certCta || !window.AnimatedSignatureLib) return;
+      certBuilt = true;
+      // Mount the library OFFSCREEN purely to render the glyph geometry, then copy the SOLID
+      // letter path(s) out and reveal them ourselves with a scroll-driven clip (left→right
+      // wipe = letter-by-letter), instead of the library's one-shot timed animation.
+      var host = document.createElement("div");
+      host.id = "cert-src";
+      host.style.cssText = "position:absolute;left:-99999px;top:0;width:800px;visibility:hidden;pointer-events:none";
+      document.body.appendChild(host);
+      window.AnimatedSignatureLib.mount("#cert-src", {
+        name: "checkout my certificates", mode: "reveal", duration: 0.001, fontSize: 84
+      });
+      var tries = 0;
+      (function wait() {
+        var src = host.querySelector("svg");
+        var ps  = src ? src.querySelectorAll("path") : [];
+        if (!ps.length && tries++ < 160) { return setTimeout(wait, 40); }  // font fetch + render is async
+        if (!ps.length) { host.remove(); certBuilt = false; return; }
+        var vbStr = src.getAttribute("viewBox") ||
+          ("0 0 " + (src.getAttribute("width") || 600) + " " + (src.getAttribute("height") || 200));
+        var vb = vbStr.split(/[ ,]+/).map(Number);          // [minX, minY, w, h]
+        var NS = "http://www.w3.org/2000/svg";
+        var svg = document.createElementNS(NS, "svg");
+        svg.setAttribute("viewBox", vbStr);
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        var clipId = "certClip";
+        var defs = document.createElementNS(NS, "defs");
+        var clip = document.createElementNS(NS, "clipPath");
+        clip.setAttribute("id", clipId);
+        clip.setAttribute("clipPathUnits", "userSpaceOnUse");
+        var rect = document.createElementNS(NS, "rect");
+        rect.setAttribute("x", vb[0]); rect.setAttribute("y", vb[1]);
+        rect.setAttribute("height", vb[3]); rect.setAttribute("width", 0);   // starts fully clipped
+        clip.appendChild(rect); defs.appendChild(clip); svg.appendChild(defs);
+        var seen = {}, added = 0;
+        ps.forEach(function (p) {
+          var d = p.getAttribute("d"); if (!d || seen[d]) return; seen[d] = 1;   // skip the faint ghost dupe
+          var np = document.createElementNS(NS, "path");
+          np.setAttribute("d", d);
+          np.setAttribute("fill", "currentColor");
+          np.setAttribute("clip-path", "url(#" + clipId + ")");
+          svg.appendChild(np); added++;
+        });
+        host.remove();
+        if (!added) { certBuilt = false; return; }
+        var sign = document.getElementById("cert-sign");
+        sign.innerHTML = ""; sign.appendChild(svg);
+        certClip = rect; certVB = vb;
+        setCertDraw(lastDrawP);                            // apply whatever scroll progress we're at
+      })();
+    }
+    // Draw progress p (0..1) → widen the clip rect left→right so the solid letters are wiped
+    // in (letter by letter). Reversible: lowering p shrinks the clip and un-writes them.
+    function setCertDraw(p) {
+      lastDrawP = p;
+      if (!certClip || !certVB) return;
+      certClip.setAttribute("width", (Math.max(0, Math.min(p, 1)) * certVB[2]).toFixed(2));
+    }
+    // Scrub over the zoom-out progress pB (0..1 across vh→2vh): fade the CTA in around the
+    // midpoint, hold, fade out before phase C; and WRITE it (scroll-driven) across 0.5→0.9.
+    function setCertReveal(pB) {
+      if (!certCta) return;
+      var op;
+      if (pB < 0.48) op = 0;
+      else if (pB < 0.58) op = (pB - 0.48) / 0.10;
+      else if (pB < 0.92) op = 1;
+      else op = Math.max(0, 1 - (pB - 0.92) / 0.08);
+      certCta.style.opacity = op.toFixed(3);
+      certCta.classList.toggle("is-armed", op > 0.5);    // clickable only while clearly visible
+      if (op > 0.01) buildCertDraw();
+      setCertDraw(Math.max(0, Math.min((pB - 0.5) / 0.4, 1)));   // writes between 50%→90% of the zoom-out
+    }
     // Header pieces that react to the zoom-out (color flip + shrink-to-edges).
     var hdr        = document.querySelector("header");
     var navLeft    = hdr && hdr.querySelector(".header__nav-left");
@@ -167,6 +249,7 @@
           var ze = zt * zt * (3 - 2 * zt);             // smoothstep
           scale = 1.55 - 0.55 * ze;                    // 1.55 → 1.0
           setVidPlay(1);                               // full speed through the pull-up
+          setCertReveal(0);                            // no zoom-out yet → CTA hidden
         } else {
           // Phase B EDGE zoom-out (shrinks the whole rectangle, uncovering the marquee around it).
           var pB = Math.max(0, Math.min((y - vh) / vh, 1));
@@ -179,6 +262,7 @@
           // 90% of the zoom (and stays paused beyond, into phase C).
           var dt = (pB - 0.8) / 0.1;                   // 0 at 80% of the zoom → 1 at 90%
           setVidPlay(pB >= 0.9 ? 0 : (pB <= 0.8 ? 1 : 1 - dt * dt));
+          setCertReveal(pB);                           // reveal the CTA midway through the zoom-out
         }
         heroVid.style.transformOrigin = "50% 50%";
         heroVid.style.transform = "translateY(" + vTy + "px) scale(" + scale + ")";
