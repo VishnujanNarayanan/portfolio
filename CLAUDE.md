@@ -1036,3 +1036,14 @@ Keep this section updated after every change. Format:
   so features can begin covering. Lock never engages on mobile (releaseLock() in the ≤820 branch; no
   cover-scroll there) and never for slow scrollers whose reveal finishes before rect.top hits 0.
   node --check OK.
+
+### 2026-06-21 (terminal title bar swipes up + vanishes at the threshold)
+- Branch `fix-features-window-top-bar`. User: when the terminal hits its threshold the mac-style
+  title bar (traffic lights + `vishnu@…:~`) should swipe UP and vanish.
+- styles.css only: `.terminal__bar` gained max-height:64px + overflow:hidden + a transition on
+  transform/opacity/max-height/padding/border-bottom-width (.4–.5s). New rule
+  `.terminal.is-revealing .terminal__bar{transform:translateY(-100%);opacity:0;max-height:0;
+  padding:0;border-bottom-width:0;pointer-events:none}` — fired by the same `.is-revealing` class
+  as phase 2, so it's threshold-timed and reverses when the class is removed. The bar slides up
+  while collapsing so the terminal body reclaims the space. Verified via headless screenshots
+  (rest = bar visible; is-revealing = bar gone, body at top).
