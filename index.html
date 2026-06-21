@@ -83,6 +83,12 @@
          at normal speed on its own — scroll never touches its playback position. -->
     <video class="hero-video" src="videos/interview_office.mp4" autoplay muted loop playsinline aria-hidden="true"></video>
 
+    <!-- "checkout my certificates" — handwritten (animated-signature) CTA drawn on top
+         of the video, revealed MIDWAY through the zoom-out (main.js mounts + scrubs it). -->
+    <a class="hero-cert-cta" href="#certificates" aria-label="Check out my certificates">
+      <span class="hero-cert-cta__sign" id="cert-sign" aria-hidden="true"></span>
+    </a>
+
     <section class="hero">
       <div class="hero__bg"></div>
       <div class="hero__content">
@@ -559,6 +565,7 @@
   });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/animated-signature/dist/animated-signature.global.js" defer></script>
 <script src="main.js" defer></script>
 <script src="flow.js" defer></script>
 </body>

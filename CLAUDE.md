@@ -1067,3 +1067,21 @@ Keep this section updated after every change. Format:
 - Left intact: flow.js `bulbLight` (an invisible Three.js PointLight that warms the flow image
   planes). It renders no visible bulb, so the top-right is fully clear; removing it would only darken
   the flow scene. Can be stripped later if a truly complete removal is wanted.
+
+### 2026-06-21 (hero: "checkout my certificates" handwritten CTA, scroll-driven over the zoom-out)
+- Branch `hero-cert-signature`. Added a handwritten "checkout my certificates" CTA drawn on top of
+  the hero video, revealed MIDWAY through the edge zoom-out (phase B). Uses the `animated-signature`
+  library (CDN global build `AnimatedSignatureLib.mount`, added before main.js) — but NOT its one-shot
+  timed playback: that drew once and faded all letters together.
+- Mechanism (main.js, in the hero IIFE): buildCertDraw() mounts the library OFFSCREEN in `reveal`
+  mode purely to harvest the SOLID letter path(s) (Momo Signature font geometry), then rebuilds them
+  under `#cert-sign` with a `<clipPath>` rect. setCertDraw(p) widens that rect left→right from scroll
+  progress (letter-by-letter wipe), fully REVERSIBLE — scrolling down writes, scrolling up un-writes.
+  Driven every frame by setCertReveal(pB) in updateHeroExit: opacity envelope (fade in 48%→58%, hold,
+  fade out 92%→100% of the zoom-out) + draw progress `(pB-0.5)/0.4` (writes across 50%→90%).
+- index.html: `<a class="hero-cert-cta" href="#certificates">` overlay (fixed, z-index 3, over the
+  z-index-2 video) wrapping `#cert-sign`; `is-armed` class gates pointer-events while visible. NOTE:
+  href is a placeholder (#certificates) — no certificates page exists yet; repoint before publishing.
+- styles.css: `.hero-cert-cta*` block after `.hero-video` (centred overlay, white `currentColor` +
+  drop-shadow for legibility on the video, hover scale on the signature).
+- node --check main.js OK.
