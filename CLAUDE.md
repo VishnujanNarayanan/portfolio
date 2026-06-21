@@ -1010,3 +1010,15 @@ Keep this section updated after every change. Format:
   .section-contours canvas, z-index 0) instead of the solid medium-blue fill. styles.css:
   .terminal background #1d2c54 → transparent so the canvas behind shows through; .terminal__bar
   bg → rgba(15,22,40,.72) (translucent) to sit on the field. Verified via headless Chrome.
+
+### 2026-06-21 (header world flip → unified to the features-hit threshold)
+- Branch `features-threshold-header-switch`. User: in the features section, the nav buttons
+  (Projects/Skills/…) AND the CTA pills should switch the moment the section HITS its threshold —
+  not the two separate, later thresholds previously used.
+- main.js contour frame loop: the world flip (light blog → dark features) was driven by blog
+  scroll-progress at TWO points — nav reel re-whitened at blogProg 0.60, CTA pills flipped at 0.07.
+  Replaced both with a SINGLE threshold off the `.features` section: `wantDark = featuresEl
+  .getBoundingClientRect().top <= 0` — the same rect.top≤0 point at which the dark navy bg covers
+  the fixed header and the terminal reveals (is-revealing). Both __navLight and __headerTheme now
+  fire together at this one threshold (and reverse together on scroll-up). Added `featuresEl` ref
+  near `writingPin`. node --check OK.
