@@ -1058,4 +1058,12 @@ Keep this section updated after every change. Format:
     clear of the header.)
 - Verified via headless screenshots: rest = solid bar visible; is-revealing = bar gone, SELECT risen
   to just below an 80px header (nav buttons clear, no overlap), cards below.
-- NOT committed/pushed/merged (per user: hold until they say so).
+
+### 2026-06-21 (remove the hanging top-right bulb)
+- Branch `remove-bulb`. User: remove the bulb from the top-right completely.
+- index.html: deleted the `.flow-bulb` element (cord/cap/glass). styles.css: deleted the entire
+  `.flow-bulb*` block, the `@keyframes bulbGlow`, and its reduced-motion + mobile rules. Verified
+  via headless screenshot — the top-right now shows only the HIRE ME / GET IN TOUCH buttons, no bulb.
+- Left intact: flow.js `bulbLight` (an invisible Three.js PointLight that warms the flow image
+  planes). It renders no visible bulb, so the top-right is fully clear; removing it would only darken
+  the flow scene. Can be stripped later if a truly complete removal is wanted.
