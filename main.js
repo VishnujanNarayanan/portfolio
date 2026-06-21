@@ -88,7 +88,7 @@
     }
     var hireSpan = buildPillReel(glassPill);   // Hire Me letters (__a inherits white in the dark world)
     var giSpan   = buildPillReel(darkPill);    // Get In Touch letters (__a inherits black in the dark world)
-    var EXIT_MIN_SCALE = 0.38;      // how far the whole page-rectangle recedes (smaller = more zoom-out)
+    var EXIT_MIN_SCALE = 0.3;       // how far the whole page-rectangle recedes (smaller = more zoom-out)
     var hdrFlipped = null;          // header flip state — THRESHOLD-fired (not scroll-scrubbed); null so it inits
     // Header THEME for a light(he=0) → dark(he=1) world: nav + Hire-Me text black→white and the
     // dark "Get In Touch" pill inverting (bg #050419→#d0e1eb, text white→black) so it stays legible.
@@ -151,7 +151,7 @@
         // Y: below the fold (top edge at the hero's bottom) → 0 (full screen) over phase A,
         // locked at 0 through the zoom, then rides up off the top in phase C.
         var vTy = (y < vh) ? (vh - y) : -Math.max(0, y - 2 * vh);
-        var scale, grey = 0;                           // grey = 0 (full colour) → 1 (greyed out)
+        var scale, grey = 0, blue = 0;                 // grey 0→1 (greyed out); blue 0→1 (blue tint, kicks in later)
         if (y < vh) {
           // Phase A CONTENT zoom (a normal camera zoom; object-fit:cover keeps it full-frame):
           // held zoomed-in 1.55 for the first 50% of the pull-up, then eased back to 1.0 (full
@@ -165,16 +165,18 @@
           var eB = pB * pB * (3 - 2 * pB);             // smoothstep
           scale = 1 - (1 - EXIT_MIN_SCALE) * eB;       // 1 → EXIT_MIN_SCALE (no opacity change)
           grey = eB;                                   // greys MORE the further it recedes (stays grey in phase C)
+          blue = Math.max(0, Math.min((eB - 0.5) / 0.5, 1)); // blue tint holds off until HALFWAY through the zoom-out
         }
         heroVid.style.transformOrigin = "50% 50%";
         heroVid.style.transform = "translateY(" + vTy + "px) scale(" + scale + ")";
-        // Desaturate + dim toward a BLUE-grey as it recedes, so the receding video blends into
-        // the blue-grey contour field it shrinks into. grayscale strips colour; sepia+hue-rotate
-        // re-tints the result toward blue (≈ the #969ba8 field), saturate sets the tint strength.
+        // Desaturate + dim toward grey as it recedes (grey, from the start of the zoom), then
+        // re-tint that grey toward BLUE only once HALFWAY through (blue) so it ends matching the
+        // blue-grey contour field (≈ #969ba8). grayscale/brightness ride grey; sepia+hue-rotate+
+        // saturate (the blue tint) ride blue.
         heroVid.style.filter =
           "grayscale(" + grey + ") brightness(" + (1 - 0.18 * grey).toFixed(3) +
-          ") sepia(" + (0.5 * grey).toFixed(3) + ") hue-rotate(" + (185 * grey).toFixed(1) +
-          "deg) saturate(" + (1 + 0.7 * grey).toFixed(3) + ")";
+          ") sepia(" + (0.5 * blue).toFixed(3) + ") hue-rotate(" + (185 * blue).toFixed(1) +
+          "deg) saturate(" + (1 + 0.7 * blue).toFixed(3) + ")";
       }
       // Scroll cue plays its entrance in reverse the moment scrolling starts.
       if (scrollCue) scrollCue.classList.toggle("is-exiting", y > 0);
