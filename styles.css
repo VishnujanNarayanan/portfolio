@@ -313,10 +313,10 @@ header .header__nav-left a{color:#050419;font-size:16px}
   --cw:clamp(260px,22vw,360px);      /* fixed width a panel opens by */
   --h:clamp(540px,82vh,880px);
   position:relative;z-index:2;background:transparent;color:#fff;
-  height:100vh;                      /* one normal screen — no pin, scroll passes straight through */
+  height:200vh;                      /* 100vh visible + 100vh sticky window so features slides over */
 }
 /* Stage holds the layout centred (timed reveal fires on a threshold, main.js — not scroll-pinned). */
-.writing__pin{position:relative;height:100vh;
+.writing__pin{position:sticky;top:0;height:100vh;
   display:flex;align-items:center;overflow:hidden;background:transparent}
 /* Section-local contour plane (drawn in main.js, same field as #bg-contours). It carries a
    VERTICAL light→dark wash that mirrors the flow's zone-4→zone-1 look: zone-4 light blue with
@@ -502,3 +502,53 @@ header .pill-btn--dark .pill-char__b{color:var(--color-text-light)}  /* Get In T
 /* HERO only (at the very top): force the clone to the SAME colour; once scrolled, --hc takes over. */
 header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{color:currentColor}
 .header__nav-left a:hover .nav-char__col,.header__nav-left a:focus-visible .nav-char__col,header .pill-btn:hover .pill-char__col,header .pill-btn:focus-visible .pill-char__col{transform:translateY(-100%)}
+
+/* ============================================================
+   Blog → Features cover-scroll
+   .writing is 200vh with .writing__pin sticky (top:0). The features
+   section is pulled UP by 100vh so it rides over the pinned blog as
+   you scroll through the second half of .writing — a gradual cover.
+   features sits ABOVE the blog (z-index 3 > .writing's 2); its own
+   .section-contours canvas (opaque navy) makes the cover solid.
+   ============================================================ */
+.features{margin-top:-100svh;z-index:3}
+@media (max-width:820px){.features{margin-top:0}}
+
+/* ============================================================
+   Terminal demo (replaces the Selected-work grid). Sits inside the
+   features sticky window so it keeps the scroll-up-into-sticky cover.
+   Medium-blue window; commands typed + install output streamed by
+   main.js, then a blinking prompt waits for the next command.
+   ============================================================ */
+.features{height:260vh}
+.features__sticky{align-items:stretch;justify-content:flex-start;padding:0;gap:0}
+.terminal{position:relative;z-index:1;width:100%;height:100vh;display:flex;flex-direction:column;overflow:hidden;border:0;border-radius:0;background:#1d2c54;font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace}
+.terminal__bar{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:11px 16px;background:#16224a;border-bottom:1px solid rgba(255,255,255,.08)}
+.terminal__dots{display:flex;gap:8px}
+.terminal__dot{width:12px;height:12px;border-radius:50%}
+.terminal__dot--r{background:#ff5f56}
+.terminal__dot--y{background:#ffbd2e}
+.terminal__dot--g{background:#27c93f}
+.terminal__title{color:#aeb6d6;font-size:13px;letter-spacing:.2px}
+.terminal__body{flex:1 1 auto;overflow:hidden;padding:26px 34px;color:#dfe4f2;font-size:15px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.terminal__line{white-space:pre-wrap}
+.term-user{color:#6ee59a;font-weight:600}
+.term-path{color:#6cb0ff}
+.term-mysql{color:#7fd0ff;font-weight:600}
+.term-cursor{display:inline-block;width:8px;height:1.05em;margin-left:1px;vertical-align:-2px;background:#dfe4f2}
+.term-cursor.is-blink{animation:termblink 1.05s steps(1) infinite}
+@keyframes termblink{50%{opacity:0}}
+/* SELECT * FROM projects → result set rendered as clickable project cards */
+.term-result{margin:14px 0 18px}
+.term-projects{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:1100px}
+.term-proj{display:flex;align-items:flex-start;gap:14px;padding:16px 18px;border:1px solid rgba(124,208,255,.22);border-radius:10px;background:rgba(124,208,255,.05);color:#dfe4f2;transition:border-color .2s,background .2s,transform .2s}
+.term-proj:hover{border-color:rgba(124,208,255,.6);background:rgba(124,208,255,.1);transform:translateY(-2px)}
+.term-proj__id{color:#7fd0ff;font-weight:600;font-size:13px;line-height:1.7}
+.term-proj__main{display:flex;flex-direction:column;gap:6px;flex:1 1 auto;min-width:0}
+.term-proj__title{font-size:17px;font-weight:600;color:#fff}
+.term-proj__desc{font-size:13px;line-height:1.5;color:#aeb6d6;white-space:normal}
+.term-proj .proj-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.term-proj .proj-tag{font-size:11px;padding:2px 8px;border:1px solid rgba(124,208,255,.28);border-radius:999px;color:#9fc6ef}
+.term-proj__arrow{color:#7fd0ff;font-size:18px;align-self:center}
+.term-result__meta{margin-top:12px;color:#7e88aa;font-size:13px}
+@media (max-width:820px){.terminal{width:100%;height:100vh}.terminal__body{font-size:12px;padding:16px 18px}.term-projects{grid-template-columns:1fr}}

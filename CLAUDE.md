@@ -914,3 +914,46 @@ Keep this section updated after every change. Format:
   updateHeroExit toggles `is-hero` ON only at the very top (scrollY<=0); the moment a scroll is
   detected it drops off and the clone carries the flip colour — no wait for a threshold. styles.css +
   main.js. node --check OK; top render unchanged.
+
+### 2026-06-21 (features grid → animated terminal demo)
+- Replaced the Selected-work project grid inside `.features#projects` with a faux Linux terminal
+  window. The section structure (sticky 100vh + margin-top:-100svh cover-scroll over the pinned
+  blog + its navy `.section-contours` canvas) is unchanged, so the terminal keeps the exact
+  scroll-up-into-sticky cover the grid had. (Considered a scroll-driven video first; user scrapped
+  it for a built component.)
+- index.html: `.features__sticky` now holds `.terminal` (title bar with traffic-light `.terminal__dot`s
+  + `.terminal__title` "vishnu@ASUS-TUF-F16-Vishnu: ~") and an empty `#term-body` filled by JS. Old
+  feature-item markup removed; id="projects" kept for the nav link.
+- styles.css (supplemental): medium-blue window (#1d2c54 body / #16224a bar) per user request, monospace
+  stack, rounded + shadowed, fixed height (min(70vh,640px)); `.features__sticky{align-items:center}`
+  centres it. `.term-user` green / `.term-path` blue prompt; `.term-cursor.is-blink` keyframe. Mobile
+  shrinks font/height. Old `.features .feature-item*` colour rules left in place (now unused, harmless).
+- main.js: new terminalDemo() IIFE. Scripted lines (cmd = typed char-by-char after the prompt; out =
+  printed) reproduce the user's session — `systemctl statius` typo + error, `systemctl status` +
+  systemd error, `service mysql status`, then `apt install mysql-server -y` with a TRIMMED slice of the
+  install output (header, a few Get:/Unpacking/Setting up lines) — body auto-scrolls, then parks at a
+  blinking prompt waiting for the next command. Plays once via IntersectionObserver (threshold .35);
+  prefers-reduced-motion / no-IO renders all lines instantly. HTML-escapes output. node --check OK.
+
+### 2026-06-21 (terminal: full-screen, scroll-driven, trimmed)
+- Terminal now fills the whole sticky window: `.features__sticky` padding/gap → 0, align stretch;
+  `.terminal` width 100% / height 100vh, no radius/border/shadow. Body padding/font bumped (26px/15px).
+- Dropped the three opening commands (systemctl statius / status / service status). Script now starts
+  at `sudo apt install mysql-server -y` and the install output is trimmed to ~12 short lines, ending
+  with a blinking prompt.
+- Printing is now SCROLL-DRIVEN, not time-based: `.features` height → 260vh; terminalDemo() maps the
+  section's pinned scroll progress (−rect.top / (height−innerHeight)) to a character count across all
+  lines and renderChars() draws that many chars (whole lines + the live partially-typed line with a
+  cursor), auto-scrolling the body. Reverses on scroll-up; reduced-motion shows it all at once.
+  rAF-throttled scroll/resize listeners. node --check OK.
+
+### 2026-06-21 (terminal: finishes earlier + SELECT renders project cards)
+- Typing now finishes slightly before the terminal fully pins (progress endTop vh*0 → vh*0.14).
+- Extended the script past the install: `sudo mysql` → monitor welcome → `USE portfolio;` →
+  `SELECT * FROM projects;`. The SELECT line is flagged `proj:true`; renderChars() renders the
+  projects as the query result under it — 4 clickable `.term-proj` cards (id, title, desc, tags,
+  arrow → project page) from a PROJECTS array, plus a "4 rows in set" meta line. Final waiting
+  prompt switched from the bash prompt to the `mysql>` prompt. Added prefixOf() ("cmd"=bash,
+  "sql"=mysql>, "out"=none) and the MYSQL prompt span.
+- styles.css: .term-mysql prompt colour; .term-result / .term-projects (2-col grid, 1-col mobile) /
+  .term-proj card styling in the terminal's blue palette (reuses .proj-tag). node --check OK.

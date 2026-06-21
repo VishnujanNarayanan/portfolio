@@ -383,28 +383,6 @@
       strokeIso(g);
       g.restore();
     }
-    // Light→dark wash shared by the blog canvas AND the Selected-work canvas. The transition is a
-    // single band in VIEWPORT space (t0 = blog top → t1 = partway into Selected work); each section
-    // samples it by its own on-screen position, so the fade is ONE continuous, gradual ramp that
-    // spans the whole blog and spills into the next section (no per-section restart, no hard corner).
-    // bg: zone-4 light blue → zone-1 navy. ln: dark indigo lines → light-blue lines (the inversion).
-    function washGrad(g, secTop, spanH, t0, t1) {
-      var bg = g.createLinearGradient(0, 0, 0, spanH);            // fill: canvas-local 0..spanH
-      var ln = g.createLinearGradient(0, secTop, 0, secTop + spanH);  // lines: section-anchored in translated space
-      var S = 20, i, span = (t1 - t0) || 1;
-      for (i = 0; i <= S; i++) {
-        var p = i / S, Y = secTop + p * spanH;                    // this stop's viewport y
-        var er = (Y - t0) / span; er = er < 0 ? 0 : er > 1 ? 1 : er;
-        var ss = er * er * er * (er * (er * 6 - 15) + 10);        // smootherstep…
-        var e = ss * ss * (3 - 2 * ss);                          // …∘ smoothstep → very gentle ends
-        bg.addColorStop(p, "rgb(" + Math.round(lerp(208, 27, e)) + "," +
-          Math.round(lerp(225, 34, e)) + "," + Math.round(lerp(235, 54, e)) + ")");
-        ln.addColorStop(p, "rgba(" + Math.round(lerp(57, 77, e)) + "," +
-          Math.round(lerp(50, 139, e)) + "," + Math.round(lerp(220, 255, e)) + "," +
-          lerp(0.5, 0.45, e).toFixed(3) + ")");
-      }
-      return { bg: bg, ln: ln };
-    }
     var t = 0, last = 0, navDark = false, ctaDark = false;   // nav reel vs CTA pills flip at SEPARATE blog thresholds
     function frame(now) {
       var dt = last ? Math.min((now - last) / 1000, 0.05) : 0; last = now;
@@ -444,51 +422,43 @@
         "," + Math.round(lerp(255, 220, lt)) + "," + lerp(0.3, 0.5, lt).toFixed(2) + ")";
       drawContours(ctx, lineCol, bgFill);                // global: blue → inverted dark-blue on light
       if (hctx) drawContours(hctx, "#969ba8");           // hero: same blue-grey as end bg → lines vanish at full zoom
-      // Shared light→dark band, in viewport space: starts at the BLOG top (t0), finishes full-dark
-      // ~35% INTO the Selected-work section (t1 = features top + 0.35·H → the dark point lands at
-      // ~135% of the blog height). Both the blog canvas and the Selected-work canvas sample this one
-      // band, so the fade is a single continuous ramp that spills gradually into the next section.
+      // Blog section thresholds (blogTop in viewport space):
+      //  • nav reel re-whitens at 60% scroll progress through the blog
+      //  • CTA pills flip at 7%
       var t0 = writingPin ? writingPin.getBoundingClientRect().top : 0;
-      var t1 = (darkSecs.length ? darkSecs[0].el.getBoundingClientRect().top : t0 + H) + H * 0.35;
-      // Blog section, two SEPARATE thresholds (t0 = blog top; -t0/H = the blog's scroll progress):
-      //  • nav reel (Projects/Skills/Services/Blog) re-whitens at 60% — the per-letter ripple;
-      //  • the CTA pills (Hire Me / Get In Touch) flip MUCH earlier, at 7% (a blog-only exception).
-      // Both threshold-fired and reverse on scroll-up.
       var blogProg = (0 - t0) / (H || 1);
       var navWantDark = blogProg >= 0.60;
       if (navWantDark !== navDark) {
         navDark = navWantDark;
-        if (window.__navLight) window.__navLight(!navDark, true);  // reel only (skipTheme) — pills handled below
+        if (window.__navLight) window.__navLight(!navDark, true);
       }
       var ctaWantDark = blogProg >= 0.07;
       if (ctaWantDark !== ctaDark) {
         ctaDark = ctaWantDark;
-        if (window.__headerTheme) window.__headerTheme(ctaDark ? 1 : 0, true);  // dark world → white text / light pill
+        if (window.__headerTheme) window.__headerTheme(ctaDark ? 1 : 0, true);
       }
+      // Blog canvas: solid light blue (end-of-zone-4) + dark indigo lines (no gradient).
       if (wctx && writingPin) {
         var wtop = writingPin.getBoundingClientRect().top;
-        var ws = washGrad(wctx, wtop, H, t0, t1);
-        drawContours(wctx, ws.ln, ws.bg, -wtop);
+        drawContours(wctx, "rgba(57,50,220,0.5)", "rgb(208,225,235)", -wtop);
       }
-      // Dark content sections (Selected work / Skills / Services), viewport-aligned & continuous.
-      // Selected work straddles the band (its top still lightening); Skills/Services are past it →
-      // washGrad resolves to solid zone-1 navy + light-blue lines for them.
+      // Dark content sections (Selected work / Skills / Services): solid dark navy + light-blue lines.
       for (var ds = 0; ds < darkSecs.length; ds++) {
         var sec = darkSecs[ds], sr = sec.el.getBoundingClientRect();
-        if (sr.bottom <= 0 || sr.top >= H) continue;       // off-screen → skip (cheap)
+        if (sr.bottom <= 0 || sr.top >= H) continue;
         var sh = sec.el.offsetHeight;
-        if (sec.w !== W || sec.h !== sh) {                  // (re)size to the whole section box
+        if (sec.w !== W || sec.h !== sh) {
           sec.w = W; sec.h = sh;
           sec.cv.width = W * DPR; sec.cv.height = sh * DPR;
           sec.cv.style.width = W + "px"; sec.cv.style.height = sh + "px";
           sec.ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
         }
-        var sg = sec.ctx, dw = washGrad(sg, sr.top, sh, t0, t1);
+        var sg = sec.ctx;
         sg.clearRect(0, 0, W, sh);
-        sg.fillStyle = dw.bg; sg.fillRect(0, 0, W, sh);
-        sg.save(); sg.translate(0, -sr.top);                // viewport-align the field
+        sg.fillStyle = "rgb(27,34,54)"; sg.fillRect(0, 0, W, sh);
+        sg.save(); sg.translate(0, -sr.top);
         sg.lineCap = "round"; sg.lineJoin = "round";
-        sg.strokeStyle = dw.ln; sg.lineWidth = 0.45;
+        sg.strokeStyle = "rgba(77,139,255,0.45)"; sg.lineWidth = 0.45;
         strokeIso(sg);
         sg.restore();
       }
@@ -889,6 +859,125 @@
   document.querySelectorAll(".mobile-nav__item a, .mobile-nav__cta").forEach(function (a) {
     a.addEventListener("click", function () { setNav(false); });
   });
+
+  /* ---------- Terminal demo (features section) ---------- */
+  /* SCROLL-DRIVEN: the command + a trimmed apt-install slice is revealed
+     character-by-character as you scroll through the pinned .features
+     section. Progress maps to a character count, so the typing tracks
+     scroll exactly (reverses on scroll-up); at the end it parks at a
+     blinking prompt waiting for the next command. */
+  (function terminalDemo() {
+    var body = document.getElementById("term-body");
+    var sec = document.querySelector(".features");
+    if (!body || !sec) return;
+    var PROMPT =
+      '<span class="term-user">vishnu@ASUS-TUF-F16-Vishnu</span>' +
+      '<span class="term-path">:~</span>$ ';
+    // mysql prompt (for the SELECT line, after entering the monitor)
+    var MYSQL = '<span class="term-mysql">mysql&gt;</span> ';
+    // type: "cmd" = bash prompt; "sql" = mysql prompt; "out" = printed line.
+    // The line flagged `proj:true` renders the projects as its result set.
+    var script = [
+      { t: "cmd", x: "sudo apt install mysql-server -y" },
+      { t: "out", x: "Reading package lists... Done" },
+      { t: "out", x: "Building dependency tree... Done" },
+      { t: "out", x: "The following NEW packages will be installed:" },
+      { t: "out", x: "  mysql-server mysql-server-8.0 mysql-client-8.0 mysql-common" },
+      { t: "out", x: "Unpacking mysql-server-8.0 ..." },
+      { t: "out", x: "Setting up mysql-server-8.0 ..." },
+      { t: "out", x: "mysqld is running as pid 13300" },
+      { t: "cmd", x: "sudo mysql" },
+      { t: "out", x: "Welcome to the MySQL monitor.  Commands end with ; or \\g." },
+      { t: "sql", x: "USE portfolio;" },
+      { t: "out", x: "Database changed" },
+      { t: "sql", x: "SELECT * FROM projects;", proj: true }
+    ];
+    var PROJECTS = [
+      { n: "Market Data Platform", d: "28-pipeline NSE market-data ingestion layer feeding 12+ datasets into a partitioned store.", t: ["Python", "pandas", "ETL", "SQL"], h: "projects/market-data-pipeline/index.html" },
+      { n: "Product Explorer", d: "Full-stack TypeScript app scraping a book catalog into PostgreSQL, served via Next.js with real-time WebSocket scraping.", t: ["TypeScript", "NestJS", "PostgreSQL", "Redis"], h: "projects/product-explorer/index.html" },
+      { n: "Fraud Transaction Detection", d: "Fraud-detection model on 6.4M transactions — 95% caught at 0.995 ROC-AUC despite a 0.13% fraud rate.", t: ["Python", "scikit-learn", "pandas"], h: "projects/fraud-detection/index.html" },
+      { n: "Minute-Level Stock Prediction", d: "Intraday price-direction system over 9.4M NSE ticks, raising next-minute precision from 0.51 to 0.61.", t: ["Python", "scikit-learn", "Backtesting"], h: "projects/nse-stock-prediction/index.html" }
+    ];
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+    var esc = document.createElement("div");
+    function escapeHtml(s) { esc.textContent = s; return esc.innerHTML; }
+    function prefixOf(s) { return s.t === "cmd" ? PROMPT : s.t === "sql" ? MYSQL : ""; }
+
+    // The projects result set rendered under the SELECT — clickable project cards.
+    function projectsHtml() {
+      var rows = PROJECTS.map(function (p, n) {
+        var tags = p.t.map(function (x) { return '<span class="proj-tag">' + escapeHtml(x) + "</span>"; }).join("");
+        return '<a class="term-proj" href="' + p.h + '">' +
+          '<span class="term-proj__id">0' + (n + 1) + "</span>" +
+          '<span class="term-proj__main">' +
+          '<span class="term-proj__title">' + escapeHtml(p.n) + "</span>" +
+          '<span class="term-proj__desc">' + escapeHtml(p.d) + "</span>" +
+          '<span class="proj-tags">' + tags + "</span></span>" +
+          '<span class="term-proj__arrow">&rarr;</span></a>';
+      }).join("");
+      return '<div class="term-result"><div class="term-projects">' + rows + "</div>" +
+        '<div class="term-result__meta">' + PROJECTS.length + " rows in set (0.001 sec)</div></div>";
+    }
+
+    // total characters across all lines (+1 per line = the "enter"/newline beat)
+    var total = 0, i;
+    for (i = 0; i < script.length; i++) total += script[i].x.length + 1;
+
+    // Render the state at `reveal` characters shown. The currently-typing line
+    // gets a (non-blinking) cursor; once everything is shown, the projects result
+    // is rendered and a final prompt with a blinking cursor waits for input.
+    function renderChars(reveal) {
+      var html = "", used = 0, done = reveal >= total, k;
+      for (k = 0; k < script.length; k++) {
+        var s = script[k], len = s.x.length, pfx = prefixOf(s);
+        if (used + len <= reveal) {                       // whole line shown
+          html += '<div class="terminal__line">' + pfx + escapeHtml(s.x) + "</div>";
+          if (s.proj) html += projectsHtml();             // result set under the SELECT
+          used += len + 1;                                // +1 for the newline beat
+          if (used > reveal && !done) {                   // sitting in the newline gap → cursor on its own
+            html += '<div class="terminal__line"><span class="term-cursor"></span></div>';
+            break;
+          }
+        } else {                                          // partially typed line (the live one)
+          var part = s.x.slice(0, Math.max(0, reveal - used));
+          html += '<div class="terminal__line">' + pfx + escapeHtml(part) +
+                  '<span class="term-cursor"></span></div>';
+          break;
+        }
+      }
+      if (done) html += '<div class="terminal__line">' + MYSQL + '<span class="term-cursor is-blink"></span></div>';
+      body.innerHTML = html;
+      body.scrollTop = body.scrollHeight;                 // keep the newest line in view
+    }
+
+    if (reduce) { renderChars(total); return; }           // reduced-motion → show it all
+
+    // Scroll progress. The section slides UP into the sticky window from the
+    // bottom: rect.top travels from +innerHeight (terminal just appearing at the
+    // bottom edge) → 0 (fully pinned) → −(height−innerHeight) (scrolled past).
+    // Printing starts 1/7 of the way through the slide-in (rect.top = 6/7·vh) and
+    // finishes exactly as the terminal reaches the top / fully pins (rect.top = 0).
+    var raf = 0, lastReveal = -1;
+    function progress() {
+      var r = sec.getBoundingClientRect(), vh = window.innerHeight;
+      var startTop = vh * (6 / 7);          // begin printing here, mid slide-in
+      var endTop = vh * 0.14;               // finish slightly before fully pinned at the top
+      var span = startTop - endTop;
+      if (span <= 0) return 0;
+      return Math.min(1, Math.max(0, (startTop - r.top) / span));
+    }
+    function update() {
+      raf = 0;
+      var reveal = Math.round(progress() * total);
+      if (reveal === lastReveal) return;
+      lastReveal = reveal;
+      renderChars(reveal);
+    }
+    function onScroll() { if (!raf) raf = requestAnimationFrame(update); }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    update();
+  })();
 
   /* ---------- Flow journey ---------- */
   /* The flow section's three.js parallax journey lives in flow.js,
