@@ -44,12 +44,19 @@
     //   Phase B (vh → 2vh): once the video fully covers the screen, the Lando zoom-out
     //     applies to the VIDEO — it scales DOWN from centre, 1 → EXIT_MIN_SCALE.
     //   Phase C (2vh → 3vh): the zoomed video rides UP with the page, handing over to
-    //     the flow below. The video plays at its own normal speed throughout — scroll
-    //     only drives the pull-up / zoom / lift, never its playback position.
+    //     the flow below. The video plays at normal speed through the pull-up, then DECELERATES
+    //     with scroll through the zoom-out (slowing from 40% of the zoom, paused by 90%).
     // Purely scroll-linked, so scrolling back up reverses it exactly. The 3D text
     // entrance still plays on load at scroll 0 (no transform on .hero).
     var heroContent = hero.querySelector(".hero__content");
     var heroVid = document.querySelector(".hero-video");  // office video revealed beneath the hero
+    // Scroll-controlled playback: rate ≤ 0 pauses; otherwise play at the given rate (clamped).
+    function setVidPlay(rate) {
+      if (!heroVid) return;
+      if (rate <= 0.001) { if (!heroVid.paused) heroVid.pause(); return; }
+      heroVid.playbackRate = Math.max(0.1, Math.min(rate, 1));
+      if (heroVid.paused) { var pr = heroVid.play(); if (pr && pr.catch) pr.catch(function () {}); }
+    }
     var scrollCue = hero.querySelector(".hero__scroll-btn");  // vanishes (reverse of its entrance) on scroll
     // Header pieces that react to the zoom-out (color flip + shrink-to-edges).
     var hdr        = document.querySelector("header");
@@ -159,6 +166,7 @@
           var zt = Math.max(0, Math.min((y - 0.5 * vh) / (0.5 * vh), 1));
           var ze = zt * zt * (3 - 2 * zt);             // smoothstep
           scale = 1.55 - 0.55 * ze;                    // 1.55 → 1.0
+          setVidPlay(1);                               // full speed through the pull-up
         } else {
           // Phase B EDGE zoom-out (shrinks the whole rectangle, uncovering the marquee around it).
           var pB = Math.max(0, Math.min((y - vh) / vh, 1));
@@ -166,6 +174,11 @@
           scale = 1 - (1 - EXIT_MIN_SCALE) * eB;       // 1 → EXIT_MIN_SCALE (no opacity change)
           grey = eB;                                   // greys MORE the further it recedes (stays grey in phase C)
           blue = Math.max(0, Math.min((eB - 0.5) / 0.5, 1)); // blue tint holds off until HALFWAY through the zoom-out
+          // PLAYBACK decelerates with scroll through the zoom-out: full speed until 80%, then
+          // eases down (gentle at first, steeper toward 90% via the squared ramp) and PAUSES at
+          // 90% of the zoom (and stays paused beyond, into phase C).
+          var dt = (pB - 0.8) / 0.1;                   // 0 at 80% of the zoom → 1 at 90%
+          setVidPlay(pB >= 0.9 ? 0 : (pB <= 0.8 ? 1 : 1 - dt * dt));
         }
         heroVid.style.transformOrigin = "50% 50%";
         heroVid.style.transform = "translateY(" + vTy + "px) scale(" + scale + ")";
