@@ -1004,3 +1004,9 @@ Keep this section updated after every change. Format:
   AFTER the pre-block clears. reduced-motion adds the class immediately (final state).
 - Verified via headless Chrome: pre-threshold = full script typed, no projects; just after threshold
   = pre fading while SELECT holds; settled = pre gone, SELECT at top, 4 cards revealed. node --check OK.
+
+### 2026-06-21 (terminal bg → dark contour-line field)
+- Per user: terminal now uses the dark navy "contour lines" background (the section's own
+  .section-contours canvas, z-index 0) instead of the solid medium-blue fill. styles.css:
+  .terminal background #1d2c54 → transparent so the canvas behind shows through; .terminal__bar
+  bg → rgba(15,22,40,.72) (translucent) to sit on the field. Verified via headless Chrome.
