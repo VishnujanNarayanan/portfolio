@@ -173,7 +173,7 @@
           var eB = pB * pB * (3 - 2 * pB);             // smoothstep
           scale = 1 - (1 - EXIT_MIN_SCALE) * eB;       // 1 → EXIT_MIN_SCALE (no opacity change)
           grey = eB;                                   // greys MORE the further it recedes (stays grey in phase C)
-          blue = Math.max(0, Math.min((eB - 0.5) / 0.5, 1)); // blue tint holds off until HALFWAY through the zoom-out
+          blue = Math.max(0, Math.min((pB - 0.8) / 0.1, 1)); // blue tint ramps only between 80% and 90% of the zoom-out
           // PLAYBACK decelerates with scroll through the zoom-out: full speed until 80%, then
           // eases down (gentle at first, steeper toward 90% via the squared ramp) and PAUSES at
           // 90% of the zoom (and stays paused beyond, into phase C).
@@ -182,14 +182,14 @@
         }
         heroVid.style.transformOrigin = "50% 50%";
         heroVid.style.transform = "translateY(" + vTy + "px) scale(" + scale + ")";
-        // Desaturate + dim toward grey as it recedes (grey, from the start of the zoom), then
-        // re-tint that grey toward BLUE only once HALFWAY through (blue) so it ends matching the
-        // blue-grey contour field (≈ #969ba8). grayscale/brightness ride grey; sepia+hue-rotate+
+        // Desaturate + dim toward grey as it recedes (grey, from the start of the zoom), then re-tint
+        // that grey toward BLUE only between 80% and 90% of the zoom-out (blue), at 0.33 strength so it
+        // ends as a softer blue-grey (≈ #969ba8). grayscale/brightness ride grey; sepia+hue-rotate+
         // saturate (the blue tint) ride blue.
         heroVid.style.filter =
           "grayscale(" + grey + ") brightness(" + (1 - 0.18 * grey).toFixed(3) +
-          ") sepia(" + (0.5 * blue).toFixed(3) + ") hue-rotate(" + (185 * blue).toFixed(1) +
-          "deg) saturate(" + (1 + 0.7 * blue).toFixed(3) + ")";
+          ") sepia(" + (0.33 * blue).toFixed(3) + ") hue-rotate(" + (185 * blue).toFixed(1) +
+          "deg) saturate(" + (1 + 0.33 * blue).toFixed(3) + ")";
       }
       // Scroll cue plays its entrance in reverse the moment scrolling starts.
       if (scrollCue) scrollCue.classList.toggle("is-exiting", y > 0);
@@ -220,6 +220,61 @@
     window.addEventListener("resize", updateHeroExit, { passive: true });
     updateHeroExit();
   }
+
+  /* ---------- Handwritten "checkout my certificates" CTA over the hero video ----------
+     The pen-stroke is laid down by scrubbing stroke-dashoffset against scroll, and the
+     whole layer is given the SAME transform the .hero-video gets, so the writing rides
+     with the (paused, shrunken) video as it recedes and drifts up. Fully reversible:
+     scrolling up un-writes the ink and lowers the layer back. Mirrors the phase B/C math
+     in updateHeroExit (kept in sync by formula, not by sharing state). */
+  (function () {
+    var layer = document.querySelector(".cert-layer");
+    if (!layer) return;
+    // The visible letters are a FILLED path; they're uncovered by a mask made of the traced
+    // centre-line PEN PATH, split into ordered strokes (writing order). We measure each
+    // stroke and reveal them in sequence by cumulative length, so the ink is laid down by a
+    // pen tip travelling each stroke — true letter-by-letter writing, fully reversible.
+    var segs = [].slice.call(layer.querySelectorAll(".cert-cta__seg"));
+    if (!segs.length) return;
+    var MIN = 0.3;                 // EXIT_MIN_SCALE — must match the hero block
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var lens = [], total = 1;
+    function measure() {
+      total = 0;
+      segs.forEach(function (s, i) {
+        var L = 1; try { L = s.getTotalLength() || 1; } catch (e) {}
+        lens[i] = L; total += L;
+        s.style.strokeDasharray = L;
+        s.style.strokeDashoffset = L;     // start fully un-inked
+      });
+    }
+    function update() {
+      var vh = window.innerHeight, y = window.scrollY;
+      // Phase B edge zoom-out (vh→2vh) and phase C ride-up (>2vh), exactly as the video.
+      var pB = Math.max(0, Math.min((y - vh) / vh, 1));
+      var eB = pB * pB * (3 - 2 * pB);
+      var scale = (y < vh) ? 1 : (1 - (1 - MIN) * eB);
+      var vTy = (y < vh) ? (vh - y) : -Math.max(0, y - 2 * vh);
+      layer.style.transform = "translateY(" + vTy + "px) scale(" + scale + ")";
+      // Write progress: starts at the zoom-out midpoint (pB .5) → done as it finishes (pB 1).
+      var p = reduce ? (pB > 0.5 ? 1 : 0) : Math.max(0, Math.min((pB - 0.5) / 0.5, 1));
+      var inked = p * total, acc = 0;
+      segs.forEach(function (s, i) {
+        var lp = Math.max(0, Math.min((inked - acc) / lens[i], 1));
+        // Hide a stroke until its ink reaches it (avoids round-cap dots on un-started strokes).
+        s.style.visibility = lp > 0 ? "visible" : "hidden";
+        s.style.strokeDashoffset = (lens[i] * (1 - lp)).toFixed(2);
+        acc += lens[i];
+      });
+      layer.style.opacity = p > 0.001 ? 1 : 0;
+    }
+    measure();
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", function () { measure(); update(); }, { passive: true });
+    // Re-measure once the SVG has surely laid out (fonts/scale settle).
+    window.addEventListener("load", function () { measure(); update(); });
+  })();
 
   /* ---------- Tool-logo marquee behind the hero (scroll-driven) ---------- */
   var marquee = document.querySelector(".tool-marquee");
