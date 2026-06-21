@@ -150,9 +150,20 @@
         // Y: below the fold (top edge at the hero's bottom) → 0 (full screen) over phase A,
         // locked at 0 through the zoom, then rides up off the top in phase C.
         var vTy = (y < vh) ? (vh - y) : -Math.max(0, y - 2 * vh);
-        var pB = Math.max(0, Math.min((y - vh) / vh, 1));
-        var eB = pB * pB * (3 - 2 * pB);               // smoothstep
-        var scale = 1 - (1 - EXIT_MIN_SCALE) * eB;     // 1 → EXIT_MIN_SCALE (no opacity change)
+        var scale;
+        if (y < vh) {
+          // Phase A CONTENT zoom (a normal camera zoom; object-fit:cover keeps it full-frame):
+          // held zoomed-in 1.55 for the first 50% of the pull-up, then eased back to 1.0 (full
+          // view) between 50% and 100% (reaching 1.0 at the top). Distinct from the edge zoom below.
+          var zt = Math.max(0, Math.min((y - 0.5 * vh) / (0.5 * vh), 1));
+          var ze = zt * zt * (3 - 2 * zt);             // smoothstep
+          scale = 1.55 - 0.55 * ze;                    // 1.55 → 1.0
+        } else {
+          // Phase B EDGE zoom-out (shrinks the whole rectangle, uncovering the marquee around it).
+          var pB = Math.max(0, Math.min((y - vh) / vh, 1));
+          var eB = pB * pB * (3 - 2 * pB);             // smoothstep
+          scale = 1 - (1 - EXIT_MIN_SCALE) * eB;       // 1 → EXIT_MIN_SCALE (no opacity change)
+        }
         heroVid.style.transformOrigin = "50% 50%";
         heroVid.style.transform = "translateY(" + vTy + "px) scale(" + scale + ")";
       }
