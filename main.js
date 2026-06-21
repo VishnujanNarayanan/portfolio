@@ -36,16 +36,20 @@
       }
     }, 1700);
 
-    // Hero exit is a scroll-SCRUBBED zoom-out (Lando-style), in two phases, no fade:
-    //   Phase 1 (0 → ZOOM_END): the fixed hero stays pinned and its content scales
-    //     DOWN (camera pulling back) from 1 to EXIT_MIN_SCALE. It never fades.
-    //   Phase 2 (past ZOOM_END): once the zoom is done the hero un-pins and rides
-    //     UP with the page (translateY tracks scroll) so it scrolls off the top,
-    //     handing over to the flow below.
+    // Hero exit is a scroll-SCRUBBED sequence, in three phases, no fade:
+    //   Phase A (0 → vh): the hero and the video scroll up together as a rigid pair —
+    //     the video (.hero-video) sits directly BELOW the hero with its top edge glued
+    //     to the hero's bottom edge, so it rises into view from below (1:1 with scroll)
+    //     rather than being uncovered in place. No zoom yet.
+    //   Phase B (vh → 2vh): once the video fully covers the screen, the Lando zoom-out
+    //     applies to the VIDEO — it scales DOWN from centre, 1 → EXIT_MIN_SCALE.
+    //   Phase C (2vh → 3vh): the zoomed video rides UP with the page, handing over to
+    //     the flow below. The video plays at its own normal speed throughout — scroll
+    //     only drives the pull-up / zoom / lift, never its playback position.
     // Purely scroll-linked, so scrolling back up reverses it exactly. The 3D text
-    // entrance still plays on load at scroll 0 (scale 1, no transform on .hero).
+    // entrance still plays on load at scroll 0 (no transform on .hero).
     var heroContent = hero.querySelector(".hero__content");
-    var heroImg = hero.querySelector(".hero__bg");  // the (light gradient) image that greys out
+    var heroVid = document.querySelector(".hero-video");  // office video revealed beneath the hero
     var scrollCue = hero.querySelector(".hero__scroll-btn");  // vanishes (reverse of its entrance) on scroll
     // Header pieces that react to the zoom-out (color flip + shrink-to-edges).
     var hdr        = document.querySelector("header");
@@ -85,6 +89,7 @@
     var hireSpan = buildPillReel(glassPill);   // Hire Me letters (__a inherits white in the dark world)
     var giSpan   = buildPillReel(darkPill);    // Get In Touch letters (__a inherits black in the dark world)
     var EXIT_MIN_SCALE = 0.38;      // how far the whole page-rectangle recedes (smaller = more zoom-out)
+    var hdrFlipped = null;          // header flip state — THRESHOLD-fired (not scroll-scrubbed); null so it inits
     // Header THEME for a light(he=0) → dark(he=1) world: nav + Hire-Me text black→white and the
     // dark "Get In Touch" pill inverting (bg #050419→#d0e1eb, text white→black) so it stays legible.
     // Shared so the reel thresholds (flow + blog, via __navLight) can flip the SAME two pills the
@@ -134,50 +139,59 @@
     window.__headerTheme = setHeaderTheme;
     function updateHeroExit() {
       var vh = window.innerHeight;
-      var ZOOM_END = vh;                             // zoom completes over one viewport
       var y = window.scrollY;
-      var p = Math.max(0, Math.min(y / ZOOM_END, 1)); // zoom progress 0 → 1
-      var e = p * p * (3 - 2 * p);                    // smoothstep
-      var scale = 1 - (1 - EXIT_MIN_SCALE) * e;       // 1 → EXIT_MIN_SCALE (no opacity change)
-      // Scale the WHOLE hero so it shrinks as a rectangle from all edges toward the
-      // viewport CENTRE (origin 50% 50%) — the finished image sits dead-centre with an
-      // equal flow-bg gap on every side.
-      var originY = 0.5 * vh;
-      // Phase 2: after the zoom, the hero scrolls up with the page (rides off the top).
-      var lift = Math.max(0, y - ZOOM_END);
+      // Phase A (0 → vh): the hero rides UP 1:1 with scroll (linear, so the video glued
+      // to its bottom edge tracks it exactly). Past vh it's parked off the top.
       if (heroContent) heroContent.style.transform = "";
-      hero.style.transformOrigin = "50% " + originY + "px";
-      hero.style.transform = "translateY(" + (-lift) + "px) scale(" + scale + ")";
-      // The further it zooms out, the greyer the image gets (desaturate + dim toward grey).
-      // Hero background crossfades from the light-blue gradient → a clean grey, so at the
-      // end of the zoom it matches the grey contour lines (deterministic, not a greyscaled blue).
-      if (heroImg) {
-        var ga = 1 - e;                                  // gradient alpha fades out
-        heroImg.style.backgroundColor = "#969ba8";       // blue-grey (theme tint) it lands on
-        heroImg.style.backgroundImage =
-          "linear-gradient(180deg,rgba(236,240,248," + ga + ") 0%,rgba(242,245,250," + ga + ") 55%,rgba(248,250,253," + ga + ") 100%)";
+      hero.style.transform = "translateY(" + (-Math.min(y, vh)) + "px)";
+      // Phases B/C act on the video once it fully covers the screen (y ≥ vh):
+      //   B (vh → 2vh): zoom OUT from the centre (camera pull-back), 1 → EXIT_MIN_SCALE.
+      //   C (2vh → 3vh): ride UP with the page, handing over to the flow below.
+      if (heroVid) {
+        // Y: below the fold (top edge at the hero's bottom) → 0 (full screen) over phase A,
+        // locked at 0 through the zoom, then rides up off the top in phase C.
+        var vTy = (y < vh) ? (vh - y) : -Math.max(0, y - 2 * vh);
+        var scale;
+        if (y < vh) {
+          // Phase A CONTENT zoom (a normal camera zoom; object-fit:cover keeps it full-frame):
+          // held zoomed-in 1.55 for the first 50% of the pull-up, then eased back to 1.0 (full
+          // view) between 50% and 100% (reaching 1.0 at the top). Distinct from the edge zoom below.
+          var zt = Math.max(0, Math.min((y - 0.5 * vh) / (0.5 * vh), 1));
+          var ze = zt * zt * (3 - 2 * zt);             // smoothstep
+          scale = 1.55 - 0.55 * ze;                    // 1.55 → 1.0
+        } else {
+          // Phase B EDGE zoom-out (shrinks the whole rectangle, uncovering the marquee around it).
+          var pB = Math.max(0, Math.min((y - vh) / vh, 1));
+          var eB = pB * pB * (3 - 2 * pB);             // smoothstep
+          scale = 1 - (1 - EXIT_MIN_SCALE) * eB;       // 1 → EXIT_MIN_SCALE (no opacity change)
+        }
+        heroVid.style.transformOrigin = "50% 50%";
+        heroVid.style.transform = "translateY(" + vTy + "px) scale(" + scale + ")";
       }
       // Scroll cue plays its entrance in reverse the moment scrolling starts.
       if (scrollCue) scrollCue.classList.toggle("is-exiting", y > 0);
-      // Hover-reel gate: on the hero (at the very top) the clone stays the SAME colour; the moment
-      // a scroll is detected it flips (CSS drops the currentColor override → --hc takes over).
-      if (hdr) hdr.classList.toggle("is-hero", y <= 0);
+      // Hover-reel gate: through the whole pull-up (y < vh) the header stays in its hero
+      // appearance, so the clone keeps the SAME colour (CSS forces currentColor). It only
+      // flips once the edge zoom-out begins (--hc takes over) — same trigger as the theme below.
+      if (hdr) hdr.classList.toggle("is-hero", y < vh);
 
-      // Header reacts to the zoom-out (driven by the same progress e):
-      //  - text colour flips white → black (opposite colour) as the light flow bg appears;
-      //  - the left nav + right CTAs SHRINK in place, anchored to their page edges,
-      //    instead of the header sliding up and vanishing;
+      // Header reacts to the EDGE zoom-out (phase B), NOT to the initial pull-up. It's
+      // THRESHOLD-fired (a timed flip, not scroll-scrubbed): the moment the video begins
+      // zooming out from the edges (y ≥ vh) it plays its transition once, and reverses when
+      // you scroll back above that line. Same look/speed as before, just one viewport later:
+      //  - text colour flips as the light bg appears (CSS .3s color transition);
+      //  - the left nav + right CTAs SHRINK in place, anchored to their page edges (.3s);
       //  - the dark "Get In Touch" pill inverts its bg (dark → light) so it stays legible.
-      // Header reaches its end state faster — over 2/5 of the zoom scroll distance.
-      var hp = Math.max(0, Math.min(y / (ZOOM_END * 0.4), 1));
-      var he = hp * hp * (3 - 2 * hp);                   // smoothstep
-      // Header colour theme: hero owns it DURING the zoom; past the zoom the reel thresholds
-      // (flow + blog, via window.__navLight → setHeaderTheme) own it, so the two pills flip with
-      // the nav reel and don't get re-frozen to dark-world by every scroll event here.
-      if (y <= ZOOM_END) setHeaderTheme(he);
-      var hs = 1 - 0.12 * he;                            // shrink 1 → 0.88 (subtle) — hero zoom only
-      if (navLeft)  { navLeft.style.transformOrigin  = "left center";  navLeft.style.transform  = "scale(" + hs + ")"; }
-      if (navRight) { navRight.style.transformOrigin = "right center"; navRight.style.transform = "scale(" + hs + ")"; }
+      // While y > 2·vh the flow/blog reel thresholds own the theme (via window.__navLight),
+      // so we only assert it up to the end of the edge zoom.
+      var wantFlip = y >= vh;
+      if (wantFlip !== hdrFlipped) {
+        hdrFlipped = wantFlip;
+        if (y <= 2 * vh) setHeaderTheme(wantFlip ? 1 : 0);   // timed (.3s), not scrubbed
+        var hs = wantFlip ? 0.88 : 1;                        // shrink 1 ↔ 0.88 (subtle)
+        if (navLeft)  { navLeft.style.transition  = "transform .3s var(--ease-default)"; navLeft.style.transformOrigin  = "left center";  navLeft.style.transform  = "scale(" + hs + ")"; }
+        if (navRight) { navRight.style.transition = "transform .3s var(--ease-default)"; navRight.style.transformOrigin = "right center"; navRight.style.transform = "scale(" + hs + ")"; }
+      }
     }
     window.addEventListener("scroll", updateHeroExit, { passive: true });
     window.addEventListener("resize", updateHeroExit, { passive: true });
@@ -231,9 +245,11 @@
     // Vertical position + fade follow scroll; horizontal motion is time-based (constant).
     function updateMarquee() {
       var y = window.scrollY, vh = window.innerHeight;
-      marquee.style.opacity = Math.max(0, Math.min(y / (vh * 0.55), 1));
-      // Phase 1 (still zooming, y < vh): stay put. Phase 2 (zoom done): ride UP with the hero.
-      var lift = Math.max(0, y - vh);
+      // The marquee sits BEHIND the video — hidden during the pull-up (phase A, y < vh),
+      // it fades in as the video zooms out and uncovers it (phase B, vh → 1.55·vh)...
+      marquee.style.opacity = Math.max(0, Math.min((y - vh) / (vh * 0.55), 1));
+      // ...then rides UP with the video as it hands over to the flow (phase C, y > 2vh).
+      var lift = Math.max(0, y - 2 * vh);
       marquee.style.transform = "translate3d(0," + (-lift) + "px,0)";
     }
     var lastT = 0;
