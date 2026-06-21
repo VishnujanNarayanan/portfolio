@@ -957,3 +957,20 @@ Keep this section updated after every change. Format:
   "sql"=mysql>, "out"=none) and the MYSQL prompt span.
 - styles.css: .term-mysql prompt colour; .term-result / .term-projects (2-col grid, 1-col mobile) /
   .term-proj card styling in the terminal's blue palette (reuses .proj-tag). node --check OK.
+
+### 2026-06-21 (project cards restyled to Lando "helmet-grid" reference)
+- Reworked the SELECT result cards to match projects_reference (Lando "Helmets" grid) using its
+  hover animation from lando-css-reference: image-base cards with a NOTCHED-corner SVG frame
+  (base outline + brighter overlay that fades in on hover — same viewBox/path as the ref), a
+  hover image-reveal WIPE (clip-path: ellipse(100% 0% at 50% 0) → ellipse(142% 120% at 50% 0))
+  exposing a blue panel with the description + tags + CTA, base image scale/darken on hover, and a
+  bottom label (title left, 0N index accent right). 4-col grid → 2-col ≤1100px.
+- main.js: PROJECTS gained `img` (mapped to the four images/flow/*.jpg placeholders). projectsHtml()
+  rewritten to emit `.proj-card` markup with frameSvg() (F_BASE/F_OVER path constants). Body split
+  into linesEl + a persistent projEl (built ONCE so card images don't reload/flicker as the typed
+  text re-renders each scroll frame) + tailEl; renderChars() updates linesEl.innerHTML and toggles
+  projEl/tailEl visibility instead of rebuilding the whole body.
+- styles.css: replaced the old flat `.term-proj` list rules with `.proj-card*` (frame/media/img/
+  reveal/label) styles in the blue palette. Verified via headless Chrome over HTTP: 4 cards render
+  with frames, and hover wipes in the description panel + lights the frame blue.
+- NOTE: card images are the flow placeholders (basketball stills) — swap for real project images.
