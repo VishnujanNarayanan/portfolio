@@ -893,46 +893,69 @@
       { t: "sql", x: "SELECT * FROM projects;", proj: true }
     ];
     var PROJECTS = [
-      { n: "Market Data Platform", d: "28-pipeline NSE market-data ingestion layer feeding 12+ datasets into a partitioned store.", t: ["Python", "pandas", "ETL", "SQL"], h: "projects/market-data-pipeline/index.html" },
-      { n: "Product Explorer", d: "Full-stack TypeScript app scraping a book catalog into PostgreSQL, served via Next.js with real-time WebSocket scraping.", t: ["TypeScript", "NestJS", "PostgreSQL", "Redis"], h: "projects/product-explorer/index.html" },
-      { n: "Fraud Transaction Detection", d: "Fraud-detection model on 6.4M transactions — 95% caught at 0.995 ROC-AUC despite a 0.13% fraud rate.", t: ["Python", "scikit-learn", "pandas"], h: "projects/fraud-detection/index.html" },
-      { n: "Minute-Level Stock Prediction", d: "Intraday price-direction system over 9.4M NSE ticks, raising next-minute precision from 0.51 to 0.61.", t: ["Python", "scikit-learn", "Backtesting"], h: "projects/nse-stock-prediction/index.html" }
+      { n: "Market Data Platform", d: "28-pipeline NSE market-data ingestion layer feeding 12+ datasets into a partitioned store.", t: ["Python", "pandas", "ETL", "SQL"], h: "projects/market-data-pipeline/index.html", img: "images/flow/data-collection.jpg" },
+      { n: "Product Explorer", d: "Full-stack TypeScript app scraping a book catalog into PostgreSQL, served via Next.js with real-time WebSocket scraping.", t: ["TypeScript", "NestJS", "PostgreSQL", "Redis"], h: "projects/product-explorer/index.html", img: "images/flow/processing-storage.jpg" },
+      { n: "Fraud Transaction Detection", d: "Fraud-detection model on 6.4M transactions — 95% caught at 0.995 ROC-AUC despite a 0.13% fraud rate.", t: ["Python", "scikit-learn", "pandas"], h: "projects/fraud-detection/index.html", img: "images/flow/ml-analysis.jpg" },
+      { n: "Minute-Level Stock Prediction", d: "Intraday price-direction system over 9.4M NSE ticks, raising next-minute precision from 0.51 to 0.61.", t: ["Python", "scikit-learn", "Backtesting"], h: "projects/nse-stock-prediction/index.html", img: "images/flow/build-ship.jpg" }
     ];
+    // Notched-corner card frame (Lando "helmet-grid" reference): base outline + a
+    // brighter overlay outline that fades in on hover. Same viewBox/path as the ref.
+    var F_BASE = "M8 .5h390.89a7.5 7.5 0 0 1 7.5 7.5v356.983a7.5 7.5 0 0 1-7.5 7.5H263.329a23.502 23.502 0 0 0-18.375 8.849l-16.499 20.695a22.502 22.502 0 0 1-17.593 8.473H8A7.5 7.5 0 0 1 .5 403V8A7.5 7.5 0 0 1 8 .5Z";
+    var F_OVER = "M8 1h390.89a7 7 0 0 1 7 7v356.983a7 7 0 0 1-7 7H263.329a23.999 23.999 0 0 0-18.766 9.038l-16.499 20.694A21.999 21.999 0 0 1 210.862 410H8a7 7 0 0 1-7-7V8a7 7 0 0 1 7-7Z";
+    function frameSvg(cls, d, w) {
+      return '<span class="proj-card__frame ' + cls + '"><svg viewBox="0 0 407 411" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+        '<path d="' + d + '" stroke="currentColor" stroke-width="' + w + '" vector-effect="non-scaling-stroke"/></svg></span>';
+    }
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
     var esc = document.createElement("div");
     function escapeHtml(s) { esc.textContent = s; return esc.innerHTML; }
     function prefixOf(s) { return s.t === "cmd" ? PROMPT : s.t === "sql" ? MYSQL : ""; }
 
-    // The projects result set rendered under the SELECT — clickable project cards.
+    // The projects result set rendered under the SELECT — reference-style cards:
+    // image base, notched frame, hover-reveal wipe (clip-path ellipse), blue accent.
     function projectsHtml() {
       var rows = PROJECTS.map(function (p, n) {
         var tags = p.t.map(function (x) { return '<span class="proj-tag">' + escapeHtml(x) + "</span>"; }).join("");
-        return '<a class="term-proj" href="' + p.h + '">' +
-          '<span class="term-proj__id">0' + (n + 1) + "</span>" +
-          '<span class="term-proj__main">' +
-          '<span class="term-proj__title">' + escapeHtml(p.n) + "</span>" +
-          '<span class="term-proj__desc">' + escapeHtml(p.d) + "</span>" +
-          '<span class="proj-tags">' + tags + "</span></span>" +
-          '<span class="term-proj__arrow">&rarr;</span></a>';
+        return '<a class="proj-card" href="' + p.h + '">' +
+          '<span class="proj-card__media">' +
+            '<img class="proj-card__img" src="' + p.img + '" alt="" loading="lazy">' +
+            '<span class="proj-card__reveal">' +
+              '<span class="proj-card__desc">' + escapeHtml(p.d) + "</span>" +
+              '<span class="proj-tags">' + tags + "</span>" +
+              '<span class="proj-card__cta">View project &rarr;</span>' +
+            "</span>" +
+          "</span>" +
+          frameSvg("is-base", F_BASE, 2) + frameSvg("is-overlay", F_OVER, 2) +
+          '<span class="proj-card__label">' +
+            '<span class="proj-card__title">' + escapeHtml(p.n) + "</span>" +
+            '<span class="proj-card__id">0' + (n + 1) + "</span>" +
+          "</span></a>";
       }).join("");
-      return '<div class="term-result"><div class="term-projects">' + rows + "</div>" +
-        '<div class="term-result__meta">' + PROJECTS.length + " rows in set (0.001 sec)</div></div>";
+      return '<div class="term-projects">' + rows + "</div>" +
+        '<div class="term-result__meta">' + PROJECTS.length + " rows in set (0.001 sec)</div>";
     }
 
     // total characters across all lines (+1 per line = the "enter"/newline beat)
     var total = 0, i;
     for (i = 0; i < script.length; i++) total += script[i].x.length + 1;
 
+    // Body = typed lines + a persistent projects block (built ONCE so the card
+    // images don't reload/flicker as scroll re-renders the text) + the tail prompt.
+    var linesEl = document.createElement("div");
+    var projEl = document.createElement("div"); projEl.className = "term-result"; projEl.style.display = "none"; projEl.innerHTML = projectsHtml();
+    var tailEl = document.createElement("div");
+    body.appendChild(linesEl); body.appendChild(projEl); body.appendChild(tailEl);
+
     // Render the state at `reveal` characters shown. The currently-typing line
-    // gets a (non-blinking) cursor; once everything is shown, the projects result
-    // is rendered and a final prompt with a blinking cursor waits for input.
+    // gets a (non-blinking) cursor; once the SELECT line is fully typed the projects
+    // block shows, then a blinking mysql> prompt waits for input.
     function renderChars(reveal) {
-      var html = "", used = 0, done = reveal >= total, k;
+      var html = "", used = 0, done = reveal >= total, showProj = false, k;
       for (k = 0; k < script.length; k++) {
         var s = script[k], len = s.x.length, pfx = prefixOf(s);
         if (used + len <= reveal) {                       // whole line shown
           html += '<div class="terminal__line">' + pfx + escapeHtml(s.x) + "</div>";
-          if (s.proj) html += projectsHtml();             // result set under the SELECT
+          if (s.proj) showProj = true;                    // result set shows under the SELECT
           used += len + 1;                                // +1 for the newline beat
           if (used > reveal && !done) {                   // sitting in the newline gap → cursor on its own
             html += '<div class="terminal__line"><span class="term-cursor"></span></div>';
@@ -945,8 +968,9 @@
           break;
         }
       }
-      if (done) html += '<div class="terminal__line">' + MYSQL + '<span class="term-cursor is-blink"></span></div>';
-      body.innerHTML = html;
+      linesEl.innerHTML = html;
+      projEl.style.display = showProj ? "" : "none";
+      tailEl.innerHTML = done ? '<div class="terminal__line">' + MYSQL + '<span class="term-cursor is-blink"></span></div>' : "";
       body.scrollTop = body.scrollHeight;                 // keep the newest line in view
     }
 
