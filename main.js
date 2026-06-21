@@ -173,7 +173,8 @@
         // re-tints the result toward blue (≈ the #969ba8 field), saturate sets the tint strength.
         heroVid.style.filter =
           "grayscale(" + grey + ") brightness(" + (1 - 0.18 * grey).toFixed(3) +
-          ") sepia(" + (0.5 * grey).toFixed(3) + ") hue-rotate(185deg) saturate(" + (1 + 0.7 * grey).toFixed(3) + ")";
+          ") sepia(" + (0.5 * grey).toFixed(3) + ") hue-rotate(" + (185 * grey).toFixed(1) +
+          "deg) saturate(" + (1 + 0.7 * grey).toFixed(3) + ")";
       }
       // Scroll cue plays its entrance in reverse the moment scrolling starts.
       if (scrollCue) scrollCue.classList.toggle("is-exiting", y > 0);
