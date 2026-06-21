@@ -676,8 +676,39 @@
 
     var T = 0, lastT = 0, prepStart = 0, latched = false;  // single timed progress 0→1 + last frame stamp; reverse-handoff timer; one-shot latch
     var PREP_MS = 800;                                  // matches the .wpanel flex-basis transition (.8s)
+
+    // ---- Cover-scroll lock --------------------------------------------------
+    // The features section is pulled up 100vh (margin-top:-100svh) and rides OVER
+    // the pinned blog during .writing's second (sticky) 100vh. The panel reveal,
+    // though, is TIMED (DUR s) — so scrolling fast pushes features up over panels
+    // that are still animating. While the reveal is playing we LOCK the scroll the
+    // instant the pin reaches the top (rect.top ≤ 0 = cover-start), freezing in
+    // place, and release it the moment the panels settle — so features can only
+    // begin covering once the animation has finished.
+    var locked = false, lockY = 0;
+    var SCROLL_KEYS = { 32: 1, 33: 1, 34: 1, 35: 1, 36: 1, 38: 1, 40: 1 };  // space,pgup/dn,end,home,up,down
+    function blockScroll(e) { e.preventDefault(); }
+    function blockKeys(e) { if (SCROLL_KEYS[e.keyCode]) e.preventDefault(); }
+    function clampScroll() { if (locked && window.scrollY !== lockY) window.scrollTo(0, lockY); }
+    function engageLock() {
+      if (locked) return; locked = true; lockY = window.scrollY;
+      if (lenis) lenis.stop();
+      window.addEventListener("wheel", blockScroll, { passive: false });
+      window.addEventListener("touchmove", blockScroll, { passive: false });
+      window.addEventListener("keydown", blockKeys, false);
+      window.addEventListener("scroll", clampScroll, { passive: true });  // catch scrollbar drags too
+    }
+    function releaseLock() {
+      if (!locked) return; locked = false;
+      if (lenis) lenis.start();
+      window.removeEventListener("wheel", blockScroll, { passive: false });
+      window.removeEventListener("touchmove", blockScroll, { passive: false });
+      window.removeEventListener("keydown", blockKeys, false);
+      window.removeEventListener("scroll", clampScroll, { passive: true });
+    }
     function render(now) {
       if (window.innerWidth <= 820) {
+        releaseLock();                                   // never lock on mobile (no cover-scroll)
         if (settled !== null) { panels.forEach(function (p, i) {
           ["transition", "transform", "transformOrigin", "clipPath", "flexBasis", "flexGrow", "flexShrink", "height", "boxShadow"].forEach(function (k) { p.style[k] = ""; });
           if (TXT[i].vert) { TXT[i].vert.style.top = ""; TXT[i].vert.style.opacity = ""; }
@@ -713,6 +744,10 @@
       if (triggered) prepStart = 0;                                // re-entering forward → reset
 
       T = clamp(T + (latched ? 1 : -1) * dt / DUR, 0, 1);          // latched → always forward (no scroll-up reversal)
+
+      // Hold the cover-scroll while the reveal is still playing: lock once the pin
+      // reaches the top (rect.top ≤ 0), release the instant the panels settle.
+      if (T < 1 && latched && rect.top <= 0) engageLock(); else if (T >= 1) releaseLock();
 
       if (T >= 1) { setSettled(true); return; }                    // landed → live accordion
       setSettled(false);

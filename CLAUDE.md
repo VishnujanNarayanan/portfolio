@@ -1022,3 +1022,17 @@ Keep this section updated after every change. Format:
   the fixed header and the terminal reveals (is-revealing). Both __navLight and __headerTheme now
   fire together at this one threshold (and reverse together on scroll-up). Added `featuresEl` ref
   near `writingPin`. node --check OK.
+
+### 2026-06-21 (blog cover-scroll waits for the panel reveal to finish)
+- Branch `features-wait-blog-anim`. Bug: the blog (.writing) panel reveal is TIMED (DUR 2.6s,
+  latched), but the features section rides up over the pinned blog purely on scroll (margin-top
+  :-100svh + sticky during .writing's second 100vh). So scrolling fast pushed features up and
+  overlapped panels that were still animating.
+- Fix (main.js, the writing IIFE): added a cover-scroll LOCK. While the reveal is still playing
+  (T<1 && latched) and the pin has reached the top (section rect.top ≤ 0 = cover-start), engageLock()
+  freezes the page in place — lenis.stop() (when Lenis is active) + preventDefault on wheel/touchmove
+  /scroll-keys + a window `scroll` clamp back to lockY (catches scrollbar drags / native/reduced-
+  motion). The instant the panels settle (T≥1) releaseLock() runs (lenis.start() + listeners removed)
+  so features can begin covering. Lock never engages on mobile (releaseLock() in the ≤820 branch; no
+  cover-scroll there) and never for slow scrollers whose reveal finishes before rect.top hits 0.
+  node --check OK.
