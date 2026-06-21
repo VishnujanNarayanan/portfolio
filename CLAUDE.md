@@ -1067,3 +1067,23 @@ Keep this section updated after every change. Format:
 - Left intact: flow.js `bulbLight` (an invisible Three.js PointLight that warms the flow image
   planes). It renders no visible bulb, so the top-right is fully clear; removing it would only darken
   the flow scene. Can be stripped later if a truly complete removal is wanted.
+
+### 2026-06-22 (handwritten "Check out my Certificates" CTA over the hero video)
+- New scroll-driven handwriting CTA on the hero, branch `hero-cert-signature`. A `.cert-layer`
+  (fixed, full-screen) holds an `<a href="#certificates">` (real link text for SR; SVG aria-hidden)
+  with the user-supplied cursive artwork (`images/handwriting_traced.svg`). The letters are FILLED
+  paths; the reveal is a `<mask>` built from the user's TRACED CENTRE-LINE pen path, split into 11
+  ordered strokes (`path3`→`path13` in the trace = true writing order), each `.cert-cta__seg`.
+- Genuine pen-tracking: main.js measures each stroke, reveals them in sequence by cumulative length
+  (stroke dash-offset), so a tip inks each stroke in writing order — not a left-to-right wipe. Mask
+  stroke-width 9 (thin enough to hug the path without bleeding onto nearby later strokes, still full
+  coverage at completion). Hidden until its ink reaches it (kills round-cap dots on un-started strokes).
+- Trigger: scroll-scrubbed against the hero zoom-out, mirroring updateHeroExit's phase B/C math.
+  Hidden until the zoom-out midpoint (pB .5), writes over pB .5→1 (done as the zoom-out finishes),
+  fully reversible (un-writes on scroll-up). The layer takes the SAME translateY()+scale() as the
+  `.hero-video`, so once written it rides up with the paused, shrunken video. prefers-reduced-motion
+  snaps to written. Does not touch the existing hero/header behaviour.
+- Path explored then dropped (all scratch removed): a hand-authored monoline path and a Yellowtail
+  font + thick-stroke mask — both looked like a font / whole-letter wipe, not a pen. The user's
+  traced centre-line gives real per-stroke pen tracking. Asset coords kept in the trace's own
+  338×155 viewBox so fill + centre-line align exactly.
