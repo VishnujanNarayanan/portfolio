@@ -279,6 +279,7 @@
     // zone-1 (dark navy, light-blue lines) at the BOTTOM — the flow's light→dark, frozen
     // vertically. Inserted first so the strips paint on top of it.
     var writingPin = document.querySelector(".writing__pin");
+    var featuresEl = document.querySelector(".features");
     var wcv = null, wctx = null;
     if (writingPin) { wcv = document.createElement("canvas"); wcv.id = "writing-contours"; writingPin.insertBefore(wcv, writingPin.firstChild); wctx = wcv.getContext("2d"); }
     // The content sections AFTER the blog (Selected work / Skills / Services) continue the
@@ -383,7 +384,7 @@
       strokeIso(g);
       g.restore();
     }
-    var t = 0, last = 0, navDark = false, ctaDark = false;   // nav reel vs CTA pills flip at SEPARATE blog thresholds
+    var t = 0, last = 0, navDark = false, ctaDark = false;   // nav reel + CTA pills now flip TOGETHER at the features-hit threshold
     function frame(now) {
       var dt = last ? Math.min((now - last) / 1000, 0.05) : 0; last = now;
       t += dt * 0.5;                                     // drift speed
@@ -422,19 +423,20 @@
         "," + Math.round(lerp(255, 220, lt)) + "," + lerp(0.3, 0.5, lt).toFixed(2) + ")";
       drawContours(ctx, lineCol, bgFill);                // global: blue → inverted dark-blue on light
       if (hctx) drawContours(hctx, "#969ba8");           // hero: same blue-grey as end bg → lines vanish at full zoom
-      // Blog section thresholds (blogTop in viewport space):
-      //  • nav reel re-whitens at 60% scroll progress through the blog
-      //  • CTA pills flip at 7%
-      var t0 = writingPin ? writingPin.getBoundingClientRect().top : 0;
-      var blogProg = (0 - t0) / (H || 1);
-      var navWantDark = blogProg >= 0.60;
-      if (navWantDark !== navDark) {
-        navDark = navWantDark;
+      // Header world flip, handed off from the (light) blog to the (dark) features
+      // section: BOTH the nav reel AND the CTA pills switch together the MOMENT the
+      // features section hits its threshold — rect.top ≤ 0, i.e. when its dark navy
+      // bg reaches/covers the fixed header (the same threshold the terminal reveals
+      // at). Previously nav flipped at blogProg 0.60 and CTA at 0.07 — two separate,
+      // later points; now they're unified to this single features-hit threshold.
+      var fTop = featuresEl ? featuresEl.getBoundingClientRect().top : (H || 1);
+      var wantDark = fTop <= 0;
+      if (wantDark !== navDark) {
+        navDark = wantDark;
         if (window.__navLight) window.__navLight(!navDark, true);
       }
-      var ctaWantDark = blogProg >= 0.07;
-      if (ctaWantDark !== ctaDark) {
-        ctaDark = ctaWantDark;
+      if (wantDark !== ctaDark) {
+        ctaDark = wantDark;
         if (window.__headerTheme) window.__headerTheme(ctaDark ? 1 : 0, true);
       }
       // Blog canvas: solid light blue (end-of-zone-4) + dark indigo lines (no gradient).
