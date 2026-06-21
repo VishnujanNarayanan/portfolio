@@ -935,67 +935,68 @@
         '<div class="term-result__meta">' + PROJECTS.length + " rows in set (0.001 sec)</div>";
     }
 
+    // The SELECT is the last script entry; everything before it is the "pre" block.
+    var selIdx = script.length - 1;
     // total characters across all lines (+1 per line = the "enter"/newline beat)
     var total = 0, i;
     for (i = 0; i < script.length; i++) total += script[i].x.length + 1;
 
-    // Body = typed lines + a persistent projects block (built ONCE so the card
-    // images don't reload/flicker as scroll re-renders the text) + the tail prompt.
-    var linesEl = document.createElement("div");
-    var projEl = document.createElement("div"); projEl.className = "term-result"; projEl.style.display = "none"; projEl.innerHTML = projectsHtml();
-    var tailEl = document.createElement("div");
-    body.appendChild(linesEl); body.appendChild(projEl); body.appendChild(tailEl);
+    // Body layout: preEl (install + monitor lines) → selEl (the SELECT line) →
+    // projEl (project cards, built ONCE so images don't reload/flicker). Phase 2
+    // collapses+fades preEl, easing selEl to the top, and expands+fades in projEl.
+    var preEl = document.createElement("div"); preEl.className = "term-pre";
+    var selEl = document.createElement("div"); selEl.className = "term-sel";
+    var projEl = document.createElement("div"); projEl.className = "term-result"; projEl.innerHTML = projectsHtml();
+    body.appendChild(preEl); body.appendChild(selEl); body.appendChild(projEl);
 
-    // Render the state at `reveal` characters shown. The currently-typing line
-    // gets a (non-blinking) cursor; once the SELECT line is fully typed the projects
-    // block shows, then a blinking mysql> prompt waits for input.
-    function renderChars(reveal) {
-      var html = "", used = 0, done = reveal >= total, showProj = false, k;
+    function lineHtml(pfx, text, cursor) {
+      return '<div class="terminal__line">' + pfx + escapeHtml(text) + (cursor || "") + "</div>";
+    }
+    // Build the typed text at `reveal` chars into preEl (pre-SELECT) + selEl (SELECT).
+    function renderText(reveal) {
+      var pre = "", sel = "", used = 0, done = reveal >= total, k;
       for (k = 0; k < script.length; k++) {
-        var s = script[k], len = s.x.length, pfx = prefixOf(s);
+        var s = script[k], len = s.x.length, pfx = prefixOf(s), into;
         if (used + len <= reveal) {                       // whole line shown
-          html += '<div class="terminal__line">' + pfx + escapeHtml(s.x) + "</div>";
-          if (s.proj) showProj = true;                    // result set shows under the SELECT
-          used += len + 1;                                // +1 for the newline beat
-          if (used > reveal && !done) {                   // sitting in the newline gap → cursor on its own
-            html += '<div class="terminal__line"><span class="term-cursor"></span></div>';
-            break;
-          }
-        } else {                                          // partially typed line (the live one)
+          var cur = "";
+          if (used + len + 1 > reveal && !done) cur = '<span class="term-cursor"></span>'; // in the newline gap
+          into = lineHtml(pfx, s.x, k === selIdx ? '<span class="term-cursor is-blink"></span>' : cur);
+          if (k === selIdx) sel += into; else pre += into;
+          used += len + 1;
+          if (cur) break;
+        } else {                                          // partially typed (live) line
           var part = s.x.slice(0, Math.max(0, reveal - used));
-          html += '<div class="terminal__line">' + pfx + escapeHtml(part) +
-                  '<span class="term-cursor"></span></div>';
+          into = lineHtml(pfx, part, '<span class="term-cursor"></span>');
+          if (k === selIdx) sel += into; else pre += into;
           break;
         }
       }
-      linesEl.innerHTML = html;
-      projEl.style.display = showProj ? "" : "none";
-      tailEl.innerHTML = done ? '<div class="terminal__line">' + MYSQL + '<span class="term-cursor is-blink"></span></div>' : "";
-      body.scrollTop = body.scrollHeight;                 // keep the newest line in view
+      preEl.innerHTML = pre;
+      selEl.innerHTML = sel;
     }
 
-    if (reduce) { renderChars(total); return; }           // reduced-motion → show it all
+    var term = body.closest(".terminal");
 
-    // Scroll progress. The section slides UP into the sticky window from the
-    // bottom: rect.top travels from +innerHeight (terminal just appearing at the
-    // bottom edge) → 0 (fully pinned) → −(height−innerHeight) (scrolled past).
-    // Printing starts 1/7 of the way through the slide-in (rect.top = 6/7·vh) and
-    // finishes exactly as the terminal reaches the top / fully pins (rect.top = 0).
-    var raf = 0, lastReveal = -1;
-    function progress() {
-      var r = sec.getBoundingClientRect(), vh = window.innerHeight;
-      var startTop = vh * (6 / 7);          // begin printing here, mid slide-in
-      var endTop = vh * 0.14;               // finish slightly before fully pinned at the top
-      var span = startTop - endTop;
-      if (span <= 0) return 0;
-      return Math.min(1, Math.max(0, (startTop - r.top) / span));
-    }
+    if (reduce) { renderText(total); term.classList.add("is-revealing"); return; }
+
+    // Scroll model. The section slides UP from the bottom: rect.top travels from
+    // +vh (appearing) → 0 (reaches the top / fully covers) → −(height−vh) (past).
+    //  • Phase 1 is SCROLL-DRIVEN: rect.top 6/7·vh → 0 types the whole script; at
+    //    full cover the last line is `mysql> SELECT * FROM projects;` (no projects).
+    //  • Reaching the top (rect.top ≤ 0) is a THRESHOLD that fires a TIMED (not
+    //    scroll-based) CSS reveal: the pre-lines fade+collapse so SELECT eases to
+    //    the top, then the project cards come in (transition-delay). Scrolling back
+    //    above the threshold reverses it.
+    var raf = 0, lastR = -1, atTop = false;
     function update() {
       raf = 0;
-      var reveal = Math.round(progress() * total);
-      if (reveal === lastReveal) return;
-      lastReveal = reveal;
-      renderChars(reveal);
+      var r = sec.getBoundingClientRect(), vh = window.innerHeight;
+      var typeStart = vh * (6 / 7);
+      var typeT = Math.min(1, Math.max(0, (typeStart - r.top) / (typeStart - 0)));
+      var reveal = Math.round(typeT * total);
+      if (reveal !== lastR) { lastR = reveal; renderText(reveal); }
+      var top = r.top <= 0;                               // threshold: terminal reached the top
+      if (top !== atTop) { atTop = top; term.classList.toggle("is-revealing", top); }
     }
     function onScroll() { if (!raf) raf = requestAnimationFrame(update); }
     window.addEventListener("scroll", onScroll, { passive: true });

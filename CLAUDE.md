@@ -974,3 +974,33 @@ Keep this section updated after every change. Format:
   reveal/label) styles in the blue palette. Verified via headless Chrome over HTTP: 4 cards render
   with frames, and hover wipes in the description panel + lights the frame blue.
 - NOTE: card images are the flow placeholders (basketball stills) — swap for real project images.
+
+### 2026-06-21 (terminal: two-phase — type to full-cover, then fade pre + ease SELECT to top)
+- Extended .features 260vh → 360vh (more scroll room for the new phase-2 motion).
+- FIX: .features__sticky was computing to position:relative (a later base rule
+  ".features__sticky,.standards__container,.faq__container{position:relative}" overrode the sticky),
+  so the terminal never pinned — it scrolled away. Supplemental rule now sets
+  position:sticky;top:0;height:100vh;z-index:1 (wins, being last in source).
+- Two-phase scroll model in terminalDemo():
+  • Phase 1 (rect.top 6/7·vh → 0, the slide-in): type the WHOLE script; at full cover the last
+    line shown is `mysql> SELECT * FROM projects;` and NO projects are visible yet.
+  • Phase 2 (rect.top 0 → −1.15·vh, while pinned): the pre-SELECT block (install + monitor lines)
+    collapses (max-height) + fades (opacity) to nothing while the SELECT line eases to the top and
+    the project cards expand + fade in — one continuous easeInOut motion.
+- Body restructured into preEl (pre-SELECT lines) + selEl (the SELECT line) + projEl (cards, built
+  once). renderText() routes char-revealed lines into pre/sel; applyPhase(bT) drives the collapse/
+  reveal via measured scrollHeight. .term-result margin 0 + .term-projects padding-top:24px so the
+  collapsed (max-height:0) state shows no gap. reduced-motion → final state. Verified all 3 phases
+  via headless Chrome. node --check OK.
+
+### 2026-06-21 (terminal phase-2 → threshold-fired TIMED reveal, not scroll-scrubbed)
+- Per user: reaching the top is a THRESHOLD; phase 2 is no longer scroll-driven. Phase 1 (typing)
+  stays scroll-driven up to full cover. When rect.top ≤ 0 (terminal reaches the top), update()
+  toggles `.terminal.is-revealing`, firing a TIMED CSS reveal; scrolling back above the threshold
+  removes the class and reverses it. Removed the scroll-scrubbed applyPhase()/bT/easeInOut + B_SPAN.
+- Sequencing (projects don't appear until the text has moved up): styles.css drives it via the class
+  — .term-pre collapses (max-height 60vh→0) + fades (opacity) over .6s so SELECT eases to the top;
+  .term-result fades+slides in (opacity/transform) with transition-delay .5s so the cards come in
+  AFTER the pre-block clears. reduced-motion adds the class immediately (final state).
+- Verified via headless Chrome: pre-threshold = full script typed, no projects; just after threshold
+  = pre fading while SELECT holds; settled = pre gone, SELECT at top, 4 cards revealed. node --check OK.
