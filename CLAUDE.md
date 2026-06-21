@@ -1036,3 +1036,26 @@ Keep this section updated after every change. Format:
   so features can begin covering. Lock never engages on mobile (releaseLock() in the ≤820 branch; no
   cover-scroll there) and never for slow scrollers whose reveal finishes before rect.top hits 0.
   node --check OK.
+
+### 2026-06-21 (terminal title bar swipes up + vanishes at the threshold)
+- Branch `fix-features-window-top-bar`. User: when the terminal hits its threshold the mac-style
+  title bar (traffic lights + `vishnu@…:~`) should swipe UP and vanish.
+- styles.css only: `.terminal__bar` gained max-height:64px + overflow:hidden + a transition on
+  transform/opacity/max-height/padding/border-bottom-width (.4–.5s). New rule
+  `.terminal.is-revealing .terminal__bar{transform:translateY(-100%);opacity:0;max-height:0;
+  padding:0;border-bottom-width:0;pointer-events:none}` — fired by the same `.is-revealing` class
+  as phase 2, so it's threshold-timed and reverses when the class is removed. The bar slides up
+  while collapsing so the terminal body reclaims the space.
+- Follow-ups (same branch):
+  • Bar background `rgba(15,22,40,.72)` → solid `#0f1628` so the section's flowy contour-line field
+    no longer shows THROUGH the bar (user: the bar shouldn't have the flowy lines behind it).
+  • SELECT text position: the `.term-pre` collapse (which moves the `mysql> SELECT * FROM projects;`
+    line + cards UP as the install lines fade) is kept — but with the bar gone the content was sliding
+    UNDER the fixed 80px header and overlapping the Projects/Skills/… nav buttons. Fix: on
+    `.is-revealing`, `.terminal__body` gains `padding-top:var(--header-height)` (transitioned), so the
+    moved-up SELECT/cards stop just below the header instead of behind the nav. (Briefly tried a
+    fade-only pre that left SELECT mid-screen — reverted; user wanted it to move up like before, just
+    clear of the header.)
+- Verified via headless screenshots: rest = solid bar visible; is-revealing = bar gone, SELECT risen
+  to just below an 80px header (nav buttons clear, no overlap), cards below.
+- NOT committed/pushed/merged (per user: hold until they say so).

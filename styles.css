@@ -523,14 +523,17 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .features{height:360vh}
 .features__sticky{position:sticky;top:0;height:100vh;z-index:1;align-items:stretch;justify-content:flex-start;padding:0;gap:0}
 .terminal{position:relative;z-index:1;width:100%;height:100vh;display:flex;flex-direction:column;overflow:hidden;border:0;border-radius:0;background:transparent;font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace}
-.terminal__bar{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:11px 16px;background:rgba(15,22,40,.72);border-bottom:1px solid rgba(255,255,255,.08)}
+.terminal__bar{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:11px 16px;max-height:64px;overflow:hidden;background:#0f1628;border-bottom:1px solid rgba(255,255,255,.08);will-change:transform,max-height,opacity;transition:transform .5s cubic-bezier(.4,0,.2,1),opacity .4s ease,max-height .5s cubic-bezier(.4,0,.2,1),padding .5s cubic-bezier(.4,0,.2,1),border-bottom-width .5s linear}
 .terminal__dots{display:flex;gap:8px}
 .terminal__dot{width:12px;height:12px;border-radius:50%}
 .terminal__dot--r{background:#ff5f56}
 .terminal__dot--y{background:#ffbd2e}
 .terminal__dot--g{background:#27c93f}
 .terminal__title{color:#aeb6d6;font-size:13px;letter-spacing:.2px}
-.terminal__body{flex:1 1 auto;overflow:hidden;padding:26px 34px;color:#dfe4f2;font-size:15px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.terminal__body{flex:1 1 auto;overflow:hidden;padding:26px 34px;color:#dfe4f2;font-size:15px;line-height:1.6;white-space:pre-wrap;word-break:break-word;transition:padding-top .5s cubic-bezier(.4,0,.2,1)}
+/* When the bar swipes away, the content moves up — clear the fixed header
+   (var(--header-height)) so SELECT + cards don't slide under the nav buttons. */
+.terminal.is-revealing .terminal__body{padding-top:var(--header-height)}
 .terminal__line{white-space:pre-wrap}
 .term-user{color:#6ee59a;font-weight:600}
 .term-path{color:#6cb0ff}
@@ -547,6 +550,9 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .terminal.is-revealing .term-pre{max-height:0;opacity:0}
 .term-result{margin:0;opacity:0;transform:translateY(16px);will-change:opacity,transform;transition:opacity .55s ease,transform .6s cubic-bezier(.19,1,.22,1)}
 .terminal.is-revealing .term-result{opacity:1;transform:none;transition-delay:.5s}
+/* At the threshold the mac-style title bar swipes UP and collapses (body reclaims
+   the space); reverses when .is-revealing is removed. */
+.terminal.is-revealing .terminal__bar{transform:translateY(-100%);opacity:0;max-height:0;padding-top:0;padding-bottom:0;border-bottom-width:0;pointer-events:none}
 .term-projects{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;max-width:1280px;padding-top:24px}
 .proj-card{position:relative;display:block;aspect-ratio:406.89/411;color:#dfe4f2;isolation:isolate}
 .proj-card__media{position:absolute;inset:0;overflow:hidden}
