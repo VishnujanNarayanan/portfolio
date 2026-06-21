@@ -151,7 +151,7 @@
         // Y: below the fold (top edge at the hero's bottom) → 0 (full screen) over phase A,
         // locked at 0 through the zoom, then rides up off the top in phase C.
         var vTy = (y < vh) ? (vh - y) : -Math.max(0, y - 2 * vh);
-        var scale;
+        var scale, grey = 0;                           // grey = 0 (full colour) → 1 (greyed out)
         if (y < vh) {
           // Phase A CONTENT zoom (a normal camera zoom; object-fit:cover keeps it full-frame):
           // held zoomed-in 1.55 for the first 50% of the pull-up, then eased back to 1.0 (full
@@ -164,9 +164,16 @@
           var pB = Math.max(0, Math.min((y - vh) / vh, 1));
           var eB = pB * pB * (3 - 2 * pB);             // smoothstep
           scale = 1 - (1 - EXIT_MIN_SCALE) * eB;       // 1 → EXIT_MIN_SCALE (no opacity change)
+          grey = eB;                                   // greys MORE the further it recedes (stays grey in phase C)
         }
         heroVid.style.transformOrigin = "50% 50%";
         heroVid.style.transform = "translateY(" + vTy + "px) scale(" + scale + ")";
+        // Desaturate + dim toward a BLUE-grey as it recedes, so the receding video blends into
+        // the blue-grey contour field it shrinks into. grayscale strips colour; sepia+hue-rotate
+        // re-tints the result toward blue (≈ the #969ba8 field), saturate sets the tint strength.
+        heroVid.style.filter =
+          "grayscale(" + grey + ") brightness(" + (1 - 0.18 * grey).toFixed(3) +
+          ") sepia(" + (0.5 * grey).toFixed(3) + ") hue-rotate(185deg) saturate(" + (1 + 0.7 * grey).toFixed(3) + ")";
       }
       // Scroll cue plays its entrance in reverse the moment scrolling starts.
       if (scrollCue) scrollCue.classList.toggle("is-exiting", y > 0);
