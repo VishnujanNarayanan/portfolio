@@ -914,3 +914,99 @@ Keep this section updated after every change. Format:
   updateHeroExit toggles `is-hero` ON only at the very top (scrollY<=0); the moment a scroll is
   detected it drops off and the clone carries the flip colour — no wait for a threshold. styles.css +
   main.js. node --check OK; top render unchanged.
+
+### 2026-06-21 (features grid → animated terminal demo)
+- Replaced the Selected-work project grid inside `.features#projects` with a faux Linux terminal
+  window. The section structure (sticky 100vh + margin-top:-100svh cover-scroll over the pinned
+  blog + its navy `.section-contours` canvas) is unchanged, so the terminal keeps the exact
+  scroll-up-into-sticky cover the grid had. (Considered a scroll-driven video first; user scrapped
+  it for a built component.)
+- index.html: `.features__sticky` now holds `.terminal` (title bar with traffic-light `.terminal__dot`s
+  + `.terminal__title` "vishnu@ASUS-TUF-F16-Vishnu: ~") and an empty `#term-body` filled by JS. Old
+  feature-item markup removed; id="projects" kept for the nav link.
+- styles.css (supplemental): medium-blue window (#1d2c54 body / #16224a bar) per user request, monospace
+  stack, rounded + shadowed, fixed height (min(70vh,640px)); `.features__sticky{align-items:center}`
+  centres it. `.term-user` green / `.term-path` blue prompt; `.term-cursor.is-blink` keyframe. Mobile
+  shrinks font/height. Old `.features .feature-item*` colour rules left in place (now unused, harmless).
+- main.js: new terminalDemo() IIFE. Scripted lines (cmd = typed char-by-char after the prompt; out =
+  printed) reproduce the user's session — `systemctl statius` typo + error, `systemctl status` +
+  systemd error, `service mysql status`, then `apt install mysql-server -y` with a TRIMMED slice of the
+  install output (header, a few Get:/Unpacking/Setting up lines) — body auto-scrolls, then parks at a
+  blinking prompt waiting for the next command. Plays once via IntersectionObserver (threshold .35);
+  prefers-reduced-motion / no-IO renders all lines instantly. HTML-escapes output. node --check OK.
+
+### 2026-06-21 (terminal: full-screen, scroll-driven, trimmed)
+- Terminal now fills the whole sticky window: `.features__sticky` padding/gap → 0, align stretch;
+  `.terminal` width 100% / height 100vh, no radius/border/shadow. Body padding/font bumped (26px/15px).
+- Dropped the three opening commands (systemctl statius / status / service status). Script now starts
+  at `sudo apt install mysql-server -y` and the install output is trimmed to ~12 short lines, ending
+  with a blinking prompt.
+- Printing is now SCROLL-DRIVEN, not time-based: `.features` height → 260vh; terminalDemo() maps the
+  section's pinned scroll progress (−rect.top / (height−innerHeight)) to a character count across all
+  lines and renderChars() draws that many chars (whole lines + the live partially-typed line with a
+  cursor), auto-scrolling the body. Reverses on scroll-up; reduced-motion shows it all at once.
+  rAF-throttled scroll/resize listeners. node --check OK.
+
+### 2026-06-21 (terminal: finishes earlier + SELECT renders project cards)
+- Typing now finishes slightly before the terminal fully pins (progress endTop vh*0 → vh*0.14).
+- Extended the script past the install: `sudo mysql` → monitor welcome → `USE portfolio;` →
+  `SELECT * FROM projects;`. The SELECT line is flagged `proj:true`; renderChars() renders the
+  projects as the query result under it — 4 clickable `.term-proj` cards (id, title, desc, tags,
+  arrow → project page) from a PROJECTS array, plus a "4 rows in set" meta line. Final waiting
+  prompt switched from the bash prompt to the `mysql>` prompt. Added prefixOf() ("cmd"=bash,
+  "sql"=mysql>, "out"=none) and the MYSQL prompt span.
+- styles.css: .term-mysql prompt colour; .term-result / .term-projects (2-col grid, 1-col mobile) /
+  .term-proj card styling in the terminal's blue palette (reuses .proj-tag). node --check OK.
+
+### 2026-06-21 (project cards restyled to Lando "helmet-grid" reference)
+- Reworked the SELECT result cards to match projects_reference (Lando "Helmets" grid) using its
+  hover animation from lando-css-reference: image-base cards with a NOTCHED-corner SVG frame
+  (base outline + brighter overlay that fades in on hover — same viewBox/path as the ref), a
+  hover image-reveal WIPE (clip-path: ellipse(100% 0% at 50% 0) → ellipse(142% 120% at 50% 0))
+  exposing a blue panel with the description + tags + CTA, base image scale/darken on hover, and a
+  bottom label (title left, 0N index accent right). 4-col grid → 2-col ≤1100px.
+- main.js: PROJECTS gained `img` (mapped to the four images/flow/*.jpg placeholders). projectsHtml()
+  rewritten to emit `.proj-card` markup with frameSvg() (F_BASE/F_OVER path constants). Body split
+  into linesEl + a persistent projEl (built ONCE so card images don't reload/flicker as the typed
+  text re-renders each scroll frame) + tailEl; renderChars() updates linesEl.innerHTML and toggles
+  projEl/tailEl visibility instead of rebuilding the whole body.
+- styles.css: replaced the old flat `.term-proj` list rules with `.proj-card*` (frame/media/img/
+  reveal/label) styles in the blue palette. Verified via headless Chrome over HTTP: 4 cards render
+  with frames, and hover wipes in the description panel + lights the frame blue.
+- NOTE: card images are the flow placeholders (basketball stills) — swap for real project images.
+
+### 2026-06-21 (terminal: two-phase — type to full-cover, then fade pre + ease SELECT to top)
+- Extended .features 260vh → 360vh (more scroll room for the new phase-2 motion).
+- FIX: .features__sticky was computing to position:relative (a later base rule
+  ".features__sticky,.standards__container,.faq__container{position:relative}" overrode the sticky),
+  so the terminal never pinned — it scrolled away. Supplemental rule now sets
+  position:sticky;top:0;height:100vh;z-index:1 (wins, being last in source).
+- Two-phase scroll model in terminalDemo():
+  • Phase 1 (rect.top 6/7·vh → 0, the slide-in): type the WHOLE script; at full cover the last
+    line shown is `mysql> SELECT * FROM projects;` and NO projects are visible yet.
+  • Phase 2 (rect.top 0 → −1.15·vh, while pinned): the pre-SELECT block (install + monitor lines)
+    collapses (max-height) + fades (opacity) to nothing while the SELECT line eases to the top and
+    the project cards expand + fade in — one continuous easeInOut motion.
+- Body restructured into preEl (pre-SELECT lines) + selEl (the SELECT line) + projEl (cards, built
+  once). renderText() routes char-revealed lines into pre/sel; applyPhase(bT) drives the collapse/
+  reveal via measured scrollHeight. .term-result margin 0 + .term-projects padding-top:24px so the
+  collapsed (max-height:0) state shows no gap. reduced-motion → final state. Verified all 3 phases
+  via headless Chrome. node --check OK.
+
+### 2026-06-21 (terminal phase-2 → threshold-fired TIMED reveal, not scroll-scrubbed)
+- Per user: reaching the top is a THRESHOLD; phase 2 is no longer scroll-driven. Phase 1 (typing)
+  stays scroll-driven up to full cover. When rect.top ≤ 0 (terminal reaches the top), update()
+  toggles `.terminal.is-revealing`, firing a TIMED CSS reveal; scrolling back above the threshold
+  removes the class and reverses it. Removed the scroll-scrubbed applyPhase()/bT/easeInOut + B_SPAN.
+- Sequencing (projects don't appear until the text has moved up): styles.css drives it via the class
+  — .term-pre collapses (max-height 60vh→0) + fades (opacity) over .6s so SELECT eases to the top;
+  .term-result fades+slides in (opacity/transform) with transition-delay .5s so the cards come in
+  AFTER the pre-block clears. reduced-motion adds the class immediately (final state).
+- Verified via headless Chrome: pre-threshold = full script typed, no projects; just after threshold
+  = pre fading while SELECT holds; settled = pre gone, SELECT at top, 4 cards revealed. node --check OK.
+
+### 2026-06-21 (terminal bg → dark contour-line field)
+- Per user: terminal now uses the dark navy "contour lines" background (the section's own
+  .section-contours canvas, z-index 0) instead of the solid medium-blue fill. styles.css:
+  .terminal background #1d2c54 → transparent so the canvas behind shows through; .terminal__bar
+  bg → rgba(15,22,40,.72) (translucent) to sit on the field. Verified via headless Chrome.
