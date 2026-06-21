@@ -89,6 +89,7 @@
     var hireSpan = buildPillReel(glassPill);   // Hire Me letters (__a inherits white in the dark world)
     var giSpan   = buildPillReel(darkPill);    // Get In Touch letters (__a inherits black in the dark world)
     var EXIT_MIN_SCALE = 0.38;      // how far the whole page-rectangle recedes (smaller = more zoom-out)
+    var hdrFlipped = null;          // header flip state — THRESHOLD-fired (not scroll-scrubbed); null so it inits
     // Header THEME for a light(he=0) → dark(he=1) world: nav + Hire-Me text black→white and the
     // dark "Get In Touch" pill inverting (bg #050419→#d0e1eb, text white→black) so it stays legible.
     // Shared so the reel thresholds (flow + blog, via __navLight) can flip the SAME two pills the
@@ -169,25 +170,28 @@
       }
       // Scroll cue plays its entrance in reverse the moment scrolling starts.
       if (scrollCue) scrollCue.classList.toggle("is-exiting", y > 0);
-      // Hover-reel gate: on the hero (at the very top) the clone stays the SAME colour; the moment
-      // a scroll is detected it flips (CSS drops the currentColor override → --hc takes over).
-      if (hdr) hdr.classList.toggle("is-hero", y <= 0);
+      // Hover-reel gate: through the whole pull-up (y < vh) the header stays in its hero
+      // appearance, so the clone keeps the SAME colour (CSS forces currentColor). It only
+      // flips once the edge zoom-out begins (--hc takes over) — same trigger as the theme below.
+      if (hdr) hdr.classList.toggle("is-hero", y < vh);
 
-      // Header reacts to the zoom-out (driven by the same progress e):
-      //  - text colour flips white → black (opposite colour) as the light flow bg appears;
-      //  - the left nav + right CTAs SHRINK in place, anchored to their page edges,
-      //    instead of the header sliding up and vanishing;
+      // Header reacts to the EDGE zoom-out (phase B), NOT to the initial pull-up. It's
+      // THRESHOLD-fired (a timed flip, not scroll-scrubbed): the moment the video begins
+      // zooming out from the edges (y ≥ vh) it plays its transition once, and reverses when
+      // you scroll back above that line. Same look/speed as before, just one viewport later:
+      //  - text colour flips as the light bg appears (CSS .3s color transition);
+      //  - the left nav + right CTAs SHRINK in place, anchored to their page edges (.3s);
       //  - the dark "Get In Touch" pill inverts its bg (dark → light) so it stays legible.
-      // Header reaches its end state faster — over 2/5 of the zoom scroll distance.
-      var hp = Math.max(0, Math.min(y / (vh * 0.4), 1));
-      var he = hp * hp * (3 - 2 * hp);                   // smoothstep
-      // Header colour theme: hero owns it DURING the zoom; past the zoom the reel thresholds
-      // (flow + blog, via window.__navLight → setHeaderTheme) own it, so the two pills flip with
-      // the nav reel and don't get re-frozen to dark-world by every scroll event here.
-      if (y <= vh) setHeaderTheme(he);
-      var hs = 1 - 0.12 * he;                            // shrink 1 → 0.88 (subtle) — hero zoom only
-      if (navLeft)  { navLeft.style.transformOrigin  = "left center";  navLeft.style.transform  = "scale(" + hs + ")"; }
-      if (navRight) { navRight.style.transformOrigin = "right center"; navRight.style.transform = "scale(" + hs + ")"; }
+      // While y > 2·vh the flow/blog reel thresholds own the theme (via window.__navLight),
+      // so we only assert it up to the end of the edge zoom.
+      var wantFlip = y >= vh;
+      if (wantFlip !== hdrFlipped) {
+        hdrFlipped = wantFlip;
+        if (y <= 2 * vh) setHeaderTheme(wantFlip ? 1 : 0);   // timed (.3s), not scrubbed
+        var hs = wantFlip ? 0.88 : 1;                        // shrink 1 ↔ 0.88 (subtle)
+        if (navLeft)  { navLeft.style.transition  = "transform .3s var(--ease-default)"; navLeft.style.transformOrigin  = "left center";  navLeft.style.transform  = "scale(" + hs + ")"; }
+        if (navRight) { navRight.style.transition = "transform .3s var(--ease-default)"; navRight.style.transformOrigin = "right center"; navRight.style.transform = "scale(" + hs + ")"; }
+      }
     }
     window.addEventListener("scroll", updateHeroExit, { passive: true });
     window.addEventListener("resize", updateHeroExit, { passive: true });
