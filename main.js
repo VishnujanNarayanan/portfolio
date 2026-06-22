@@ -256,17 +256,27 @@
       var pB = Math.max(0, Math.min((y - vh) / vh, 1));
       // Write progress: starts at the zoom-out midpoint (pB .5) → done as it finishes (pB 1).
       var p = reduce ? (pB > 0.5 ? 1 : 0) : Math.max(0, Math.min((pB - 0.5) / 0.5, 1));
+      // The moment the video pauses (97% of the zoom-out) the word is "written": pop the black
+      // outline AND snap every trace fully inked + wide (6) so the calligraphy fills solidly
+      // (the slim pen widths only ink the centre-line, leaving the letters partly hollow).
+      var written = pB >= 0.97;
       var inked = p * total, acc = 0;
       segs.forEach(function (s, i) {
-        var lp = Math.max(0, Math.min((inked - acc) / lens[i], 1));
-        // Hide a stroke until its ink reaches it (avoids round-cap dots on un-started strokes).
-        s.style.visibility = lp > 0 ? "visible" : "hidden";
-        s.style.strokeDashoffset = (lens[i] * (1 - lp)).toFixed(2);
+        if (written) {
+          s.style.visibility = "visible";
+          s.style.strokeDashoffset = 0;
+          s.style.strokeWidth = "6";
+        } else {
+          var lp = Math.max(0, Math.min((inked - acc) / lens[i], 1));
+          // Hide a stroke until its ink reaches it (avoids round-cap dots on un-started strokes).
+          s.style.visibility = lp > 0 ? "visible" : "hidden";
+          s.style.strokeDashoffset = (lens[i] * (1 - lp)).toFixed(2);
+          s.style.strokeWidth = "";   // restore the per-stroke pen widths on scroll-up
+        }
         acc += lens[i];
       });
       layer.style.opacity = p > 0.001 ? 1 : 0;
-      // Pop the black outline in the moment the video pauses (97% of the zoom-out).
-      layer.classList.toggle("is-written", pB >= 0.97);
+      layer.classList.toggle("is-written", written);
     }
     measure();
     update();
