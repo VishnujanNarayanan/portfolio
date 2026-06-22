@@ -45,7 +45,7 @@
     //     applies to the VIDEO — it scales DOWN from centre, 1 → EXIT_MIN_SCALE.
     //   Phase C (2vh → 3vh): the zoomed video rides UP with the page, handing over to
     //     the flow below. The video plays at normal speed through the pull-up, then DECELERATES
-    //     with scroll through the zoom-out (slowing from 40% of the zoom, paused by 90%).
+    //     with scroll through the zoom-out (slowing from 92% of the zoom, paused by 97%).
     // Purely scroll-linked, so scrolling back up reverses it exactly. The 3D text
     // entrance still plays on load at scroll 0 (no transform on .hero).
     var heroContent = hero.querySelector(".hero__content");
@@ -174,11 +174,11 @@
           scale = 1 - (1 - EXIT_MIN_SCALE) * eB;       // 1 → EXIT_MIN_SCALE (no opacity change)
           grey = eB;                                   // greys MORE the further it recedes (stays grey in phase C)
           blue = Math.max(0, Math.min((pB - 0.8) / 0.1, 1)); // blue tint ramps only between 80% and 90% of the zoom-out
-          // PLAYBACK decelerates with scroll through the zoom-out: full speed until 80%, then
-          // eases down (gentle at first, steeper toward 90% via the squared ramp) and PAUSES at
-          // 90% of the zoom (and stays paused beyond, into phase C).
-          var dt = (pB - 0.8) / 0.1;                   // 0 at 80% of the zoom → 1 at 90%
-          setVidPlay(pB >= 0.9 ? 0 : (pB <= 0.8 ? 1 : 1 - dt * dt));
+          // PLAYBACK decelerates with scroll through the zoom-out: full speed until 92%, then
+          // eases down (gentle at first, steeper toward 97% via the squared ramp) and PAUSES at
+          // 97% of the zoom (and stays paused beyond, into phase C).
+          var dt = (pB - 0.92) / 0.05;                 // 0 at 92% of the zoom → 1 at 97%
+          setVidPlay(pB >= 0.97 ? 0 : (pB <= 0.92 ? 1 : 1 - dt * dt));
         }
         heroVid.style.transformOrigin = "50% 50%";
         heroVid.style.transform = "translateY(" + vTy + "px) scale(" + scale + ")";
