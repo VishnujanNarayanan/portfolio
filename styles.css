@@ -589,7 +589,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 /* The cursive letters are a FILLED path, revealed by a mask built from the traced
    centre-line PEN PATH (.cert-cta__seg, ordered by writing order). main.js sequences the
    stroke dash-offsets so a pen tip inks each stroke in turn — scroll-scrubbed, reversible. */
-.cert-cta__fill{fill:#a9cdff;stroke:#000;stroke-width:0;paint-order:stroke;transition:stroke-width .35s ease}
+.cert-cta__fill{fill:#fff;stroke:#000;stroke-width:0;paint-order:stroke;transition:stroke-width .35s ease}
 /* The black outline pops in the moment the video pauses (is-written, set by main.js at zoom-out 97%). */
 .cert-layer.is-written .cert-cta__fill{stroke-width:1.2}
 /* Bleed fix: butt caps (no half-width overshoot past a stroke's ends — was the "crossbar
