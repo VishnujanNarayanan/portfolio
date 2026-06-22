@@ -95,7 +95,7 @@
     }
     var hireSpan = buildPillReel(glassPill);   // Hire Me letters (__a inherits white in the dark world)
     var giSpan   = buildPillReel(darkPill);    // Get In Touch letters (__a inherits black in the dark world)
-    var EXIT_MIN_SCALE = 0.3;       // how far the whole page-rectangle recedes (smaller = more zoom-out)
+    var EXIT_MIN_SCALE = 0.33;      // how far the whole page-rectangle recedes (smaller = more zoom-out)
     var hdrFlipped = null;          // header flip state — THRESHOLD-fired (not scroll-scrubbed); null so it inits
     // Header THEME for a light(he=0) → dark(he=1) world: nav + Hire-Me text black→white and the
     // dark "Get In Touch" pill inverting (bg #050419→#d0e1eb, text white→black) so it stays legible.
@@ -304,7 +304,8 @@
           // (15-19 = the f cluster near the 2nd i-dot, 25 = thick26, 26 = the 27redone pair), so
           // keep their CSS pen width and just fully ink them.
           var di = s.getAttribute("data-i");
-          s.style.strokeWidth = KEEP_PEN.indexOf(di) >= 0 ? "" : (POP_W[di] || "15");
+          var keep = KEEP_PEN.indexOf(di) >= 0 || s.hasAttribute("data-keeppen");
+          s.style.strokeWidth = keep ? "" : (POP_W[di] || "15");
         } else {
           var lp = Math.max(0, Math.min((inked - acc) / lens[i], 1));
           // Hide a stroke until its ink reaches it (avoids round-cap dots on un-started strokes).
