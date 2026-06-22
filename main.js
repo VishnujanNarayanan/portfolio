@@ -256,15 +256,27 @@
       var pB = Math.max(0, Math.min((y - vh) / vh, 1));
       // Write progress: starts at the zoom-out midpoint (pB .5) → done as it finishes (pB 1).
       var p = reduce ? (pB > 0.5 ? 1 : 0) : Math.max(0, Math.min((pB - 0.5) / 0.5, 1));
+      // The moment the video pauses (97% of the zoom-out) the word is "written": pop the black
+      // outline AND snap every trace fully inked + wide (6) so the calligraphy fills solidly
+      // (the slim pen widths only ink the centre-line, leaving the letters partly hollow).
+      var written = pB >= 0.97;
       var inked = p * total, acc = 0;
       segs.forEach(function (s, i) {
-        var lp = Math.max(0, Math.min((inked - acc) / lens[i], 1));
-        // Hide a stroke until its ink reaches it (avoids round-cap dots on un-started strokes).
-        s.style.visibility = lp > 0 ? "visible" : "hidden";
-        s.style.strokeDashoffset = (lens[i] * (1 - lp)).toFixed(2);
+        if (written) {
+          s.style.visibility = "visible";
+          s.style.strokeDashoffset = 0;
+          s.style.strokeWidth = "6";
+        } else {
+          var lp = Math.max(0, Math.min((inked - acc) / lens[i], 1));
+          // Hide a stroke until its ink reaches it (avoids round-cap dots on un-started strokes).
+          s.style.visibility = lp > 0 ? "visible" : "hidden";
+          s.style.strokeDashoffset = (lens[i] * (1 - lp)).toFixed(2);
+          s.style.strokeWidth = "";   // restore the per-stroke pen widths on scroll-up
+        }
         acc += lens[i];
       });
       layer.style.opacity = p > 0.001 ? 1 : 0;
+      layer.classList.toggle("is-written", written);
     }
     measure();
     update();
@@ -274,35 +286,30 @@
     window.addEventListener("load", function () { measure(); update(); });
   })();
 
-  /* ---------- Tool-logo marquee behind the hero (scroll-driven) ---------- */
+  /* ---------- Moving-text marquee behind the hero (scroll-driven, Lando-style) ----------
+     Replaces the old tool-logo marquee: big impact words (my tools/skills as TEXT) scroll
+     horizontally in alternating rows behind the hero video, fading in + riding up exactly as
+     the logos did. Same horizontal-loop mechanics; the children are now <span> words. */
   var marquee = document.querySelector(".tool-marquee");
   if (marquee) {
-    var TOOLS = [
-      "python/python-original", "javascript/javascript-original", "typescript/typescript-original",
-      "react/react-original", "nextjs/nextjs-original", "nodejs/nodejs-original",
-      "nestjs/nestjs-original", "tailwindcss/tailwindcss-original", "docker/docker-original",
-      "postgresql/postgresql-original", "redis/redis-original", "git/git-original",
-      "github/github-original", "amazonwebservices/amazonwebservices-original-wordmark",
-      "vercel/vercel-original", "fastapi/fastapi-original", "pandas/pandas-original",
-      "selenium/selenium-original", "playwright/playwright-original",
-      "pytorch/pytorch-original", "tensorflow/tensorflow-original", "scikitlearn/scikitlearn-original"
-    ];
-    var CDN = "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/";
-    var HALF = Math.ceil(TOOLS.length / 2);
+    // Two rows only, like the reference. Top row = filled darker blue (bold sans); bottom row
+    // = outlined contrasting serif. Each row carries its own word set + font/colour modifier.
     var ROWS = [
-      { dir: -1, speed: 90,  set: TOOLS.slice(0, HALF) },  // top row: first half of the tools
-      { dir:  1, speed: 115, set: TOOLS.slice(HALF) }       // bottom row: the rest (no overlap)
+      { dir: -1, speed: 60, mod: "is-top",
+        set: ["PYTHON", "TYPESCRIPT", "DATA PIPELINES", "FASTAPI", "POSTGRESQL", "PYTORCH", "AWS"] },
+      { dir:  1, speed: 70, mod: "is-bottom",
+        set: ["WEB SCRAPING", "MACHINE LEARNING", "BACKEND APIS", "DOCKER", "PANDAS", "QUANT ANALYSIS"] }
     ];
     var COPIES = 4;                                          // repeats per row → seamless loop
     var rowEls = ROWS.map(function (cfg) {
       var row = document.createElement("div");
-      row.className = "tool-marquee__row";
+      row.className = "tool-marquee__row " + cfg.mod;
       for (var d = 0; d < COPIES; d++) {
         cfg.set.forEach(function (t) {
-          var img = document.createElement("img");
-          img.src = CDN + t + ".svg";
-          img.alt = "";
-          row.appendChild(img);
+          var span = document.createElement("span");
+          span.className = "tool-marquee__word";
+          span.textContent = t;
+          row.appendChild(span);
         });
       }
       marquee.appendChild(row);
@@ -311,7 +318,7 @@
     // Cache each row's EXACT repeat stride = distance from the first item of copy 0 to the
     // first item of copy 1 (includes the inter-item gap). Using scrollWidth/COPIES was off by
     // the missing trailing gap, so the seam didn't line up → a jump at the wrap point.
-    // Only re-measured on load/resize (per-frame measuring caused jitter while logos loaded).
+    // Only re-measured on load/resize (per-frame measuring caused jitter while fonts load).
     function measure() {
       rowEls.forEach(function (r) {
         var a = r.el.children[0], b = r.el.children[r.count];
@@ -343,7 +350,7 @@
     function onResize() { measure(); updateMarquee(); }
     window.addEventListener("scroll", updateMarquee, { passive: true });
     window.addEventListener("resize", onResize, { passive: true });
-    window.addEventListener("load", onResize);          // re-measure once logos affect layout
+    window.addEventListener("load", onResize);          // re-measure once fonts affect layout
     measure();
     updateMarquee();
     requestAnimationFrame(tick);
