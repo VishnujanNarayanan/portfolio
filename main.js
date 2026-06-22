@@ -238,14 +238,37 @@
     if (!segs.length) return;
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var lens = [], total = 1;
+    // The final flourish + the two i-dots keep DRAWING on a timer after the pop (staggered), so
+    // the last bit of the handwriting isn't cut off when the word "pops". data-i in draw order.
+    var TAIL = [42, 45, 43, 44];              // medium43, thick46, dot(i #1), dot(i #2)
+    var TAIL_STAGGER = 220, TAIL_DUR = 320;   // ms between each start / per-stroke draw time
+    function tailIdx(s) { return TAIL.indexOf(+s.getAttribute("data-i")); }  // -1 if not a tail stroke
+    // Strokes that keep their own pen width at the pop (the wide snap would cut them off or spill).
+    var KEEP_PEN = ["15", "16", "17", "18", "19", "25", "26"];
     function measure() {
       total = 0;
       segs.forEach(function (s, i) {
         var L = 1; try { L = s.getTotalLength() || 1; } catch (e) {}
-        lens[i] = L; total += L;
+        lens[i] = L; s._len = L; total += L;
         s.style.strokeDasharray = L;
         s.style.strokeDashoffset = L;     // start fully un-inked
       });
+    }
+    var wasWritten = false, tailStart = 0, tailRAF = 0;
+    // Timed, staggered draw of the tail strokes — runs after the pop, independent of scroll
+    // (so it finishes even if the user has scrolled on past 100%).
+    function animTail() {
+      tailRAF = 0;
+      var now = Date.now(), allDone = true;
+      segs.forEach(function (s) {
+        var k = tailIdx(s); if (k < 0) return;
+        var prog = Math.max(0, Math.min((now - tailStart - k * TAIL_STAGGER) / TAIL_DUR, 1));
+        if (prog < 1) allDone = false;
+        s.style.visibility = prog > 0 ? "visible" : "hidden";
+        s.style.strokeDashoffset = (s._len * (1 - prog)).toFixed(2);
+        s.style.strokeWidth = "";          // the tail keeps its own pen width
+      });
+      if (!allDone) tailRAF = requestAnimationFrame(animTail);
     }
     function update() {
       var vh = window.innerHeight, y = window.scrollY;
@@ -257,19 +280,29 @@
       // Write progress: starts at the zoom-out midpoint (pB .5) → done as it finishes (pB 1).
       var p = reduce ? (pB > 0.5 ? 1 : 0) : Math.max(0, Math.min((pB - 0.5) / 0.5, 1));
       // The moment the video pauses (97% of the zoom-out) the word is "written": pop the black
-      // outline AND snap every trace fully inked + wide (22) so the calligraphy fills solidly
+      // outline AND snap every trace fully inked + wide (15) so the calligraphy fills solidly.
+      // 15 (not wider) keeps the fat bands from spilling into the i-dots + the final-s tip, so
+      // those tail regions stay EMPTY for the timed tail draw below to fill in
       // (the slim pen widths only ink the centre-line, leaving the letters partly hollow).
       var written = pB >= 0.97;
+      // On the pop edge: kick off the timed tail draw; on the way back up, hand the tail back to
+      // scroll control.
+      if (written && !wasWritten && !reduce) { tailStart = Date.now(); if (!tailRAF) tailRAF = requestAnimationFrame(animTail); }
+      if (!written && wasWritten && tailRAF) { cancelAnimationFrame(tailRAF); tailRAF = 0; }
+      wasWritten = written;
       var inked = p * total, acc = 0;
       segs.forEach(function (s, i) {
         if (written) {
+          // Tail strokes are drawn on a timer (animTail) so they finish after the pop — don't
+          // snap them here (unless reduced motion, where everything just settles).
+          if (!reduce && tailIdx(s) >= 0) { acc += lens[i]; return; }
           s.style.visibility = "visible";
           s.style.strokeDashoffset = 0;
-          // thick26 (data-i 25) and the 27redone strokes (data-i 26) draw fine at their own
-          // widths — widening them to 22 cuts them off, so keep their CSS pen width and just
-          // fully ink them.
+          // These strokes draw fine at their own widths — widening them cuts them off or spills
+          // (15-19 = the f cluster near the 2nd i-dot, 25 = thick26, 26 = the 27redone pair), so
+          // keep their CSS pen width and just fully ink them.
           var di = s.getAttribute("data-i");
-          s.style.strokeWidth = (di === "25" || di === "26") ? "" : "22";
+          s.style.strokeWidth = KEEP_PEN.indexOf(di) >= 0 ? "" : "15";
         } else {
           var lp = Math.max(0, Math.min((inked - acc) / lens[i], 1));
           // Hide a stroke until its ink reaches it (avoids round-cap dots on un-started strokes).
