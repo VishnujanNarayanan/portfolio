@@ -257,7 +257,7 @@
       // Write progress: starts at the zoom-out midpoint (pB .5) → done as it finishes (pB 1).
       var p = reduce ? (pB > 0.5 ? 1 : 0) : Math.max(0, Math.min((pB - 0.5) / 0.5, 1));
       // The moment the video pauses (97% of the zoom-out) the word is "written": pop the black
-      // outline AND snap every trace fully inked + wide (6) so the calligraphy fills solidly
+      // outline AND snap every trace fully inked + wide (20) so the calligraphy fills solidly
       // (the slim pen widths only ink the centre-line, leaving the letters partly hollow).
       var written = pB >= 0.97;
       var inked = p * total, acc = 0;
@@ -265,7 +265,7 @@
         if (written) {
           s.style.visibility = "visible";
           s.style.strokeDashoffset = 0;
-          s.style.strokeWidth = "6";
+          s.style.strokeWidth = "20";
         } else {
           var lp = Math.max(0, Math.min((inked - acc) / lens[i], 1));
           // Hide a stroke until its ink reaches it (avoids round-cap dots on un-started strokes).
