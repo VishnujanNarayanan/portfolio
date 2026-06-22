@@ -24,9 +24,9 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
-     inkscape:zoom="14.105793"
-     inkscape:cx="317.81268"
-     inkscape:cy="78.230268"
+     inkscape:zoom="9.9743022"
+     inkscape:cx="335.06103"
+     inkscape:cy="56.595438"
      inkscape:window-width="1920"
      inkscape:window-height="1111"
      inkscape:window-x="-9"
@@ -306,5 +306,15 @@
        d="m 361.69536,48.13625 c 0,0 -38.06947,39.416429 -40.6925,45.300536"
        id="path59"
        inkscape:label="35redone 1" />
+    <path
+       style="fill:none"
+       d="m 239.61786,54.729286 2.62303,-0.850714 3.65099,-2.906608 2.72937,-3.083839 0.17723,-1.630536 -1.4533,-0.354464 -4.25357,2.197679 -3.33197,2.942053 -1.4533,2.9775 0.74437,0.673482 z"
+       id="path60"
+       inkscape:label="circle dot for first i 44" />
+    <path
+       style="fill:none"
+       d="m 329.84764,62.961798 h 50.42959"
+       id="path61"
+       inkscape:label="thick46" />
   </g>
 </svg>
