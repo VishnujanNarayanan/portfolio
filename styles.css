@@ -584,7 +584,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    exact translateY()+scale() the .hero-video gets during the zoom-out, origin centre,
    so the writing shrinks and drifts up locked to the (paused) video rectangle. */
 .cert-layer{position:fixed;inset:0;z-index:2;pointer-events:none;transform-origin:50% 50%;will-change:transform,opacity;opacity:0}
-.cert-cta{position:absolute;left:47%;top:51%;width:min(1000px,84vw);transform:translate(-50%,-50%) rotate(-13deg);pointer-events:auto;-webkit-tap-highlight-color:transparent;cursor:pointer}
+.cert-cta{position:absolute;left:49%;top:51%;width:min(1070px,90vw);transform:translate(-50%,-50%) rotate(-13deg);pointer-events:auto;-webkit-tap-highlight-color:transparent;cursor:pointer}
 .cert-cta__svg{display:block;width:100%;height:auto;overflow:visible;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 /* The cursive letters are a FILLED path, revealed by a mask built from the traced
    centre-line PEN PATH (.cert-cta__seg, ordered by writing order). main.js sequences the
