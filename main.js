@@ -245,6 +245,8 @@
     function tailIdx(s) { return TAIL.indexOf(+s.getAttribute("data-i")); }  // -1 if not a tail stroke
     // Strokes that keep their own pen width at the pop (the wide snap would cut them off or spill).
     var KEEP_PEN = ["15", "16", "17", "18", "19", "25", "26"];
+    // Per-stroke pop width overrides (else the default snap width is used).
+    var POP_W = { "39": "12" };   // thick40
     function measure() {
       total = 0;
       segs.forEach(function (s, i) {
@@ -302,7 +304,7 @@
           // (15-19 = the f cluster near the 2nd i-dot, 25 = thick26, 26 = the 27redone pair), so
           // keep their CSS pen width and just fully ink them.
           var di = s.getAttribute("data-i");
-          s.style.strokeWidth = KEEP_PEN.indexOf(di) >= 0 ? "" : "15";
+          s.style.strokeWidth = KEEP_PEN.indexOf(di) >= 0 ? "" : (POP_W[di] || "15");
         } else {
           var lp = Math.max(0, Math.min((inked - acc) / lens[i], 1));
           // Hide a stroke until its ink reaches it (avoids round-cap dots on un-started strokes).
