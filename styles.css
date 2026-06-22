@@ -590,6 +590,31 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 /* Hovering the CTA (or the video) brings the greyed video back to full colour; the inline,
    scroll-driven filter set in main.js is overridden via !important so colour wins while hovered. */
 .hero-video.is-color{filter:none!important}
+/* Pull-in transition: full-screen overlay above everything (incl. the header). Starts at the
+   hero video's current scaled-down rectangle (transform set inline by main.js), zooms to full
+   screen over the clip's duration, plays once. transform-origin centre mirrors the zoom-out. */
+.pullout-video{position:fixed;inset:0;z-index:50;width:100%;height:100%;object-fit:cover;background:#000;pointer-events:none;transform-origin:50% 50%;opacity:0;visibility:hidden;will-change:transform}
+.pullout-video.is-playing{opacity:1;visibility:visible}
+/* Closing transition: above the gallery (60); zooms it back out to the hero rectangle. */
+.receive-video{position:fixed;inset:0;z-index:70;width:100%;height:100%;object-fit:cover;background:#000;pointer-events:none;transform-origin:50% 50%;opacity:0;visibility:hidden;will-change:transform}
+.receive-video.is-playing{opacity:1;visibility:visible}
+/* Certificate gallery (opens after the pull-in). Its OWN scroll container so it works while
+   the page behind stays locked. Each .cert-slide is sticky full-screen; later slides paint
+   over earlier ones (DOM order) and scroll up to cover them — the features-over-blog stack. */
+.cert-gallery{position:fixed;inset:0;z-index:60;background:#fff;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .5s var(--ease-default)}
+.cert-gallery.is-open{opacity:1;visibility:visible;pointer-events:auto}
+.cert-gallery__scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+/* Back-to-home button, pinned top-right over the slides. */
+.cert-gallery__back{position:absolute;top:24px;right:24px;z-index:2;display:inline-flex;align-items:center;height:var(--btn-height);padding:0 var(--space-md);border-radius:var(--radius-full);background:#0504190d;backdrop-filter:blur(8px);font-family:var(--font-ui);font-size:var(--text-xs);letter-spacing:var(--tracking-wide);text-transform:uppercase;color:var(--color-text);transition:background-color .3s var(--ease-default),color .3s var(--ease-default)}
+@media (pointer:fine){.cert-gallery__back:hover{background:var(--color-highlight);color:var(--color-text-light)}}
+@media (max-width:820px){.cert-gallery__back{top:16px;right:16px}}
+.cert-slide{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#fff}
+.cert-slide__fig{position:relative;display:flex;align-items:center;justify-content:center;width:100vw;height:100vh}
+/* Fit the whole certificate to the screen (no card / no navy surround). */
+.cert-slide__img{display:block;width:100%;height:100%;object-fit:contain;background:#fff}
+/* "Open ↗" caption — opens the original PDF in a new tab (the image is the render). */
+.cert-slide__open{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);white-space:nowrap;padding:8px 16px;border-radius:var(--radius-full);background:#0504190d;backdrop-filter:blur(6px);font-family:var(--font-ui);font-size:var(--text-xs);letter-spacing:var(--tracking-wide);text-transform:uppercase;color:var(--color-text);opacity:.85;transition:opacity .3s var(--ease-default),color .3s var(--ease-default)}
+@media (pointer:fine){.cert-slide__open:hover{opacity:1;color:#4d8bff}}
 .cert-cta__svg{display:block;width:100%;height:auto;overflow:visible;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 /* The cursive letters are a FILLED path, revealed by a mask built from the traced
    centre-line PEN PATH (.cert-cta__seg, ordered by writing order). main.js sequences the

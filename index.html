@@ -72,6 +72,24 @@
   </nav>
 </header>
 
+<!-- Pull-in transition video. Clicking the cert CTA (once it's active) plays this once,
+     zooming IN from the hero video's CURRENT on-screen rectangle to full screen (the reverse
+     of the scroll zoom-out, position-aware). Body-level so it covers the header too. -->
+<video class="pullout-video" src="videos/pullout_animation.mp4" muted playsinline preload="auto" aria-hidden="true"></video>
+
+<!-- Closing transition video: plays when you reach the end of the gallery (or hit Esc / the
+     back button), zooming the gallery back OUT to the hero rectangle it came from. -->
+<video class="receive-video" src="videos/recieve_animation.mp4" muted playsinline preload="auto" aria-hidden="true"></video>
+
+<!-- Certificate gallery: opens once the pull-in finishes. Each certificate is a sticky
+     full-screen slide; scrolling brings the next one up to COVER the previous (the same
+     cover-scroll the features section does over the blog). Slides are built from CERT_IMAGES
+     in main.js — drop the images into images/certificates/ and list them there. -->
+<div class="cert-gallery" aria-hidden="true">
+  <div class="cert-gallery__scroll" data-lenis-prevent></div>
+  <button class="cert-gallery__back" type="button" aria-label="Back to home">Back to home ↩</button>
+</div>
+
 <main>
   <div class="top">
 

@@ -257,11 +257,174 @@
     }
     var onEnter = function () { setHover(true); };
     var onLeave = function () { setHover(false); };
-    if (link) { link.addEventListener("pointerenter", onEnter); link.addEventListener("pointerleave", onLeave); }
+
+    // ---- Pull-IN transition on click: zoom the pullout clip from the hero video's CURRENT
+    // on-screen rectangle (position-aware) to full screen, the reverse of the scroll zoom-out,
+    // playing videos/pullout_animation.mp4 exactly ONCE over its own duration. ----
+    var pullout = document.querySelector(".pullout-video");
+    var receive = document.querySelector(".receive-video");
+    var pullActive = false, pullDone = false, pullRAF = 0;
+    var pullStart = { s: 1, ty: 0 };          // hero rectangle the pull-in came from (closing returns here)
+    var closing = false, closeRAF = 0;
+
+    // ---- Certificate gallery (opens once the pull-in finishes). Each entry is one sticky,
+    // full-screen slide; scrolling brings the next up to cover the previous (features-over-blog).
+    // The certificates are shown as PNGs (rendered from the PDFs, page 1) so they display full
+    // size cleanly; each keeps an "Open ↗" link to the original PDF. ----
+    var CERT_DOCS = [
+      { img: "images/certificates/google-advanced-data-scientist.png", pdf: "images/certificates/GOOGLE ADVANCED DATA SCIENTIST N8G3041EJ7M6.pdf",    title: "Google Advanced Data Scientist" },
+      { img: "images/certificates/google-capstone.png",             pdf: "images/certificates/Google_capstone.pdf",                                  title: "Google Capstone" },
+      { img: "images/certificates/ibm-generative-ai.png",           pdf: "images/certificates/IBM Generative AI Engineering Coursera 8R9Q0WU9IB5G.pdf", title: "IBM Generative AI Engineering" },
+      { img: "images/certificates/dsa-python.png",                  pdf: "images/certificates/Data Structures and Algorithms Using Python.pdf",       title: "Data Structures & Algorithms (Python)" },
+      { img: "images/certificates/intro-database-systems.png",      pdf: "images/certificates/Introduction to Database systems.pdf",                  title: "Introduction to Database Systems" },
+      { img: "images/certificates/modern-cpp.png",                  pdf: "images/certificates/Programming in modern C++.pdf",                         title: "Programming in Modern C++" }
+    ];
+    var gallery = document.querySelector(".cert-gallery");
+    var galleryScroll = gallery && gallery.querySelector(".cert-gallery__scroll");
+    var galleryBuilt = false;
+    function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+    function buildGallery() {
+      if (galleryBuilt || !galleryScroll) return;
+      galleryBuilt = true;
+      galleryScroll.innerHTML = CERT_DOCS.map(function (c, i) {
+        var title = esc(c.title || ("Certificate " + (i + 1)));
+        // encodeURI: the PDF filenames have spaces. The PNG is shown; the link opens the real PDF.
+        return '<div class="cert-slide"><figure class="cert-slide__fig">' +
+          '<img class="cert-slide__img" src="' + encodeURI(c.img) + '" alt="' + title + '" loading="lazy">' +
+          (c.pdf ? '<a class="cert-slide__open" href="' + encodeURI(c.pdf) + '" target="_blank" rel="noopener">Open ' + title + ' ↗</a>' : '') +
+          '</figure></div>';
+      }).join("");
+    }
+    function openCertGallery() {
+      buildGallery();
+      if (gallery) { gallery.classList.add("is-open"); gallery.setAttribute("aria-hidden", "false"); }
+      if (galleryScroll) galleryScroll.scrollTop = 0;
+    }
+    // ---- Closing transition: zoom the gallery back OUT to the hero rectangle it came from while
+    // the receive clip plays. Triggered at the end of the scroll, on Esc, or via the back button. ----
+    function finishClose() {
+      if (!closing) return;
+      closing = false;
+      if (closeRAF) { cancelAnimationFrame(closeRAF); closeRAF = 0; }
+      if (receive) { receive.classList.remove("is-playing"); receive.style.transform = ""; try { receive.pause(); } catch (e) {} }
+      if (pullout) { pullout.classList.remove("is-playing"); pullout.style.transform = ""; try { pullout.pause(); } catch (e) {} }
+      // Scroll was never moved while modal, so just unlock — we're back at the hero exactly as it was.
+      pullDone = false; pullActive = false;
+      lockScroll(false);
+    }
+    function closeCertGallery() {
+      if (!pullDone || closing) return;            // only meaningful while the gallery is open
+      closing = true;
+      var CLOSE_RATE = 2.0;                         // faster than the pull-in → snappier "go back down"
+      if (receive) {
+        receive.classList.add("is-playing");
+        receive.style.transform = "translateY(0) scale(1)";   // start full screen (covers the gallery)
+        try { receive.currentTime = 0; } catch (e) {}
+        receive.playbackRate = CLOSE_RATE;
+        var rp = receive.play(); if (rp && rp.catch) rp.catch(function () {});
+      }
+      if (gallery) { gallery.classList.remove("is-open"); gallery.setAttribute("aria-hidden", "true"); }
+      // Hide the pull-in clip NOW (it's still full-screen at z-50) so it isn't seen behind the
+      // shrinking receive clip — only the hero scene should show around it.
+      if (pullout) { pullout.classList.remove("is-playing"); pullout.style.transform = ""; try { pullout.pause(); } catch (e) {} }
+      var DUR = (((receive && receive.duration) || 1.6) / CLOSE_RATE) * 1000;
+      var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+      function frame(now) {
+        if (!closing) return;
+        var t = Math.max(0, Math.min((now - t0) / DUR, 1));
+        var e = t * t * (3 - 2 * t);               // smoothstep — reverse of the pull-in
+        var s = 1 + (pullStart.s - 1) * e;         // full screen → the hero rectangle's scale
+        var ty = pullStart.ty * e;                 // 0 → the hero rectangle's offset
+        if (receive) receive.style.transform = "translateY(" + ty.toFixed(2) + "px) scale(" + s.toFixed(4) + ")";
+        if (t < 1) closeRAF = requestAnimationFrame(frame); else finishClose();
+      }
+      closeRAF = requestAnimationFrame(frame);
+      if (receive) receive.addEventListener("ended", finishClose, { once: true });
+    }
+    function lockScroll(on) {
+      var L = window.__lenis;
+      if (on) { if (L && L.stop) L.stop(); } else { if (L && L.start) L.start(); }
+      document.documentElement.style.overflow = on ? "hidden" : "";
+    }
+    // Decompose the hero video's live transform (only translateY + uniform scale, no rotation).
+    function heroXf() {
+      if (!heroVid) return { s: 1, ty: 0 };
+      try { var m = new DOMMatrixReadOnly(getComputedStyle(heroVid).transform); return { s: m.a || 1, ty: m.f || 0 }; }
+      catch (e) { return { s: 1, ty: 0 }; }
+    }
+    function playPullout() {
+      if (!pullout || pullActive) return;
+      pullActive = true;
+      setHover(false);
+      lockScroll(true);
+      pullStart = heroXf();                       // remember the hero rectangle (closing returns to it)
+      var start = pullStart;                      // where the image is RIGHT NOW (start of the zoom-in)
+      pullout.classList.add("is-playing");
+      pullout.style.transform = "translateY(" + start.ty + "px) scale(" + start.s.toFixed(4) + ")";
+      var RATE = 1.2;                             // clip speed → shorter zoom-in
+      try { pullout.currentTime = 0; } catch (e) {}
+      pullout.playbackRate = RATE;
+      var pr = pullout.play(); if (pr && pr.catch) pr.catch(function () {});
+      // Drive the zoom on a wall-clock timer (NOT pullout.currentTime) so it starts the instant
+      // you click — currentTime sits at 0 until the clip actually begins decoding, which read as a
+      // delay. The video plays alongside; both finish at ~the same time.
+      var DUR = ((pullout.duration || 1.5) / RATE) * 1000;
+      var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+      function frame(now) {
+        if (!pullActive) return;
+        var t = Math.max(0, Math.min((now - t0) / DUR, 1));
+        var e = t * t * (3 - 2 * t);              // smoothstep — same easing feel as the zoom-out
+        var s = start.s + (1 - start.s) * e;      // current scale → 1 (full screen)
+        var ty = start.ty * (1 - e);              // current offset → 0
+        pullout.style.transform = "translateY(" + ty.toFixed(2) + "px) scale(" + s.toFixed(4) + ")";
+        if (t < 1) pullRAF = requestAnimationFrame(frame); else finishPullout();
+      }
+      pullRAF = requestAnimationFrame(frame);
+      // Settle full-screen and open the gallery — driven by the zoom finishing (reliable, instant);
+      // the clip's own `ended` is a fallback in case it stalls. Scroll stays locked (modal).
+      pullout.addEventListener("ended", finishPullout, { once: true });
+    }
+    function finishPullout() {
+      if (pullDone) return;
+      pullDone = true;
+      if (pullRAF) { cancelAnimationFrame(pullRAF); pullRAF = 0; }
+      if (pullout) pullout.style.transform = "translateY(0) scale(1)";
+      openCertGallery();
+    }
+
+    if (link) {
+      link.addEventListener("pointerenter", onEnter);
+      link.addEventListener("pointerleave", onLeave);
+      link.addEventListener("click", function (e) { if (active) { e.preventDefault(); playPullout(); } });
+    }
     if (heroVid) {
       heroVid.addEventListener("pointerenter", onEnter);
       heroVid.addEventListener("pointerleave", onLeave);
-      heroVid.addEventListener("click", function () { if (active && link) link.click(); });
+      heroVid.addEventListener("click", function () { if (active) playPullout(); });
+    }
+
+    // ---- Close triggers: back button, Esc, and reaching the end of the gallery scroll. ----
+    var backBtn = gallery && gallery.querySelector(".cert-gallery__back");
+    if (backBtn) backBtn.addEventListener("click", closeCertGallery);
+    document.addEventListener("keydown", function (e) {
+      if ((e.key === "Escape" || e.key === "Esc") && pullDone && !closing) closeCertGallery();
+    });
+    if (galleryScroll) {
+      function atBottom() { return galleryScroll.scrollTop + galleryScroll.clientHeight >= galleryScroll.scrollHeight - 2; }
+      // Light resistance at the last certificate: once you've been at the bottom for ARM_MS (~0.1s),
+      // the next scroll-down (or upward swipe) collapses instantly. The tiny delay just stops the
+      // very scroll that reaches the bottom from closing in the same instant.
+      var bottomSince = 0, ARM_MS = 100;
+      galleryScroll.addEventListener("scroll", function () { bottomSince = atBottom() ? (bottomSince || Date.now()) : 0; }, { passive: true });
+      function tryClose() {
+        if (!pullDone || closing || !atBottom()) return;
+        if (!bottomSince) { bottomSince = Date.now(); return; }    // first contact with the bottom — start the 0.1s
+        if (Date.now() - bottomSince >= ARM_MS) closeCertGallery();
+      }
+      galleryScroll.addEventListener("wheel", function (e) { if (e.deltaY > 0) tryClose(); }, { passive: true });
+      var touchY = 0;
+      galleryScroll.addEventListener("touchstart", function (e) { touchY = e.touches[0].clientY; }, { passive: true });
+      galleryScroll.addEventListener("touchmove", function (e) { if ((touchY - e.touches[0].clientY) > 30) tryClose(); }, { passive: true });
     }
     var lens = [], total = 1;
     // The final flourish + the two i-dots keep DRAWING on a timer after the pop (staggered), so
