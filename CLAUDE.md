@@ -1228,3 +1228,26 @@ Keep this section updated after every change. Format:
   next fresh scroll-down (`closeAfterAbsorb`: momAbsorbed && now-armedAt>1ms) collapses. So a fling
   can't carry you out, and it never auto-closes (close is event-driven). Resets on leaving the bottom.
   node --check OK.
+
+### 2026-06-22 (cert write/video: "thin24" threshold → timed completion + pop at the end)
+- Branch `cert-write-image-sync`. Reworked how the handwriting WRITE and the hero VIDEO (image) are
+  coupled. Before: both were scroll-scrubbed over the zoom-out (writing pB .5→1, video zoom/grey),
+  the word "popped" at pB .97, and the last four strokes drew on a SEPARATE post-pop timer (animTail)
+  that could run after you'd scrolled past 100%.
+- Now there is a single THRESHOLD at the stroke "thin24" (= data-i 23; its centre-line path matches
+  the SVG label `thin24`). The scroll-driven pen lays down only the strokes BEFORE thin24 (data-i
+  0..22); the moment the pen reaches thin24 a threshold fires and the REST of the writing (strokes
+  23..45, INCLUDING the four tail strokes) plays as ONE TIMED completion (cT 0→1 over DUR=1100ms),
+  no longer scrubbed by scroll. The word POPS (fills solid + becomes clickable/hoverable) only at the
+  END of that timer — i.e. once the last four strokes finish (no more separate tail timer; animTail/
+  TAIL_STAGGER/TAIL_DUR removed). Fully reversible: scrolling back above the threshold ramps cT→0.
+- The VIDEO is driven off the SAME threshold. updateHeroExit's phase-B now computes `prog`: scroll
+  =pB until the threshold (window.__certWrite.pBThr ≈ 0.807, measured = 0.5+0.5·thrLen/total where
+  thrLen/total≈0.613), then `prog = pBThr + (1-pBThr)·smoothstep(cT)` — so the video's zoom-out, grey,
+  blue tint and 92%→97% deceleration/PAUSE all finish on the cert timer, landing with the last
+  strokes at the pop. The cert IIFE owns the rAF clock and calls window.__updateHeroExit each frame so
+  the video advances even with no scroll; the layer's translateY lift (phase C) stays scroll-driven.
+- main.js: cert IIFE rewritten — measure() also sums thrLen (length of data-i<23); new
+  scrollInk()/render(inkedScroll)/tick()/kickRAF()/update(); window.__certWrite={crossed,t,pBThr}
+  shared with the video; window.__updateHeroExit exposed from the hero IIFE. node --check OK; verified
+  no JS errors on a real http load; threshold length measured in headless Chrome. DUR (1100ms) tunable.
