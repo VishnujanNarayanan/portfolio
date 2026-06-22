@@ -1222,7 +1222,9 @@ Keep this section updated after every change. Format:
   `.cert-gallery__scroll`; (b) ESC key; (c) a new `.cert-gallery__back` "Back to home ↩" button pinned
   top-right (styles.css: pill, blurred faint bg, highlight on hover; mobile inset). node --check OK.
 - Follow-ups: pull-in RATE 1.5→1.2 (slower); closing CLOSE_RATE → 2.0.
-- Last-certificate RESISTANCE: the gesture-gap version was too hard to trigger, so settled on a tiny
-  0.1s gate — a `scroll` listener stamps `bottomSince` on first contact with the bottom; `tryClose`
-  (wheel-down / upward swipe) collapses once you've been at the bottom ≥ARM_MS=100ms. Just enough that
-  the scroll which REACHES the bottom doesn't close in the same instant; any scroll after that does. node --check OK.
+- Last-certificate RESISTANCE (final): non-passive wheel/touchmove listeners `preventDefault` the
+  over-scroll at the bottom to actively STOP the fling/momentum; `momAbsorbed` flips true only once
+  the scroll has been idle for IDLE=120ms (momentum reached 0), recording `armedAt`. After that, the
+  next fresh scroll-down (`closeAfterAbsorb`: momAbsorbed && now-armedAt>1ms) collapses. So a fling
+  can't carry you out, and it never auto-closes (close is event-driven). Resets on leaving the bottom.
+  node --check OK.

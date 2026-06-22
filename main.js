@@ -411,20 +411,38 @@
     });
     if (galleryScroll) {
       function atBottom() { return galleryScroll.scrollTop + galleryScroll.clientHeight >= galleryScroll.scrollHeight - 2; }
-      // Light resistance at the last certificate: once you've been at the bottom for ARM_MS (~0.1s),
-      // the next scroll-down (or upward swipe) collapses instantly. The tiny delay just stops the
-      // very scroll that reaches the bottom from closing in the same instant.
-      var bottomSince = 0, ARM_MS = 100;
-      galleryScroll.addEventListener("scroll", function () { bottomSince = atBottom() ? (bottomSince || Date.now()) : 0; }, { passive: true });
-      function tryClose() {
-        if (!pullDone || closing || !atBottom()) return;
-        if (!bottomSince) { bottomSince = Date.now(); return; }    // first contact with the bottom — start the 0.1s
-        if (Date.now() - bottomSince >= ARM_MS) closeCertGallery();
+      // Resistance at the last certificate. The first over-scroll at the bottom is ABSORBED and the
+      // scroll/momentum is actively STOPPED (preventDefault). "momentum absorbed" flips true only once
+      // the fling reaches 0 (no more wheel events for IDLE ms). After that, the very next scroll-down
+      // (a fresh, separate event) collapses. So a fling can't carry you out, and it never auto-closes.
+      var momAbsorbed = false, armedAt = 0, idleT = 0, IDLE = 120;
+      function reset() { momAbsorbed = false; armedAt = 0; if (idleT) { clearTimeout(idleT); idleT = 0; } }
+      function absorb() {            // stop the scroll; arm only after it's been idle (momentum == 0)
+        if (idleT) clearTimeout(idleT);
+        idleT = setTimeout(function () { momAbsorbed = true; armedAt = Date.now(); idleT = 0; }, IDLE);
       }
-      galleryScroll.addEventListener("wheel", function (e) { if (e.deltaY > 0) tryClose(); }, { passive: true });
+      function closeAfterAbsorb() {  // a fresh scroll once momentum is fully absorbed → collapse
+        if (momAbsorbed && Date.now() - armedAt > 1) { closeCertGallery(); return true; }
+        return false;
+      }
+      galleryScroll.addEventListener("scroll", function () { if (!atBottom()) reset(); }, { passive: true });
+      galleryScroll.addEventListener("wheel", function (e) {
+        if (!pullDone || closing) return;
+        if (e.deltaY < 0) { reset(); return; }        // scrolling UP — always free, clears the resistance
+        if (!atBottom() || e.deltaY <= 0) return;     // not over-scrolling at the end → normal scroll
+        if (closeAfterAbsorb()) return;
+        e.preventDefault(); absorb();                 // over-scroll down at the bottom → absorb + stop
+      }, { passive: false });
       var touchY = 0;
       galleryScroll.addEventListener("touchstart", function (e) { touchY = e.touches[0].clientY; }, { passive: true });
-      galleryScroll.addEventListener("touchmove", function (e) { if ((touchY - e.touches[0].clientY) > 30) tryClose(); }, { passive: true });
+      galleryScroll.addEventListener("touchmove", function (e) {
+        if (!pullDone || closing) return;
+        var up = touchY - e.touches[0].clientY;       // >0 = scrolling toward the bottom; <0 = scrolling up
+        if (up < 0) { reset(); return; }              // swiping back up — always free
+        if (!atBottom() || up <= 12) return;
+        if (closeAfterAbsorb()) return;
+        e.preventDefault(); absorb();
+      }, { passive: false });
     }
     var lens = [], total = 1;
     // The final flourish + the two i-dots keep DRAWING on a timer after the pop (staggered), so
