@@ -584,6 +584,9 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    exact translateY()+scale() the .hero-video gets during the zoom-out, origin centre,
    so the writing shrinks and drifts up locked to the (paused) video rectangle. */
 .cert-layer{position:fixed;inset:0;z-index:2;pointer-events:none;transform-origin:50% 50%;will-change:transform,opacity;opacity:0}
+/* During the gallery collapse the handwritten "Certificates" CTA is lifted ABOVE the receive clip
+   (z 70) and faded in around the mid of the zoom-out (opacity driven inline by main.js). */
+.cert-layer.is-collapsing{z-index:80}
 .cert-cta{position:absolute;left:49%;top:51%;width:min(1040px,87vw);transform:translate(-50%,-50%) rotate(-13deg);pointer-events:none;-webkit-tap-highlight-color:transparent;cursor:pointer}
 /* Clickable/hoverable only from ~90% of the hero zoom-out onward (is-active, set by main.js). */
 .cert-layer.is-active .cert-cta{pointer-events:auto}
@@ -602,7 +605,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    over earlier ones (DOM order) and scroll up to cover them — the features-over-blog stack. */
 .cert-gallery{position:fixed;inset:0;z-index:60;background:#fff;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .5s var(--ease-default)}
 .cert-gallery.is-open{opacity:1;visibility:visible;pointer-events:auto}
-.cert-gallery__scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.cert-gallery__scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 /* Back-to-home button, pinned top-right over the slides. */
 .cert-gallery__back{position:absolute;top:24px;right:24px;z-index:2;display:inline-flex;align-items:center;height:var(--btn-height);padding:0 var(--space-md);border-radius:var(--radius-full);background:#0504190d;backdrop-filter:blur(8px);font-family:var(--font-ui);font-size:var(--text-xs);letter-spacing:var(--tracking-wide);text-transform:uppercase;color:var(--color-text);transition:background-color .3s var(--ease-default),color .3s var(--ease-default)}
 @media (pointer:fine){.cert-gallery__back:hover{background:var(--color-highlight);color:var(--color-text-light)}}
@@ -611,6 +614,8 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .cert-slide__fig{position:relative;display:flex;align-items:center;justify-content:center;width:100vw;height:100vh}
 /* Fit the whole certificate to the screen (no card / no navy surround). */
 .cert-slide__img{display:block;width:100%;height:100%;object-fit:contain;background:#fff}
+.cert-slide--end{padding:0;background:#000}
+.cert-slide__loop{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
 /* "Open ↗" caption — opens the original PDF in a new tab (the image is the render). */
 .cert-slide__open{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);white-space:nowrap;padding:8px 16px;border-radius:var(--radius-full);background:#0504190d;backdrop-filter:blur(6px);font-family:var(--font-ui);font-size:var(--text-xs);letter-spacing:var(--tracking-wide);text-transform:uppercase;color:var(--color-text);opacity:.85;transition:opacity .3s var(--ease-default),color .3s var(--ease-default)}
 @media (pointer:fine){.cert-slide__open:hover{opacity:1;color:#4d8bff}}
