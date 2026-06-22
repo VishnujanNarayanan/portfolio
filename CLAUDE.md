@@ -1087,3 +1087,41 @@ Keep this section updated after every change. Format:
   font + thick-stroke mask — both looked like a font / whole-letter wipe, not a pen. The user's
   traced centre-line gives real per-stroke pen tracking. Asset coords kept in the trace's own
   338×155 viewBox so fill + centre-line align exactly.
+
+### 2026-06-22 (cert CTA → new ballet-script artwork + bleed fix, branch cert-text-fill)
+- Swapped the cert handwriting artwork to `images/Certificates_ballet_traced.svg` (viewBox
+  397×192). path1 = the filled ballet-script "Certificates" (→ `.cert-cta__fill`); the `Trace`
+  group's path2→path12 = 11 ordered centre-line pen strokes (→ `.cert-cta__seg`). Rebuilt the
+  inline SVG mask in index.html from the file (one-shot splice script, removed after).
+- Fixed the reported reveal BLEED (thick mask line uncovering a neighbour's fill early — crossbar
+  spilling past the t-stem, adjacent lines filling before the pen reached them). User chose "keep
+  the filled calligraphy" over a monoline pen. Two changes, no JS edit (main.js's seg-sequencing is
+  width-agnostic):
+  • `stroke-linecap:round` → `butt` on every `.cert-cta__seg` — removes the half-width (~4.5u)
+    round-cap blob that overshot each stroke's endpoints (the "crossbar bleeds beyond the stem").
+  • per-stroke reveal width via `--ink-w` (styles.css): main strokes 9, the four thin
+    connector/cross bars + short ticks (path9–path12, marked `data-thin`) 4.5 — a narrow band so
+    those long bars can't reveal the stems they cross over. Approximates a "nearest centre-line owns
+    the ink" partition; tune via `--ink-w`.
+- Verified by rendering the real markup in headless Chrome at p=1/0.45/0.7: full reveal is fully
+  covered (no gaps), and mid-reveal writes "Cert"→"Certifi" cleanly in pen order with no downstream
+  bleed and no crossbar overshoot. (`.cert-cta` still rotate(-13deg); kept from the old artwork.)
+
+### 2026-06-22 (cert mask → per-stroke thickness artwork, finer anti-bleed)
+- Swapped the reveal mask to the new `images/Certificates_ballet_thick_thin.svg` (viewBox 397×192).
+  The filled "Certificates" calligraphy (path1 → `.cert-cta__fill`) is IDENTICAL to the old artwork,
+  so the fill markup is unchanged; only the centre-line TRACE changed. The new `trace` layer has 46
+  ordered pen strokes (was 11), each Inkscape-LABELLED with its local thickness (Thin1/Thick2/
+  thin_to_thick6/medium43/…) so a stroke's reveal band can hug just its own region and not spill
+  onto a neighbouring letter's fill at intersections (the t/f crossbars, e loops the user called out).
+- index.html: regenerated the `<mask id="certInk">` segments from the file (one-shot Python splice,
+  document order = writing order). Each `.cert-cta__seg` now carries `data-w="thin|medium|thick"`,
+  classified from its label (transitions like thin_to_thick → medium; "think14" typo → thick; circle
+  dots → thin). 46 segs: 13 thin / 12 medium / 21 thick. main.js cert sequencing is unchanged — it's
+  width- and count-agnostic (cumulative getTotalLength over all `.cert-cta__seg`), so it just works.
+- styles.css: replaced the single `[data-thin]` rule with a 3-tier width map —
+  `[data-w=thin]{--ink-w:4.5}` / `medium{8}` / `thick{12}`, default 8. Plus a hairline override for the
+  opening flourish `[data-i="0"]{--ink-w:3}` (Thin1 = the big looping pen-in on the C; user wanted its
+  start even thinner). butt caps kept.
+- Verified the full reveal (p=1) in headless Chrome over file://: clean "Certificates", every glyph
+  fully covered, no inter-letter bleed and no crossbar overshoot.
