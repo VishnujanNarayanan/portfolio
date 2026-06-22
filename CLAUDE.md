@@ -1296,3 +1296,141 @@ Keep this section updated after every change. Format:
   popped (cT≥1) it SNAPS with hover instead. main.js applyColor(): amt = animating ? hoverAmt :
   (hovering?1:0), then fill = mixFill(amt·min(cT,1)). (Video unchanged — always a snap, 100%+ only.)
   node --check OK.
+
+### 2026-06-22 (cert gallery: diagnosed the spam-no-collapse bug, then replaced absorption with a looping collapse end-slide)
+- DIAGNOSIS (the reported bug — at the last cert, spamming scroll-downs never collapsed; waiting 2–3s
+  then scrolling worked but felt random): the old resistance armed via `absorb()` which did
+  `clearTimeout(idleT)` + a fresh 120ms timer on EVERY wheel/touch event, so `momAbsorbed` only
+  latched after a full 120ms with NO events. Continuous input — a momentum fling tail, rapid mouse-
+  wheel spam, or even one smooth-scroll notch's event burst — kept resetting the timer, so it never
+  armed (spam → absorbs forever). Waiting let the stream go silent → armed; "random" = the variable
+  momentum tail + the `scroll` handler's `reset()` firing on any sub-pixel `!atBottom()` wobble
+  (no `overscroll-behavior`). [Interim fix built then superseded below: a set-once `armedAt` + GRACE
+  window. Per the user it was removed in favour of the end-slide model.]
+- NEW BEHAVIOUR (user decision: "Scroll-down, no resistance"): added a 7th, special gallery slide —
+  `.cert-slide--end` containing `.cert-slide__loop`, a muted/loop/autoplay `<video>` of the collapse
+  clip (videos/recieve_animation.mp4). It cover-scrolls up like any certificate and loops "over and
+  over". Reaching the bottom (it fully covered) and scrolling DOWN (or swiping up past the end)
+  collapses the gallery IMMEDIATELY — no absorption/grace at all (wheel/touch listeners are now
+  passive, just `if (deltaY>0 && atBottom()) closeCertGallery()`).
+- "Close from where the video is playing, different every time": closeCertGallery() seeds the
+  body-level `.receive-video` from `loopVid.currentTime` (instead of `currentTime=0`), so the closing
+  zoom-out CONTINUES the collapse clip from whatever frame the loop is on (you land on the end slide
+  at a different loop position each visit → different start frame every time). `receive.loop=true`
+  during the close so it never ENDS mid-zoom; `playbackRate=1` (matches the loop → no speed jump);
+  the zoom DUR is decoupled to a fixed 700ms; the old `ended`→finishClose listener is removed;
+  finishClose() resets `receive.loop=false`. openCertGallery() calls `loopVid.play()` (free-running,
+  no currentTime reset). loopVid captured in buildGallery().
+- styles.css: `.cert-slide--end{padding:0;background:#000}` + `.cert-slide__loop{position:absolute;
+  inset:0;width/height:100%;object-fit:cover;background:#000}` — full-screen `cover` matching the
+  `.receive-video` framing so the slide→close hand-off lines up. Also kept `overscroll-behavior:
+  contain` on `.cert-gallery__scroll` (belt-and-suspenders against scroll chaining).
+- Verified: node --check OK; no orphaned refs to the removed absorb/grace code; end-slide markup
+  balanced; headless load over HTTP has no JS errors. The video autoplay/loop + the seamless
+  frame-continuation hand-off + the zoom-out are visual and need a real-GPU browser to confirm
+  (headless can't composite <video>/WebGL, per the standing caveat) — worth an eyeball on whether the
+  receive clip's seek shows any flash at the hand-off and whether 1× during the 700ms zoom reads right.
+
+### 2026-06-22 (cert close: collapse plays from start, freezes on last frame; scroll-back plays hero from start)
+- User: don't remember the frame the gallery was closed at — remember only the rectangle position;
+  freeze the collapse on its LAST frame as the new pause image; scrolling backward plays the hero
+  video from the start.
+- main.js cert IIFE:
+  • closeCertGallery() no longer seeds `receive.currentTime` from `loopVid.currentTime` — it starts the
+    receive (collapse) clip from 0 and sets `receive.loop=false` (so it ENDS and holds its last frame).
+    pullStart (the hero rectangle) is still captured/used as the zoom-out target — only the rectangle
+    position is remembered.
+  • finishClose() no longer hides the receive clip / hands back to the live hero video. It pauses the
+    clip IN PLACE — on whatever frame the 700ms zoom-out ENDED on (NOT the video's final frame, so it's
+    dynamic/different each time per real play+decode timing) — and parks it at the hero rectangle
+    (pullStart transform) with `.is-playing` kept → that frozen frame is the new pause image. It does
+    NOT touch the hero video here.
+  • New armHeroHandoff()/heroHandoff()/disarmHeroHandoff(): after a close, scroll/wheel/touch listeners
+    are armed but only fire on a BACKWARD (upward) scroll — wheel deltaY<0, touch finger-down, or scrollY
+    dropping below the armed baseline (forward/sideways events just keep the frozen frame). On a backward
+    scroll it removes the frozen collapse frame, resets the hero video to currentTime 0, and calls
+    window.__updateHeroExit() — so the real hero video is revealed and plays forward from the start as the
+    zoom reverses. playPullout() calls disarmHeroHandoff() on re-open so the frozen frame can't linger.
+- buildGallery() comment updated (no more loopVid.currentTime seeding). node --check OK. Visual hand-off
+  (frozen collapse last frame ↔ hero frame 0) needs a real-GPU browser to confirm, per the standing caveat.
+
+### 2026-06-22 (cert close: freeze the zoom-out's end frame, dismiss on ANY scroll, CTA text fades in mid-collapse)
+- Three follow-ups on the collapse close:
+  • The pause is no longer the VIDEO's last frame. finishClose() just pauses the receive clip IN PLACE
+    on whatever frame the 700ms zoom-out ended on (dynamic, different each time) — removed the
+    seek-to-(duration−0.04). No cut.
+  • The frozen frame is now dismissed on ANY scroll (forward OR backward), not just backward. Removed the
+    direction gate in heroHandoff (and the wheel/touch/scroll baseline tracking + touchstart listener);
+    any scroll/wheel/touchmove drops the frozen frame, resets the hero video to currentTime 0, and reveals
+    it via window.__updateHeroExit(). (Fixes the frozen frame lingering ~2s on a downward scroll.)
+  • Around the MIDPOINT of the collapse the handwritten "Certificates" CTA (.cert-layer) fades in ON TOP
+    of the receive clip: the close frame loop adds `.cert-layer.is-collapsing` (styles.css: z-index 80,
+    above the receive clip's 70) and drives layer opacity 0→1 over the second half of the zoom (t≥0.5).
+    It stays on the frozen pause frame; disarmHeroHandoff() removes `.is-collapsing` on the next scroll so
+    the cert IIFE's render() resumes normal z-index/opacity. node --check OK.
+
+### 2026-06-22 (branch cert-collapse-frame-behavior: frozen-frame lift/hover/gradient + CTA position fix)
+- Branch `cert-collapse-frame-behavior`. Reworked the post-collapse FROZEN pause-frame so it behaves
+  like a real paused hero, per the user:
+  • FORWARD scroll no longer dismisses the frozen frame. It rides UP with the cert text (liftFrozen()
+    lifts the receive clip by the same scroll delta the CTA gets from render()'s phase-C lift — both
+    move 1:1, staying coincident). Only a BACKWARD scroll swaps back to the REAL hero video (reset to
+    currentTime 0, revealed via __updateHeroExit) — heroHandoff() now compares scrollY to lastHandoffY
+    for direction instead of dismissing on any scroll.
+  • HOVER on the frozen frame (the receive clip, pointer-events flipped to auto, OR the CTA link)
+    re-colours it (snap to true colour); leaving returns it to grey+blue. setFrozenHover() + a window
+    pointermove tracker (lastPX/lastPY) + pointerOverFrame() so finishClose can detect a stationary
+    hover at the END of the collapse (pointerenter won't fire then) and snap to colour if hovered.
+  • COLLAPSE animation now carries the SAME grey + blue "blush" filter as the hero zoom-out: new
+    vidFilter(grey,blue,colorOn) replicates updateHeroExit's grayscale/brightness/sepia/hue-rotate/
+    saturate formula; the close frame loop ramps grey/blue with the zoom progress e (colour → grey+blue
+    as it recedes), and the frozen frame holds grey+blue (or colour if hovered).
+  • CTA TEXT POSITION FIX: an earlier attempt forced the CTA to translateY(0) on the frozen frame,
+    which put it "out of place." Removed that override — scroll is locked at the click position, so
+    render() already left the CTA transform at the remembered click spot. The CTA now appears exactly
+    where it was when the gallery was opened, and (since render() drives it on scroll) lifts in lockstep
+    with the frame on forward scroll.
+- finishClose() now sets frozen=true/freezeY and keeps the receive clip visible+hoverable instead of
+  hiding it; dismissFrozen() (replaces disarmHeroHandoff, called from playPullout on re-open) tears it
+  all down. Confirmed .cert-layer is a sibling of .hero (no transformed ancestor), so .is-collapsing's
+  z-index 80 correctly sits above the receive clip's 70. node --check OK. Visual behaviour (video
+  compositing/hover/lift) needs a real-GPU browser to confirm, per the standing headless caveat.
+- Follow-up — the switch to the hero video is now gated on the 97% PAUSE THRESHOLD, not the first
+  backward scroll. New heroProg() mirrors updateHeroExit's phase-B `prog` (= pBThreshold + (1−pBThr)·
+  smoothstep(cT) while crossed, else pBNow()). heroHandoff() keeps the frozen frame while heroProg() ≥
+  HERO_RESUME (0.97) — the whole paused zone — and only calls dismissFrozen()+reveal-hero (currentTime
+  0) once a backward scroll drops it below 0.97 (where the office video resumes playing). Forward scroll
+  keeps prog at 1 (cT ramps/stays 1), so it never switches — it just lifts the frozen frame. Removed the
+  old lastHandoffY direction check. node --check OK.
+- Fix — the CTA text was stuck BLUE after a collapse: if the cursor was over the CTA during the closing
+  zoom, onEnter set hovering=true, and once frozen the frozen-mode hover handlers never reset it, so
+  applyColor() kept painting it blue. Now applyColor() uses frozenHover (not hovering) while frozen →
+  text is WHITE when not hovering the frozen frame and blue only on hover; setFrozenHover() calls
+  applyColor() so the text tracks the frozen hover; onEnter/onLeave ignore hover while `closing` (so
+  hovering can't get stuck into the frozen state); dismissFrozen() clears hovering before the hero takes
+  over. node --check OK.
+- Size — shrink BOTH the collapsed frame and the CTA text by the SAME factor, consistently across the
+  collapse animation and the frozen state (no jump). New COLLAPSE_SCALE (0.7) + helpers: frameScale()
+  (= pullStart.s × COLLAPSE_SCALE) used by the collapse loop's end target, finishClose freeze, and
+  liftFrozen; layerTransform() (= remembered translateY + scale(COLLAPSE_SCALE) when frozen/.is-collapsing,
+  else scale 1) now drives the CTA transform in render(), the collapse loop, and finishClose — so the text
+  scales by the same proportion as the frame in every collapse rectangle, before and after, and reverts to
+  full size once dismissed back to the hero. node --check OK. (Tune via COLLAPSE_SCALE.)
+- Follow-up — make ALL rectangles consistent before AND after the threshold (user: "reduce all rectangles
+  after collapse and before"). The first pass only shrank the frozen frame (×0.7), so it mismatched the
+  hero video at the 97% hand-off. Now the hero zoom-out itself is reduced by the same factor:
+  EXIT_MIN_SCALE 0.33 → 0.231 (= 0.33×0.7). Since pullStart.s is captured from the already-shrunk hero,
+  frameScale() now returns pullStart.s directly (no extra ×COLLAPSE_SCALE — that would double-shrink and
+  re-introduce the jump). COLLAPSE_SCALE (0.7) now only scales the CTA text (layerTransform), matching the
+  hero's reduction. Net: hero rectangle, collapse frame, frozen frame, and text are all ×0.7 of their old
+  sizes, so the 97% switch is seamless. node --check OK.
+- Tweak — frame felt too small; bumped the shared factor 0.7 → 0.85: EXIT_MIN_SCALE 0.231 → 0.28
+  (0.33×0.85) and COLLAPSE_SCALE 0.7 → 0.85. Hero/frame/text stay matched, just larger. node --check OK.
+- DECOUPLED text and image (they are NOT the same proportion):
+  • IMAGE — size is purely EXIT_MIN_SCALE (0.28 → 0.35, bigger; was too small). The frozen frame uses the
+    same hero rectangle (frameScale() = pullStart.s), so the image is EQUAL before and after collapse.
+  • TEXT — renamed COLLAPSE_SCALE → TEXT_SCALE (0.85) and layerTransform() now applies it ALWAYS (dropped
+    the frozen/.is-collapsing gate), so the CTA text is the SAME size before AND after collapse (previously
+    full-size before / 0.85 after — the "before" read too big). Independent of the image now.
+  • Updated the stale COLLAPSE_SCALE comments. node --check OK. (Image size = EXIT_MIN_SCALE; text size =
+    TEXT_SCALE — tune the two independently.)
