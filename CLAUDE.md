@@ -1141,3 +1141,88 @@ Keep this section updated after every change. Format:
   wins while hovered). `.cert-layer.is-hover .cert-cta__fill{fill:#4d8bff}` (+ fill added to the fill's
   transition) turns the text blue on hover. node --check main.js OK.
 - href still `#certificates` (where it leads is TODO, per the user).
+
+### 2026-06-22 (cert CTA click → pull-IN transition video, position-aware zoom to full screen)
+- Clicking the active CTA (link or video) now plays a pull-IN transition instead of navigating:
+  `videos/pullout_animation.mp4` (1.5s) zooms FROM the hero video's current on-screen rectangle
+  (position-aware) TO full screen — the reverse of the scroll zoom-out — and plays exactly once
+  over its own duration. (Closing animation is a later step.)
+- index.html: body-level `<video class="pullout-video" src="videos/pullout_animation.mp4" muted
+  playsinline preload="auto">` (body-level so it covers the header; the hero's transform makes it a
+  stacking context, so an in-hero overlay couldn't).
+- styles.css: `.pullout-video` fixed inset:0, z-index:50 (above header 11), object-fit:cover,
+  transform-origin:50% 50%, hidden until `.is-playing`.
+- main.js cert IIFE: link/video click handlers (when active) preventDefault + playPullout().
+  playPullout() captures the hero video's live transform via DOMMatrix decomposition (heroXf →
+  {scale, translateY}), shows the clip at that exact rectangle, plays it once, and a rAF synced to
+  the clip's currentTime/duration lerps transform start→identity with smoothstep (mirrors the
+  zoom-out easing). On `ended` it settles to translateY(0) scale(1). lockScroll() stops Lenis +
+  html overflow:hidden during the transition (stays locked as a modal until the future closing).
+  node --check OK.
+- Also removed the two `*.mp4:Zone.Identifier` WSL metadata files from videos/.
+
+### 2026-06-22 (certificate gallery — sticky cover-scroll stack after the pull-in)
+- After the pull-in zoom finishes, a certificate gallery opens: each certificate is a sticky
+  full-screen slide and scrolling brings the next up to COVER the previous — the same cover-scroll
+  the features section does over the blog (position:sticky;top:0;height:100vh + DOM-order paint).
+  (Scaffold only — the user supplies the images.)
+- index.html: body-level `.cert-gallery` > `.cert-gallery__scroll[data-lenis-prevent]` (its OWN
+  overflow:auto scroll container, so it scrolls while the page behind stays scroll-locked; the
+  lenis-prevent attr keeps Lenis off it).
+- styles.css: `.cert-gallery` fixed inset:0 z-index:60 (above the pullout's 50), hidden until
+  `.is-open` (opacity/visibility, .5s fade). `.cert-slide` sticky top:0 height:100vh, opaque
+  var(--color-dark) bg so later slides cover earlier ones; `.cert-slide__img` contained,
+  max 1100px/90vw × 88vh, rounded + shadow. Mobile tightens padding/size.
+- main.js cert IIFE: `CERT_IMAGES` array (placeholder certificate-1..4.jpg — edit to list real
+  files) → buildGallery() injects one `.cert-slide` per entry (built once). finishPullout() (fired
+  when the zoom reaches t=1, with the clip's `ended` as a fallback, guarded by pullDone) settles the
+  pullout full-screen and calls openCertGallery() (adds .is-open, resets scrollTop). Scroll stays
+  locked (modal) — closing is the next step.
+- images/certificates/ created with a README documenting the expected filenames + how to add more.
+
+### 2026-06-22 (certificate gallery shows the real PDFs)
+- The certificates are PDFs (the user uploaded 7 to images/certificates/). Replaced the placeholder
+  image slides with embedded PDFs. `CERT_IMAGES` → `CERT_DOCS` ({src,title}), listing the 7 real
+  files in display order. buildGallery() now emits, per slide, an `<iframe class="cert-slide__doc"
+  src="<encodeURI(pdf)>#toolbar=0&navpanes=0&scrollbar=0&view=FitH">` (filenames have spaces → URL-
+  encoded; viewer chrome hidden, page fit-to-width) + an "Open ↗" link (`.cert-slide__open`, new tab).
+- styles.css: `.cert-slide__img` rule replaced by `.cert-slide__fig` sized (min(1100px,90vw)×88vh) +
+  `.cert-slide__doc` (fills it, rounded, shadow, `pointer-events:none` so the embedded viewer doesn't
+  swallow the gallery's cover-scroll) + `.cert-slide__open` (caption link, blue on hover). Mobile sizes.
+- Removed the WSL `*.pdf:Zone.Identifier` metadata files; README updated for the PDF flow. node --check OK.
+
+### 2026-06-22 (certificate gallery → PNG renders instead of PDF embeds)
+- The PDF `<iframe>` embeds didn't display full-size cleanly, so switched to showing PNGs rendered
+  from each PDF's first page (kept the PDFs + an "Open ↗" link per slide to the original).
+- Rendered page 1 of each PDF via Ghostscript (`gs -sDEVICE=png16m -r200 -dFirstPage=1 -dLastPage=1`,
+  with TextAlphaBits/GraphicsAlphaBits 4 for smoothing) — ImageMagick's PDF policy is blocked here.
+  The three NPTEL renders came out 7090×5079 (~2MB); downscaled those to ≤2400px via `convert
+  -resize 2400x2400>` (PNG resize is policy-allowed). 7 PNGs in images/certificates/.
+- main.js `CERT_DOCS` entries are now `{img,pdf,title}`; buildGallery() emits `<img class="cert-
+  slide__img" src="<png>">` + the "Open ↗" link to the pdf (both encodeURI'd for the spaced names).
+- styles.css: `.cert-slide__doc` (iframe) rule replaced by `.cert-slide__img` (contained, max
+  min(1100px,92vw)×86vh, white card bg, rounded, shadow) + `.cert-slide__fig` sized to content so
+  the `.cert-slide__open` caption sits centred just below. Mobile sizes. node --check OK.
+
+### 2026-06-22 (cert gallery: full-screen fit + closing transition back to the hero)
+- Certificates now FIT THE SCREEN (no navy card): `.cert-slide` padding removed, `.cert-slide__fig`
+  100vw×100vh, `.cert-slide__img` object-fit:contain on a WHITE surround (gallery + slide bg → #fff,
+  was var(--color-dark)). The "Open ↗" link became a small bottom-centre pill (dark text on a faint
+  backdrop) so it stays legible over white.
+- Removed the internship entry from CERT_DOCS (user deleted those files) → 6 certificates.
+- CLOSING transition (the deferred step): zooms the gallery back OUT to the hero rectangle it came
+  from while `videos/recieve_animation.mp4` plays. New body-level `.receive-video` (z-index 70, above
+  the gallery's 60). main.js: playPullout now stores the captured hero transform in `pullStart`;
+  closeCertGallery() plays the receive clip full-screen, hides the gallery under it, and a wall-clock
+  rAF lerps the receive transform identity→pullStart (smoothstep, reverse of the pull-in, ~1.07s at
+  1.5× rate); finishClose() (fired at t=1, `ended` as fallback, guarded by `closing`) clears the
+  overlays, resets pullDone/pullActive, and unlocks scroll — landing back exactly where it came from
+  (scrollY was never moved while modal). Re-openable (click) afterward.
+- Triggers: (a) END OF SCROLL — wheel down / further upward touch-swipe while at the bottom of
+  `.cert-gallery__scroll`; (b) ESC key; (c) a new `.cert-gallery__back` "Back to home ↩" button pinned
+  top-right (styles.css: pill, blurred faint bg, highlight on hover; mobile inset). node --check OK.
+- Follow-ups: pull-in RATE 1.5→1.2 (slower); closing CLOSE_RATE → 2.0.
+- Last-certificate RESISTANCE: the gesture-gap version was too hard to trigger, so settled on a tiny
+  0.1s gate — a `scroll` listener stamps `bottomSince` on first contact with the bottom; `tryClose`
+  (wheel-down / upward swipe) collapses once you've been at the bottom ≥ARM_MS=100ms. Just enough that
+  the scroll which REACHES the bottom doesn't close in the same instant; any scroll after that does. node --check OK.
