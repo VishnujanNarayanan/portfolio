@@ -1125,3 +1125,19 @@ Keep this section updated after every change. Format:
   start even thinner). butt caps kept.
 - Verified the full reveal (p=1) in headless Chrome over file://: clean "Certificates", every glyph
   fully covered, no inter-letter bleed and no crossbar overshoot.
+
+### 2026-06-22 (cert CTA: clickable + hover only after the word "pops"; hover = colour + blue text)
+- Branch `cert-cta-hover-activate`. The hero video already DESATURATES to grey across the zoom-out
+  (updateHeroExit: grey=eB → grayscale(grey)). New: the CTA (the handwriting AND the video) only
+  becomes clickable + hoverable once the word "pops" (pB≥.97, the same threshold as is-written), and
+  hovering brings the grey video back to full colour + turns the handwriting blue.
+- main.js cert IIFE: added active/hovering state. setActive(pB≥.97) (called in update() where pB is
+  computed) toggles `.cert-layer.is-active` and flips the video's pointer-events/cursor on. Hover wiring
+  on BOTH the `.cert-cta` link and the `.hero-video` (pointerenter/leave → setHover): when active,
+  hovering either adds `.cert-layer.is-hover` + `.hero-video.is-color`. The video also gets a click
+  handler that forwards to link.click() so the image is clickable (link still carries the real SR text).
+- styles.css: `.cert-cta` pointer-events auto→none, re-enabled via `.cert-layer.is-active .cert-cta`.
+  `.hero-video.is-color{filter:none!important}` (beats the inline scroll-driven grey filter so colour
+  wins while hovered). `.cert-layer.is-hover .cert-cta__fill{fill:#4d8bff}` (+ fill added to the fill's
+  transition) turns the text blue on hover. node --check main.js OK.
+- href still `#certificates` (where it leads is TODO, per the user).

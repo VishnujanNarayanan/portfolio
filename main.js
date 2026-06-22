@@ -237,6 +237,32 @@
     var segs = [].slice.call(layer.querySelectorAll(".cert-cta__seg"));
     if (!segs.length) return;
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Hover + clickability only switch ON once the word "pops" (pB ≥ .97, same threshold as
+    // is-written). While active: the video + the cert text become clickable, and hovering either
+    // brings the (greyed) video back to full colour and turns the handwriting blue.
+    var heroVid = document.querySelector(".hero-video");
+    var link = layer.querySelector(".cert-cta");
+    var active = false, hovering = false;
+    function setHover(on) {
+      hovering = on && active;
+      layer.classList.toggle("is-hover", hovering);
+      if (heroVid) heroVid.classList.toggle("is-color", hovering);   // CSS forces full colour (beats inline filter)
+    }
+    function setActive(on) {
+      if (on === active) return;
+      active = on;
+      layer.classList.toggle("is-active", on);
+      if (heroVid) { heroVid.style.pointerEvents = on ? "auto" : "none"; heroVid.style.cursor = on ? "pointer" : ""; }
+      if (!on) setHover(false);
+    }
+    var onEnter = function () { setHover(true); };
+    var onLeave = function () { setHover(false); };
+    if (link) { link.addEventListener("pointerenter", onEnter); link.addEventListener("pointerleave", onLeave); }
+    if (heroVid) {
+      heroVid.addEventListener("pointerenter", onEnter);
+      heroVid.addEventListener("pointerleave", onLeave);
+      heroVid.addEventListener("click", function () { if (active && link) link.click(); });
+    }
     var lens = [], total = 1;
     // The final flourish + the two i-dots keep DRAWING on a timer after the pop (staggered), so
     // the last bit of the handwriting isn't cut off when the word "pops". data-i in draw order.
@@ -279,6 +305,7 @@
       var vTy = -Math.max(0, y - 2 * vh);
       layer.style.transform = "translateY(" + vTy + "px)";
       var pB = Math.max(0, Math.min((y - vh) / vh, 1));
+      setActive(pB >= 0.97);   // clickable + hoverable once the word "pops" (same threshold as is-written)
       // Write progress: starts at the zoom-out midpoint (pB .5) → done as it finishes (pB 1).
       var p = reduce ? (pB > 0.5 ? 1 : 0) : Math.max(0, Math.min((pB - 0.5) / 0.5, 1));
       // The moment the video pauses (97% of the zoom-out) the word is "written": pop the black
