@@ -95,7 +95,8 @@
     }
     var hireSpan = buildPillReel(glassPill);   // Hire Me letters (__a inherits white in the dark world)
     var giSpan   = buildPillReel(darkPill);    // Get In Touch letters (__a inherits black in the dark world)
-    var EXIT_MIN_SCALE = 0.33;      // how far the whole page-rectangle recedes (smaller = more zoom-out)
+    var EXIT_MIN_SCALE = 0.35;      // IMAGE size: how far the page-rectangle recedes on zoom-out. The frozen
+                                    // collapse frame uses this same rectangle, so the image is equal before/after.
     var hdrFlipped = null;          // header flip state — THRESHOLD-fired (not scroll-scrubbed); null so it inits
     // Header THEME for a light(he=0) → dark(he=1) world: nav + Hire-Me text black→white and the
     // dark "Get In Touch" pill inverting (bg #050419→#d0e1eb, text white→black) so it stays legible.
@@ -275,9 +276,10 @@
     }
     function applyColor() {
       var anim = !reduce && cT < 0.999;                          // still writing → ease; popped → snap
-      var amt = anim ? hoverAmt : (hovering ? 1 : 0);
+      var h = frozen ? frozenHover : hovering;                   // on the frozen frame, hover = frozenHover
+      var amt = anim ? hoverAmt : (h ? 1 : 0);
       if (fillEl) fillEl.style.fill = mixFill(amt * Math.max(0, Math.min(cT, 1)));
-      window.__certColor = (hovering && cT >= 0.999) ? 1 : 0;    // video: snap to true colour, 100%+ only
+      window.__certColor = (h && cT >= 0.999) ? 1 : 0;           // video: snap to true colour, 100%+ only
     }
     function colorTick(now) {
       colorRAF = 0;
@@ -302,8 +304,10 @@
       if (heroVid) { heroVid.style.pointerEvents = on ? "auto" : "none"; heroVid.style.cursor = on ? "pointer" : ""; }
       if (!on) setHover(false);
     }
-    var onEnter = function () { setHover(true); };
-    var onLeave = function () { setHover(false); };
+    // Frozen frame → frozenHover (text white off / blue on). Normal hero → hovering. During the closing
+    // zoom (closing, not yet frozen) ignore hover so `hovering` can't get stuck true into the frozen state.
+    var onEnter = function () { if (frozen) setFrozenHover(true); else if (!closing) setHover(true); };
+    var onLeave = function () { if (frozen) setFrozenHover(false); else if (!closing) setHover(false); };
 
     // ---- Pull-IN transition on click: zoom the pullout clip from the hero video's CURRENT
     // on-screen rectangle (position-aware) to full screen, the reverse of the scroll zoom-out,
@@ -328,12 +332,12 @@
     ];
     var gallery = document.querySelector(".cert-gallery");
     var galleryScroll = gallery && gallery.querySelector(".cert-gallery__scroll");
-    var galleryBuilt = false;
+    var galleryBuilt = false, loopVid = null;    // loopVid = the end slide's looping collapse video
     function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
     function buildGallery() {
       if (galleryBuilt || !galleryScroll) return;
       galleryBuilt = true;
-      galleryScroll.innerHTML = CERT_DOCS.map(function (c, i) {
+      var slides = CERT_DOCS.map(function (c, i) {
         var title = esc(c.title || ("Certificate " + (i + 1)));
         // encodeURI: the PDF filenames have spaces. The PNG is shown; the link opens the real PDF.
         return '<div class="cert-slide"><figure class="cert-slide__fig">' +
@@ -341,52 +345,166 @@
           (c.pdf ? '<a class="cert-slide__open" href="' + encodeURI(c.pdf) + '" target="_blank" rel="noopener">Open ' + title + ' ↗</a>' : '') +
           '</figure></div>';
       }).join("");
+      // Final slide: the collapse/receive video, looping. It cover-scrolls up like any certificate;
+      // a scroll-down on it collapses the gallery. The close plays its OWN receive clip from the start
+      // (only the rectangle position is remembered, not the frame you closed at).
+      slides += '<div class="cert-slide cert-slide--end">' +
+        '<video class="cert-slide__loop" src="' + encodeURI("videos/recieve_animation.mp4") +
+        '" muted loop playsinline autoplay preload="auto" aria-hidden="true"></video></div>';
+      galleryScroll.innerHTML = slides;
+      loopVid = galleryScroll.querySelector(".cert-slide__loop");
     }
     function openCertGallery() {
       buildGallery();
       if (gallery) { gallery.classList.add("is-open"); gallery.setAttribute("aria-hidden", "false"); }
       if (galleryScroll) galleryScroll.scrollTop = 0;
+      // Keep the end-slide loop running (free-running, no currentTime reset → a different frame each
+      // visit) so the close — which continues from it — looks dynamically different every time.
+      if (loopVid) { var lp = loopVid.play(); if (lp && lp.catch) lp.catch(function () {}); }
     }
     // ---- Closing transition: zoom the gallery back OUT to the hero rectangle it came from while
     // the receive clip plays. Triggered at the end of the scroll, on Esc, or via the back button. ----
+    // The collapse clip is left FROZEN on its last frame, parked at the hero rectangle — that frozen
+    // frame is the new pause image. We do NOT hand back to the live hero video here; instead the hero
+    // video is reset to its start and revealed (playing from frame 0) on the next backward scroll.
+    // ---- Frozen pause-frame state (after a collapse). The collapse clip is left paused at the hero
+    // rectangle; the handwritten CTA sits on top; hovering re-colours the frame, otherwise it's
+    // grey+blue (same look as the hero zoom-out). FORWARD scroll lifts the frozen frame + text up
+    // together (never swaps); only a BACKWARD scroll snaps back to the real hero video (from start). ----
+    var frozen = false, frozenHover = false, freezeY = 0;
+    var heroHandoffArmed = false, lastPX = -1, lastPY = -1;
+    var HERO_RESUME = 0.97;     // zoom-out progress at which the hero video pauses/resumes (updateHeroExit)
+    var TEXT_SCALE = 0.85;      // CTA TEXT size — applied ALWAYS (independent of the image) so the text is the
+                                // SAME size before AND after collapse. Lower = smaller text.
+    // Frame/image size = the hero rectangle as-is → image is equal before & after; size set by EXIT_MIN_SCALE.
+    function frameScale() { return pullStart.s; }
+    function layerTransform() {                                        // CTA: remembered position + TEXT_SCALE
+      var y = window.scrollY, vh = window.innerHeight;                 // (always — so the text size never changes
+      return "translateY(" + (-Math.max(0, y - 2 * vh)).toFixed(2) + "px) scale(" + TEXT_SCALE + ")";  // before↔after)
+    }
+    // Mirror updateHeroExit's phase-B `prog` so we know when the office video would resume playing.
+    function heroProg() {
+      if (!crossed) return pBNow();
+      var ct = cT * cT * (3 - 2 * cT);
+      var pBT = pBThreshold();
+      return pBT + (1 - pBT) * ct;
+    }
+    // Same grey + blue "blush" filter the hero zoom-out uses (see updateHeroExit). colorOn → true colour.
+    function vidFilter(grey, blue, colorOn) {
+      var dg = colorOn ? 0 : 1;
+      return "grayscale(" + (grey * dg).toFixed(3) + ") brightness(" + (1 - 0.18 * grey * dg).toFixed(3) +
+        ") sepia(" + (0.33 * blue * dg).toFixed(3) + ") hue-rotate(" + (185 * blue * dg).toFixed(1) +
+        "deg) saturate(" + (1 + 0.33 * blue * dg).toFixed(3) + ")";
+    }
+    function setFrozenHover(on) {
+      frozenHover = on;
+      if (receive) receive.style.filter = vidFilter(1, 1, on);   // hover → colour (snap), else grey+blue
+      applyColor();                                              // text: blue on hover, white when not
+    }
+    function pointerOverFrame() {                                // is the cursor currently over the frame/CTA?
+      if (lastPX < 0) return false;
+      var el = document.elementFromPoint(lastPX, lastPY);
+      return !!el && (el === receive || (link && (el === link || link.contains(el))));
+    }
+    function liftFrozen(y) {                                     // forward scroll: ride UP with the text
+      if (!receive) return;
+      var vh = window.innerHeight;
+      var lift = Math.max(0, y - 2 * vh) - Math.max(0, freezeY - 2 * vh);
+      receive.style.transform = "translateY(" + (pullStart.ty - lift).toFixed(2) + "px) scale(" + frameScale().toFixed(4) + ")";
+    }
+    function heroHandoff() {
+      if (!heroHandoffArmed) return;
+      var y = window.scrollY || window.pageYOffset || 0;
+      // The frozen frame STAYS through the whole paused zone (zoom-out ≥ 97%). It only switches to the
+      // real hero video when a BACKWARD scroll drops the zoom-out below 97% — the exact point the office
+      // video resumes playing. Forward scroll never crosses this (prog stays 1), so it never switches;
+      // it just lifts the frozen frame up with the text.
+      if (heroProg() < HERO_RESUME) {
+        dismissFrozen();
+        if (heroVid) { try { heroVid.pause(); heroVid.currentTime = 0; } catch (er) {} }
+        if (window.__updateHeroExit) window.__updateHeroExit();
+      } else {
+        liftFrozen(y);
+      }
+    }
+    function dismissFrozen() {
+      frozen = false; frozenHover = false; hovering = false;   // clear any stuck hover before the hero takes over
+      heroHandoffArmed = false;
+      window.removeEventListener("scroll", heroHandoff);
+      if (receive) {
+        receive.classList.remove("is-playing");
+        receive.style.transform = ""; receive.style.filter = "";
+        receive.style.pointerEvents = ""; receive.style.cursor = "";
+        try { receive.pause(); } catch (e) {}
+      }
+      if (layer) layer.classList.remove("is-collapsing");        // hand the CTA's z-index back to normal
+    }
     function finishClose() {
       if (!closing) return;
       closing = false;
       if (closeRAF) { cancelAnimationFrame(closeRAF); closeRAF = 0; }
-      if (receive) { receive.classList.remove("is-playing"); receive.style.transform = ""; try { receive.pause(); } catch (e) {} }
+      // Freeze the collapse clip on WHATEVER frame the zoom-out ENDED on (not the video's final frame),
+      // paused at the hero rectangle — dynamic, different each time = the new pause image.
+      frozen = true; freezeY = window.scrollY || 0;
+      if (receive) {
+        try { receive.pause(); } catch (e) {}
+        receive.style.transform = "translateY(" + pullStart.ty.toFixed(2) + "px) scale(" + frameScale().toFixed(4) + ")";
+        receive.style.pointerEvents = "auto";                    // hoverable → re-colour
+        setFrozenHover(pointerOverFrame());                      // at the END: if hovered, snap to colour
+        // keep `.is-playing` so the frozen frame stays visible at the rectangle
+      }
+      // Keep the handwritten "Certificates" CTA on top of the frozen frame, at its remembered position
+      // (render() left it at the click-time scroll spot), at its constant TEXT_SCALE size.
+      if (layer) { layer.classList.add("is-collapsing"); layer.style.transform = layerTransform(); layer.style.opacity = "1"; }
       if (pullout) { pullout.classList.remove("is-playing"); pullout.style.transform = ""; try { pullout.pause(); } catch (e) {} }
-      // Scroll was never moved while modal, so just unlock — we're back at the hero exactly as it was.
+      // Do NOT reveal the hero video here — heroHandoff swaps back ONLY on a backward scroll.
       pullDone = false; pullActive = false;
       lockScroll(false);
+      heroHandoffArmed = true;
+      window.addEventListener("scroll", heroHandoff, { passive: true });
     }
     function closeCertGallery() {
       if (!pullDone || closing) return;            // only meaningful while the gallery is open
       closing = true;
-      var CLOSE_RATE = 2.0;                         // faster than the pull-in → snappier "go back down"
       if (receive) {
         receive.classList.add("is-playing");
         receive.style.transform = "translateY(0) scale(1)";   // start full screen (covers the gallery)
+        // Play the collapse clip from its START (we only remember the rectangle position, not the
+        // frame you closed at). loop = false so it ends and HOLDS its last frame — finishClose freezes
+        // it there as the new pause image. 1× rate keeps the motion natural.
         try { receive.currentTime = 0; } catch (e) {}
-        receive.playbackRate = CLOSE_RATE;
+        receive.loop = false;
+        receive.playbackRate = 1;
         var rp = receive.play(); if (rp && rp.catch) rp.catch(function () {});
       }
       if (gallery) { gallery.classList.remove("is-open"); gallery.setAttribute("aria-hidden", "true"); }
       // Hide the pull-in clip NOW (it's still full-screen at z-50) so it isn't seen behind the
       // shrinking receive clip — only the hero scene should show around it.
       if (pullout) { pullout.classList.remove("is-playing"); pullout.style.transform = ""; try { pullout.pause(); } catch (e) {} }
-      var DUR = (((receive && receive.duration) || 1.6) / CLOSE_RATE) * 1000;
+      var DUR = 700;                               // snappy zoom-out, decoupled from the looping clip's length
       var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
       function frame(now) {
         if (!closing) return;
         var t = Math.max(0, Math.min((now - t0) / DUR, 1));
         var e = t * t * (3 - 2 * t);               // smoothstep — reverse of the pull-in
-        var s = 1 + (pullStart.s - 1) * e;         // full screen → the hero rectangle's scale
+        var s = 1 + (frameScale() - 1) * e;        // full screen → the (shrunk) hero rectangle's scale
         var ty = pullStart.ty * e;                 // 0 → the hero rectangle's offset
-        if (receive) receive.style.transform = "translateY(" + ty.toFixed(2) + "px) scale(" + s.toFixed(4) + ")";
+        if (receive) {
+          receive.style.transform = "translateY(" + ty.toFixed(2) + "px) scale(" + s.toFixed(4) + ")";
+          // Same grey + blue "blush" as the hero zoom-out: colour → grey+blue as it recedes.
+          receive.style.filter = vidFilter(e, Math.max(0, Math.min((e - 0.8) / 0.1, 1)), false);
+        }
+        // Around the MIDPOINT of the collapse, fade the handwritten "Certificates" CTA in ON TOP of
+        // the clip (lifted above it by .is-collapsing). The CTA keeps the position it had when the
+        // gallery was opened (scroll is locked, so render() left it at the remembered click spot).
+        if (layer) {
+          layer.classList.add("is-collapsing");
+          layer.style.transform = layerTransform();      // remembered position + constant TEXT_SCALE size
+          layer.style.opacity = (t < 0.5 ? 0 : (t - 0.5) / 0.5).toFixed(3);
+        }
         if (t < 1) closeRAF = requestAnimationFrame(frame); else finishClose();
       }
       closeRAF = requestAnimationFrame(frame);
-      if (receive) receive.addEventListener("ended", finishClose, { once: true });
     }
     function lockScroll(on) {
       var L = window.__lenis;
@@ -402,6 +520,7 @@
     function playPullout() {
       if (!pullout || pullActive) return;
       pullActive = true;
+      dismissFrozen();            // clear any frozen collapse frame left from a previous close
       setHover(false);
       lockScroll(true);
       pullStart = heroXf();                       // remember the hero rectangle (closing returns to it)
@@ -449,6 +568,14 @@
       heroVid.addEventListener("pointerleave", onLeave);
       heroVid.addEventListener("click", function () { if (active) playPullout(); });
     }
+    // Track the cursor so finishClose can tell if the frozen frame is being hovered at the END of the
+    // collapse (pointerenter won't fire on a stationary cursor when pointer-events flips to auto).
+    window.addEventListener("pointermove", function (e) { lastPX = e.clientX; lastPY = e.clientY; }, { passive: true });
+    // Hovering the frozen frame itself (outside the CTA text) re-colours it; leaving → grey+blue.
+    if (receive) {
+      receive.addEventListener("pointerenter", function () { if (frozen) setFrozenHover(true); });
+      receive.addEventListener("pointerleave", function () { if (frozen) setFrozenHover(false); });
+    }
 
     // ---- Close triggers: back button, Esc, and reaching the end of the gallery scroll. ----
     var backBtn = gallery && gallery.querySelector(".cert-gallery__back");
@@ -458,38 +585,20 @@
     });
     if (galleryScroll) {
       function atBottom() { return galleryScroll.scrollTop + galleryScroll.clientHeight >= galleryScroll.scrollHeight - 2; }
-      // Resistance at the last certificate. The first over-scroll at the bottom is ABSORBED and the
-      // scroll/momentum is actively STOPPED (preventDefault). "momentum absorbed" flips true only once
-      // the fling reaches 0 (no more wheel events for IDLE ms). After that, the very next scroll-down
-      // (a fresh, separate event) collapses. So a fling can't carry you out, and it never auto-closes.
-      var momAbsorbed = false, armedAt = 0, idleT = 0, IDLE = 120;
-      function reset() { momAbsorbed = false; armedAt = 0; if (idleT) { clearTimeout(idleT); idleT = 0; } }
-      function absorb() {            // stop the scroll; arm only after it's been idle (momentum == 0)
-        if (idleT) clearTimeout(idleT);
-        idleT = setTimeout(function () { momAbsorbed = true; armedAt = Date.now(); idleT = 0; }, IDLE);
-      }
-      function closeAfterAbsorb() {  // a fresh scroll once momentum is fully absorbed → collapse
-        if (momAbsorbed && Date.now() - armedAt > 1) { closeCertGallery(); return true; }
-        return false;
-      }
-      galleryScroll.addEventListener("scroll", function () { if (!atBottom()) reset(); }, { passive: true });
+      // No resistance at the end. The final slide loops the collapse video; once it's fully up (at
+      // the bottom of the scroll), a scroll-DOWN (or an upward swipe past the end) collapses the
+      // gallery immediately. The close continues that video from its current frame (closeCertGallery).
+      // Esc / Back still close from anywhere.
       galleryScroll.addEventListener("wheel", function (e) {
         if (!pullDone || closing) return;
-        if (e.deltaY < 0) { reset(); return; }        // scrolling UP — always free, clears the resistance
-        if (!atBottom() || e.deltaY <= 0) return;     // not over-scrolling at the end → normal scroll
-        if (closeAfterAbsorb()) return;
-        e.preventDefault(); absorb();                 // over-scroll down at the bottom → absorb + stop
-      }, { passive: false });
+        if (e.deltaY > 0 && atBottom()) closeCertGallery();    // over-scroll down at the end → collapse
+      }, { passive: true });
       var touchY = 0;
       galleryScroll.addEventListener("touchstart", function (e) { touchY = e.touches[0].clientY; }, { passive: true });
       galleryScroll.addEventListener("touchmove", function (e) {
         if (!pullDone || closing) return;
-        var up = touchY - e.touches[0].clientY;       // >0 = scrolling toward the bottom; <0 = scrolling up
-        if (up < 0) { reset(); return; }              // swiping back up — always free
-        if (!atBottom() || up <= 12) return;
-        if (closeAfterAbsorb()) return;
-        e.preventDefault(); absorb();
-      }, { passive: false });
+        if ((touchY - e.touches[0].clientY) > 12 && atBottom()) closeCertGallery();   // swipe up past the end → collapse
+      }, { passive: true });
     }
     var lens = [], total = 1, thrLen = 0;
     // THRESHOLD model: the scroll-driven pen lays down the strokes BEFORE "thin24" (data-i 23).
@@ -540,8 +649,9 @@
     }
     function render(inkedScroll) {
       var y = window.scrollY, vh = window.innerHeight;
-      // The CTA rides UP with the video (phase C, >2vh) but never shrinks — same size throughout.
-      layer.style.transform = "translateY(" + (-Math.max(0, y - 2 * vh)) + "px)";
+      // The CTA rides UP with the video (phase C, >2vh) at its constant TEXT_SCALE size (layerTransform),
+      // so the text is the SAME size before and after collapse.
+      layer.style.transform = layerTransform();
       var written = cT >= 0.999;
       // Hand the threshold state to the video (read by updateHeroExit each frame).
       window.__certWrite = { crossed: crossed, t: cT, pBThr: pBThreshold() };
