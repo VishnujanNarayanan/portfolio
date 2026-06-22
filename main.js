@@ -265,6 +265,8 @@
         acc += lens[i];
       });
       layer.style.opacity = p > 0.001 ? 1 : 0;
+      // Pop the black outline in the moment the video pauses (97% of the zoom-out).
+      layer.classList.toggle("is-written", pB >= 0.97);
     }
     measure();
     update();
