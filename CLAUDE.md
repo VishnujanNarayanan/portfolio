@@ -1228,3 +1228,71 @@ Keep this section updated after every change. Format:
   next fresh scroll-down (`closeAfterAbsorb`: momAbsorbed && now-armedAt>1ms) collapses. So a fling
   can't carry you out, and it never auto-closes (close is event-driven). Resets on leaving the bottom.
   node --check OK.
+
+### 2026-06-22 (cert write/video: "thin24" threshold → timed completion + pop at the end)
+- Branch `cert-write-image-sync`. Reworked how the handwriting WRITE and the hero VIDEO (image) are
+  coupled. Before: both were scroll-scrubbed over the zoom-out (writing pB .5→1, video zoom/grey),
+  the word "popped" at pB .97, and the last four strokes drew on a SEPARATE post-pop timer (animTail)
+  that could run after you'd scrolled past 100%.
+- Now there is a single THRESHOLD at the stroke "thin24" (= data-i 23; its centre-line path matches
+  the SVG label `thin24`). The scroll-driven pen lays down only the strokes BEFORE thin24 (data-i
+  0..22); the moment the pen reaches thin24 a threshold fires and the REST of the writing (strokes
+  23..45, INCLUDING the four tail strokes) plays as ONE TIMED completion (cT 0→1 over DUR=1100ms),
+  no longer scrubbed by scroll. The word POPS (fills solid + becomes clickable/hoverable) only at the
+  END of that timer — i.e. once the last four strokes finish (no more separate tail timer; animTail/
+  TAIL_STAGGER/TAIL_DUR removed). Fully reversible: scrolling back above the threshold ramps cT→0.
+- The VIDEO is driven off the SAME threshold. updateHeroExit's phase-B now computes `prog`: scroll
+  =pB until the threshold (window.__certWrite.pBThr ≈ 0.807, measured = 0.5+0.5·thrLen/total where
+  thrLen/total≈0.613), then `prog = pBThr + (1-pBThr)·smoothstep(cT)` — so the video's zoom-out, grey,
+  blue tint and 92%→97% deceleration/PAUSE all finish on the cert timer, landing with the last
+  strokes at the pop. The cert IIFE owns the rAF clock and calls window.__updateHeroExit each frame so
+  the video advances even with no scroll; the layer's translateY lift (phase C) stays scroll-driven.
+- main.js: cert IIFE rewritten — measure() also sums thrLen (length of data-i<23); new
+  scrollInk()/render(inkedScroll)/tick()/kickRAF()/update(); window.__certWrite={crossed,t,pBThr}
+  shared with the video; window.__updateHeroExit exposed from the hero IIFE. node --check OK; verified
+  no JS errors on a real http load; threshold length measured in headless Chrome. DUR (1100ms) tunable.
+
+### 2026-06-22 (cert: backward = scroll-driven; forward stays the timed threshold completion)
+- Forward is unchanged (scroll-driven to the thin24 threshold, then a TIMED completion to the pop).
+  But scrolling BACK after the pop is now SCROLL-DRIVEN, not the old behaviour (frozen-popped from pB 1
+  down to the threshold, then a timed reverse). main.js cert IIFE: update() is now direction-aware
+  (up/down vs prevPB). On scroll-up while crossed, reversing=true and cT = min(cT, reverseCT()), where
+  reverseCT() maps the band [threshold, pBMax] back to [0,1] (pBMax = furthest pB reached while
+  crossed) — so the writing + video un-wind in step with the scroll and leave the popped state without
+  a jump. On scroll-down it re-arms the forward timer (kickRAF). tick() now only ramps FORWARD (never
+  reverses). The video (updateHeroExit, prog from cT) follows automatically; update() also calls
+  window.__updateHeroExit() so the video tracks the fresh cT within the same scroll frame. node --check OK.
+
+### 2026-06-22 (cert: clickable from the threshold, both directions — decoupled from the pop)
+- Clickability/hover (setActive) was tied to the visual pop (written = cT≥.999). Now it tracks
+  `crossed` (the thin24 threshold) instead: forward, the CTA becomes clickable + hoverable the moment
+  the threshold is hit (not only at the pop); backward, it stays clickable through the reverse and only
+  deactivates when you scroll back above the threshold. The visual pop/fill (is-written, width-26 snap)
+  remains tied to cT. main.js: render() now calls setActive(crossed). node --check OK.
+
+### 2026-06-22 (cert hover colour: gradual, gated by completion — no instant flip)
+- Hover no longer flips the text fully blue / the video fully colour instantly. Both are now driven
+  by colorStr = hoverAmt·cT (hoverAmt eases 0→1 over HOVER_DUR=360ms on its own rAF; cT = writing
+  completion). So from the thin24 threshold (cT≈0) hovering barely tints, the handwriting reaches FULL
+  blue only at the pop, and the video reaches TRUE colour only at cT≥1 ("100% or more").
+- main.js cert IIFE: setHover() now just sets the target + kicks colorTick() (the ease loop);
+  applyColor() sets window.__certColor and lerps the fill #fff→#4d8bff by colorStr (also called from
+  render() so the blue tracks cT as it changes). updateHeroExit folds the de-grey in: dg = 1−colorStr
+  scales grayscale/brightness/sepia/hue-rotate/saturate, so at colorStr=1 the filter is none (true
+  colour). Removed the old binary `.hero-video.is-color{filter:none!important}` + `.cert-layer.is-hover
+  .cert-cta__fill{fill:#4d8bff}` CSS (and the now-unused class toggles); dropped the CSS `fill` transition
+  (the inline per-frame value is already eased). node --check OK.
+
+### 2026-06-22 (cert: video hover = quick snap at 100%+, only; text stays gradual)
+- Split the hover colour: the TEXT still eases blue gradually (hoverAmt·cT). The VIDEO no longer fades
+  in/out — it QUICK-SNAPS to true colour on hover and ONLY at the pop (cT≥1 / "100% or more"); below
+  that, hovering doesn't touch the video. main.js: window.__certColor is now binary (hovering && cT≥.999
+  ? 1 : 0); updateHeroExit's dg = 1−__certColor (no transition on the filter → instant snap). setHover()
+  applies it + calls updateHeroExit immediately (snap); colorTick() now only eases the text blue (its
+  updateHeroExit call removed). node --check OK.
+
+### 2026-06-22 (cert text blue: gradual while animating, snap once popped)
+- The text hover blue now eases (gradual) only WHILE the writing is still animating (cT<1); once
+  popped (cT≥1) it SNAPS with hover instead. main.js applyColor(): amt = animating ? hoverAmt :
+  (hovering?1:0), then fill = mixFill(amt·min(cT,1)). (Video unchanged — always a snap, 100%+ only.)
+  node --check OK.

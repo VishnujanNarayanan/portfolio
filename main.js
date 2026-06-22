@@ -169,16 +169,30 @@
           setVidPlay(1);                               // full speed through the pull-up
         } else {
           // Phase B EDGE zoom-out (shrinks the whole rectangle, uncovering the marquee around it).
+          // `prog` ∈ [0,1] = zoom-out completion. It is SCROLL-driven up to the handwriting's
+          // "thin24" threshold (window.__certWrite.pBThr); once the pen reaches that stroke the
+          // cert IIFE fires a TIMED completion (cw.t 0→1) and the video finishes its zoom-out,
+          // grey, blue tint and PAUSE on that same timer — threshold-driven, not scroll-driven —
+          // so the video and the last strokes land together at the pop. Reverses on scroll-up.
           var pB = Math.max(0, Math.min((y - vh) / vh, 1));
-          var eB = pB * pB * (3 - 2 * pB);             // smoothstep
+          var cw = window.__certWrite;
+          var prog;
+          if (cw && cw.crossed) {
+            var ct = cw.t * cw.t * (3 - 2 * cw.t);                 // smoothstep on the timed factor
+            prog = cw.pBThr + (1 - cw.pBThr) * ct;                 // threshold → 1 on the timer
+          } else {
+            prog = pB;                                             // scroll-driven up to the threshold
+          }
+          var eB = prog * prog * (3 - 2 * prog);       // smoothstep
           scale = 1 - (1 - EXIT_MIN_SCALE) * eB;       // 1 → EXIT_MIN_SCALE (no opacity change)
           grey = eB;                                   // greys MORE the further it recedes (stays grey in phase C)
-          blue = Math.max(0, Math.min((pB - 0.8) / 0.1, 1)); // blue tint ramps only between 80% and 90% of the zoom-out
-          // PLAYBACK decelerates with scroll through the zoom-out: full speed until 92%, then
-          // eases down (gentle at first, steeper toward 97% via the squared ramp) and PAUSES at
-          // 97% of the zoom (and stays paused beyond, into phase C).
-          var dt = (pB - 0.92) / 0.05;                 // 0 at 92% of the zoom → 1 at 97%
-          setVidPlay(pB >= 0.97 ? 0 : (pB <= 0.92 ? 1 : 1 - dt * dt));
+          blue = Math.max(0, Math.min((prog - 0.8) / 0.1, 1)); // blue tint ramps only between 80% and 90% of the zoom-out
+          // PLAYBACK decelerates through the zoom-out: full speed until 92%, then eases down
+          // (gentle at first, steeper toward 97% via the squared ramp) and PAUSES at 97% (and
+          // stays paused beyond, into phase C). Driven by `prog`, so it pauses on the timer once
+          // the threshold has fired.
+          var dt = (prog - 0.92) / 0.05;               // 0 at 92% of the zoom → 1 at 97%
+          setVidPlay(prog >= 0.97 ? 0 : (prog <= 0.92 ? 1 : 1 - dt * dt));
         }
         heroVid.style.transformOrigin = "50% 50%";
         heroVid.style.transform = "translateY(" + vTy + "px) scale(" + scale + ")";
@@ -186,10 +200,14 @@
         // that grey toward BLUE only between 80% and 90% of the zoom-out (blue), at 0.33 strength so it
         // ends as a softer blue-grey (≈ #969ba8). grayscale/brightness ride grey; sepia+hue-rotate+
         // saturate (the blue tint) ride blue.
+        // Hovering the cert CTA de-greys the video back to TRUE colour — a QUICK SNAP (no fade) and
+        // ONLY at the pop (cT≥1). window.__certColor is 1/0 (set by the cert IIFE); dg=1 scales every
+        // greyed channel to none (true colour), dg=0 leaves the scroll-driven grey untouched.
+        var dg = 1 - (window.__certColor ? 1 : 0);
         heroVid.style.filter =
-          "grayscale(" + grey + ") brightness(" + (1 - 0.18 * grey).toFixed(3) +
-          ") sepia(" + (0.33 * blue).toFixed(3) + ") hue-rotate(" + (185 * blue).toFixed(1) +
-          "deg) saturate(" + (1 + 0.33 * blue).toFixed(3) + ")";
+          "grayscale(" + (grey * dg).toFixed(3) + ") brightness(" + (1 - 0.18 * grey * dg).toFixed(3) +
+          ") sepia(" + (0.33 * blue * dg).toFixed(3) + ") hue-rotate(" + (185 * blue * dg).toFixed(1) +
+          "deg) saturate(" + (1 + 0.33 * blue * dg).toFixed(3) + ")";
       }
       // Scroll cue plays its entrance in reverse the moment scrolling starts.
       if (scrollCue) scrollCue.classList.toggle("is-exiting", y > 0);
@@ -216,6 +234,7 @@
         if (navRight) { navRight.style.transition = "transform .3s var(--ease-default)"; navRight.style.transformOrigin = "right center"; navRight.style.transform = "scale(" + hs + ")"; }
       }
     }
+    window.__updateHeroExit = updateHeroExit;   // cert IIFE drives this during its timed completion
     window.addEventListener("scroll", updateHeroExit, { passive: true });
     window.addEventListener("resize", updateHeroExit, { passive: true });
     updateHeroExit();
@@ -237,16 +256,44 @@
     var segs = [].slice.call(layer.querySelectorAll(".cert-cta__seg"));
     if (!segs.length) return;
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    // Hover + clickability only switch ON once the word "pops" (pB ≥ .97, same threshold as
-    // is-written). While active: the video + the cert text become clickable, and hovering either
-    // brings the (greyed) video back to full colour and turns the handwriting blue.
+    // Clickability switches ON at the thin24 THRESHOLD (crossed) and stays on until you scroll back
+    // above it. While active the video + cert text are clickable, and hovering de-greys the video +
+    // turns the handwriting blue — gradually, gated by the writing completion (see applyColor below).
     var heroVid = document.querySelector(".hero-video");
     var link = layer.querySelector(".cert-cta");
+    var fillEl = layer.querySelector(".cert-cta__fill");
     var active = false, hovering = false;
+    // TEXT blue: WHILE the writing is still animating (cT<1) the hover blue eases in GRADUALLY
+    // (hoverAmt 0→1 on its own rAF), gated by completion so it can only get as blue as cT allows.
+    // Once popped (cT≥1, not animating) the hover blue SNAPS instead (uses the raw hover state).
+    // VIDEO colour: always a QUICK-SNAP to true colour on hover, and ONLY at the pop (cT≥1 /
+    // "100% or more"); below that, hovering doesn't touch the video.
+    var hoverAmt = 0, colorRAF = 0, colorLast = 0, HOVER_DUR = 360;   // ms text-blue hover ease (while animating)
+    function mixFill(t) {     // #fff → #4d8bff by t
+      var r = Math.round(255 + (77 - 255) * t), g = Math.round(255 + (139 - 255) * t);
+      return "rgb(" + r + "," + g + ",255)";
+    }
+    function applyColor() {
+      var anim = !reduce && cT < 0.999;                          // still writing → ease; popped → snap
+      var amt = anim ? hoverAmt : (hovering ? 1 : 0);
+      if (fillEl) fillEl.style.fill = mixFill(amt * Math.max(0, Math.min(cT, 1)));
+      window.__certColor = (hovering && cT >= 0.999) ? 1 : 0;    // video: snap to true colour, 100%+ only
+    }
+    function colorTick(now) {
+      colorRAF = 0;
+      var dt = colorLast ? (now - colorLast) : 16; colorLast = now;
+      var target = hovering ? 1 : 0;
+      if (reduce) hoverAmt = target;
+      else if (hoverAmt < target) hoverAmt = Math.min(hoverAmt + dt / HOVER_DUR, target);
+      else if (hoverAmt > target) hoverAmt = Math.max(hoverAmt - dt / HOVER_DUR, target);
+      applyColor();
+      if (hoverAmt !== target) colorRAF = requestAnimationFrame(colorTick); else colorLast = 0;
+    }
     function setHover(on) {
       hovering = on && active;
-      layer.classList.toggle("is-hover", hovering);
-      if (heroVid) heroVid.classList.toggle("is-color", hovering);   // CSS forces full colour (beats inline filter)
+      applyColor();                                       // snap the video immediately (binary, 100%+ only)
+      if (window.__updateHeroExit) window.__updateHeroExit();
+      if (!colorRAF) { colorLast = 0; colorRAF = requestAnimationFrame(colorTick); }   // ease the text blue
     }
     function setActive(on) {
       if (on === active) return;
@@ -444,78 +491,74 @@
         e.preventDefault(); absorb();
       }, { passive: false });
     }
-    var lens = [], total = 1;
-    // The final flourish + the two i-dots keep DRAWING on a timer after the pop (staggered), so
-    // the last bit of the handwriting isn't cut off when the word "pops". data-i in draw order.
-    var TAIL = [42, 45, 43, 44];              // medium43, thick46, dot(i #1), dot(i #2)
-    var TAIL_STAGGER = 220, TAIL_DUR = 320;   // ms between each start / per-stroke draw time
-    function tailIdx(s) { return TAIL.indexOf(+s.getAttribute("data-i")); }  // -1 if not a tail stroke
-    // Strokes that keep their own pen width at the pop (the wide snap would cut them off or spill).
-    var KEEP_PEN = ["15", "16", "17", "18", "19", "25", "26"];
-    // Per-stroke pop width overrides (else the default snap width is used).
-    var POP_W = { "39": "12" };   // thick40
+    var lens = [], total = 1, thrLen = 0;
+    // THRESHOLD model: the scroll-driven pen lays down the strokes BEFORE "thin24" (data-i 23).
+    // The moment the pen reaches thin24, a threshold fires and the REST of the writing —
+    // strokes 23..45, INCLUDING the four tail strokes — plays as a single TIMED completion
+    // (cT 0→1), no longer scrubbed by scroll. The video finishes its zoom-out + pause on the SAME
+    // timer (updateHeroExit reads window.__certWrite), and the word POPS (fills solid + becomes
+    // clickable) only when the timer ends — i.e. once the last four strokes are complete. Fully
+    // reversible: scrolling back above the threshold un-fires it (cT ramps back to 0).
+    var THRESH_I = 23;                        // "thin24" — first stroke of the timed completion
+    var POP_W = "26";                         // strokes snap to this width at the pop...
+    var POP_KEEP = ["25", "26", "27"];        // ...except thick26/thick27/thick28, which keep their own pen width
     function measure() {
-      total = 0;
+      total = 0; thrLen = 0;
       segs.forEach(function (s, i) {
         var L = 1; try { L = s.getTotalLength() || 1; } catch (e) {}
         lens[i] = L; s._len = L; total += L;
         s.style.strokeDasharray = L;
         s.style.strokeDashoffset = L;     // start fully un-inked
+        if (+s.getAttribute("data-i") < THRESH_I) thrLen += L;   // cumulative length before thin24
       });
     }
-    var wasWritten = false, tailStart = 0, tailRAF = 0;
-    // Timed, staggered draw of the tail strokes — runs after the pop, independent of scroll
-    // (so it finishes even if the user has scrolled on past 100%).
-    function animTail() {
-      tailRAF = 0;
-      var now = Date.now(), allDone = true;
-      segs.forEach(function (s) {
-        var k = tailIdx(s); if (k < 0) return;
-        var prog = Math.max(0, Math.min((now - tailStart - k * TAIL_STAGGER) / TAIL_DUR, 1));
-        if (prog < 1) allDone = false;
-        s.style.visibility = prog > 0 ? "visible" : "hidden";
-        s.style.strokeDashoffset = (s._len * (1 - prog)).toFixed(2);
-        s.style.strokeWidth = "";          // the tail keeps its own pen width
-      });
-      if (!allDone) tailRAF = requestAnimationFrame(animTail);
-    }
-    function update() {
-      var vh = window.innerHeight, y = window.scrollY;
-      // The CTA rides UP with the video (phase C, >2vh) but never shrinks — it keeps the same
-      // size throughout (no scale), so it stays big and on the same spot, just lifting away.
-      var vTy = -Math.max(0, y - 2 * vh);
-      layer.style.transform = "translateY(" + vTy + "px)";
-      var pB = Math.max(0, Math.min((y - vh) / vh, 1));
-      setActive(pB >= 0.97);   // clickable + hoverable once the word "pops" (same threshold as is-written)
-      // Write progress: starts at the zoom-out midpoint (pB .5) → done as it finishes (pB 1).
+    // pBThr = the zoom-out progress (pB) at which the scroll-driven ink reaches thin24. Writing is
+    // scrubbed over pB 0.5→1 with ink = p·total, so the threshold sits at p = thrLen/total.
+    function pBThreshold() { return 0.5 + 0.5 * (thrLen / total); }
+
+    var cT = 0;                  // completion factor: 0 = at the threshold, 1 = popped
+    var crossed = false;         // has the scroll-driven pen reached thin24?
+    var reversing = false;       // are we un-writing on scroll-up? (then cT is scroll-driven, not timed)
+    var pBMax = 0;               // furthest zoom-out reached while crossed — anchors the scroll-driven reverse
+    var prevPB = -1;
+    var rafId = 0, lastT = 0;
+    var DUR = 1100;              // ms for the FORWARD timed completion (strokes 23..45 + the video finish)
+
+    function pBNow() { var vh = window.innerHeight; return Math.max(0, Math.min((window.scrollY - vh) / vh, 1)); }
+    function scrollInk() {       // scroll-driven ink length (drives strokes BEFORE the threshold)
+      var pB = pBNow();
       var p = reduce ? (pB > 0.5 ? 1 : 0) : Math.max(0, Math.min((pB - 0.5) / 0.5, 1));
-      // The moment the video pauses (97% of the zoom-out) the word is "written": pop the black
-      // outline AND snap every trace fully inked + wide (15) so the calligraphy fills solidly.
-      // 15 (not wider) keeps the fat bands from spilling into the i-dots + the final-s tip, so
-      // those tail regions stay EMPTY for the timed tail draw below to fill in
-      // (the slim pen widths only ink the centre-line, leaving the letters partly hollow).
-      var written = pB >= 0.97;
-      // On the pop edge: kick off the timed tail draw; on the way back up, hand the tail back to
-      // scroll control.
-      if (written && !wasWritten && !reduce) { tailStart = Date.now(); if (!tailRAF) tailRAF = requestAnimationFrame(animTail); }
-      if (!written && wasWritten && tailRAF) { cancelAnimationFrame(tailRAF); tailRAF = 0; }
-      wasWritten = written;
-      var inked = p * total, acc = 0;
+      return p * total;
+    }
+    // On scroll-UP the completion is SCROLL-driven: cT maps the band [threshold, furthest-reached]
+    // back to [0,1], so the writing + video un-wind in step with the scroll (anchored at pBMax so it
+    // leaves the popped state without a jump). Forward stays the timed completion.
+    function reverseCT() {
+      var pBT = pBThreshold(), d = pBMax - pBT;
+      if (d <= 1e-4) return pBNow() >= pBMax ? 1 : 0;
+      return Math.max(0, Math.min((pBNow() - pBT) / d, 1));
+    }
+    function render(inkedScroll) {
+      var y = window.scrollY, vh = window.innerHeight;
+      // The CTA rides UP with the video (phase C, >2vh) but never shrinks — same size throughout.
+      layer.style.transform = "translateY(" + (-Math.max(0, y - 2 * vh)) + "px)";
+      var written = cT >= 0.999;
+      // Hand the threshold state to the video (read by updateHeroExit each frame).
+      window.__certWrite = { crossed: crossed, t: cT, pBThr: pBThreshold() };
+      var inkedTimed = thrLen + cT * (total - thrLen);   // strokes 23..45 reveal on the timer
+      var acc = 0;
       segs.forEach(function (s, i) {
+        var di = s.getAttribute("data-i");
         if (written) {
-          // Tail strokes are drawn on a timer (animTail) so they finish after the pop — don't
-          // snap them here (unless reduced motion, where everything just settles).
-          if (!reduce && tailIdx(s) >= 0) { acc += lens[i]; return; }
+          // Popped: every stroke fully inked and snapped to one WIDE band (26) so the calligraphy
+          // fills solidly — except thick27/thick28, which keep their own pen width (26 spills there).
           s.style.visibility = "visible";
           s.style.strokeDashoffset = 0;
-          // These strokes draw fine at their own widths — widening them cuts them off or spills
-          // (15-19 = the f cluster near the 2nd i-dot, 25 = thick26, 26 = the 27redone pair), so
-          // keep their CSS pen width and just fully ink them.
-          var di = s.getAttribute("data-i");
-          var keep = KEEP_PEN.indexOf(di) >= 0 || s.hasAttribute("data-keeppen");
-          s.style.strokeWidth = keep ? "" : (POP_W[di] || "15");
+          s.style.strokeWidth = POP_KEEP.indexOf(di) >= 0 ? "" : POP_W;
         } else {
-          var lp = Math.max(0, Math.min((inked - acc) / lens[i], 1));
+          // Strokes before thin24 scrub with scroll; thin24 onward reveal on the timer (inkedTimed).
+          var ref = (+di < THRESH_I) ? inkedScroll : inkedTimed;
+          var lp = Math.max(0, Math.min((ref - acc) / lens[i], 1));
           // Hide a stroke until its ink reaches it (avoids round-cap dots on un-started strokes).
           s.style.visibility = lp > 0 ? "visible" : "hidden";
           s.style.strokeDashoffset = (lens[i] * (1 - lp)).toFixed(2);
@@ -523,8 +566,39 @@
         }
         acc += lens[i];
       });
-      layer.style.opacity = p > 0.001 ? 1 : 0;
+      layer.style.opacity = (inkedScroll > 0.001 || cT > 0.001) ? 1 : 0;
       layer.classList.toggle("is-written", written);
+      // Clickable + hoverable from the moment the THRESHOLD is hit (crossed) — both directions:
+      // it activates as the pen reaches thin24 on the way down, and stays active on scroll-up until
+      // you cross back above the threshold. (The visual pop/fill is separate, tied to cT above.)
+      setActive(crossed);
+      applyColor();   // keep the hover blue in step with cT as it changes (it's gated by completion)
+    }
+    function tick(now) {                            // FORWARD only: ramp the timed completion to 1
+      rafId = 0;
+      var dt = lastT ? (now - lastT) : 16; lastT = now;
+      if (!reduce && crossed && !reversing && cT < 1) cT = Math.min(cT + dt / DUR, 1);
+      render(scrollInk());
+      if (window.__updateHeroExit) window.__updateHeroExit();   // the video follows the timer
+      var running = !reduce && crossed && !reversing && cT < 1;
+      if (running) rafId = requestAnimationFrame(tick); else lastT = 0;
+    }
+    function kickRAF() { if (!rafId && !reduce) { lastT = 0; rafId = requestAnimationFrame(tick); } }
+    function update() {
+      var inkedScroll = scrollInk(), pB = pBNow();
+      crossed = reduce ? (pB > 0.5) : (inkedScroll >= thrLen - 0.001);   // pen reached thin24?
+      var up = pB < prevPB - 1e-6, down = pB > prevPB + 1e-6;
+      prevPB = pB;
+      if (!crossed) { reversing = false; pBMax = 0; cT = 0; }
+      else {
+        pBMax = Math.max(pBMax, pB);
+        if (reduce) { cT = 1; }
+        else if (up) { reversing = true; cT = Math.min(cT, reverseCT()); }   // scroll-driven un-write
+        else if (down) { reversing = false; kickRAF(); }                     // forward → timed completion
+        // (no movement while crossed: leave cT as-is; any in-flight timer keeps running)
+      }
+      render(inkedScroll);
+      if (window.__updateHeroExit) window.__updateHeroExit();   // video tracks the fresh cT this frame
     }
     measure();
     update();
