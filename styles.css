@@ -587,9 +587,8 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .cert-cta{position:absolute;left:49%;top:51%;width:min(1040px,87vw);transform:translate(-50%,-50%) rotate(-13deg);pointer-events:none;-webkit-tap-highlight-color:transparent;cursor:pointer}
 /* Clickable/hoverable only from ~90% of the hero zoom-out onward (is-active, set by main.js). */
 .cert-layer.is-active .cert-cta{pointer-events:auto}
-/* Hovering the CTA (or the video) brings the greyed video back to full colour; the inline,
-   scroll-driven filter set in main.js is overridden via !important so colour wins while hovered. */
-.hero-video.is-color{filter:none!important}
+/* Hover colour (text blue + video de-grey) is driven entirely by main.js, gated by the writing
+   completion (colorStr = hoverAmt·cT): full true colour only at the pop. (No binary CSS flip.) */
 /* Pull-in transition: full-screen overlay above everything (incl. the header). Starts at the
    hero video's current scaled-down rectangle (transform set inline by main.js), zooms to full
    screen over the clip's duration, plays once. transform-origin centre mirrors the zoom-out. */
@@ -619,11 +618,11 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 /* The cursive letters are a FILLED path, revealed by a mask built from the traced
    centre-line PEN PATH (.cert-cta__seg, ordered by writing order). main.js sequences the
    stroke dash-offsets so a pen tip inks each stroke in turn — scroll-scrubbed, reversible. */
-.cert-cta__fill{fill:#fff;stroke:#000;stroke-width:0;paint-order:stroke;transition:stroke-width .35s ease,fill .3s ease}
+/* Base ink is white; the hover blue is driven inline by main.js (eased by hoverAmt·cT), so no
+   CSS fill transition here (it would double-ease/lag the per-frame value). */
+.cert-cta__fill{fill:#fff;stroke:#000;stroke-width:0;paint-order:stroke;transition:stroke-width .35s ease}
 /* The black outline pops in the moment the video pauses (is-written, set by main.js at zoom-out 97%). */
 .cert-layer.is-written .cert-cta__fill{stroke-width:1.2}
-/* Hover (active only) turns the handwriting blue. */
-.cert-layer.is-hover .cert-cta__fill{fill:#4d8bff}
 /* Bleed fix: butt caps (no half-width overshoot past a stroke's ends — was the "crossbar
    spills past the stem" symptom) + per-stroke reveal width. The new artwork
    (Certificates_ballet_thick_thin.svg) labels every trace stroke thin/medium/thick to match
