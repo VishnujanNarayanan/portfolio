@@ -1504,3 +1504,16 @@ Keep this section updated after every change. Format:
   ~260vh of pinned dead-zone after the reveal where scrolling moved nothing. Trimmed .features 360vh →
   200vh (~100vh approach/typing + ~100vh pin for the latched timed reveal), so scrolling down progresses
   to the next section instead of sitting stuck. node --check OK.
+
+### 2026-06-23 (fix cards clipped at the Skills handoff — scroll-pan the card wrapper)
+- Real cause of "cards stay where they are and cut off when scrolling to What I Build With": 14 cards
+  overflow the pinned 100vh terminal (overflow:hidden), so the lower rows were never reachable — the pin
+  released to Skills with them still clipped.
+- Wrapped preEl+selEl+projEl in a `.term-scroll` div. Once the reveal latches, panCards() maps the
+  remaining pinned scroll to a translateY pan of that wrapper (over 85% of the pin, with a brief end-hold),
+  so every row scrolls into view and the last card + "N rows in set" land just before the pin hands off to
+  Skills. overflowPx = scrollWrap.scrollHeight − visible body height (+24 breathing room); past =
+  −features.top / (0.85·pinRange). Desktop only (guarded >820 + panRange>0).
+- styles.css: `.term-scroll{will-change:transform}`; mobile (≤820) safety — `.terminal{height:auto}` +
+  `.terminal__body{overflow:visible}` + `.term-scroll{transform:none}` so the 14 cards flow naturally
+  instead of clipping (mobile isn't pinned). .features stays 200vh. node --check OK.

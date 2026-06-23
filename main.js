@@ -1539,7 +1539,12 @@
     var preEl = document.createElement("div"); preEl.className = "term-pre";
     var selEl = document.createElement("div"); selEl.className = "term-sel";
     var projEl = document.createElement("div"); projEl.className = "term-result"; projEl.innerHTML = projectsHtml();
-    body.appendChild(preEl); body.appendChild(selEl); body.appendChild(projEl);
+    // All typed content + cards live in a wrapper that pans UP on scroll once the
+    // reveal has fired, so all 14 cards can be scrolled into view inside the pinned
+    // 100vh terminal (they overflow it) before it hands off to the Skills section.
+    var scrollWrap = document.createElement("div"); scrollWrap.className = "term-scroll";
+    scrollWrap.appendChild(preEl); scrollWrap.appendChild(selEl); scrollWrap.appendChild(projEl);
+    body.appendChild(scrollWrap);
 
     // Stagger the card pop-in along the anti-diagonal (row+col): the top-left card
     // goes first, then each diagonal "wave" toward the bottom-right corner. Column
@@ -1607,13 +1612,28 @@
     //    LATCHED — once fired it never reverses, so scrolling back up keeps the
     //    cards on screen (and stops the per-frame re-typing fighting the scroll).
     var raf = 0, lastR = -1, atTop = false;
+    // Once revealed, map the rest of the pinned scroll to a vertical PAN of the card
+    // wrapper, so the overflowing rows scroll into view and the last card lands just
+    // as the pin releases to Skills (no clipped cards, no stuck dead-zone).
+    function panCards() {
+      if (window.innerWidth <= 820) { scrollWrap.style.transform = ""; return; }
+      // Map the pan across 85% of the pin so the last row holds briefly before the
+      // pin releases to Skills (not flung past the instant it arrives).
+      var panRange = (sec.offsetHeight - window.innerHeight) * 0.85;
+      if (panRange <= 0) { scrollWrap.style.transform = ""; return; }
+      var cs = getComputedStyle(body);
+      var visible = body.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      var overflowPx = Math.max(0, scrollWrap.scrollHeight - visible + 24); // +24 bottom breathing room
+      var past = Math.min(1, Math.max(0, -sec.getBoundingClientRect().top / panRange));
+      scrollWrap.style.transform = "translateY(" + (-(past * overflowPx)).toFixed(1) + "px)";
+    }
     function update() {
       raf = 0;
-      if (atTop) return;                                  // latched: cards stay, nothing reverses
+      if (atTop) { panCards(); return; }                  // latched: cards stay; pan to reveal all rows
       var r = sec.getBoundingClientRect(), vh = window.innerHeight;
       if (r.top <= 0) {                                   // threshold reached → fire the reveal once
         atTop = true; term.classList.add("is-revealing");
-        renderText(total); lastR = total; return;
+        renderText(total); lastR = total; panCards(); return;
       }
       var typeStart = vh * (6 / 7);
       var typeT = Math.min(1, Math.max(0, (typeStart - r.top) / (typeStart - 0)));
