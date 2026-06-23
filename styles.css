@@ -549,6 +549,9 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .term-pre{overflow:hidden;max-height:60vh;opacity:1;will-change:max-height,opacity;transition:max-height .6s cubic-bezier(.4,0,.2,1),opacity .45s ease}
 .terminal.is-revealing .term-pre{max-height:0;opacity:0}
 .term-result{margin:0}
+/* Wrapper that pans up on scroll so all cards scroll through the pinned terminal. */
+.term-scroll{will-change:transform}
+@media (max-width:820px){.terminal{height:auto;min-height:100vh}.terminal__body{overflow:visible}.term-scroll{transform:none!important}}
 /* At the threshold the mac-style title bar swipes UP and collapses (body reclaims
    the space); reverses when .is-revealing is removed. */
 .terminal.is-revealing .terminal__bar{transform:translateY(-100%);opacity:0;max-height:0;padding-top:0;padding-bottom:0;border-bottom-width:0;pointer-events:none}
