@@ -1460,11 +1460,24 @@
       { t: "out", x: "Database changed" },
       { t: "sql", x: "SELECT * FROM projects;", proj: true }
     ];
+    // n=name, d=description (first outcome bullet), t=tech tags, h=subpage link
+    // (4 existing only), code=GitHub repo (drives the "View code" notch button),
+    // img=card image (cycles the 4 flow placeholders). Content from master_profile.yaml.
     var PROJECTS = [
       { n: "Market Data Platform", d: "28-pipeline NSE market-data ingestion layer feeding 12+ datasets into a partitioned store.", t: ["Python", "pandas", "ETL", "SQL"], h: "projects/market-data-pipeline/index.html", img: "images/flow/data-collection.jpg" },
       { n: "Product Explorer", d: "Full-stack TypeScript app scraping a book catalog into PostgreSQL, served via Next.js with real-time WebSocket scraping.", t: ["TypeScript", "NestJS", "PostgreSQL", "Redis"], h: "projects/product-explorer/index.html", img: "images/flow/processing-storage.jpg" },
-      { n: "Fraud Transaction Detection", d: "Fraud-detection model on 6.4M transactions — 95% caught at 0.995 ROC-AUC despite a 0.13% fraud rate.", t: ["Python", "scikit-learn", "pandas"], h: "projects/fraud-detection/index.html", img: "images/flow/ml-analysis.jpg" },
-      { n: "Minute-Level Stock Prediction", d: "Intraday price-direction system over 9.4M NSE ticks, raising next-minute precision from 0.51 to 0.61.", t: ["Python", "scikit-learn", "Backtesting"], h: "projects/nse-stock-prediction/index.html", img: "images/flow/build-ship.jpg" }
+      { n: "Fraud Transaction Detection", d: "Fraud-detection model on 6.4M transactions — 95% caught at 0.995 ROC-AUC despite a 0.13% fraud rate.", t: ["Python", "scikit-learn", "pandas"], h: "projects/fraud-detection/index.html", code: "https://github.com/VishnujanNarayanan/Fraud_Transaction_Detection", img: "images/flow/ml-analysis.jpg" },
+      { n: "Minute-Level Stock Prediction", d: "Intraday price-direction system over 9.4M NSE ticks, raising next-minute precision from 0.51 to 0.61.", t: ["Python", "scikit-learn", "Backtesting"], h: "projects/nse-stock-prediction/index.html", code: "https://github.com/VishnujanNarayanan/minute-level-stock-prediction", img: "images/flow/build-ship.jpg" },
+      { n: "Trader Sentiment Analysis", d: "Quantified how Bitcoin Fear & Greed sentiment drives trader PnL across 211K crypto trades, with a contrarian sentiment-gated signal.", t: ["Python", "pandas", "SciPy", "Statistics"], code: "https://github.com/VishnujanNarayanan/Trader_sentiment_analysis", img: "images/flow/data-collection.jpg" },
+      { n: "Nexora Semantic Vibe Matcher", d: "Semantic product-search engine that embeds descriptions and ranks by cosine similarity — finds matches with no shared keywords.", t: ["Python", "sentence-transformers", "NLP"], code: "https://github.com/VishnujanNarayanan/nexora_submission", img: "images/flow/processing-storage.jpg" },
+      { n: "Support Ticket Classifier", d: "End-to-end NLP system classifying support tickets by issue type and urgency and extracting entities, served via a Gradio app.", t: ["Python", "scikit-learn", "NLTK", "Gradio"], code: "https://github.com/VishnujanNarayanan/ticket-classifier-nlp", img: "images/flow/ml-analysis.jpg" },
+      { n: "Semantic Quote Retrieval", d: "Semantic quote search — fine-tuned sentence embeddings + FAISS index over ~2,500 quotes, served through Streamlit.", t: ["Python", "FAISS", "PyTorch", "Streamlit"], code: "https://github.com/VishnujanNarayanan/Quotes_Retrieval", img: "images/flow/build-ship.jpg" },
+      { n: "Age & Gender Classifier", d: "Multi-task CNN predicting age and gender from a face photo, trained on 10,000+ UTKFace images with face detection and alignment.", t: ["Python", "TensorFlow", "Keras", "OpenCV"], code: "https://github.com/VishnujanNarayanan/Image_classifier", img: "images/flow/data-collection.jpg" },
+      { n: "Neural Network From Scratch", d: "Feed-forward classifier built in pure NumPy — 97.4% accuracy / 0.995 ROC-AUC on Breast-Cancer-Wisconsin, with hand-derived backprop.", t: ["Python", "NumPy"], code: "https://github.com/VishnujanNarayanan/Neural_net_from_scratch", img: "images/flow/processing-storage.jpg" },
+      { n: "Multi-Task Face Network", d: "From-scratch NumPy multi-task network predicting age and gender from 24,102 face images — shared trunk, two heads, manual backprop.", t: ["Python", "NumPy", "OpenCV"], code: "https://github.com/VishnujanNarayanan/Neural_net_from_scratch", img: "images/flow/ml-analysis.jpg" },
+      { n: "Linear Regression From Scratch", d: "Linear regression built end to end in pure NumPy — hand-derived gradient descent and a closed-form solver, validated vs scikit-learn.", t: ["Python", "NumPy"], code: "https://github.com/VishnujanNarayanan/Linear_regression_from_scratch", img: "images/flow/build-ship.jpg" },
+      { n: "Binance Futures Trading Bot", d: "CLI trading bot placing market, limit, and stop-limit orders and managing positions on the Binance USDT-M Futures Testnet.", t: ["Python", "python-binance", "CLI"], code: "https://github.com/VishnujanNarayanan/binance-futures-trading-bot", img: "images/flow/data-collection.jpg" },
+      { n: "Professional Directory App", d: "Cross-platform React Native directory app across 12 screens — auth, search, and messaging — over a FastAPI REST service.", t: ["React Native", "Expo", "FastAPI"], code: "https://github.com/VishnujanNarayanan/professional-directory-app", img: "images/flow/processing-storage.jpg" }
     ];
     // Notched-corner card frame (Lando "helmet-grid" reference): base outline + a
     // brighter overlay outline that fades in on hover. Same viewBox/path as the ref.
@@ -1484,20 +1497,31 @@
     function projectsHtml() {
       var rows = PROJECTS.map(function (p, n) {
         var tags = p.t.map(function (x) { return '<span class="proj-tag">' + escapeHtml(x) + "</span>"; }).join("");
-        return '<a class="proj-card" href="' + p.h + '">' +
-          '<span class="proj-card__media">' +
+        // Media links to the subpage if one exists, otherwise straight to GitHub.
+        var primary = p.h || p.code || "";
+        var ext = !p.h && !!p.code; // github → new tab
+        var openA = primary
+          ? '<a class="proj-card__media" href="' + primary + '"' + (ext ? ' target="_blank" rel="noopener"' : "") + ">"
+          : '<span class="proj-card__media">';
+        var closeA = primary ? "</a>" : "</span>";
+        var cta = p.h ? "View project &rarr;" : "View code &#8599;";
+        var id = (n + 1 < 10 ? "0" : "") + (n + 1);
+        return '<div class="proj-card">' +
+          openA +
             '<img class="proj-card__img" src="' + p.img + '" alt="" loading="lazy">' +
             '<span class="proj-card__reveal">' +
               '<span class="proj-card__desc">' + escapeHtml(p.d) + "</span>" +
               '<span class="proj-tags">' + tags + "</span>" +
-              '<span class="proj-card__cta">View project &rarr;</span>' +
+              '<span class="proj-card__cta">' + cta + "</span>" +
             "</span>" +
-          "</span>" +
+          closeA +
           frameSvg("is-base", F_BASE, 2) + frameSvg("is-overlay", F_OVER, 2) +
           '<span class="proj-card__label">' +
+            '<span class="proj-card__id">' + id + "</span>" +
             '<span class="proj-card__title">' + escapeHtml(p.n) + "</span>" +
-            '<span class="proj-card__id">0' + (n + 1) + "</span>" +
-          "</span></a>";
+          "</span>" +
+          (p.code ? '<a class="proj-card__code" href="' + p.code + '" target="_blank" rel="noopener">View code <span aria-hidden="true">&#8599;</span></a>' : "") +
+          "</div>";
       }).join("");
       return '<div class="term-projects">' + rows + "</div>" +
         '<div class="term-result__meta">' + PROJECTS.length + " rows in set (0.001 sec)</div>";
@@ -1515,7 +1539,38 @@
     var preEl = document.createElement("div"); preEl.className = "term-pre";
     var selEl = document.createElement("div"); selEl.className = "term-sel";
     var projEl = document.createElement("div"); projEl.className = "term-result"; projEl.innerHTML = projectsHtml();
-    body.appendChild(preEl); body.appendChild(selEl); body.appendChild(projEl);
+    // All typed content + cards live in a wrapper that pans UP on scroll once the
+    // reveal has fired, so all 14 cards can be scrolled into view inside the pinned
+    // 100vh terminal (they overflow it) before it hands off to the Skills section.
+    var scrollWrap = document.createElement("div"); scrollWrap.className = "term-scroll";
+    scrollWrap.appendChild(preEl); scrollWrap.appendChild(selEl); scrollWrap.appendChild(projEl);
+    body.appendChild(scrollWrap);
+
+    // Stagger the card pop-in along the anti-diagonal (row+col): the top-left card
+    // goes first, then each diagonal "wave" toward the bottom-right corner. Column
+    // count is responsive (4 / 2), so read it live from the rendered grid and set
+    // a per-card --cd transition-delay; the meta line follows after the last wave.
+    var gridEl = projEl.querySelector(".term-projects");
+    var cardEls = [].slice.call(projEl.querySelectorAll(".proj-card"));
+    var CARD_STEP = 0.2;    // seconds between successive anti-diagonals
+    // The cards wait until the threshold animation (the .term-pre collapse, ~0.6s)
+    // is done, then a 0.3s gap, before the first card pops — so they don't appear
+    // while the pre-text is still vanishing.
+    var PRE_COLLAPSE = 0.6, GAP = 0.3, BASE_DELAY = PRE_COLLAPSE + GAP;
+    function layoutCardStagger() {
+      var tpl = getComputedStyle(gridEl).gridTemplateColumns;
+      var cols = tpl ? tpl.split(" ").filter(Boolean).length : 4;
+      if (cols < 1) cols = 1;
+      var maxDiag = 0;
+      cardEls.forEach(function (el, i) {
+        var diag = Math.floor(i / cols) + (i % cols);
+        if (diag > maxDiag) maxDiag = diag;
+        el.style.setProperty("--cd", (BASE_DELAY + diag * CARD_STEP) + "s");
+      });
+      projEl.style.setProperty("--meta-d", (BASE_DELAY + maxDiag * CARD_STEP + 0.5) + "s");
+    }
+    layoutCardStagger();
+    window.addEventListener("resize", layoutCardStagger, { passive: true });
 
     function lineHtml(pfx, text, cursor) {
       return '<div class="terminal__line">' + pfx + escapeHtml(text) + (cursor || "") + "</div>";
@@ -1553,18 +1608,37 @@
     //    full cover the last line is `mysql> SELECT * FROM projects;` (no projects).
     //  • Reaching the top (rect.top ≤ 0) is a THRESHOLD that fires a TIMED (not
     //    scroll-based) CSS reveal: the pre-lines fade+collapse so SELECT eases to
-    //    the top, then the project cards come in (transition-delay). Scrolling back
-    //    above the threshold reverses it.
+    //    the top, then the project cards come in (transition-delay). The reveal is
+    //    LATCHED — once fired it never reverses, so scrolling back up keeps the
+    //    cards on screen (and stops the per-frame re-typing fighting the scroll).
     var raf = 0, lastR = -1, atTop = false;
+    // Once revealed, map the rest of the pinned scroll to a vertical PAN of the card
+    // wrapper, so the overflowing rows scroll into view and the last card lands just
+    // as the pin releases to Skills (no clipped cards, no stuck dead-zone).
+    function panCards() {
+      if (window.innerWidth <= 820) { scrollWrap.style.transform = ""; return; }
+      // Map the pan across 85% of the pin so the last row holds briefly before the
+      // pin releases to Skills (not flung past the instant it arrives).
+      var panRange = (sec.offsetHeight - window.innerHeight) * 0.85;
+      if (panRange <= 0) { scrollWrap.style.transform = ""; return; }
+      var cs = getComputedStyle(body);
+      var visible = body.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      var overflowPx = Math.max(0, scrollWrap.scrollHeight - visible + 24); // +24 bottom breathing room
+      var past = Math.min(1, Math.max(0, -sec.getBoundingClientRect().top / panRange));
+      scrollWrap.style.transform = "translateY(" + (-(past * overflowPx)).toFixed(1) + "px)";
+    }
     function update() {
       raf = 0;
+      if (atTop) { panCards(); return; }                  // latched: cards stay; pan to reveal all rows
       var r = sec.getBoundingClientRect(), vh = window.innerHeight;
+      if (r.top <= 0) {                                   // threshold reached → fire the reveal once
+        atTop = true; term.classList.add("is-revealing");
+        renderText(total); lastR = total; panCards(); return;
+      }
       var typeStart = vh * (6 / 7);
       var typeT = Math.min(1, Math.max(0, (typeStart - r.top) / (typeStart - 0)));
       var reveal = Math.round(typeT * total);
       if (reveal !== lastR) { lastR = reveal; renderText(reveal); }
-      var top = r.top <= 0;                               // threshold: terminal reached the top
-      if (top !== atTop) { atTop = top; term.classList.toggle("is-revealing", top); }
     }
     function onScroll() { if (!raf) raf = requestAnimationFrame(update); }
     window.addEventListener("scroll", onScroll, { passive: true });

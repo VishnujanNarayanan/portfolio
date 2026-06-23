@@ -518,7 +518,9 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    Medium-blue window; commands typed + install output streamed by
    main.js, then a blinking prompt waits for the next command.
    ============================================================ */
-.features{height:360vh}
+/* 200vh = ~100vh typing/cover approach + ~100vh pin while the latched card reveal
+   plays. Trimmed from 360vh so scrolling down isn't stuck in a long pinned dead-zone. */
+.features{height:200vh}
 .features__sticky{position:sticky;top:0;height:100vh;z-index:1;align-items:stretch;justify-content:flex-start;padding:0;gap:0}
 .terminal{position:relative;z-index:1;width:100%;height:100vh;display:flex;flex-direction:column;overflow:hidden;border:0;border-radius:0;background:transparent;font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace}
 .terminal__bar{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:11px 16px;max-height:64px;overflow:hidden;background:#0f1628;border-bottom:1px solid rgba(255,255,255,.08);will-change:transform,max-height,opacity;transition:transform .5s cubic-bezier(.4,0,.2,1),opacity .4s ease,max-height .5s cubic-bezier(.4,0,.2,1),padding .5s cubic-bezier(.4,0,.2,1),border-bottom-width .5s linear}
@@ -546,19 +548,31 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    the project cards come into picture. Reverses when the class is removed. */
 .term-pre{overflow:hidden;max-height:60vh;opacity:1;will-change:max-height,opacity;transition:max-height .6s cubic-bezier(.4,0,.2,1),opacity .45s ease}
 .terminal.is-revealing .term-pre{max-height:0;opacity:0}
-.term-result{margin:0;opacity:0;transform:translateY(16px);will-change:opacity,transform;transition:opacity .55s ease,transform .6s cubic-bezier(.19,1,.22,1)}
-.terminal.is-revealing .term-result{opacity:1;transform:none;transition-delay:.5s}
+.term-result{margin:0}
+/* Wrapper that pans up on scroll so all cards scroll through the pinned terminal. */
+.term-scroll{will-change:transform}
+@media (max-width:820px){.terminal{height:auto;min-height:100vh}.terminal__body{overflow:visible}.term-scroll{transform:none!important}}
 /* At the threshold the mac-style title bar swipes UP and collapses (body reclaims
    the space); reverses when .is-revealing is removed. */
 .terminal.is-revealing .terminal__bar{transform:translateY(-100%);opacity:0;max-height:0;padding-top:0;padding-bottom:0;border-bottom-width:0;pointer-events:none}
 .term-projects{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;max-width:1280px;padding-top:24px}
+/* Each card pops in with the zone-title APPEAR animation, copied EXACTLY from
+   flow.js (poseStr + APPEAR pose, ENTER_MS=420, easeOut cubic, no fade-in):
+   translateX(22vw)=ex(vw*0.22) perspective translate(50%) translate3d(-222.2,88)
+   rotateY(60) rotateX(35) → identity. The 22vw is what makes it fly in from the
+   RIGHT. Opacity snaps (0s) so it's hidden during its delay then enters un-faded.
+   JS sets --cd per card so they wave in along the anti-diagonal (row+col):
+   [0,0] first, then [0,1]+[1,0], then [1,1]+[2,0]+…. */
+.term-projects .proj-card{opacity:0;transform:translateX(22vw) perspective(1000px) translate(50%) translate3d(-222.2px,88px,0) rotateY(60deg) rotateX(35deg);will-change:opacity,transform;transition:transform .42s cubic-bezier(.215,.61,.355,1) var(--cd,0s),opacity 0s linear var(--cd,0s)}
+.terminal.is-revealing .term-projects .proj-card{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.term-projects .proj-card{opacity:1;transform:none;transition:none}}
 .proj-card{position:relative;display:block;aspect-ratio:406.89/411;color:#dfe4f2;isolation:isolate}
 .proj-card__media{position:absolute;inset:0;overflow:hidden}
 .proj-card__img{width:100%;height:100%;object-fit:cover;filter:saturate(.92) brightness(.78);transition:transform .7s cubic-bezier(.19,1,.22,1),filter .5s}
 .proj-card:hover .proj-card__img{transform:scale(1.06);filter:saturate(.7) brightness(.5)}
 /* hover image-reveal wipe (ref: clip-path ellipse from the top) */
 .proj-card__reveal{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;padding:22px;background:linear-gradient(160deg,rgba(18,28,58,.72),rgba(38,62,128,.92));clip-path:ellipse(100% 0% at 50% 0);transition:clip-path .65s cubic-bezier(.19,1,.22,1)}
-.proj-card:hover .proj-card__reveal,.proj-card:focus-visible .proj-card__reveal{clip-path:ellipse(142% 120% at 50% 0)}
+.proj-card:hover .proj-card__reveal,.proj-card:focus-within .proj-card__reveal{clip-path:ellipse(142% 120% at 50% 0)}
 .proj-card__desc{font-size:13.5px;line-height:1.55;color:#eaf0ff}
 .proj-card__reveal .proj-tags{display:flex;flex-wrap:wrap;gap:6px}
 .proj-card__reveal .proj-tag{font-size:11px;padding:2px 9px;border:1px solid rgba(159,198,239,.4);border-radius:999px;color:#cfe0ff}
@@ -568,12 +582,19 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .proj-card__frame svg{width:100%;height:100%;display:block}
 .proj-card__frame.is-base{color:rgba(124,208,255,.26)}
 .proj-card__frame.is-overlay{color:#4d8bff;opacity:0;transition:opacity .4s ease}
-.proj-card:hover .proj-card__frame.is-overlay,.proj-card:focus-visible .proj-card__frame.is-overlay{opacity:1}
+.proj-card:hover .proj-card__frame.is-overlay,.proj-card:focus-within .proj-card__frame.is-overlay{opacity:1}
 /* label pinned bottom (title left, index accent right), above the image, below reveal-text */
-.proj-card__label{position:absolute;left:18px;right:18px;bottom:16px;z-index:5;display:flex;justify-content:space-between;align-items:flex-end;gap:10px;pointer-events:none}
+/* Title block sits on the taller LEFT portion of the notched frame (the bottom
+   step drops only the left side), leaving the raised right shelf for the button. */
+.proj-card__label{position:absolute;left:18px;right:40%;bottom:16px;z-index:5;display:flex;flex-direction:column;align-items:flex-start;gap:2px;pointer-events:none}
 .proj-card__title{font-size:15px;font-weight:600;line-height:1.25;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.5)}
-.proj-card__id{font-size:14px;font-weight:700;color:#7fd0ff}
-.term-result__meta{margin-top:16px;color:#7e88aa;font-size:13px}
+.proj-card__id{font-size:13px;font-weight:700;letter-spacing:.6px;color:#7fd0ff}
+/* "View code" button parked on the raised bottom-right shelf (the notch). */
+.proj-card__code{position:absolute;right:7%;bottom:12.5%;z-index:11;display:inline-flex;align-items:center;gap:5px;padding:6px 12px;font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#bfe0ff;background:rgba(13,22,40,.7);border:1px solid rgba(124,208,255,.4);border-radius:999px;text-decoration:none;pointer-events:auto;transition:color .3s,background .3s,border-color .3s}
+.proj-card__code:hover{color:#0d1628;background:#4d8bff;border-color:#4d8bff}
+.term-result__meta{margin-top:16px;color:#7e88aa;font-size:13px;opacity:0;transition:opacity .4s ease}
+.terminal.is-revealing .term-result__meta{opacity:1;transition-delay:var(--meta-d,1s)}
+@media (prefers-reduced-motion:reduce){.term-result__meta{opacity:1;transition:none}}
 @media (max-width:1100px){.term-projects{grid-template-columns:1fr 1fr}}
 @media (max-width:820px){.terminal{width:100%;height:100vh}.terminal__body{font-size:12px;padding:16px 18px}.term-projects{grid-template-columns:1fr 1fr;gap:12px}}
 
