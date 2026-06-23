@@ -1494,3 +1494,13 @@ Keep this section updated after every change. Format:
   PRE_COLLAPSE(0.6s, the .term-pre collapse) + GAP(0.3s) = 0.9s, folded into every card's --cd, so the
   first card pops 0.3s AFTER the collapse animation finishes. CARD_STEP 0.07s → 0.18s (the diagonal wave
   was finishing too quick). meta-d now BASE_DELAY + maxDiag*STEP + 0.5. node --check OK.
+
+### 2026-06-23 (card reveal latches; trimmed pinned dead-zone; step 0.2s)
+- CARD_STEP 0.18s → 0.2s (per request).
+- Cards no longer collapse on scroll-up: the terminal reveal is now LATCHED. update() fires
+  is-revealing + renderText(total) ONCE when rect.top ≤ 0, then early-returns on every later frame —
+  so scrolling back up keeps the cards, and the per-frame re-typing stops fighting the scroll.
+- "Scrolling down doesn't scroll": the cause was .features being 360vh with a 100vh sticky pin, leaving
+  ~260vh of pinned dead-zone after the reveal where scrolling moved nothing. Trimmed .features 360vh →
+  200vh (~100vh approach/typing + ~100vh pin for the latched timed reveal), so scrolling down progresses
+  to the next section instead of sitting stuck. node --check OK.
