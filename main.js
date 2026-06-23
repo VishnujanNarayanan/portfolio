@@ -1547,7 +1547,7 @@
     // a per-card --cd transition-delay; the meta line follows after the last wave.
     var gridEl = projEl.querySelector(".term-projects");
     var cardEls = [].slice.call(projEl.querySelectorAll(".proj-card"));
-    var CARD_STEP = 0.18;   // seconds between successive anti-diagonals
+    var CARD_STEP = 0.2;    // seconds between successive anti-diagonals
     // The cards wait until the threshold animation (the .term-pre collapse, ~0.6s)
     // is done, then a 0.3s gap, before the first card pops — so they don't appear
     // while the pre-text is still vanishing.
@@ -1603,18 +1603,22 @@
     //    full cover the last line is `mysql> SELECT * FROM projects;` (no projects).
     //  • Reaching the top (rect.top ≤ 0) is a THRESHOLD that fires a TIMED (not
     //    scroll-based) CSS reveal: the pre-lines fade+collapse so SELECT eases to
-    //    the top, then the project cards come in (transition-delay). Scrolling back
-    //    above the threshold reverses it.
+    //    the top, then the project cards come in (transition-delay). The reveal is
+    //    LATCHED — once fired it never reverses, so scrolling back up keeps the
+    //    cards on screen (and stops the per-frame re-typing fighting the scroll).
     var raf = 0, lastR = -1, atTop = false;
     function update() {
       raf = 0;
+      if (atTop) return;                                  // latched: cards stay, nothing reverses
       var r = sec.getBoundingClientRect(), vh = window.innerHeight;
+      if (r.top <= 0) {                                   // threshold reached → fire the reveal once
+        atTop = true; term.classList.add("is-revealing");
+        renderText(total); lastR = total; return;
+      }
       var typeStart = vh * (6 / 7);
       var typeT = Math.min(1, Math.max(0, (typeStart - r.top) / (typeStart - 0)));
       var reveal = Math.round(typeT * total);
       if (reveal !== lastR) { lastR = reveal; renderText(reveal); }
-      var top = r.top <= 0;                               // threshold: terminal reached the top
-      if (top !== atTop) { atTop = top; term.classList.toggle("is-revealing", top); }
     }
     function onScroll() { if (!raf) raf = requestAnimationFrame(update); }
     window.addEventListener("scroll", onScroll, { passive: true });

@@ -518,7 +518,9 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    Medium-blue window; commands typed + install output streamed by
    main.js, then a blinking prompt waits for the next command.
    ============================================================ */
-.features{height:360vh}
+/* 200vh = ~100vh typing/cover approach + ~100vh pin while the latched card reveal
+   plays. Trimmed from 360vh so scrolling down isn't stuck in a long pinned dead-zone. */
+.features{height:200vh}
 .features__sticky{position:sticky;top:0;height:100vh;z-index:1;align-items:stretch;justify-content:flex-start;padding:0;gap:0}
 .terminal{position:relative;z-index:1;width:100%;height:100vh;display:flex;flex-direction:column;overflow:hidden;border:0;border-radius:0;background:transparent;font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace}
 .terminal__bar{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:11px 16px;max-height:64px;overflow:hidden;background:#0f1628;border-bottom:1px solid rgba(255,255,255,.08);will-change:transform,max-height,opacity;transition:transform .5s cubic-bezier(.4,0,.2,1),opacity .4s ease,max-height .5s cubic-bezier(.4,0,.2,1),padding .5s cubic-bezier(.4,0,.2,1),border-bottom-width .5s linear}
