@@ -1488,3 +1488,9 @@ Keep this section updated after every change. Format:
   the card is hidden through its stagger delay then enters un-faded, matching the title's "entering =
   no fade-in". Anti-diagonal --cd stagger + meta-line gating unchanged (meta delay bumped to +0.5s for
   the 420ms entrance). node --check OK.
+
+### 2026-06-23 (card pop: wait for the threshold collapse + slower diagonal stagger)
+- Cards were starting at the threshold while the pre-text was still vanishing. Added BASE_DELAY =
+  PRE_COLLAPSE(0.6s, the .term-pre collapse) + GAP(0.3s) = 0.9s, folded into every card's --cd, so the
+  first card pops 0.3s AFTER the collapse animation finishes. CARD_STEP 0.07s → 0.18s (the diagonal wave
+  was finishing too quick). meta-d now BASE_DELAY + maxDiag*STEP + 0.5. node --check OK.
