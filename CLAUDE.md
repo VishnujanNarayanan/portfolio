@@ -1434,3 +1434,57 @@ Keep this section updated after every change. Format:
     full-size before / 0.85 after — the "before" read too big). Independent of the image now.
   • Updated the stale COLLAPSE_SCALE comments. node --check OK. (Image size = EXIT_MIN_SCALE; text size =
     TEXT_SCALE — tune the two independently.)
+
+### 2026-06-23 (projects section: added all 10 remaining master_profile projects + per-card "View code" notch button)
+- Branch `projects-add-yaml-projects`. The terminal `SELECT * FROM projects` result (main.js PROJECTS
+  array → projectsHtml()) showed only 4 cards. Added the other 10 projects from master_profile.yaml's
+  `projects:` block — Trader Sentiment Analysis, Nexora Semantic Vibe Matcher, Support Ticket Classifier,
+  Semantic Quote Retrieval, Age & Gender Classifier, Neural Network From Scratch, Multi-Task Face Network,
+  Linear Regression From Scratch, Binance Futures Trading Bot, Professional Directory App — for 14 total.
+  Each card's name/description (first outcome bullet)/tech tags come from the yaml; images cycle the 4
+  existing images/flow/*.jpg placeholders (no per-project art yet).
+- New cards have no dedicated subpage (only the original 4 do). Per user: each card gets a "View code ↗"
+  button parked in the frame's notched bottom-right shelf, linking to the project's GitHub repo (yaml
+  `link:`). Existing 4 keep their subpage; fraud + nse also got a `code:` GitHub link, market-data +
+  product-explorer have none (work entry / empty yaml link).
+- Restructured projectsHtml(): the card is now a `<div>` (was a full-card `<a>` — can't nest the code
+  anchor inside an anchor). `.proj-card__media` is the primary link (subpage if `h`, else the GitHub repo
+  in a new tab); `.proj-card__code` is a separate absolutely-positioned anchor (z-index 11, above the
+  frame). CTA text is "View project →" for subpage cards / "View code ↗" otherwise. Index number now
+  zero-pads (01–09, then 10–14) instead of the old `'0'+(n+1)` which would print "010".
+- styles.css: `.proj-card__label` relaid out to a left-aligned id+title column constrained to the LEFT
+  ~60% (the notch only drops the bottom-left, so the title sits on the taller left and the raised right
+  shelf stays clear for the button). Added `.proj-card__code` (pill: blue border, dark translucent bg,
+  hover fills blue) positioned right:7%/bottom:12.5% to sit on that shelf. Reveal/frame hover selectors
+  switched `:focus-visible` → `:focus-within` since focus now lands on the inner links, not the card div.
+- node --check main.js OK; card markup logic verified via a node simulation (padded id, new-tab GitHub
+  media link, button present). Visual placement in the notch needs an eyeball in a real browser.
+
+### 2026-06-23 (project cards pop in with the zone-title APPEAR animation, anti-diagonal wave)
+- The project cards (terminal `SELECT * FROM projects` result) now enter with the SAME animation the
+  flow zone titles play on forward scroll — the hero APPEAR pose (`perspective(1000px) translate(50%)
+  translate3d(-222.2px,88px,0) rotateY(60deg) rotateX(35deg)` → identity, from flow.js buildPoses). Dropped
+  the flow-only `ex` mid-slide so each card resolves in place rather than sliding from mid-right.
+- Stagger = anti-diagonal (row+col): the top-left card [0,0] pops first, then the [0,1]+[1,0] wave, then
+  [0,2]+[1,1]+[2,0], … out to the far bottom-right corner last. Cards on the same diagonal fire together.
+- styles.css: removed the old whole-block `.term-result` opacity/translateY fade; the entrance now lives on
+  each `.term-projects .proj-card` (APPEAR pose → `.terminal.is-revealing` rest, transition .55/.7s,
+  transition-delay var(--cd)). Meta line ("N rows in set") gated separately with var(--meta-d) so it
+  appears after the last wave. prefers-reduced-motion guard added on both (static, no transition).
+- main.js (terminal IIFE): layoutCardStagger() reads the LIVE column count from the rendered grid
+  (getComputedStyle gridTemplateColumns — robust to the responsive 4→2 col media queries) and sets each
+  card's --cd = (row+col)*CARD_STEP (0.07s), plus --meta-d = maxDiag*STEP+0.35s. Called once after building
+  projEl and on resize. Same is-revealing threshold drives it (reverses on scroll back up). Verified the
+  wave ordering for 4-col and 2-col via a node simulation; node --check OK.
+
+### 2026-06-23 (card pop = EXACT zone-title appear values — fixed fly-in direction)
+- The cards were flying in from the wrong direction (bottom-LEFT). Cause: I'd dropped the flow-only
+  `ex` (= vw*0.22) translateX from the APPEAR pose, which is exactly the term that throws the title in
+  from the RIGHT — without it translate(50%)+translate3d(-222.2) netted a leftward start.
+- Copied the values verbatim from flow.js (poseStr + APPEAR): start transform is now
+  `translateX(22vw) perspective(1000px) translate(50%) translate3d(-222.2px,88px,0) rotateY(60deg)
+  rotateX(35deg)` → identity (22vw == ex). Duration ENTER_MS=420ms; easing easeOut cubic
+  (1−(1−t)³ ≈ cubic-bezier(.215,.61,.355,1)); no fade-in — opacity transitions over 0s at var(--cd) so
+  the card is hidden through its stagger delay then enters un-faded, matching the title's "entering =
+  no fade-in". Anti-diagonal --cd stagger + meta-line gating unchanged (meta delay bumped to +0.5s for
+  the 420ms entrance). node --check OK.
