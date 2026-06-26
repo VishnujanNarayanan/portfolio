@@ -1545,3 +1545,10 @@ Keep this section updated after every change. Format:
     is-revealing→is-covered; main.js update() now toggles `is-covered` every frame on `r.top<=0`
     (independent of the still-latched card reveal), so scrolling back up past the threshold restores
     the title bar. reduced-motion path adds is-covered too. node --check OK.
+
+### 2026-06-26 (projects: black terminal bar + bar-coloured background)
+- User: make the terminal top bar black and the projects background the colour the bar USED to be.
+  styles.css `.terminal__bar` background #0f1628 → #000 (black). main.js darkSecs: the `.features`
+  entry now carries `fill: rgb(15,22,40)` (= #0f1628, the bar's old navy) used by the draw loop
+  (`sg.fillStyle = sec.fill`); Skills/Services keep rgb(27,34,54). So the projects field reads as the
+  former-bar navy under a now-black bar. node --check OK.
