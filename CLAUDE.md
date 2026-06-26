@@ -1715,3 +1715,11 @@ Keep this section updated after every change. Format:
   content no longer forces shrink (it still grows to fill, keeping cards-view bounded for clip/pan);
   + `.term-pre{flex:0 0 auto}` so the typed-text block can never be shrunk/clipped (the is-revealing
   max-height:0 collapse still works). Printing is back to natural top-down terminal output.
+
+### 2026-06-26 (cert auto-play: speed up the threshold completion + matching video)
+- Branch `cert-autoplay-speedup`. User: speed up the certificates part that auto-plays when the
+  thin24 threshold is hit, and the video should match. The forward timed completion (strokes 23..45)
+  ramps cT 0→1 over DUR; the hero video's zoom-out/grey/blue/pause is computed purely from cT
+  (updateHeroExit reads window.__certWrite.t — no separate video timer), so DUR is the single knob.
+- main.js cert IIFE: DUR 1100 → 550 ms. Writing completion AND the video finish are now ~2× faster
+  and stay in lock-step (they land together at the pop, as before). node --check OK.

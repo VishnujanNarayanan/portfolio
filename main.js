@@ -631,7 +631,7 @@
     var pBMax = 0;               // furthest zoom-out reached while crossed — anchors the scroll-driven reverse
     var prevPB = -1;
     var rafId = 0, lastT = 0;
-    var DUR = 1100;              // ms for the FORWARD timed completion (strokes 23..45 + the video finish)
+    var DUR = 550;               // ms for the FORWARD timed completion (strokes 23..45 + the video finish) — sped up from 1100
 
     function pBNow() { var vh = window.innerHeight; return Math.max(0, Math.min((window.scrollY - vh) / vh, 1)); }
     function scrollInk() {       // scroll-driven ink length (drives strokes BEFORE the threshold)
