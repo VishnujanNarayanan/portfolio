@@ -726,3 +726,36 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .cert-cta__seg[data-i="33"]{--ink-w:2}  /* adjust needed34 */
 .cert-cta__seg[data-i="36"]{--ink-w:.5}  /* thin37 */
 @media (max-width:820px){.cert-cta{width:78vw;top:54%}}
+
+/* GitHub card revealed over the video during the hero's internal zoom-out (phase A).
+   Anchored BOTTOM-LEFT, sits ABOVE the video (z-index 3). No fade, no rotation, no
+   slide: the card has a fixed DESIGN height (75vh) and main.js SCALES it from the
+   bottom-left corner — visually 40vh at the reveal point, growing to its full 75vh as
+   the video reaches fullscreen — then shrinks/fades back out as the edge zoom-out
+   begins so it never floats over the sections below. */
+.gh-reveal{position:fixed;inset:0;z-index:3;display:flex;align-items:flex-end;justify-content:flex-start;padding:clamp(20px,3.5vh,56px) clamp(12px,2.2vw,40px);pointer-events:none;opacity:0;overflow:hidden;will-change:opacity}
+.gh-card{display:flex;flex-direction:column;width:min(440px,86vw);height:65vh;border-radius:14px;background:#010409;border:1px solid #30363d;box-shadow:0 24px 70px rgba(0,0,0,.5);color:#e6edf3;font-family:var(--font-ui,Inter,system-ui,sans-serif);text-decoration:none;overflow:hidden;transform-origin:50% 100%;will-change:transform}
+.gh-card__head{display:flex;flex-direction:column;gap:10px;padding:6px 26px 16px;background:#010409}
+.gh-card__body{display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0;padding:16px 26px 22px;background:#0d1117}
+.gh-card__headrow{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.gh-card__top{display:flex;align-items:center;gap:10px;margin-top:12px}
+.gh-card__logo{width:28px;height:28px;color:#e6edf3;flex:0 0 auto}
+.gh-card__brand{font-size:22px;font-weight:700;letter-spacing:-.01em;color:#e6edf3}
+.gh-card__avatar{width:76px;height:76px;border-radius:50%;object-fit:cover;border:1px solid #30363d;background:#161b22}
+.gh-card__avatar[src=""],.gh-card__avatar:not([src]){display:none}
+.gh-card__handle{font-size:17px;font-weight:600;color:#e6edf3;margin-top:-30px}
+.gh-card__bio{margin:0;font-size:14px;line-height:1.5;color:#7d8590}
+.gh-card__contrib{display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid #21262d}
+.gh-card__label{font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#7d8590}
+.gh-card__label b{color:#39d353;font-weight:800;font-size:13px}
+.gh-card__chart{width:100%}
+.gh-card__chart svg{width:100%;height:auto;display:block;font-family:var(--font-ui,Inter,system-ui,sans-serif)}
+.gh-card__repos{list-style:none;margin:0;padding:10px 0 0;display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:#58a6ff;border-top:1px solid #21262d}
+.gh-card__repos li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gh-card__repos li::before{content:"\2022";color:#39d353;margin-right:8px}
+.gh-card__cta{margin-top:auto;font-size:14px;font-weight:600;color:#2f81f7}
+.gh-reveal.is-live .gh-card{pointer-events:auto}
+.gh-card:hover{border-color:#8b949e}
+.gh-card:hover .gh-card__cta{text-decoration:underline}
+@media (max-width:820px){.gh-reveal{display:none}}
+@media (prefers-reduced-motion:reduce){.gh-reveal{transition:none}}
