@@ -1007,6 +1007,29 @@
         strokeIso(sg);
         sg.restore();
       }
+      // "Filter by" sidebar ONLY: same navy + contour lines (the rest of the projects
+      // section stays a flat solid fill). The canvas lives inside .term-side; translating
+      // by its on-screen rect keeps the lines aligned with the shared viewport field.
+      var sideCv = document.querySelector(".term-side-contours");
+      if (sideCv && sideCv.parentNode) {
+        var side = sideCv.parentNode, cw = side.clientWidth, ch = side.scrollHeight;
+        if (cw && ch && (sideCv._w !== cw || sideCv._h !== ch)) {
+          sideCv._w = cw; sideCv._h = ch;
+          sideCv.width = cw * DPR; sideCv.height = ch * DPR;
+          sideCv.style.width = cw + "px"; sideCv.style.height = ch + "px";
+          sideCv.getContext("2d").setTransform(DPR, 0, 0, DPR, 0, 0);
+        }
+        if (cw && ch) {
+          var scg = sideCv.getContext("2d"), srect = sideCv.getBoundingClientRect();
+          scg.clearRect(0, 0, cw, ch);
+          scg.fillStyle = "rgb(15,22,40)"; scg.fillRect(0, 0, cw, ch);
+          scg.save(); scg.translate(-srect.left, -srect.top);
+          scg.lineCap = "round"; scg.lineJoin = "round";
+          scg.strokeStyle = "rgba(77,139,255,0.45)"; scg.lineWidth = 0.45;
+          strokeIso(scg);
+          scg.restore();
+        }
+      }
       if (!reduce) requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
@@ -1530,7 +1553,8 @@
         '<ul class="filter__items">' + facetItems(key) + "</ul></div>";
     }
     function panelHtml() {
-      return '<div class="filter"><div class="filter__head">Filter by</div>' +
+      return '<canvas class="term-side-contours" aria-hidden="true"></canvas>' +
+        '<div class="filter"><div class="filter__head">Filter by</div>' +
         groupHtml("tools", "Tools", true) + groupHtml("dom", "Domain", true) +
         '<button type="button" class="filter__clear" hidden>Clear all</button></div>';
     }
