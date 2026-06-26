@@ -804,6 +804,29 @@
     var ghCard = ghReveal.querySelector(".gh-card");
     var GH_USER = "VishnujanNarayanan";
     function ghEl(k) { return ghReveal.querySelector('[data-gh="' + k + '"]'); }
+    // GitHub dark-theme contribution palette: empty cell + 4 green levels.
+    var GH_LEVELS = ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"];
+    var GH_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    // Render the last-year calendar as an SVG grid (weeks = columns, day-of-week = rows),
+    // matching GitHub's dark theme — so empty days are dark (#161b22), not white.
+    function ghBuildGraph(contribs) {
+      var chart = ghEl("chart");
+      if (!chart || !Array.isArray(contribs) || !contribs.length) return;
+      var STEP = 13, SIZE = 11, TOP = 14, col = 0, lastMonth = -1, cells = "", labels = "";
+      contribs.forEach(function (d, i) {
+        var dt = new Date(d.date + "T00:00:00Z"), dow = dt.getUTCDay();
+        if (i > 0 && dow === 0) col++;
+        var x = col * STEP, y = TOP + dow * STEP;
+        cells += '<rect x="' + x + '" y="' + y + '" width="' + SIZE + '" height="' + SIZE +
+          '" rx="2" ry="2" fill="' + (GH_LEVELS[d.level] || GH_LEVELS[0]) + '"/>';
+        if (dow === 0) {
+          var m = dt.getUTCMonth();
+          if (m !== lastMonth) { lastMonth = m; labels += '<text x="' + x + '" y="9" fill="#7d8590" font-size="9">' + GH_MONTHS[m] + '</text>'; }
+        }
+      });
+      var w = (col + 1) * STEP - (STEP - SIZE), h = TOP + 7 * STEP - (STEP - SIZE);
+      chart.innerHTML = '<svg viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="xMinYMin meet">' + labels + cells + "</svg>";
+    }
     // --- live data ---
     (function fetchGitHub() {
       if (!window.fetch) return;                               // keep static fallback
@@ -833,6 +856,17 @@
           }
         })
         .catch(function () {});
+      // Last-year contribution TOTAL (GitHub's REST API can't return it without auth; this
+      // public endpoint mirrors the contribution calendar). Silent fallback to the static "—".
+      fetch("https://github-contributions-api.jogruber.de/v4/" + GH_USER + "?y=last")
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (d) {
+          var n = d && d.total && d.total.lastYear;
+          var el = ghEl("contrib");
+          if (el && typeof n === "number") el.textContent = n.toLocaleString();
+          if (d && d.contributions) ghBuildGraph(d.contributions);
+        })
+        .catch(function () {});
     })();
     // --- scroll reveal (synced to phase A's internal zoom-out) ---
     function smooth(t) { return t * t * (3 - 2 * t); }
@@ -842,7 +876,7 @@
     // scaling it makes it read smaller, so it GROWS from the bottom-left corner from
     // GH_START → GH_END as the video reaches fullscreen. No fade, no rotation, no slide
     // independent of the video.
-    var GH_START = 0.40, GH_END = 0.75;           // visual height (× viewport): at reveal → at fullscreen
+    var GH_START = 0.40, GH_END = 0.65;           // visual height (× viewport): at reveal → at fullscreen
     function updateGhCard() {
       var y = window.scrollY, vh = window.innerHeight;
       var sc, op, ty;
