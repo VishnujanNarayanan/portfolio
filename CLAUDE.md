@@ -1562,3 +1562,16 @@ Keep this section updated after every change. Format:
   + 150ms buffer), computed in layoutCardStagger alongside --meta-d. So the cards rise + settle in place
   before any pan/scroll-through; then the lock releases and panCards resumes as before. Guarded off on
   mobile (≤820, no pin). node --check OK.
+
+### 2026-06-26 (project cards: clip image to the notched frame + View-code button in the notch)
+- Branch `cards-notch-clip`. User: the bottom-right notch outline was there but the image spilled
+  past it, and the "View code" button should sit in that spilled space.
+- styles.css `.proj-card__media`: added clip-path:polygon(0 0,100% 0,100% 90.5%,64.7% 90.5%,51.8%
+  100%,0 100%) — the frame path's notch as % of the 407×411 viewBox (shelf top y=371.983→90.5%,
+  ledge x=263.329→64.7%, bevel x=210.862→51.8%), so the image (+ hover-reveal) is clipped to the
+  notched outline and no longer spills past the bottom-right. Applied to media (not the whole card)
+  so the code button — a sibling in the cut space — isn't clipped.
+- `.proj-card__code`: moved from the old right:7%/bottom:12.5% shelf into the notch
+  (right:3.5%/bottom:1.5%) and shrunk (padding 4px 11px, font 10px, gap 4px) to fit the ~9.5%-tall
+  notch band. Verified with a standalone headless Chrome render — image clips along the bevel, button
+  sits in the notch.
