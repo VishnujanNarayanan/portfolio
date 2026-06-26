@@ -1661,3 +1661,57 @@ Keep this section updated after every change. Format:
 - User: remove the fade out. Dropped the .term-cards-view top mask-image (and its mobile reset).
   Kept overflow:hidden so the panning cards still HARD-cut off at the viewport's top edge instead
   of overlapping the SELECT line / panel above — just no gradient fade now.
+
+### 2026-06-26 (branch cards-vanish-reappear-on-click: filter click = vanish all → reappear new set)
+- Reverted the abandoned `cards-disappear-reappear` scroll experiment (it broke the scroll animation).
+  Scroll/threshold reveal is back to the original LATCHED behaviour, untouched.
+- New branch `cards-vanish-reappear-on-click`. User: on a filter CLICK, COMPLETELY vanish ALL
+  currently-shown cards and reappear the new (filtered) set with the same animation the cards play
+  initially at the threshold. The old filter swapped cards per-card (out/in simultaneously).
+- main.js wireFilter(): replaced setHidden()/apply() with a two-phase apply():
+  • vanishAll(done) — every currently-visible card sinks +64px + fades out together (FADE 550ms),
+    then after FADE fires `done`.
+  • showFiltered() — drops the non-matching cards (is-filtered-out), resets the matching set to the
+    appear "from" state (opacity 0, translateY 64, transition none) + reflow, then replays the
+    threshold appear (rise + fade) with an anti-diagonal stagger (CLICK_STEP 0.06s) recomputed over
+    the FILTERED grid's live column count. Meta line updated to the filtered count.
+  • apply() = vanishAll(showFiltered); clear-pill visibility updated immediately. Fires on facet
+    change + clear (folder open/close unchanged). Removed the per-card _fhidden/_ft machinery.
+- node --check OK. Visual vanish→reappear needs a real browser to eyeball.
+
+### 2026-06-26 (filter reappear: reset pan so the new set starts fresh at the top)
+- User: after scrolling/panning the cards, clicking a new filter showed the reappearing set still at
+  the scrolled (panned) position — e.g. a 1-card result was panned off and you had to scroll up to
+  see it. The new set must appear FRESH from the top, ignoring the prior scroll/pan.
+- main.js wireFilter() showFiltered(): before replaying the appear, reset panEl transform to
+  translateY(0) AND realign the page scroll to the cover threshold (scrollY where rect.top = 0, via
+  __lenis.scrollTo immediate / window.scrollTo fallback) — so panCards() recomputes to 0 and the
+  filtered cards (even a single one) reappear at the top without needing to scroll up. node --check OK.
+
+### 2026-06-26 (projects: dynamic pin length = card overflow, not a fixed 200vh)
+- User: scrolling the projects part should scroll down further only if more projects are below; if all
+  projects already fit, treat it as the bottom and scroll on normally (no fixed dead-zone). The pin was
+  a fixed .features{height:200vh} → always ~100vh of pinned scroll even for a 1-card filter result.
+- main.js (terminal IIFE): the section height is now set from JS to window.innerHeight + cardOverflow()
+  (cardOverflow = panEl.scrollHeight − viewEl.clientHeight + 24, or 0 when the cards already fit), via a
+  new sizeSection() called on init (layoutCardStagger), resize, and every filter change (showFiltered).
+  So the PINNED scroll length == the card overflow: more cards → longer pin (scroll reveals them); all
+  visible → overflow 0 → height 100vh → the section releases immediately and you scroll on out.
+- panCards() reworked to map pinScroll (= sec.offsetHeight − innerHeight == cardOverflow) 1:1 to the
+  pan (dropped the old 0.85 factor + separate overflow calc), so the last card lands exactly as the pin
+  releases regardless of count. Inline sec.style.height overrides the CSS 200vh; mobile clears it
+  (natural flow). node --check OK; needs a real-browser eyeball (incl. a heavily-filtered 1–2 card set).
+
+### 2026-06-26 (fix the scroll-driven terminal printing regression)
+- User: the features/projects slide-in TEXT PRINTING (the typed script as the section covers the
+  blog) looked correct ~10–15 merges ago but went "weird". Bisected: renderText() + the typing
+  mapping (typeStart vh*6/7 → typeT → reveal) are byte-IDENTICAL across that whole range — so it was
+  CSS, not JS. The culprit was THIS session's `.terminal__body{display:flex;flex-direction:column}`
+  (added for the cards-view clip/pan) combined with `.term-result{flex:1 1 auto}`: flex-basis auto =
+  the cards' tall content (~2000px) as the basis pushed the body's flex column into SHRINK mode, and
+  `.term-pre` (the typed lines, flex-shrink:1 + overflow:hidden) got shrunk → the install text was
+  squashed/clipped while typing.
+- Fix (styles.css, CSS only): `.term-result` flex-basis auto → 0 (`flex:1 1 0`) so the tall card
+  content no longer forces shrink (it still grows to fill, keeping cards-view bounded for clip/pan);
+  + `.term-pre{flex:0 0 auto}` so the typed-text block can never be shrunk/clipped (the is-revealing
+  max-height:0 collapse still works). Printing is back to natural top-down terminal output.

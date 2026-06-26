@@ -543,10 +543,12 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 /* Phase 2 is TIMED (fired by .terminal.is-revealing, not scroll-scrubbed):
    the pre-lines collapse+fade so SELECT eases to the top, then (transition-delay)
    the project cards come into picture. Reverses when the class is removed. */
-.term-pre{overflow:hidden;max-height:60vh;opacity:1;will-change:max-height,opacity;transition:max-height .6s cubic-bezier(.4,0,.2,1),opacity .45s ease}
+.term-pre{flex:0 0 auto;overflow:hidden;max-height:60vh;opacity:1;will-change:max-height,opacity;transition:max-height .6s cubic-bezier(.4,0,.2,1),opacity .45s ease}
 .terminal.is-revealing .term-pre{max-height:0;opacity:0}
-/* Result fills the remaining body height so the cards viewport can clip + pan. */
-.term-result{margin:0;flex:1 1 auto;min-height:0;display:flex}
+/* Result fills the remaining body height so the cards viewport can clip + pan.
+   flex-basis MUST be 0 (not auto): the cards' tall content as the basis would push the
+   body's flex column into shrink mode and squash/clip .term-pre — breaking the typing. */
+.term-result{margin:0;flex:1 1 0;min-height:0;display:flex}
 /* Cards viewport: clips the panning cards (hard cut-off) so they don't overlap the
    SELECT line / panel above. */
 .term-cards-view{flex:1 1 auto;min-width:0;overflow:hidden}
