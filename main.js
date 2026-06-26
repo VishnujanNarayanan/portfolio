@@ -823,9 +823,11 @@
       var el = document.querySelector(sel); if (!el) return;
       var c = document.createElement("canvas"); c.className = "section-contours";
       el.insertBefore(c, el.firstChild);
-      // The projects section (.features) keeps the solid navy backing but NO contour
-      // lines (user request) — so its terminal sits on a plain dark field.
-      darkSecs.push({ el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0, noLines: sel === ".features" });
+      // The projects section (.features) keeps the solid backing but NO contour
+      // lines (user request) — and a DARKER near-black navy fill so it reads like the
+      // black terminal bar; Skills/Services keep the standard navy + their lines.
+      var isFeatures = sel === ".features";
+      darkSecs.push({ el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0, noLines: isFeatures, fill: isFeatures ? "rgb(15,22,40)" : "rgb(27,34,54)" });
     });
     var W = 0, H = 0, DPR = 1, CELL = 26, cols = 0, rows = 0, field = [];
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
@@ -990,8 +992,8 @@
         }
         var sg = sec.ctx;
         sg.clearRect(0, 0, W, sh);
-        sg.fillStyle = "rgb(27,34,54)"; sg.fillRect(0, 0, W, sh);
-        if (sec.noLines) continue;                         // projects: solid navy, no contour lines
+        sg.fillStyle = sec.fill; sg.fillRect(0, 0, W, sh);
+        if (sec.noLines) continue;                         // projects: solid fill, no contour lines
         sg.save(); sg.translate(0, -sr.top);
         sg.lineCap = "round"; sg.lineJoin = "round";
         sg.strokeStyle = "rgba(77,139,255,0.45)"; sg.lineWidth = 0.45;
