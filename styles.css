@@ -568,7 +568,8 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .term-projects .proj-card{opacity:0;transform:translateY(64px);will-change:opacity,transform;transition:transform .9s cubic-bezier(.19,1,.22,1) var(--cd,0s),opacity .9s cubic-bezier(.19,1,.22,1) var(--cd,0s)}
 .terminal.is-revealing .term-projects .proj-card{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.term-projects .proj-card{opacity:1;transform:none;transition:none}}
-.proj-card{position:relative;display:block;aspect-ratio:406.89/411;color:#dfe4f2;isolation:isolate}
+.term-projects{justify-items:center}
+.proj-card{position:relative;display:block;width:95%;aspect-ratio:406.89/411;color:#dfe4f2;isolation:isolate}
 /* Clip the image (+ hover-reveal) to the notched frame shape so it no longer spills
    past the bottom-right notch. Polygon = the frame path's notch as % of the 407×411
    viewBox: shelf top y=371.983→90.5%, ledge x=263.329→64.7%, bevel x=210.862→51.8%. */
