@@ -556,7 +556,12 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    (body reclaims the space). Driven by .is-covered (reversible — NOT the latched
    .is-revealing) so scrolling back up past the same threshold brings the bar back. */
 .terminal.is-covered .terminal__bar{transform:translateY(-100%);opacity:0;max-height:0;padding-top:0;padding-bottom:0;border-bottom-width:0;pointer-events:none}
-.term-projects{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;max-width:1280px;padding-top:24px}
+/* Projects result = cards grid (left, flexible) + a side panel (right). */
+.term-pgrid{display:flex;gap:28px;align-items:stretch;max-width:1280px;padding-top:24px}
+.term-projects{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.term-side{flex:0 0 clamp(200px,20vw,320px);align-self:stretch;border:1px solid rgba(124,208,255,.22);border-radius:10px;background:rgba(13,22,40,.45);min-height:240px}
+@media (max-width:1100px){.term-side{flex-basis:clamp(180px,26vw,280px)}}
+@media (max-width:820px){.term-pgrid{flex-direction:column}.term-side{flex:0 0 auto;width:100%;min-height:160px}}
 /* Each card pops in with the zone-title APPEAR animation, copied EXACTLY from
    flow.js (poseStr + APPEAR pose, ENTER_MS=420, easeOut cubic, no fade-in):
    translateX(22vw)=ex(vw*0.22) perspective translate(50%) translate3d(-222.2,88)
@@ -569,7 +574,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .terminal.is-revealing .term-projects .proj-card{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.term-projects .proj-card{opacity:1;transform:none;transition:none}}
 .term-projects{justify-items:center}
-.proj-card{position:relative;display:block;width:95%;aspect-ratio:406.89/411;color:#dfe4f2;isolation:isolate}
+.proj-card{position:relative;display:block;width:90%;aspect-ratio:406.89/411;color:#dfe4f2;isolation:isolate}
 /* Clip the image (+ hover-reveal) to the notched frame shape so it no longer spills
    past the bottom-right notch. Polygon = the frame path's notch as % of the 407×411
    viewBox: shelf top y=371.983→90.5%, ledge x=263.329→64.7%, bevel x=210.862→51.8%. */

@@ -1528,7 +1528,11 @@
           (p.code ? '<a class="proj-card__code" href="' + p.code + '" target="_blank" rel="noopener">View code <span aria-hidden="true">&#8599;</span></a>' : "") +
           "</div>";
       }).join("");
-      return '<div class="term-projects">' + rows + "</div>" +
+      // Cards grid + a side panel (content TBD — placeholder for now).
+      return '<div class="term-pgrid">' +
+          '<div class="term-projects">' + rows + "</div>" +
+          '<aside class="term-side" aria-label="Projects panel"></aside>' +
+        "</div>" +
         '<div class="term-result__meta">' + PROJECTS.length + " rows in set (0.001 sec)</div>";
     }
 
