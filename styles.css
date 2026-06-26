@@ -560,10 +560,44 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    The panel breaks out of the body's 34px left padding (margin-left:-34px) so it starts
    right at the border with no gap; the grid keeps a gap after it. */
 .term-pgrid{display:flex;gap:28px;align-items:stretch;padding-top:24px;margin-left:-34px}
-.term-projects{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
-.term-side{flex:0 0 clamp(200px,20vw,320px);align-self:stretch;border:1px solid rgba(124,208,255,.22);border-left:0;border-radius:0 10px 10px 0;background:rgba(13,22,40,.45);min-height:240px}
-@media (max-width:1100px){.term-side{flex-basis:clamp(180px,26vw,280px)}}
-@media (max-width:820px){.term-pgrid{flex-direction:column;margin-left:-18px;margin-right:-18px}.term-side{flex:0 0 auto;width:100%;min-height:160px;border-left:1px solid rgba(124,208,255,.22);border-radius:0}}
+.term-projects{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;align-content:start;align-items:start}
+/* Panel appears with the SAME rise+fade as the cards (Lando reveal), keyed off the
+   reversible .is-covered threshold class so it also VANISHES (reverse) on scroll-up. */
+.term-side{flex:0 0 clamp(220px,21vw,330px);align-self:flex-start;max-height:calc(100vh - var(--header-height) - 64px);overflow-y:auto;overscroll-behavior:contain;border:1px solid rgba(124,208,255,.22);border-left:0;border-radius:0 10px 10px 0;background:rgba(13,22,40,.45);min-height:240px;opacity:0;transform:translateY(64px);will-change:opacity,transform;transition:opacity .9s cubic-bezier(.19,1,.22,1) .5s,transform .9s cubic-bezier(.19,1,.22,1) .5s}
+.terminal.is-covered .term-side{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.term-side{opacity:1;transform:none;transition:none}}
+/* panel's own slim scrollbar */
+.term-side{scrollbar-width:thin;scrollbar-color:rgba(124,208,255,.4) transparent}
+.term-side::-webkit-scrollbar{width:8px}
+.term-side::-webkit-scrollbar-thumb{background:rgba(124,208,255,.35);border-radius:8px;border:2px solid transparent;background-clip:content-box}
+.term-side::-webkit-scrollbar-thumb:hover{background:rgba(124,208,255,.55);background-clip:content-box}
+@media (max-width:1100px){.term-side{flex-basis:clamp(190px,26vw,290px)}}
+@media (max-width:820px){.term-pgrid{flex-direction:column;margin-left:-18px;margin-right:-18px}.term-side{flex:0 0 auto;width:100%;min-height:0;max-height:none;overflow:visible;border-left:1px solid rgba(124,208,255,.22);border-radius:0}}
+/* hidden by the side-panel filter */
+.proj-card.is-filtered-out{display:none}
+/* ---- "Filter by" facet panel ---- */
+.filter{font-family:var(--font-ui);padding:18px 16px 16px 34px;display:flex;flex-direction:column;gap:6px}
+@media (max-width:820px){.filter{padding:16px 18px}}
+.filter__head{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#7fd0ff;margin-bottom:8px}
+.filter__group{border-top:1px solid rgba(124,208,255,.12)}
+.filter__folder{width:100%;display:flex;align-items:center;gap:9px;padding:11px 2px;background:none;border:0;cursor:pointer;color:#dfe4f2;font:inherit;font-size:13px;font-weight:600;text-align:left}
+.filter__chev{flex:0 0 auto;width:0;height:0;border-left:5px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent;color:#7fd0ff;transition:transform .25s ease}
+.filter__group.is-open .filter__chev{transform:rotate(90deg)}
+.filter__name{flex:1 1 auto}
+.filter__items{list-style:none;margin:0;padding:0;overflow:hidden;max-height:0;opacity:0;transition:max-height .35s cubic-bezier(.4,0,.2,1),opacity .25s ease}
+.filter__group.is-open .filter__items{max-height:1200px;opacity:1;padding-bottom:8px}
+.filter__item{display:flex;align-items:center;gap:9px;padding:5px 2px 5px 14px;cursor:pointer;color:#aeb8d4;font-size:12.5px;transition:color .2s}
+.filter__item:hover{color:#eaf0ff}
+.filter__cb{position:absolute;opacity:0;width:0;height:0}
+.filter__box{flex:0 0 auto;width:14px;height:14px;border:1px solid rgba(124,208,255,.45);border-radius:4px;position:relative;transition:background .2s,border-color .2s}
+.filter__cb:checked+.filter__box{background:#4d8bff;border-color:#4d8bff}
+.filter__cb:checked+.filter__box:after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #0d1628;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.filter__cb:focus-visible+.filter__box{outline:2px solid #7fd0ff;outline-offset:2px}
+.filter__item .filter__label{flex:1 1 auto}
+.filter__cb:checked~.filter__label{color:#eaf0ff}
+.filter__n{flex:0 0 auto;font-size:11px;color:#6b76a0;font-variant-numeric:tabular-nums}
+.filter__clear{margin-top:10px;align-self:flex-start;background:none;border:1px solid rgba(124,208,255,.4);border-radius:999px;color:#bfe0ff;font:inherit;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;padding:6px 13px;cursor:pointer;transition:color .25s,background .25s,border-color .25s}
+.filter__clear:hover{color:#0d1628;background:#4d8bff;border-color:#4d8bff}
 /* Each card pops in with the zone-title APPEAR animation, copied EXACTLY from
    flow.js (poseStr + APPEAR pose, ENTER_MS=420, easeOut cubic, no fade-in):
    translateX(22vw)=ex(vw*0.22) perspective translate(50%) translate3d(-222.2,88)

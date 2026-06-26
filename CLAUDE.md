@@ -1575,3 +1575,26 @@ Keep this section updated after every change. Format:
   (right:3.5%/bottom:1.5%) and shrunk (padding 4px 11px, font 10px, gap 4px) to fit the ~9.5%-tall
   notch band. Verified with a standalone headless Chrome render — image clips along the bevel, button
   sits in the notch.
+
+### 2026-06-26 (projects side panel = "Filter by" facets + own scroll; card filter animation)
+- Branch `side-panel-filter`. Built the left side panel into a "Filter by" faceted filter:
+  • PROJECTS gained `tools` (full stack from master_profile.yaml, fuller than the visible `t` tags)
+    and `dom` (domains) arrays; cards emit data-tools/data-dom (slugged, |-joined).
+  • panelHtml(): "FILTER BY" head + two collapsible folders — Tools + Domain — whose items are
+    derived from facetCounts(key) (unique values + per-facet project count, sorted by count). Each
+    item = a checkbox chip; a "Clear all" button shows when any facet is active.
+  • wireFilter(): faceted filter — a card shows if it matches the selected Tools (any) AND Domains
+    (any); folder buttons toggle .is-open (chevron rotates, items collapse via max-height); meta line
+    updates to the filtered count.
+- styles.css: full .filter* styling (folders, chevron, custom checkbox, counts, clear pill). Panel
+  appears with the SAME rise+fade as the cards (translateY(64px)+fade, .9s cubic-bezier(.19,1,.22,1),
+  +.5s delay) keyed to the REVERSIBLE .terminal.is-covered threshold class, so it also VANISHES
+  (reverse) on scroll-up. Reduced-motion static.
+- Bug fixes: (a) grid gaps spread when Tools open — the tall panel stretched the grid taller than its
+  content and CSS grid distributed the slack into row gaps; fixed with align-content:start;
+  align-items:start on .term-projects. (b) filter now ANIMATES: setHidden() sinks+fades a card out
+  (reverse of appear) then collapses it (display:none), and rises+fades it back in — instead of an
+  instant display toggle.
+- Side panel has its OWN scroll: align-self:flex-start + max-height:calc(100vh - header - 64px) +
+  overflow-y:auto + overscroll-behavior:contain + data-lenis-prevent (Lenis won't hijack), slim themed
+  scrollbar; mobile resets to natural flow. node --check OK.
