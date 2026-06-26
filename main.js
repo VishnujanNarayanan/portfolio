@@ -727,9 +727,9 @@
     // Two rows only, like the reference. Top row = filled darker blue (bold sans); bottom row
     // = outlined contrasting serif. Each row carries its own word set + font/colour modifier.
     var ROWS = [
-      { dir: -1, speed: 60, mod: "is-top",
+      { dir: -1, speed: 120, mod: "is-top",
         set: ["PYTHON", "TYPESCRIPT", "DATA PIPELINES", "FASTAPI", "POSTGRESQL", "PYTORCH", "AWS"] },
-      { dir:  1, speed: 70, mod: "is-bottom",
+      { dir:  1, speed: 140, mod: "is-bottom",
         set: ["WEB SCRAPING", "MACHINE LEARNING", "BACKEND APIS", "DOCKER", "PANDAS", "QUANT ANALYSIS"] }
     ];
     var COPIES = 4;                                          // repeats per row → seamless loop
@@ -758,8 +758,15 @@
       });
     }
     // Vertical position + fade follow scroll; horizontal motion is time-based (constant).
+    // scrollSign flips the rows' horizontal direction with scroll direction: +1 on scroll
+    // DOWN (rows move their natural way), -1 on scroll UP (both rows reverse). Held between
+    // scrolls so an idle marquee keeps the last direction.
+    var lastY = window.scrollY, scrollSign = 1;
     function updateMarquee() {
       var y = window.scrollY, vh = window.innerHeight;
+      if (y < lastY) scrollSign = -1;
+      else if (y > lastY) scrollSign = 1;
+      lastY = y;
       // The marquee sits BEHIND the video — hidden during the pull-up (phase A, y < vh),
       // it fades in as the video zooms out and uncovers it (phase B, vh → 1.55·vh)...
       marquee.style.opacity = Math.max(0, Math.min((y - vh) / (vh * 0.55), 1));
@@ -773,7 +780,7 @@
       lastT = now;
       rowEls.forEach(function (r) {
         var setW = r.setW;
-        r.offset += r.dir * r.speed * dt;
+        r.offset += r.dir * scrollSign * r.speed * dt;
         var wrapped = ((r.offset % setW) + setW) % setW; // 0 → setW, seamless wrap
         r.el.style.transform = "translate3d(" + (wrapped - setW) + "px,0,0)";
       });
