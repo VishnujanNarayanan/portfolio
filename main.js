@@ -1561,12 +1561,17 @@
           (p.code ? '<a class="proj-card__code" href="' + p.code + '" target="_blank" rel="noopener">View code <span aria-hidden="true">&#8599;</span></a>' : "") +
           "</div>";
       }).join("");
-      // Side panel (LEFT, flush to the border) = "Filter by" facets + cards grid.
+      // Side panel (LEFT, flush to the border) = "Filter by" facets. The cards live
+      // in their OWN clipped viewport (.term-cards-view, top-fade mask) whose inner
+      // .term-cards-pan is the layer that pans up on scroll — so the panel stays put
+      // and the cards fade out at the top instead of overlapping the SELECT line.
       return '<div class="term-pgrid">' +
           '<aside class="term-side" aria-label="Filter projects" data-lenis-prevent>' + panelHtml() + "</aside>" +
-          '<div class="term-projects">' + rows + "</div>" +
-        "</div>" +
-        '<div class="term-result__meta">' + PROJECTS.length + " rows in set (0.001 sec)</div>";
+          '<div class="term-cards-view"><div class="term-cards-pan">' +
+            '<div class="term-projects">' + rows + "</div>" +
+            '<div class="term-result__meta">' + PROJECTS.length + " rows in set (0.001 sec)</div>" +
+          "</div></div>" +
+        "</div>";
     }
 
     // The SELECT is the last script entry; everything before it is the "pre" block.
@@ -1581,12 +1586,13 @@
     var preEl = document.createElement("div"); preEl.className = "term-pre";
     var selEl = document.createElement("div"); selEl.className = "term-sel";
     var projEl = document.createElement("div"); projEl.className = "term-result"; projEl.innerHTML = projectsHtml();
-    // All typed content + cards live in a wrapper that pans UP on scroll once the
-    // reveal has fired, so all 14 cards can be scrolled into view inside the pinned
-    // 100vh terminal (they overflow it) before it hands off to the Skills section.
-    var scrollWrap = document.createElement("div"); scrollWrap.className = "term-scroll";
-    scrollWrap.appendChild(preEl); scrollWrap.appendChild(selEl); scrollWrap.appendChild(projEl);
-    body.appendChild(scrollWrap);
+    // preEl (collapses on reveal) + selEl (the `mysql> SELECT …` line) stay pinned at
+    // the top; the side panel stays put too. Only .term-cards-pan (inside the clipped,
+    // top-faded .term-cards-view) pans UP on scroll, so all 14 cards scroll through the
+    // pinned 100vh terminal while the SELECT line + panel hold, fading out at the top.
+    body.appendChild(preEl); body.appendChild(selEl); body.appendChild(projEl);
+    var panEl = projEl.querySelector(".term-cards-pan");
+    var viewEl = projEl.querySelector(".term-cards-view");
 
     // Stagger the card pop-in along the anti-diagonal (row+col): the top-left card
     // goes first, then each diagonal "wave" toward the bottom-right corner. Column
@@ -1753,20 +1759,19 @@
       window.removeEventListener("keydown", blockKeys, false);
       window.removeEventListener("scroll", clampScroll, { passive: true });
     }
-    // Once revealed, map the rest of the pinned scroll to a vertical PAN of the card
-    // wrapper, so the overflowing rows scroll into view and the last card lands just
-    // as the pin releases to Skills (no clipped cards, no stuck dead-zone).
+    // Once revealed, map the rest of the pinned scroll to a vertical PAN of the cards
+    // layer INSIDE its clipped viewport, so the overflowing rows scroll into view (and
+    // fade out at the viewport's top) and the last card lands just as the pin releases
+    // to Skills (no clipped cards, no stuck dead-zone). The side panel doesn't move.
     function panCards() {
-      if (window.innerWidth <= 820) { scrollWrap.style.transform = ""; return; }
+      if (window.innerWidth <= 820) { panEl.style.transform = ""; return; }
       // Map the pan across 85% of the pin so the last row holds briefly before the
       // pin releases to Skills (not flung past the instant it arrives).
       var panRange = (sec.offsetHeight - window.innerHeight) * 0.85;
-      if (panRange <= 0) { scrollWrap.style.transform = ""; return; }
-      var cs = getComputedStyle(body);
-      var visible = body.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-      var overflowPx = Math.max(0, scrollWrap.scrollHeight - visible + 24); // +24 bottom breathing room
+      if (panRange <= 0) { panEl.style.transform = ""; return; }
+      var overflowPx = Math.max(0, panEl.scrollHeight - viewEl.clientHeight + 24); // +24 bottom breathing room
       var past = Math.min(1, Math.max(0, -sec.getBoundingClientRect().top / panRange));
-      scrollWrap.style.transform = "translateY(" + (-(past * overflowPx)).toFixed(1) + "px)";
+      panEl.style.transform = "translateY(" + (-(past * overflowPx)).toFixed(1) + "px)";
     }
     function update() {
       raf = 0;
@@ -1785,7 +1790,24 @@
       var reveal = Math.round(typeT * total);
       if (reveal !== lastR) { lastR = reveal; renderText(reveal); }
     }
-    function onScroll() { if (!raf) raf = requestAnimationFrame(update); }
+    // SNAP-TO-THRESHOLD: a pre-threshold buffer just ABOVE the full-cover position.
+    // If a scroll SETTLES inside it (while still approaching DOWN), auto-scroll the
+    // rest of the way so the section lands exactly at its cover position (rect.top = 0).
+    var snapT = 0, lastY = window.scrollY, dir = 1;
+    function maybeSnap() {
+      if (locked || window.innerWidth <= 820 || dir < 0) return; // only approaching down
+      var r = sec.getBoundingClientRect(), buffer = window.innerHeight * 0.2;
+      if (r.top > 0 && r.top <= buffer) {
+        var target = window.scrollY + r.top;                 // scrollY that makes rect.top = 0
+        if (lenis) lenis.scrollTo(target, { duration: 0.5 });
+        else window.scrollTo({ top: target, behavior: "smooth" });
+      }
+    }
+    function onScroll() {
+      var y = window.scrollY; dir = y >= lastY ? 1 : -1; lastY = y;
+      if (!raf) raf = requestAnimationFrame(update);
+      clearTimeout(snapT); snapT = setTimeout(maybeSnap, 140); // fire once the scroll settles
+    }
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll, { passive: true });
     update();
