@@ -812,7 +812,9 @@
     function ghBuildGraph(contribs) {
       var chart = ghEl("chart");
       if (!chart || !Array.isArray(contribs) || !contribs.length) return;
-      var STEP = 13, SIZE = 11, TOP = 14, col = 0, lastMonth = -1, cells = "", labels = "";
+      var STEP = 13, SIZE = 11, TOP = 18, col = 0, lastMonth = -1, lastLabelCol = -99, cells = "", labels = "";
+      var first = new Date(contribs[0].date + "T00:00:00Z");
+      var stubMonth = first.getUTCDate() > 7 ? first.getUTCMonth() : -1;  // leading partial month → skip its label
       contribs.forEach(function (d, i) {
         var dt = new Date(d.date + "T00:00:00Z"), dow = dt.getUTCDay();
         if (i > 0 && dow === 0) col++;
@@ -821,11 +823,20 @@
           '" rx="2" ry="2" fill="' + (GH_LEVELS[d.level] || GH_LEVELS[0]) + '"/>';
         if (dow === 0) {
           var m = dt.getUTCMonth();
-          if (m !== lastMonth) { lastMonth = m; labels += '<text x="' + x + '" y="9" fill="#7d8590" font-size="9">' + GH_MONTHS[m] + '</text>'; }
+          // label each month once, but skip the leading stub month and keep ≥3 columns between labels.
+          if (m !== lastMonth) {
+            lastMonth = m;
+            if (m !== stubMonth && col - lastLabelCol >= 3) {
+              labels += '<text x="' + x + '" y="11" fill="#7d8590" font-size="9">' + GH_MONTHS[m] + '</text>';
+              lastLabelCol = col;
+            }
+          }
         }
       });
-      var w = (col + 1) * STEP - (STEP - SIZE), h = TOP + 7 * STEP - (STEP - SIZE);
-      chart.innerHTML = '<svg viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="xMinYMin meet">' + labels + cells + "</svg>";
+      // +16 right padding so a last-column label isn't clipped; -4 top so the month text
+      // (which sits above y=0) has headroom and isn't shaved at the top edge of the viewBox.
+      var w = (col + 1) * STEP - (STEP - SIZE) + 16, h = TOP + 7 * STEP - (STEP - SIZE);
+      chart.innerHTML = '<svg viewBox="0 -4 ' + w + " " + (h + 4) + '" preserveAspectRatio="xMinYMin meet">' + labels + cells + "</svg>";
     }
     // --- live data ---
     (function fetchGitHub() {
