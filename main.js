@@ -823,7 +823,9 @@
       var el = document.querySelector(sel); if (!el) return;
       var c = document.createElement("canvas"); c.className = "section-contours";
       el.insertBefore(c, el.firstChild);
-      darkSecs.push({ el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0 });
+      // The projects section (.features) keeps the solid navy backing but NO contour
+      // lines (user request) — so its terminal sits on a plain dark field.
+      darkSecs.push({ el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0, noLines: sel === ".features" });
     });
     var W = 0, H = 0, DPR = 1, CELL = 26, cols = 0, rows = 0, field = [];
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
@@ -989,6 +991,7 @@
         var sg = sec.ctx;
         sg.clearRect(0, 0, W, sh);
         sg.fillStyle = "rgb(27,34,54)"; sg.fillRect(0, 0, W, sh);
+        if (sec.noLines) continue;                         // projects: solid navy, no contour lines
         sg.save(); sg.translate(0, -sr.top);
         sg.lineCap = "round"; sg.lineJoin = "round";
         sg.strokeStyle = "rgba(77,139,255,0.45)"; sg.lineWidth = 0.45;
@@ -1600,7 +1603,7 @@
 
     var term = body.closest(".terminal");
 
-    if (reduce) { renderText(total); term.classList.add("is-revealing"); return; }
+    if (reduce) { renderText(total); term.classList.add("is-revealing"); term.classList.add("is-covered"); return; }
 
     // Scroll model. The section slides UP from the bottom: rect.top travels from
     // +vh (appearing) → 0 (reaches the top / fully covers) → −(height−vh) (past).
@@ -1629,8 +1632,12 @@
     }
     function update() {
       raf = 0;
-      if (atTop) { panCards(); return; }                  // latched: cards stay; pan to reveal all rows
       var r = sec.getBoundingClientRect(), vh = window.innerHeight;
+      // Top bar: reversible at the threshold — hidden while the terminal covers the
+      // top (r.top ≤ 0), back the moment you scroll up past it. Toggled every frame
+      // (independent of the latched card reveal below).
+      term.classList.toggle("is-covered", r.top <= 0);
+      if (atTop) { panCards(); return; }                  // latched: cards stay; pan to reveal all rows
       if (r.top <= 0) {                                   // threshold reached → fire the reveal once
         atTop = true; term.classList.add("is-revealing");
         renderText(total); lastR = total; panCards(); return;

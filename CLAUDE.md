@@ -1531,3 +1531,17 @@ Keep this section updated after every change. Format:
 - main.js (terminal IIFE): CARD_STEP 0.2s → 0.09s (gentler/flowing cascade for the slower rise);
   --meta-d trailing gap 0.5 → 0.9s so the "N rows in set" line follows after the last rise finishes.
   Anti-diagonal stagger + the latched is-revealing threshold trigger unchanged. node --check OK.
+
+### 2026-06-26 (projects: remove contour lines; top bar reversible at threshold)
+- Branch `projects-bg-and-topbar`. Two fixes:
+  • REMOVE BACKGROUND LINES in the projects section. The .features section's .section-contours
+    canvas drew solid navy + blue iso-contour lines. main.js: the darkSecs entry for `.features` is
+    now tagged `noLines:true`; the draw loop fills the solid navy (rgb 27,34,54) backing then
+    `continue`s before strokeIso — so the terminal keeps its dark field with NO contour lines (Skills
+    /Services keep theirs).
+  • TOP BAR comes back on scroll-up at the SAME threshold it left. The bar's collapse was keyed off
+    the LATCHED `.terminal.is-revealing` (added once at rect.top≤0, never removed) so it never
+    returned. Split it onto a new reversible `.terminal.is-covered` class: styles.css rule moved
+    is-revealing→is-covered; main.js update() now toggles `is-covered` every frame on `r.top<=0`
+    (independent of the still-latched card reveal), so scrolling back up past the threshold restores
+    the title bar. reduced-motion path adds is-covered too. node --check OK.
