@@ -552,9 +552,10 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 /* Wrapper that pans up on scroll so all cards scroll through the pinned terminal. */
 .term-scroll{will-change:transform}
 @media (max-width:820px){.terminal{height:auto;min-height:100vh}.terminal__body{overflow:visible}.term-scroll{transform:none!important}}
-/* At the threshold the mac-style title bar swipes UP and collapses (body reclaims
-   the space); reverses when .is-revealing is removed. */
-.terminal.is-revealing .terminal__bar{transform:translateY(-100%);opacity:0;max-height:0;padding-top:0;padding-bottom:0;border-bottom-width:0;pointer-events:none}
+/* At the threshold (rect.top ≤ 0) the mac-style title bar swipes UP and collapses
+   (body reclaims the space). Driven by .is-covered (reversible — NOT the latched
+   .is-revealing) so scrolling back up past the same threshold brings the bar back. */
+.terminal.is-covered .terminal__bar{transform:translateY(-100%);opacity:0;max-height:0;padding-top:0;padding-bottom:0;border-bottom-width:0;pointer-events:none}
 .term-projects{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;max-width:1280px;padding-top:24px}
 /* Each card pops in with the zone-title APPEAR animation, copied EXACTLY from
    flow.js (poseStr + APPEAR pose, ENTER_MS=420, easeOut cubic, no fade-in):
