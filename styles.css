@@ -238,7 +238,7 @@ body.nav-open{overflow:hidden}
 /* ---- Flow 3D image objects (desktop GL replaces the DOM card floats) ---- */
 /* The reference's global `canvas{opacity:0}` (only `canvas.is-ready` is shown)
    was hiding our WebGL canvases — they never get .is-ready. Force them visible. */
-.flow__gl,#vanta-bg canvas,#bg-contours,#hero-contours,#writing-contours,.section-contours{opacity:1}
+.flow__gl,#vanta-bg canvas,#bg-contours,#hero-contours,#writing-contours,.section-contours,.term-side-contours{opacity:1}
 @media (min-width:821px){.flow--gl .flow-panel__floats{display:none}}
 
 /* Scroll cue: white text. Exit = reverse of its entrance (label slides back down into the
@@ -565,7 +565,9 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 /* Panel appears with the SAME rise+fade as the cards (Lando reveal), keyed off the
    LATCHED .is-revealing class (same as the cards) so once it appears it STAYS — it
    does not vanish when you scroll back up. */
-.term-side{flex:0 0 clamp(220px,21vw,330px);align-self:flex-start;max-height:calc(100vh - var(--header-height) - 64px);overflow-y:auto;overscroll-behavior:contain;border:1px solid rgba(124,208,255,.22);border-left:0;border-radius:0 10px 10px 0;background:rgba(13,22,40,.45);min-height:240px;opacity:0;transform:translateY(64px);will-change:opacity,transform;transition:opacity .9s cubic-bezier(.19,1,.22,1) .5s,transform .9s cubic-bezier(.19,1,.22,1) .5s}
+.term-side{position:relative;flex:0 0 clamp(220px,21vw,330px);align-self:flex-start;max-height:calc(100vh - var(--header-height) - 64px);overflow-y:auto;overscroll-behavior:contain;border:1px solid rgba(124,208,255,.22);border-left:0;border-radius:0 10px 10px 0;background:transparent;min-height:240px;opacity:0;transform:translateY(64px);will-change:opacity,transform;transition:opacity .9s cubic-bezier(.19,1,.22,1) .5s,transform .9s cubic-bezier(.19,1,.22,1) .5s}
+.term-side-contours{position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:0 10px 10px 0}
+.term-side .filter{position:relative;z-index:1}
 .terminal.is-revealing .term-side{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.term-side{opacity:1;transform:none;transition:none}}
 /* panel's own slim scrollbar */
