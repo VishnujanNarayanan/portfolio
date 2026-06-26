@@ -1552,3 +1552,13 @@ Keep this section updated after every change. Format:
   entry now carries `fill: rgb(15,22,40)` (= #0f1628, the bar's old navy) used by the draw loop
   (`sg.fillStyle = sec.fill`); Skills/Services keep rgb(27,34,54). So the projects field reads as the
   former-bar navy under a now-black bar. node --check OK.
+
+### 2026-06-26 (projects: stick/pin at the threshold until the card reveal finishes)
+- Branch `projects-stick-threshold`. User: at the projects threshold the section should STICK a bit,
+  at least until the card animation finishes. Added a timed scroll LOCK to the terminal IIFE: when the
+  reveal threshold fires (r.top≤0, atTop latches), engageStick() freezes the page (lenis.stop() +
+  preventDefault on wheel/touchmove/scroll-keys + a scroll-clamp back to lockY) and a setTimeout
+  releases it after STICK_MS — the full reveal duration (BASE_DELAY + maxDiag·CARD_STEP + RISE_DUR(0.9s)
+  + 150ms buffer), computed in layoutCardStagger alongside --meta-d. So the cards rise + settle in place
+  before any pan/scroll-through; then the lock releases and panCards resumes as before. Guarded off on
+  mobile (≤820, no pin). node --check OK.

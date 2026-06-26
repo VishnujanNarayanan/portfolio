@@ -1558,10 +1558,14 @@
     var gridEl = projEl.querySelector(".term-projects");
     var cardEls = [].slice.call(projEl.querySelectorAll(".proj-card"));
     var CARD_STEP = 0.09;   // seconds between successive anti-diagonals (Lando-style flowing rise)
+    var RISE_DUR = 0.9;     // seconds — matches the CSS .9s card rise transition
     // The cards wait until the threshold animation (the .term-pre collapse, ~0.6s)
     // is done, then a 0.3s gap, before the first card pops — so they don't appear
     // while the pre-text is still vanishing.
     var PRE_COLLAPSE = 0.6, GAP = 0.3, BASE_DELAY = PRE_COLLAPSE + GAP;
+    // Total time (ms) from the threshold firing to the LAST card settling — used to
+    // hold (stick) the section pinned until the reveal animation finishes.
+    var STICK_MS = 0;
     function layoutCardStagger() {
       var tpl = getComputedStyle(gridEl).gridTemplateColumns;
       var cols = tpl ? tpl.split(" ").filter(Boolean).length : 4;
@@ -1572,7 +1576,8 @@
         if (diag > maxDiag) maxDiag = diag;
         el.style.setProperty("--cd", (BASE_DELAY + diag * CARD_STEP) + "s");
       });
-      projEl.style.setProperty("--meta-d", (BASE_DELAY + maxDiag * CARD_STEP + 0.9) + "s");
+      projEl.style.setProperty("--meta-d", (BASE_DELAY + maxDiag * CARD_STEP + RISE_DUR) + "s");
+      STICK_MS = (BASE_DELAY + maxDiag * CARD_STEP + RISE_DUR + 0.15) * 1000; // +150ms buffer
     }
     layoutCardStagger();
     window.addEventListener("resize", layoutCardStagger, { passive: true });
@@ -1617,6 +1622,31 @@
     //    LATCHED — once fired it never reverses, so scrolling back up keeps the
     //    cards on screen (and stops the per-frame re-typing fighting the scroll).
     var raf = 0, lastR = -1, atTop = false;
+    // Scroll LOCK: at the threshold the section STICKS (pins) just long enough for the
+    // card reveal animation to finish, so the cards aren't panned away mid-animation.
+    var lenis = window.__lenis, locked = false, lockY = 0, stickT = 0;
+    var SCROLL_KEYS = { 32: 1, 33: 1, 34: 1, 35: 1, 36: 1, 38: 1, 40: 1 };
+    function blockScroll(e) { e.preventDefault(); }
+    function blockKeys(e) { if (SCROLL_KEYS[e.keyCode]) e.preventDefault(); }
+    function clampScroll() { if (locked && window.scrollY !== lockY) window.scrollTo(0, lockY); }
+    function engageStick() {
+      if (locked || window.innerWidth <= 820) return;        // no pin on mobile
+      locked = true; lockY = window.scrollY;
+      if (lenis) lenis.stop();
+      window.addEventListener("wheel", blockScroll, { passive: false });
+      window.addEventListener("touchmove", blockScroll, { passive: false });
+      window.addEventListener("keydown", blockKeys, false);
+      window.addEventListener("scroll", clampScroll, { passive: true });
+      stickT = setTimeout(releaseStick, STICK_MS || 2500);
+    }
+    function releaseStick() {
+      if (!locked) return; locked = false; clearTimeout(stickT);
+      if (lenis) lenis.start();
+      window.removeEventListener("wheel", blockScroll, { passive: false });
+      window.removeEventListener("touchmove", blockScroll, { passive: false });
+      window.removeEventListener("keydown", blockKeys, false);
+      window.removeEventListener("scroll", clampScroll, { passive: true });
+    }
     // Once revealed, map the rest of the pinned scroll to a vertical PAN of the card
     // wrapper, so the overflowing rows scroll into view and the last card lands just
     // as the pin releases to Skills (no clipped cards, no stuck dead-zone).
@@ -1642,7 +1672,7 @@
       if (atTop) { panCards(); return; }                  // latched: cards stay; pan to reveal all rows
       if (r.top <= 0) {                                   // threshold reached → fire the reveal once
         atTop = true; term.classList.add("is-revealing");
-        renderText(total); lastR = total; panCards(); return;
+        renderText(total); lastR = total; engageStick(); panCards(); return;
       }
       var typeStart = vh * (6 / 7);
       var typeT = Math.min(1, Math.max(0, (typeStart - r.top) / (typeStart - 0)));
