@@ -1598,3 +1598,66 @@ Keep this section updated after every change. Format:
 - Side panel has its OWN scroll: align-self:flex-start + max-height:calc(100vh - header - 64px) +
   overflow-y:auto + overscroll-behavior:contain + data-lenis-prevent (Lenis won't hijack), slim themed
   scrollbar; mobile resets to natural flow. node --check OK.
+
+### 2026-06-26 (terminal top bar stays visible — no vanish, no shift)
+- Branch `topbar-keep-visible` (off main). User: keep the mac-style terminal title bar
+  visible at the top of the screen — do NOT make it swipe away/vanish at the threshold, and
+  do NOT shift it (the reposition-at-threshold behaviour from the abandoned projects-threshold-snap
+  branch). styles.css only:
+  • Removed `.terminal.is-covered .terminal__bar{transform:translateY(-100%);opacity:0;…}` — the
+    swipe-up/collapse that hid the bar once the terminal covered the top.
+  • Removed `.terminal.is-revealing .terminal__body{padding-top:var(--header-height)}` — the content
+    shift that pushed SELECT/cards below the header when the bar used to vanish (no longer needed).
+  • Simplified `.terminal__bar` (dropped the now-dead will-change/transition for transform/max-height/
+    opacity) — the bar is static.
+- `.terminal.is-covered` is still toggled in main.js and still drives the `.term-side` panel reveal —
+  left untouched. No JS changes.
+
+### 2026-06-26 (terminal: snap-to-threshold from the pre-threshold buffer)
+- User: add a "threshold before the threshold" — if a scroll lands in a buffer just BEFORE the
+  full-cover position, auto-complete the rest of the scroll up so it lands at that position.
+- main.js (terminal IIFE): new maybeSnap(), debounced 140ms after the scroll settles (via onScroll).
+  When the scroll stops with the section still APPROACHING DOWN (dir≥0) and its rect.top is within
+  the buffer (vh·0.13) above the full-cover line, it eases to the scrollY that makes rect.top = 0
+  (lenis.scrollTo duration .5, fallback window.scrollTo smooth). Guards: skips once atTop/locked,
+  on mobile (≤820), and when leaving upward (dir<0). onScroll now also tracks scroll direction.
+  node --check OK.
+
+### 2026-06-26 (snap earlier + always; side panel latches)
+- Snap-to-threshold buffer vh·0.13 → vh·0.2 (fires a little earlier).
+- Snap now happens EVERY time, including after scrolling back up and returning: removed the `atTop`
+  guard in maybeSnap() — its `r.top > 0 && r.top <= buffer` test already only matches when approaching
+  from above (pinned/panning has r.top ≤ 0), so re-entering the buffer from above re-snaps.
+- Filter side panel no longer disappears once shown: `.term-side` reveal moved from the reversible
+  `.terminal.is-covered` to the LATCHED `.terminal.is-revealing` (same trigger as the cards). node --check OK.
+
+### 2026-06-26 (SELECT line sticks under the top bar)
+- User: `mysql> SELECT * FROM projects;` should stay with the top bar. It was inside the panned
+  `.term-scroll` wrapper, so it scrolled away with the cards. main.js: moved preEl + selEl OUT of
+  scrollWrap into body flow (scrollWrap now holds only projEl/the cards), so selEl holds just under
+  the bar while only the cards pan up. panCards() `visible` now also subtracts selEl.offsetHeight +
+  preEl.offsetHeight (the collapsed pre ≈ 0) so the pan range still lands the last card correctly.
+  node --check OK.
+
+### 2026-06-26 (cards fade-out at the top; side panel no longer pans with the cards)
+- User: when scrolling down, the panning cards/side panel must not OVERLAP the pinned text — they
+  should cut off with a FADEOUT; and scrolling the cards must NOT move the side panel.
+- Restructured the SELECT result (main.js projectsHtml + body layout):
+  • The side panel (.term-side) is now a sibling of a new .term-cards-view; only the cards pan, so
+    the panel STAYS PUT (it no longer rides the pan transform). Scrolling the cards area doesn't move
+    it (its own data-lenis-prevent scroll is unchanged).
+  • Cards live in .term-cards-view (clipped, overflow:hidden) → .term-cards-pan (the layer that gets
+    the translateY pan). The viewport carries a top FADE MASK (mask-image linear-gradient transparent
+    0 → #000 52px), so cards dissolve out at the top instead of overlapping the SELECT line above.
+  • Moved the "N rows in set" meta line inside .term-cards-pan so it pans in after the last card.
+- CSS: .terminal__body is now a flex column; .term-result + .term-pgrid flex:1/min-height:0 so the
+  cards viewport gets a bounded height to clip + pan within. panCards() now translates .term-cards-pan
+  and sizes the pan from panEl.scrollHeight − viewEl.clientHeight (was the body-minus-SELECT calc).
+  Mobile resets: body display:block, cards-view mask none + overflow visible, pan transform none.
+- node --check OK; no stale scrollWrap/term-scroll refs. Visual (the fade + the panel holding while
+  cards pan) needs an eyeball in a real browser per the standing headless caveat.
+
+### 2026-06-26 (cards: remove the top fade-out, keep the hard clip)
+- User: remove the fade out. Dropped the .term-cards-view top mask-image (and its mobile reset).
+  Kept overflow:hidden so the panning cards still HARD-cut off at the viewport's top edge instead
+  of overlapping the SELECT line / panel above — just no gradient fade now.
