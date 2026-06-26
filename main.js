@@ -861,10 +861,15 @@
       fetch("https://github-contributions-api.jogruber.de/v4/" + GH_USER + "?y=last")
         .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
         .then(function (d) {
-          var n = d && d.total && d.total.lastYear;
+          // Keep only the last 8 months of the daily calendar.
+          var contribs = (d && d.contributions) || [];
+          var cut = new Date(); cut.setMonth(cut.getMonth() - 8);
+          var cutStr = cut.toISOString().slice(0, 10);
+          contribs = contribs.filter(function (c) { return c.date >= cutStr; });
+          var total = contribs.reduce(function (s, c) { return s + (c.count || 0); }, 0);
           var el = ghEl("contrib");
-          if (el && typeof n === "number") el.textContent = n.toLocaleString();
-          if (d && d.contributions) ghBuildGraph(d.contributions);
+          if (el) el.textContent = total.toLocaleString();
+          ghBuildGraph(contribs);
         })
         .catch(function () {});
     })();
