@@ -148,6 +148,9 @@
     function updateHeroExit() {
       var vh = window.innerHeight;
       var y = window.scrollY;
+      // The header reaction (text shrink + colour flip) fires a little BEFORE the edge
+      // zoom-out actually begins — 4.5% of a viewport early — so it leads the motion.
+      var HDR_FLIP = vh * 0.955;
       // Phase A (0 → vh): the hero rides UP 1:1 with scroll (linear, so the video glued
       // to its bottom edge tracks it exactly). Past vh it's parked off the top.
       if (heroContent) heroContent.style.transform = "";
@@ -215,7 +218,7 @@
       // Hover-reel gate: through the whole pull-up (y < vh) the header stays in its hero
       // appearance, so the clone keeps the SAME colour (CSS forces currentColor). It only
       // flips once the edge zoom-out begins (--hc takes over) — same trigger as the theme below.
-      if (hdr) hdr.classList.toggle("is-hero", y < vh);
+      if (hdr) hdr.classList.toggle("is-hero", y < HDR_FLIP);
 
       // Header reacts to the EDGE zoom-out (phase B), NOT to the initial pull-up. It's
       // THRESHOLD-fired (a timed flip, not scroll-scrubbed): the moment the video begins
@@ -226,7 +229,7 @@
       //  - the dark "Get In Touch" pill inverts its bg (dark → light) so it stays legible.
       // While y > 2·vh the flow/blog reel thresholds own the theme (via window.__navLight),
       // so we only assert it up to the end of the edge zoom.
-      var wantFlip = y >= vh;
+      var wantFlip = y >= HDR_FLIP;
       if (wantFlip !== hdrFlipped) {
         hdrFlipped = wantFlip;
         if (y <= 2 * vh) setHeaderTheme(wantFlip ? 1 : 0);   // timed (.3s), not scrubbed
