@@ -101,6 +101,43 @@
          at normal speed on its own — scroll never touches its playback position. -->
     <video class="hero-video" src="videos/interview_office.mp4" autoplay muted loop playsinline aria-hidden="true"></video>
 
+    <!-- GitHub card revealed OVER the video during the internal zoom-out (phase A,
+         the 1.55→1.0 camera pull-back), then faded out as the edge zoom-out begins.
+         Live data is fetched from the GitHub API in main.js; the static markup below
+         is the fallback shown if the request fails / before it resolves. -->
+    <div class="gh-reveal">
+      <a class="gh-card" href="https://github.com/VishnujanNarayanan" target="_blank" rel="noopener" data-framer-name="GitHub">
+        <div class="gh-card__head">
+          <div class="gh-card__headrow">
+            <div class="gh-card__top">
+              <svg class="gh-card__logo" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+              <span class="gh-card__brand">GitHub</span>
+            </div>
+            <img class="gh-card__avatar" data-gh="avatar" src="" alt="" width="56" height="56">
+          </div>
+          <div class="gh-card__handle" data-gh="handle">@VishnujanNarayanan</div>
+        </div>
+        <div class="gh-card__body">
+        <p class="gh-card__bio" data-gh="bio">Data &amp; ML engineer building systems that scale — pipelines, backends, ML.</p>
+        <div class="gh-card__contrib">
+          <span class="gh-card__label"><b data-gh="contrib">—</b> contributions · last 8 months</span>
+          <div class="gh-card__chart" data-gh="chart" role="img" aria-label="GitHub contribution graph for the last year"></div>
+        </div>
+        <ul class="gh-card__repos" data-gh="repos-list">
+          <li>Fraud_Transaction_Detection</li>
+          <li>minute-level-stock-prediction</li>
+          <li>Trader_sentiment_analysis</li>
+          <li>nexora_submission</li>
+          <li>ticket-classifier-nlp</li>
+          <li>Quotes_Retrieval</li>
+          <li>Image_classifier</li>
+          <li>Neural_net_from_scratch</li>
+        </ul>
+        <span class="gh-card__cta">View profile <span aria-hidden="true">&#8599;</span></span>
+        </div>
+      </a>
+    </div>
+
     <!-- Handwritten CTA drawn over the hero video. Rides with the video's zoom-out
          transform (set in main.js); the stroke is laid down letter-by-letter via
          stroke-dashoffset scrubbed to scroll (writes in the back half of the zoom-out,

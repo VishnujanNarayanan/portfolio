@@ -795,6 +795,129 @@
     requestAnimationFrame(tick);
   }
 
+  /* ---------- GitHub card: revealed OVER the video during the hero's internal
+     zoom-out (phase A, the 1.55→1.0 pull-back), faded out as the edge zoom-out
+     begins. Live profile/repo data pulled from the GitHub REST API (unauthenticated;
+     falls back to the static markup on any error / before it resolves). ---------- */
+  var ghReveal = document.querySelector(".gh-reveal");
+  if (ghReveal) {
+    var ghCard = ghReveal.querySelector(".gh-card");
+    var GH_USER = "VishnujanNarayanan";
+    function ghEl(k) { return ghReveal.querySelector('[data-gh="' + k + '"]'); }
+    // GitHub dark-theme contribution palette: empty cell + 4 green levels.
+    var GH_LEVELS = ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"];
+    var GH_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    // Render the last-year calendar as an SVG grid (weeks = columns, day-of-week = rows),
+    // matching GitHub's dark theme — so empty days are dark (#161b22), not white.
+    function ghBuildGraph(contribs) {
+      var chart = ghEl("chart");
+      if (!chart || !Array.isArray(contribs) || !contribs.length) return;
+      var STEP = 13, SIZE = 11, TOP = 18, col = 0, lastMonth = -1, lastLabelCol = -99, cells = "", labels = "";
+      var first = new Date(contribs[0].date + "T00:00:00Z");
+      var stubMonth = first.getUTCDate() > 7 ? first.getUTCMonth() : -1;  // leading partial month → skip its label
+      contribs.forEach(function (d, i) {
+        var dt = new Date(d.date + "T00:00:00Z"), dow = dt.getUTCDay();
+        if (i > 0 && dow === 0) col++;
+        var x = col * STEP, y = TOP + dow * STEP;
+        cells += '<rect x="' + x + '" y="' + y + '" width="' + SIZE + '" height="' + SIZE +
+          '" rx="2" ry="2" fill="' + (GH_LEVELS[d.level] || GH_LEVELS[0]) + '"/>';
+        if (dow === 0) {
+          var m = dt.getUTCMonth();
+          // label each month once, but skip the leading stub month and keep ≥3 columns between labels.
+          if (m !== lastMonth) {
+            lastMonth = m;
+            if (m !== stubMonth && col - lastLabelCol >= 3) {
+              labels += '<text x="' + x + '" y="11" fill="#7d8590" font-size="9">' + GH_MONTHS[m] + '</text>';
+              lastLabelCol = col;
+            }
+          }
+        }
+      });
+      // +16 right padding so a last-column label isn't clipped; -4 top so the month text
+      // (which sits above y=0) has headroom and isn't shaved at the top edge of the viewBox.
+      var w = (col + 1) * STEP - (STEP - SIZE) + 16, h = TOP + 7 * STEP - (STEP - SIZE);
+      chart.innerHTML = '<svg viewBox="0 -4 ' + w + " " + (h + 4) + '" preserveAspectRatio="xMinYMin meet">' + labels + cells + "</svg>";
+    }
+    // --- live data ---
+    (function fetchGitHub() {
+      if (!window.fetch) return;                               // keep static fallback
+      fetch("https://api.github.com/users/" + GH_USER)
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (u) {
+          var av = ghEl("avatar"); if (av && u.avatar_url) { av.src = u.avatar_url; av.alt = (u.name || GH_USER) + " on GitHub"; }
+          var h = ghEl("handle"); if (h) h.textContent = "@" + (u.login || GH_USER);
+          var bio = ghEl("bio"); if (bio && u.bio) bio.textContent = u.bio;
+        })
+        .catch(function () {});                                 // silent → static fallback stays
+      fetch("https://api.github.com/users/" + GH_USER + "/repos?per_page=100&sort=updated")
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (list) {
+          if (!Array.isArray(list) || !list.length) return;
+          var top = list.filter(function (r) { return !r.fork; })
+            .sort(function (a, b) {
+              return (b.stargazers_count || 0) - (a.stargazers_count || 0) ||
+                     (new Date(b.pushed_at) - new Date(a.pushed_at));
+            })
+            .slice(0, 8);
+          var ul = ghEl("repos-list");
+          if (ul && top.length) {
+            ul.innerHTML = top.map(function (r) {
+              var li = document.createElement("li"); li.textContent = r.name; return li.outerHTML;
+            }).join("");
+          }
+        })
+        .catch(function () {});
+      // Last-year contribution TOTAL (GitHub's REST API can't return it without auth; this
+      // public endpoint mirrors the contribution calendar). Silent fallback to the static "—".
+      fetch("https://github-contributions-api.jogruber.de/v4/" + GH_USER + "?y=last")
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (d) {
+          // Keep only the last 8 months of the daily calendar.
+          var contribs = (d && d.contributions) || [];
+          var cut = new Date(); cut.setMonth(cut.getMonth() - 8);
+          var cutStr = cut.toISOString().slice(0, 10);
+          contribs = contribs.filter(function (c) { return c.date >= cutStr; });
+          var total = contribs.reduce(function (s, c) { return s + (c.count || 0); }, 0);
+          var el = ghEl("contrib");
+          if (el) el.textContent = total.toLocaleString();
+          ghBuildGraph(contribs);
+        })
+        .catch(function () {});
+    })();
+    // --- scroll reveal (synced to phase A's internal zoom-out) ---
+    function smooth(t) { return t * t * (3 - 2 * t); }
+    // The card is ANCHORED TO THE VIDEO: it tracks the video's vertical motion (the same
+    // vTy the hero uses) so it rides UP with the video as it comes up, instead of being
+    // stuck to the page. Its CSS height is the FULL/design size (GH_END of the viewport);
+    // scaling it makes it read smaller, so it GROWS from the bottom-left corner from
+    // GH_START → GH_END as the video reaches fullscreen. No fade, no rotation, no slide
+    // independent of the video.
+    var GH_START = 0.40, GH_END = 0.65;           // visual height (× viewport): at reveal → at fullscreen
+    function updateGhCard() {
+      var y = window.scrollY, vh = window.innerHeight;
+      var sc, op, ty;
+      if (y <= vh) {
+        // Phase A: ride up WITH the video (ty = vh − y, the video's own translate), so the
+        // card emerges from the video's bottom and settles as the video fills the screen.
+        ty = vh - y;
+        var g = smooth(Math.max(0, Math.min(y / vh, 1)));
+        var frac = GH_START + (GH_END - GH_START) * g;   // 0.40 → 0.75 of the viewport
+        sc = frac / GH_END;                              // 0.533 → 1 (card's base height is GH_END)
+        op = 1;                                          // off-screen below at the top, so no fade needed
+      } else {
+        // Phase B: shrink + fade back out so the fixed card never covers the sections below.
+        var x = smooth(Math.max(0, Math.min((y - vh) / (0.35 * vh), 1)));
+        ty = 0; sc = 1 - 0.5 * x; op = 1 - x;
+      }
+      ghReveal.style.opacity = op.toFixed(3);
+      ghCard.style.transform = "translateY(" + ty.toFixed(1) + "px) scale(" + sc.toFixed(3) + ")";
+      ghReveal.classList.toggle("is-live", op > 0.6 && y >= 0.6 * vh && y <= vh * 1.02);
+    }
+    window.addEventListener("scroll", updateGhCard, { passive: true });
+    window.addEventListener("resize", updateGhCard, { passive: true });
+    updateGhCard();
+  }
+
   /* ---------- Global background: animated topographic blue contours ----------
      One fixed full-viewport plane shared by the hero zoom-out reveal AND the flow
      section (so they read as the same continuous background). The contours are
