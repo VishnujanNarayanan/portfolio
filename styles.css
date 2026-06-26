@@ -136,7 +136,7 @@ body.nav-open{overflow:hidden}
 /* 200svh reserves room for the two-phase hero exit: ~1 viewport of pinned
    zoom-out, then ~1 viewport for the hero to scroll up off the top before the
    flow section begins (see updateHeroExit in main.js). */
-.hero-spacer{min-height:300svh}
+.hero-spacer{min-height:360svh}/* 300 base + 60 (HERO_DWELL 0.6·vh) for the fullscreen checkpoint dwell */
 
 /* ============================================================
    Flow — three.js parallax journey (2026-06-16)
