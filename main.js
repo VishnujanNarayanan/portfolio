@@ -1552,7 +1552,7 @@
     // a per-card --cd transition-delay; the meta line follows after the last wave.
     var gridEl = projEl.querySelector(".term-projects");
     var cardEls = [].slice.call(projEl.querySelectorAll(".proj-card"));
-    var CARD_STEP = 0.2;    // seconds between successive anti-diagonals
+    var CARD_STEP = 0.09;   // seconds between successive anti-diagonals (Lando-style flowing rise)
     // The cards wait until the threshold animation (the .term-pre collapse, ~0.6s)
     // is done, then a 0.3s gap, before the first card pops — so they don't appear
     // while the pre-text is still vanishing.
@@ -1567,7 +1567,7 @@
         if (diag > maxDiag) maxDiag = diag;
         el.style.setProperty("--cd", (BASE_DELAY + diag * CARD_STEP) + "s");
       });
-      projEl.style.setProperty("--meta-d", (BASE_DELAY + maxDiag * CARD_STEP + 0.5) + "s");
+      projEl.style.setProperty("--meta-d", (BASE_DELAY + maxDiag * CARD_STEP + 0.9) + "s");
     }
     layoutCardStagger();
     window.addEventListener("resize", layoutCardStagger, { passive: true });
