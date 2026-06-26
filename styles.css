@@ -561,9 +561,10 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    translateX(22vw)=ex(vw*0.22) perspective translate(50%) translate3d(-222.2,88)
    rotateY(60) rotateX(35) → identity. The 22vw is what makes it fly in from the
    RIGHT. Opacity snaps (0s) so it's hidden during its delay then enters un-faded.
-   JS sets --cd per card so they wave in along the anti-diagonal (row+col):
-   [0,0] first, then [0,1]+[1,0], then [1,1]+[2,0]+…. */
-.term-projects .proj-card{opacity:0;transform:translateX(22vw) perspective(1000px) translate(50%) translate3d(-222.2px,88px,0) rotateY(60deg) rotateX(35deg);will-change:opacity,transform;transition:transform .42s cubic-bezier(.215,.61,.355,1) var(--cd,0s),opacity 0s linear var(--cd,0s)}
+   Lando "helmet-grid" reveal: each card RISES up from below + fades in
+   (rest = translate(0)), staggered along the anti-diagonal (row+col) via
+   the JS-set --cd: [0,0] first, then [0,1]+[1,0], then [1,1]+[2,0]+…. */
+.term-projects .proj-card{opacity:0;transform:translateY(64px);will-change:opacity,transform;transition:transform .9s cubic-bezier(.19,1,.22,1) var(--cd,0s),opacity .9s cubic-bezier(.19,1,.22,1) var(--cd,0s)}
 .terminal.is-revealing .term-projects .proj-card{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.term-projects .proj-card{opacity:1;transform:none;transition:none}}
 .proj-card{position:relative;display:block;aspect-ratio:406.89/411;color:#dfe4f2;isolation:isolate}
