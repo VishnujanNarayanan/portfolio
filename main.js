@@ -1621,6 +1621,7 @@
       });
       projEl.style.setProperty("--meta-d", (BASE_DELAY + maxDiag * CARD_STEP + RISE_DUR) + "s");
       STICK_MS = (BASE_DELAY + maxDiag * CARD_STEP + RISE_DUR + 0.15) * 1000; // +150ms buffer
+      sizeSection();                                   // pin length tracks the card overflow
     }
     layoutCardStagger();
     window.addEventListener("resize", layoutCardStagger, { passive: true });
@@ -1642,37 +1643,61 @@
         for (var i = 0; i < keys.length; i++) if (data.indexOf("|" + keys[i] + "|") >= 0) return true;
         return false;
       }
-      // Animate a card out (reverse of the appear: sink + fade, then collapse) or
-      // in (appear: rise + fade). Mirrors the threshold reveal animation.
-      var FADE = 550, EASE = "cubic-bezier(.19,1,.22,1)";
-      function setHidden(c, hide) {
-        if (hide) {
-          if (c._fhidden) return;                          // already out
-          c._fhidden = true; clearTimeout(c._ft);
+      // On a filter change: COMPLETELY vanish ALL currently-shown cards (the reverse of
+      // the appear — sink + fade), then reappear the NEW (filtered) set with the SAME
+      // staggered anti-diagonal rise the cards play initially at the threshold.
+      var FADE = 550, EASE = "cubic-bezier(.19,1,.22,1)", CLICK_STEP = 0.06;
+      var applyT = 0;
+      function colCount() {
+        var tpl = getComputedStyle(gridEl).gridTemplateColumns;
+        var n = tpl ? tpl.split(" ").filter(Boolean).length : 4;
+        return n < 1 ? 1 : n;
+      }
+      // Phase 1 — every currently-visible card sinks + fades out together.
+      function vanishAll(done) {
+        var vis = cardEls.filter(function (c) { return !c.classList.contains("is-filtered-out"); });
+        if (!vis.length) { done(); return; }
+        vis.forEach(function (c) {
           c.style.transition = "opacity " + FADE + "ms ease,transform " + FADE + "ms " + EASE;
           c.style.opacity = "0"; c.style.transform = "translateY(64px)";
-          c._ft = setTimeout(function () { c.classList.add("is-filtered-out"); }, FADE);
-        } else {
-          clearTimeout(c._ft);
-          if (c._fhidden) {                                // was out → bring back + animate in
-            c._fhidden = false; c.classList.remove("is-filtered-out");
-            c.style.transition = "none"; c.style.opacity = "0"; c.style.transform = "translateY(64px)";
-            void c.offsetWidth;                            // reflow so the "from" sticks
-          }
-          c.style.transition = "opacity " + FADE + "ms ease,transform " + FADE + "ms " + EASE;
-          c.style.opacity = "1"; c.style.transform = "none";
-        }
+        });
+        clearTimeout(applyT); applyT = setTimeout(done, FADE);
       }
-      function apply() {
-        var shown = 0;
+      // Phase 2 — drop the non-matching cards, then replay the threshold appear (rise +
+      // fade, anti-diagonal stagger recomputed over the filtered grid) on the new set.
+      function showFiltered() {
+        var matching = [];
         cardEls.forEach(function (c) {
-          var ok = matches(c, "tools") && matches(c, "dom");
-          setHidden(c, !ok);
-          if (ok) shown++;
+          if (matches(c, "tools") && matches(c, "dom")) { c.classList.remove("is-filtered-out"); matching.push(c); }
+          else { c.classList.add("is-filtered-out"); }
+        });
+        // Re-size the section for the new card count: fewer cards → shorter (or no) pin,
+        // so you don't have to scroll a fixed dead-zone past a 1-card result to leave.
+        sizeSection();
+        // FRESH start: drop any scroll-driven pan so the new set appears from the TOP
+        // (not at the prior scrolled position — a 1-card result must be visible without
+        // scrolling up). Realign scroll to the cover threshold so panCards() stays at 0.
+        panEl.style.transform = "translateY(0px)";
+        var top = window.scrollY + sec.getBoundingClientRect().top; // scrollY where rect.top = 0
+        if (window.__lenis) window.__lenis.scrollTo(top, { immediate: true });
+        else window.scrollTo(0, top);
+        matching.forEach(function (c) {                    // reset to the appear "from" state, no transition
+          c.style.transition = "none"; c.style.opacity = "0"; c.style.transform = "translateY(64px)";
+        });
+        void gridEl.offsetWidth;                           // reflow: new grid layout + from-state stick
+        var cols = colCount();
+        matching.forEach(function (c, i) {
+          var d = ((Math.floor(i / cols) + (i % cols)) * CLICK_STEP) + "s";
+          c.style.transition = "opacity " + FADE + "ms ease " + d + ",transform " + FADE + "ms " + EASE + " " + d;
+          c.style.opacity = "1"; c.style.transform = "none";
         });
         var any = Object.keys(sel.tools).length + Object.keys(sel.dom).length > 0;
-        if (clearBtn) clearBtn.hidden = !any;
-        if (metaEl) metaEl.textContent = shown + " row" + (shown === 1 ? "" : "s") + " in set" + (any ? " (filtered)" : " (0.001 sec)");
+        if (metaEl) metaEl.textContent = matching.length + " row" + (matching.length === 1 ? "" : "s") + " in set" + (any ? " (filtered)" : " (0.001 sec)");
+      }
+      function apply() {
+        var any = Object.keys(sel.tools).length + Object.keys(sel.dom).length > 0;
+        if (clearBtn) clearBtn.hidden = !any;              // update the clear pill immediately
+        vanishAll(showFiltered);                           // vanish ALL → reappear the filtered set
       }
       panel.addEventListener("change", function (e) {
         var cb = e.target.closest && e.target.closest(".filter__cb");
@@ -1759,19 +1784,30 @@
       window.removeEventListener("keydown", blockKeys, false);
       window.removeEventListener("scroll", clampScroll, { passive: true });
     }
-    // Once revealed, map the rest of the pinned scroll to a vertical PAN of the cards
-    // layer INSIDE its clipped viewport, so the overflowing rows scroll into view (and
-    // fade out at the viewport's top) and the last card lands just as the pin releases
-    // to Skills (no clipped cards, no stuck dead-zone). The side panel doesn't move.
+    // How far the (visible) cards extend past their viewport — drives BOTH the section
+    // height and the pan, so the two stay in lock-step.
+    var PAN_PAD = 24;
+    function cardOverflow() {
+      var ov = panEl.scrollHeight - viewEl.clientHeight;
+      return ov > 0 ? ov + PAN_PAD : 0;                 // 0 when the cards already fit
+    }
+    // Size the section so the PINNED scroll length == the card overflow: more projects
+    // below → a longer pin (scrolling down reveals them); all projects already visible
+    // → overflow 0 → height 100vh → no extra pin, so you scroll on out of the section
+    // normally (no fixed dead-zone). Recomputed on init, resize, and every filter change.
+    function sizeSection() {
+      if (window.innerWidth <= 820) { sec.style.height = ""; return; } // mobile: natural flow
+      sec.style.height = (window.innerHeight + cardOverflow()) + "px";
+    }
+    // Map the pinned scroll to a vertical PAN of the cards layer inside its clipped
+    // viewport. Because sizeSection() made the pin length == the overflow, the last card
+    // lands exactly as the pin releases to Skills. The side panel doesn't move.
     function panCards() {
       if (window.innerWidth <= 820) { panEl.style.transform = ""; return; }
-      // Map the pan across 85% of the pin so the last row holds briefly before the
-      // pin releases to Skills (not flung past the instant it arrives).
-      var panRange = (sec.offsetHeight - window.innerHeight) * 0.85;
-      if (panRange <= 0) { panEl.style.transform = ""; return; }
-      var overflowPx = Math.max(0, panEl.scrollHeight - viewEl.clientHeight + 24); // +24 bottom breathing room
-      var past = Math.min(1, Math.max(0, -sec.getBoundingClientRect().top / panRange));
-      panEl.style.transform = "translateY(" + (-(past * overflowPx)).toFixed(1) + "px)";
+      var pinScroll = sec.offsetHeight - window.innerHeight; // == cardOverflow()
+      if (pinScroll <= 0) { panEl.style.transform = "translateY(0px)"; return; }
+      var past = Math.min(1, Math.max(0, -sec.getBoundingClientRect().top / pinScroll));
+      panEl.style.transform = "translateY(" + (-(past * pinScroll)).toFixed(1) + "px)";
     }
     function update() {
       raf = 0;
