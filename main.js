@@ -1468,21 +1468,24 @@
     // n=name, d=description (first outcome bullet), t=tech tags, h=subpage link
     // (4 existing only), code=GitHub repo (drives the "View code" notch button),
     // img=card image (cycles the 4 flow placeholders). Content from master_profile.yaml.
+    // n=name, d=desc, t=visible card tags, h=subpage, code=GitHub, img=card image.
+    // tools = full tech stack (from master_profile.yaml, fuller than the visible tags)
+    // and dom = domain(s) — both drive the side-panel "Filter by" facets.
     var PROJECTS = [
-      { n: "Market Data Platform", d: "28-pipeline NSE market-data ingestion layer feeding 12+ datasets into a partitioned store.", t: ["Python", "pandas", "ETL", "SQL"], h: "projects/market-data-pipeline/index.html", img: "images/flow/data-collection.jpg" },
-      { n: "Product Explorer", d: "Full-stack TypeScript app scraping a book catalog into PostgreSQL, served via Next.js with real-time WebSocket scraping.", t: ["TypeScript", "NestJS", "PostgreSQL", "Redis"], h: "projects/product-explorer/index.html", img: "images/flow/processing-storage.jpg" },
-      { n: "Fraud Transaction Detection", d: "Fraud-detection model on 6.4M transactions — 95% caught at 0.995 ROC-AUC despite a 0.13% fraud rate.", t: ["Python", "scikit-learn", "pandas"], h: "projects/fraud-detection/index.html", code: "https://github.com/VishnujanNarayanan/Fraud_Transaction_Detection", img: "images/flow/ml-analysis.jpg" },
-      { n: "Minute-Level Stock Prediction", d: "Intraday price-direction system over 9.4M NSE ticks, raising next-minute precision from 0.51 to 0.61.", t: ["Python", "scikit-learn", "Backtesting"], h: "projects/nse-stock-prediction/index.html", code: "https://github.com/VishnujanNarayanan/minute-level-stock-prediction", img: "images/flow/build-ship.jpg" },
-      { n: "Trader Sentiment Analysis", d: "Quantified how Bitcoin Fear & Greed sentiment drives trader PnL across 211K crypto trades, with a contrarian sentiment-gated signal.", t: ["Python", "pandas", "SciPy", "Statistics"], code: "https://github.com/VishnujanNarayanan/Trader_sentiment_analysis", img: "images/flow/data-collection.jpg" },
-      { n: "Nexora Semantic Vibe Matcher", d: "Semantic product-search engine that embeds descriptions and ranks by cosine similarity — finds matches with no shared keywords.", t: ["Python", "sentence-transformers", "NLP"], code: "https://github.com/VishnujanNarayanan/nexora_submission", img: "images/flow/processing-storage.jpg" },
-      { n: "Support Ticket Classifier", d: "End-to-end NLP system classifying support tickets by issue type and urgency and extracting entities, served via a Gradio app.", t: ["Python", "scikit-learn", "NLTK", "Gradio"], code: "https://github.com/VishnujanNarayanan/ticket-classifier-nlp", img: "images/flow/ml-analysis.jpg" },
-      { n: "Semantic Quote Retrieval", d: "Semantic quote search — fine-tuned sentence embeddings + FAISS index over ~2,500 quotes, served through Streamlit.", t: ["Python", "FAISS", "PyTorch", "Streamlit"], code: "https://github.com/VishnujanNarayanan/Quotes_Retrieval", img: "images/flow/build-ship.jpg" },
-      { n: "Age & Gender Classifier", d: "Multi-task CNN predicting age and gender from a face photo, trained on 10,000+ UTKFace images with face detection and alignment.", t: ["Python", "TensorFlow", "Keras", "OpenCV"], code: "https://github.com/VishnujanNarayanan/Image_classifier", img: "images/flow/data-collection.jpg" },
-      { n: "Neural Network From Scratch", d: "Feed-forward classifier built in pure NumPy — 97.4% accuracy / 0.995 ROC-AUC on Breast-Cancer-Wisconsin, with hand-derived backprop.", t: ["Python", "NumPy"], code: "https://github.com/VishnujanNarayanan/Neural_net_from_scratch", img: "images/flow/processing-storage.jpg" },
-      { n: "Multi-Task Face Network", d: "From-scratch NumPy multi-task network predicting age and gender from 24,102 face images — shared trunk, two heads, manual backprop.", t: ["Python", "NumPy", "OpenCV"], code: "https://github.com/VishnujanNarayanan/Neural_net_from_scratch", img: "images/flow/ml-analysis.jpg" },
-      { n: "Linear Regression From Scratch", d: "Linear regression built end to end in pure NumPy — hand-derived gradient descent and a closed-form solver, validated vs scikit-learn.", t: ["Python", "NumPy"], code: "https://github.com/VishnujanNarayanan/Linear_regression_from_scratch", img: "images/flow/build-ship.jpg" },
-      { n: "Binance Futures Trading Bot", d: "CLI trading bot placing market, limit, and stop-limit orders and managing positions on the Binance USDT-M Futures Testnet.", t: ["Python", "python-binance", "CLI"], code: "https://github.com/VishnujanNarayanan/binance-futures-trading-bot", img: "images/flow/data-collection.jpg" },
-      { n: "Professional Directory App", d: "Cross-platform React Native directory app across 12 screens — auth, search, and messaging — over a FastAPI REST service.", t: ["React Native", "Expo", "FastAPI"], code: "https://github.com/VishnujanNarayanan/professional-directory-app", img: "images/flow/processing-storage.jpg" }
+      { n: "Market Data Platform", d: "28-pipeline NSE market-data ingestion layer feeding 12+ datasets into a partitioned store.", t: ["Python", "pandas", "ETL", "SQL"], tools: ["Python", "pandas", "NumPy", "SQL", "ETL"], dom: ["Data", "Finance"], h: "projects/market-data-pipeline/index.html", img: "images/flow/data-collection.jpg" },
+      { n: "Product Explorer", d: "Full-stack TypeScript app scraping a book catalog into PostgreSQL, served via Next.js with real-time WebSocket scraping.", t: ["TypeScript", "NestJS", "PostgreSQL", "Redis"], tools: ["TypeScript", "NestJS", "Next.js", "PostgreSQL", "Redis", "WebSockets"], dom: ["Scraping", "Backend", "Full-Stack", "Data"], h: "projects/product-explorer/index.html", img: "images/flow/processing-storage.jpg" },
+      { n: "Fraud Transaction Detection", d: "Fraud-detection model on 6.4M transactions — 95% caught at 0.995 ROC-AUC despite a 0.13% fraud rate.", t: ["Python", "scikit-learn", "pandas"], tools: ["Python", "scikit-learn", "pandas", "NumPy", "SciPy"], dom: ["ML", "Data", "Finance"], h: "projects/fraud-detection/index.html", code: "https://github.com/VishnujanNarayanan/Fraud_Transaction_Detection", img: "images/flow/ml-analysis.jpg" },
+      { n: "Minute-Level Stock Prediction", d: "Intraday price-direction system over 9.4M NSE ticks, raising next-minute precision from 0.51 to 0.61.", t: ["Python", "scikit-learn", "Backtesting"], tools: ["Python", "scikit-learn", "pandas", "Backtesting"], dom: ["ML", "Quant", "Finance", "Data"], h: "projects/nse-stock-prediction/index.html", code: "https://github.com/VishnujanNarayanan/minute-level-stock-prediction", img: "images/flow/build-ship.jpg" },
+      { n: "Trader Sentiment Analysis", d: "Quantified how Bitcoin Fear & Greed sentiment drives trader PnL across 211K crypto trades, with a contrarian sentiment-gated signal.", t: ["Python", "pandas", "SciPy", "Statistics"], tools: ["Python", "pandas", "SciPy", "Matplotlib"], dom: ["Finance", "Quant", "Data"], code: "https://github.com/VishnujanNarayanan/Trader_sentiment_analysis", img: "images/flow/data-collection.jpg" },
+      { n: "Nexora Semantic Vibe Matcher", d: "Semantic product-search engine that embeds descriptions and ranks by cosine similarity — finds matches with no shared keywords.", t: ["Python", "sentence-transformers", "NLP"], tools: ["Python", "sentence-transformers", "PyTorch"], dom: ["ML", "NLP"], code: "https://github.com/VishnujanNarayanan/nexora_submission", img: "images/flow/processing-storage.jpg" },
+      { n: "Support Ticket Classifier", d: "End-to-end NLP system classifying support tickets by issue type and urgency and extracting entities, served via a Gradio app.", t: ["Python", "scikit-learn", "NLTK", "Gradio"], tools: ["Python", "scikit-learn", "NLTK", "Gradio"], dom: ["ML", "NLP"], code: "https://github.com/VishnujanNarayanan/ticket-classifier-nlp", img: "images/flow/ml-analysis.jpg" },
+      { n: "Semantic Quote Retrieval", d: "Semantic quote search — fine-tuned sentence embeddings + FAISS index over ~2,500 quotes, served through Streamlit.", t: ["Python", "FAISS", "PyTorch", "Streamlit"], tools: ["Python", "FAISS", "PyTorch", "sentence-transformers", "Streamlit"], dom: ["ML", "NLP"], code: "https://github.com/VishnujanNarayanan/Quotes_Retrieval", img: "images/flow/build-ship.jpg" },
+      { n: "Age & Gender Classifier", d: "Multi-task CNN predicting age and gender from a face photo, trained on 10,000+ UTKFace images with face detection and alignment.", t: ["Python", "TensorFlow", "Keras", "OpenCV"], tools: ["Python", "TensorFlow", "Keras", "OpenCV"], dom: ["ML", "Computer Vision"], code: "https://github.com/VishnujanNarayanan/Image_classifier", img: "images/flow/data-collection.jpg" },
+      { n: "Neural Network From Scratch", d: "Feed-forward classifier built in pure NumPy — 97.4% accuracy / 0.995 ROC-AUC on Breast-Cancer-Wisconsin, with hand-derived backprop.", t: ["Python", "NumPy"], tools: ["Python", "NumPy"], dom: ["ML"], code: "https://github.com/VishnujanNarayanan/Neural_net_from_scratch", img: "images/flow/processing-storage.jpg" },
+      { n: "Multi-Task Face Network", d: "From-scratch NumPy multi-task network predicting age and gender from 24,102 face images — shared trunk, two heads, manual backprop.", t: ["Python", "NumPy", "OpenCV"], tools: ["Python", "NumPy", "OpenCV"], dom: ["ML", "Computer Vision"], code: "https://github.com/VishnujanNarayanan/Neural_net_from_scratch", img: "images/flow/ml-analysis.jpg" },
+      { n: "Linear Regression From Scratch", d: "Linear regression built end to end in pure NumPy — hand-derived gradient descent and a closed-form solver, validated vs scikit-learn.", t: ["Python", "NumPy"], tools: ["Python", "NumPy", "scikit-learn"], dom: ["ML"], code: "https://github.com/VishnujanNarayanan/Linear_regression_from_scratch", img: "images/flow/build-ship.jpg" },
+      { n: "Binance Futures Trading Bot", d: "CLI trading bot placing market, limit, and stop-limit orders and managing positions on the Binance USDT-M Futures Testnet.", t: ["Python", "python-binance", "CLI"], tools: ["Python", "python-binance", "CLI"], dom: ["Finance", "Backend"], code: "https://github.com/VishnujanNarayanan/binance-futures-trading-bot", img: "images/flow/data-collection.jpg" },
+      { n: "Professional Directory App", d: "Cross-platform React Native directory app across 12 screens — auth, search, and messaging — over a FastAPI REST service.", t: ["React Native", "Expo", "FastAPI"], tools: ["React Native", "Expo", "FastAPI"], dom: ["Full-Stack", "Backend", "Mobile"], code: "https://github.com/VishnujanNarayanan/professional-directory-app", img: "images/flow/processing-storage.jpg" }
     ];
     // Notched-corner card frame (Lando "helmet-grid" reference): base outline + a
     // brighter overlay outline that fades in on hover. Same viewBox/path as the ref.
@@ -1496,6 +1499,34 @@
     var esc = document.createElement("div");
     function escapeHtml(s) { esc.textContent = s; return esc.innerHTML; }
     function prefixOf(s) { return s.t === "cmd" ? PROMPT : s.t === "sql" ? MYSQL : ""; }
+    function slug(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""); }
+
+    // ---- Side-panel "Filter by" facets, derived from PROJECTS' tools/dom ----
+    function facetCounts(key) {
+      var m = {};
+      PROJECTS.forEach(function (p) { (p[key] || []).forEach(function (v) { m[v] = (m[v] || 0) + 1; }); });
+      return Object.keys(m).map(function (k) { return { label: k, n: m[k] }; })
+        .sort(function (a, b) { return b.n - a.n || a.label.localeCompare(b.label); });
+    }
+    function facetItems(key) {
+      return facetCounts(key).map(function (it) {
+        return '<li><label class="filter__item"><input type="checkbox" class="filter__cb" data-facet="' + key +
+          '" value="' + slug(it.label) + '"><span class="filter__box" aria-hidden="true"></span>' +
+          '<span class="filter__label">' + escapeHtml(it.label) + "</span>" +
+          '<span class="filter__n">' + it.n + "</span></label></li>";
+      }).join("");
+    }
+    function groupHtml(key, name, open) {
+      return '<div class="filter__group' + (open ? " is-open" : "") + '" data-group="' + key + '">' +
+        '<button type="button" class="filter__folder" aria-expanded="' + (open ? "true" : "false") + '">' +
+        '<span class="filter__chev" aria-hidden="true"></span><span class="filter__name">' + name + "</span></button>" +
+        '<ul class="filter__items">' + facetItems(key) + "</ul></div>";
+    }
+    function panelHtml() {
+      return '<div class="filter"><div class="filter__head">Filter by</div>' +
+        groupHtml("tools", "Tools", true) + groupHtml("dom", "Domain", true) +
+        '<button type="button" class="filter__clear" hidden>Clear all</button></div>';
+    }
 
     // The projects result set rendered under the SELECT — reference-style cards:
     // image base, notched frame, hover-reveal wipe (clip-path ellipse), blue accent.
@@ -1511,7 +1542,9 @@
         var closeA = primary ? "</a>" : "</span>";
         var cta = p.h ? "View project &rarr;" : "View code &#8599;";
         var id = (n + 1 < 10 ? "0" : "") + (n + 1);
-        return '<div class="proj-card">' +
+        // data-tools / data-dom (lowercased, |-joined) let the side-panel filter match.
+        var dataF = ' data-tools="|' + p.tools.map(slug).join("|") + '|" data-dom="|' + p.dom.map(slug).join("|") + '|"';
+        return '<div class="proj-card"' + dataF + ">" +
           openA +
             '<img class="proj-card__img" src="' + p.img + '" alt="" loading="lazy">' +
             '<span class="proj-card__reveal">' +
@@ -1528,9 +1561,9 @@
           (p.code ? '<a class="proj-card__code" href="' + p.code + '" target="_blank" rel="noopener">View code <span aria-hidden="true">&#8599;</span></a>' : "") +
           "</div>";
       }).join("");
-      // Side panel (LEFT, flush to the border) + cards grid. Panel content TBD.
+      // Side panel (LEFT, flush to the border) = "Filter by" facets + cards grid.
       return '<div class="term-pgrid">' +
-          '<aside class="term-side" aria-label="Projects panel"></aside>' +
+          '<aside class="term-side" aria-label="Filter projects" data-lenis-prevent>' + panelHtml() + "</aside>" +
           '<div class="term-projects">' + rows + "</div>" +
         "</div>" +
         '<div class="term-result__meta">' + PROJECTS.length + " rows in set (0.001 sec)</div>";
@@ -1585,6 +1618,75 @@
     }
     layoutCardStagger();
     window.addEventListener("resize", layoutCardStagger, { passive: true });
+
+    // ---- Side-panel filtering ----
+    // Faceted filter: a card shows if it matches the selected Tools (any) AND the
+    // selected Domains (any). No selection in a group = that group doesn't constrain.
+    (function wireFilter() {
+      var panel = projEl.querySelector(".term-side");
+      if (!panel) return;
+      var metaEl = projEl.querySelector(".term-result__meta");
+      var clearBtn = panel.querySelector(".filter__clear");
+      var sel = { tools: {}, dom: {} };  // value-sets of checked facets
+
+      function matches(card, key) {
+        var keys = Object.keys(sel[key]);
+        if (!keys.length) return true;                 // group not constraining
+        var data = card.getAttribute("data-" + key) || "";
+        for (var i = 0; i < keys.length; i++) if (data.indexOf("|" + keys[i] + "|") >= 0) return true;
+        return false;
+      }
+      // Animate a card out (reverse of the appear: sink + fade, then collapse) or
+      // in (appear: rise + fade). Mirrors the threshold reveal animation.
+      var FADE = 550, EASE = "cubic-bezier(.19,1,.22,1)";
+      function setHidden(c, hide) {
+        if (hide) {
+          if (c._fhidden) return;                          // already out
+          c._fhidden = true; clearTimeout(c._ft);
+          c.style.transition = "opacity " + FADE + "ms ease,transform " + FADE + "ms " + EASE;
+          c.style.opacity = "0"; c.style.transform = "translateY(64px)";
+          c._ft = setTimeout(function () { c.classList.add("is-filtered-out"); }, FADE);
+        } else {
+          clearTimeout(c._ft);
+          if (c._fhidden) {                                // was out → bring back + animate in
+            c._fhidden = false; c.classList.remove("is-filtered-out");
+            c.style.transition = "none"; c.style.opacity = "0"; c.style.transform = "translateY(64px)";
+            void c.offsetWidth;                            // reflow so the "from" sticks
+          }
+          c.style.transition = "opacity " + FADE + "ms ease,transform " + FADE + "ms " + EASE;
+          c.style.opacity = "1"; c.style.transform = "none";
+        }
+      }
+      function apply() {
+        var shown = 0;
+        cardEls.forEach(function (c) {
+          var ok = matches(c, "tools") && matches(c, "dom");
+          setHidden(c, !ok);
+          if (ok) shown++;
+        });
+        var any = Object.keys(sel.tools).length + Object.keys(sel.dom).length > 0;
+        if (clearBtn) clearBtn.hidden = !any;
+        if (metaEl) metaEl.textContent = shown + " row" + (shown === 1 ? "" : "s") + " in set" + (any ? " (filtered)" : " (0.001 sec)");
+      }
+      panel.addEventListener("change", function (e) {
+        var cb = e.target.closest && e.target.closest(".filter__cb");
+        if (!cb) return;
+        var g = cb.getAttribute("data-facet"), v = cb.value;
+        if (cb.checked) sel[g][v] = 1; else delete sel[g][v];
+        apply();
+      });
+      panel.addEventListener("click", function (e) {
+        var folder = e.target.closest && e.target.closest(".filter__folder");
+        if (!folder) return;
+        var grp = folder.parentNode, open = grp.classList.toggle("is-open");
+        folder.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      if (clearBtn) clearBtn.addEventListener("click", function () {
+        sel = { tools: {}, dom: {} };
+        [].slice.call(panel.querySelectorAll(".filter__cb")).forEach(function (cb) { cb.checked = false; });
+        apply();
+      });
+    })();
 
     function lineHtml(pfx, text, cursor) {
       return '<div class="terminal__line">' + pfx + escapeHtml(text) + (cursor || "") + "</div>";
