@@ -795,6 +795,79 @@
     requestAnimationFrame(tick);
   }
 
+  /* ---------- GitHub card: revealed OVER the video during the hero's internal
+     zoom-out (phase A, the 1.55→1.0 pull-back), faded out as the edge zoom-out
+     begins. Live profile/repo data pulled from the GitHub REST API (unauthenticated;
+     falls back to the static markup on any error / before it resolves). ---------- */
+  var ghReveal = document.querySelector(".gh-reveal");
+  if (ghReveal) {
+    var ghCard = ghReveal.querySelector(".gh-card");
+    var GH_USER = "VishnujanNarayanan";
+    function ghEl(k) { return ghReveal.querySelector('[data-gh="' + k + '"]'); }
+    // --- live data ---
+    (function fetchGitHub() {
+      if (!window.fetch) return;                               // keep static fallback
+      fetch("https://api.github.com/users/" + GH_USER)
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (u) {
+          var av = ghEl("avatar"); if (av && u.avatar_url) { av.src = u.avatar_url; av.alt = (u.name || GH_USER) + " on GitHub"; }
+          var h = ghEl("handle"); if (h) h.textContent = "@" + (u.login || GH_USER);
+          var bio = ghEl("bio"); if (bio && u.bio) bio.textContent = u.bio;
+        })
+        .catch(function () {});                                 // silent → static fallback stays
+      fetch("https://api.github.com/users/" + GH_USER + "/repos?per_page=100&sort=updated")
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (list) {
+          if (!Array.isArray(list) || !list.length) return;
+          var top = list.filter(function (r) { return !r.fork; })
+            .sort(function (a, b) {
+              return (b.stargazers_count || 0) - (a.stargazers_count || 0) ||
+                     (new Date(b.pushed_at) - new Date(a.pushed_at));
+            })
+            .slice(0, 8);
+          var ul = ghEl("repos-list");
+          if (ul && top.length) {
+            ul.innerHTML = top.map(function (r) {
+              var li = document.createElement("li"); li.textContent = r.name; return li.outerHTML;
+            }).join("");
+          }
+        })
+        .catch(function () {});
+    })();
+    // --- scroll reveal (synced to phase A's internal zoom-out) ---
+    function smooth(t) { return t * t * (3 - 2 * t); }
+    // The card is ANCHORED TO THE VIDEO: it tracks the video's vertical motion (the same
+    // vTy the hero uses) so it rides UP with the video as it comes up, instead of being
+    // stuck to the page. Its CSS height is the FULL/design size (GH_END of the viewport);
+    // scaling it makes it read smaller, so it GROWS from the bottom-left corner from
+    // GH_START → GH_END as the video reaches fullscreen. No fade, no rotation, no slide
+    // independent of the video.
+    var GH_START = 0.40, GH_END = 0.75;           // visual height (× viewport): at reveal → at fullscreen
+    function updateGhCard() {
+      var y = window.scrollY, vh = window.innerHeight;
+      var sc, op, ty;
+      if (y <= vh) {
+        // Phase A: ride up WITH the video (ty = vh − y, the video's own translate), so the
+        // card emerges from the video's bottom and settles as the video fills the screen.
+        ty = vh - y;
+        var g = smooth(Math.max(0, Math.min(y / vh, 1)));
+        var frac = GH_START + (GH_END - GH_START) * g;   // 0.40 → 0.75 of the viewport
+        sc = frac / GH_END;                              // 0.533 → 1 (card's base height is GH_END)
+        op = 1;                                          // off-screen below at the top, so no fade needed
+      } else {
+        // Phase B: shrink + fade back out so the fixed card never covers the sections below.
+        var x = smooth(Math.max(0, Math.min((y - vh) / (0.35 * vh), 1)));
+        ty = 0; sc = 1 - 0.5 * x; op = 1 - x;
+      }
+      ghReveal.style.opacity = op.toFixed(3);
+      ghCard.style.transform = "translateY(" + ty.toFixed(1) + "px) scale(" + sc.toFixed(3) + ")";
+      ghReveal.classList.toggle("is-live", op > 0.6 && y >= 0.6 * vh && y <= vh * 1.02);
+    }
+    window.addEventListener("scroll", updateGhCard, { passive: true });
+    window.addEventListener("resize", updateGhCard, { passive: true });
+    updateGhCard();
+  }
+
   /* ---------- Global background: animated topographic blue contours ----------
      One fixed full-viewport plane shared by the hero zoom-out reveal AND the flow
      section (so they read as the same continuous background). The contours are
