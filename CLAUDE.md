@@ -1517,3 +1517,17 @@ Keep this section updated after every change. Format:
 - styles.css: `.term-scroll{will-change:transform}`; mobile (≤820) safety — `.terminal{height:auto}` +
   `.terminal__body{overflow:visible}` + `.term-scroll{transform:none}` so the 14 cards flow naturally
   instead of clipping (mobile isn't pinned). .features stays 200vh. node --check OK.
+
+### 2026-06-26 (project cards: Lando "helmet-grid" rise-in replaces the 3D pop)
+- Branch `cards-lando-scroll`. Reworked the project cards' reveal to match the Lando website's
+  helmet-grid scroll effect (the grid items RISE up from below + fade in, rest = translate(0),
+  staggered as the grid scrolls into view) — replacing the busy 3D APPEAR pose (translateX(22vw) +
+  perspective/translate3d/rotateY60/rotateX35).
+- styles.css `.term-projects .proj-card`: initial transform → translateY(64px) + opacity 0; revealed
+  (.terminal.is-revealing) → translate(0)+opacity 1; transition now transform+opacity .9s
+  cubic-bezier(.19,1,.22,1) with per-card delay var(--cd) (was a .42s transform + 0s opacity snap).
+  So cards fade UP into place rather than rotating in. Hover image-reveal/frame + reduced-motion
+  guard unchanged.
+- main.js (terminal IIFE): CARD_STEP 0.2s → 0.09s (gentler/flowing cascade for the slower rise);
+  --meta-d trailing gap 0.5 → 0.9s so the "N rows in set" line follows after the last rise finishes.
+  Anti-diagonal stagger + the latched is-revealing threshold trigger unchanged. node --check OK.
