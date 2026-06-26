@@ -556,7 +556,14 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    (body reclaims the space). Driven by .is-covered (reversible — NOT the latched
    .is-revealing) so scrolling back up past the same threshold brings the bar back. */
 .terminal.is-covered .terminal__bar{transform:translateY(-100%);opacity:0;max-height:0;padding-top:0;padding-bottom:0;border-bottom-width:0;pointer-events:none}
-.term-projects{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;max-width:1280px;padding-top:24px}
+/* Projects result = a side panel (LEFT, flush to the terminal's left edge) + cards grid.
+   The panel breaks out of the body's 34px left padding (margin-left:-34px) so it starts
+   right at the border with no gap; the grid keeps a gap after it. */
+.term-pgrid{display:flex;gap:28px;align-items:stretch;padding-top:24px;margin-left:-34px}
+.term-projects{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.term-side{flex:0 0 clamp(200px,20vw,320px);align-self:stretch;border:1px solid rgba(124,208,255,.22);border-left:0;border-radius:0 10px 10px 0;background:rgba(13,22,40,.45);min-height:240px}
+@media (max-width:1100px){.term-side{flex-basis:clamp(180px,26vw,280px)}}
+@media (max-width:820px){.term-pgrid{flex-direction:column;margin-left:-18px;margin-right:-18px}.term-side{flex:0 0 auto;width:100%;min-height:160px;border-left:1px solid rgba(124,208,255,.22);border-radius:0}}
 /* Each card pops in with the zone-title APPEAR animation, copied EXACTLY from
    flow.js (poseStr + APPEAR pose, ENTER_MS=420, easeOut cubic, no fade-in):
    translateX(22vw)=ex(vw*0.22) perspective translate(50%) translate3d(-222.2,88)
@@ -568,8 +575,11 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .term-projects .proj-card{opacity:0;transform:translateY(64px);will-change:opacity,transform;transition:transform .9s cubic-bezier(.19,1,.22,1) var(--cd,0s),opacity .9s cubic-bezier(.19,1,.22,1) var(--cd,0s)}
 .terminal.is-revealing .term-projects .proj-card{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.term-projects .proj-card{opacity:1;transform:none;transition:none}}
-.proj-card{position:relative;display:block;aspect-ratio:406.89/411;color:#dfe4f2;isolation:isolate}
-.proj-card__media{position:absolute;inset:0;overflow:hidden}
+.proj-card{position:relative;display:block;width:100%;aspect-ratio:406.89/411;color:#dfe4f2;isolation:isolate}
+/* Clip the image (+ hover-reveal) to the notched frame shape so it no longer spills
+   past the bottom-right notch. Polygon = the frame path's notch as % of the 407×411
+   viewBox: shelf top y=371.983→90.5%, ledge x=263.329→64.7%, bevel x=210.862→51.8%. */
+.proj-card__media{position:absolute;inset:0;overflow:hidden;clip-path:polygon(0 0,100% 0,100% 90.5%,64.7% 90.5%,51.8% 100%,0 100%)}
 .proj-card__img{width:100%;height:100%;object-fit:cover;filter:saturate(.92) brightness(.78);transition:transform .7s cubic-bezier(.19,1,.22,1),filter .5s}
 .proj-card:hover .proj-card__img{transform:scale(1.06);filter:saturate(.7) brightness(.5)}
 /* hover image-reveal wipe (ref: clip-path ellipse from the top) */
@@ -591,8 +601,9 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .proj-card__label{position:absolute;left:18px;right:40%;bottom:16px;z-index:5;display:flex;flex-direction:column;align-items:flex-start;gap:2px;pointer-events:none}
 .proj-card__title{font-size:15px;font-weight:600;line-height:1.25;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.5)}
 .proj-card__id{font-size:13px;font-weight:700;letter-spacing:.6px;color:#7fd0ff}
-/* "View code" button parked on the raised bottom-right shelf (the notch). */
-.proj-card__code{position:absolute;right:7%;bottom:12.5%;z-index:11;display:inline-flex;align-items:center;gap:5px;padding:6px 12px;font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#bfe0ff;background:rgba(13,22,40,.7);border:1px solid rgba(124,208,255,.4);border-radius:999px;text-decoration:none;pointer-events:auto;transition:color .3s,background .3s,border-color .3s}
+/* "View code" button sits IN the bottom-right notch (the cut space the image used to
+   spill into) — anchored to that corner and sized to fit the notch band (~9.5% tall). */
+.proj-card__code{position:absolute;right:-1%;bottom:-0.75%;z-index:11;display:inline-flex;align-items:center;gap:4px;padding:4px 11px;font-family:var(--font-ui);font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#bfe0ff;background:rgba(13,22,40,.7);border:1px solid rgba(124,208,255,.4);border-radius:999px;text-decoration:none;pointer-events:auto;transition:color .3s,background .3s,border-color .3s}
 .proj-card__code:hover{color:#0d1628;background:#4d8bff;border-color:#4d8bff}
 .term-result__meta{margin-top:16px;color:#7e88aa;font-size:13px;opacity:0;transition:opacity .4s ease}
 .terminal.is-revealing .term-result__meta{opacity:1;transition-delay:var(--meta-d,1s)}
