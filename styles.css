@@ -437,13 +437,31 @@ header .header__nav-left a{color:#050419;font-size:16px}
 .features .feature-item__num{color:#7f86a0}
 .features .proj-tag{border-color:rgba(255,255,255,.22);color:#c2c7d6}
 
-/* --- Skills (.standards) --- */
-.standards .standards__title{color:var(--color-text-light)}
-.standards .standards__description{color:#aeb4c6}
-.standards .skill-group__name{color:#9aa0b4}
-.standards .skill-tag{border-color:rgba(255,255,255,.22);color:#e6e8f0}
-.standards .placeholder-box{background:rgba(255,255,255,.05)}
-.standards .placeholder-box .logo-text{color:rgba(255,255,255,.28)}
+/* --- Skills (.standards) — plain white section: dark text, single-column,
+   no left placeholder box (the title/skill groups take the whole width) --- */
+.standards .standards__title{color:var(--color-text)}
+.standards .standards__description{color:var(--color-text-muted)}
+.standards .skill-group__name{color:var(--color-text-muted)}
+.standards .skill-tag{border-color:#e6e6e8;color:var(--color-text)}
+/* 50/50 split: text left, Linux logo right. Text sits 20% higher (as before);
+   the logo sits a further ~12.5% up (half of the prior extra up-move), and on
+   TOP of the dark bulge (.skills-curve z-index:3) → container z-index 4. */
+.standards .standards__container{align-items:center;gap:var(--space-3xl);transform:translateY(-20%);z-index:4}
+.standards .standards__content{flex:1 1 50%;min-width:0;max-width:none}
+.standards__logo{flex:0 0 50%;width:50%;height:auto;border-radius:0;overflow:visible;display:flex;align-items:center;justify-content:center;position:relative;z-index:5;transform:translateY(-10%)}
+.standards__logo-stack{position:relative;width:100%;max-width:620px}
+.standards__logo-stack img.standards__logo-main{display:block;width:100%;height:auto;object-fit:contain}
+/* small skill logos scattered in/around Linux — 5% of its size, each parallaxes
+   upward on scroll at its own data-speed (driven in main.js). The high-specificity
+   selector beats the reference `.standards__image img{height:100%;object-fit:cover}`
+   rule that was stretching+cropping them into thin vertical slices. */
+.standards__logo-stack img.skill-float{position:absolute;width:15%;height:auto;object-fit:contain;will-change:transform;filter:drop-shadow(0 4px 10px rgba(15,22,40,.25))}
+@media (max-width:820px){
+  .standards .standards__container{flex-direction:column;align-items:flex-start;transform:translateY(-20%)}
+  .standards .standards__content,.standards__logo{flex:1 1 100%;width:100%}
+  .standards__logo{transform:translateY(-10%)}
+  .standards__logo-stack{max-width:360px}
+}
 
 /* --- Services (.faq) --- */
 .faq{border-top-color:rgba(255,255,255,.12);border-bottom-color:rgba(255,255,255,.12)}
@@ -769,8 +787,8 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 @media (max-width:820px){.skills-curve{display:none}}
 /* Blank dark breathing room below the projects terminal, before the curved
    seam + Skills section — so the transition doesn't feel congested. */
-.projects-tail{position:relative;z-index:1;height:clamp(66px,12.6vh,138px);background-color:#0f1628}
-@media (max-width:820px){.projects-tail{height:36px}}
+.projects-tail{position:relative;z-index:1;height:clamp(132px,25.2vh,276px);background-color:#0f1628}
+@media (max-width:820px){.projects-tail{height:72px}}
 
 /* ============================================================
    What's Up — On Socials (Lando fanned-card spread)
