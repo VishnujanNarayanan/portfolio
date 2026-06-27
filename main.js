@@ -974,9 +974,16 @@
       el.insertBefore(c, el.firstChild);
       // The projects section (.features) keeps the solid backing but NO contour
       // lines (user request) — and a DARKER near-black navy fill so it reads like the
-      // black terminal bar; Skills/Services keep the standard navy + their lines.
-      var isFeatures = sel === ".features";
-      darkSecs.push({ el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0, noLines: isFeatures, fill: isFeatures ? "rgb(15,22,40)" : "rgb(27,34,54)" });
+      // black terminal bar. Skills (.standards) uses the SAME LIGHT field as the blog
+      // (light-blue fill + dark indigo lines), not the dark navy one. Services (.faq)
+      // keeps the standard dark navy + its light-blue lines.
+      var isFeatures = sel === ".features", isSkills = sel === ".standards";
+      darkSecs.push({
+        el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0,
+        noLines: isFeatures,
+        fill: isFeatures ? "rgb(15,22,40)" : isSkills ? "rgb(208,225,235)" : "rgb(27,34,54)",
+        line: isSkills ? "rgba(57,50,220,0.5)" : "rgba(77,139,255,0.45)"
+      });
     });
     var W = 0, H = 0, DPR = 1, CELL = 26, cols = 0, rows = 0, field = [];
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
@@ -1145,7 +1152,7 @@
         if (sec.noLines) continue;                         // projects: solid fill, no contour lines
         sg.save(); sg.translate(0, -sr.top);
         sg.lineCap = "round"; sg.lineJoin = "round";
-        sg.strokeStyle = "rgba(77,139,255,0.45)"; sg.lineWidth = 0.45;
+        sg.strokeStyle = sec.line; sg.lineWidth = 0.45;
         strokeIso(sg);
         sg.restore();
       }

@@ -1817,3 +1817,33 @@ Keep this section updated after every change. Format:
   Skills section. New order: Projects → projects-tail (dark spacer) → [bulge] Skills → Socials
   → Services. projects-tail now sits directly before Skills (dark→bulge→skills flow intact);
   Socials (light) follows Skills (light). Verified single socials section + balanced <section> tags.
+
+### 2026-06-27 (Skills "What I Build With" → light contour bg + no placeholder box)
+- User: remove the rounded-rectangle placeholder from the left of the Skills section and put the
+  text there; the background should be the LIGHT contour field (light-blue fill + dark indigo
+  contour lines) — the SAME one the blog (.writing) section uses — NOT the dark navy flowy field.
+  (First pass mistakenly stripped the contour canvas entirely → flat white; corrected here.)
+- main.js: .standards stays in the darkSecs list, tagged `isSkills` so it draws the BLOG palette —
+  fill rgb(208,225,235) (was navy rgb(27,34,54)) + line rgba(57,50,220,0.5) (dark indigo, was
+  light-blue rgba(77,139,255,0.45)). Added a per-section `line` field; the draw loop uses sec.line
+  instead of the hardcoded light-blue. .features (navy/no-lines) + .faq (navy/light-blue) unchanged.
+- index.html: removed the `.standards__image.placeholder-box` (the "VJ" rounded box) from
+  `.standards__container`; only `.standards__content` (title + skill groups) remains.
+- styles.css: .standards stays transparent (the contour canvas provides the light fill). Skills
+  text overrides reverted to DARK tokens (title --color-text, desc/group --color-text-muted,
+  skill-tag border #e6e6e8) since the field is now light. `.standards__container` is single-column
+  (flex-direction:column, align-items:flex-start) and `.standards__content` max-width 760 / full
+  width so the title + skill groups take the whole area. Dead .placeholder-box rules removed. node
+  --check main.js OK.
+
+### 2026-06-27 (Skills: Linux logo on the right, 50/50 split)
+- User: place images/logos/Linux.svg to the RIGHT of the "What I Build With" text, taking 50% of
+  the page.
+- index.html: added `.standards__image.standards__logo.reveal` (img → images/logos/Linux.svg,
+  aria-hidden, lazy) as the second child of `.standards__container`, after `.standards__content`.
+- styles.css: reverted the single-column override — `.standards__container` is a centered row
+  (gap --space-3xl); `.standards__content` flex 1 1 50% (text half), `.standards__logo` flex 0 0
+  50% (logo half), img width 100% / max 420px / contain. Overrides the base `.standards__image`
+  (800×400 cover box). Mobile (≤820): stacks column, both full-width, logo img max 280px.
+- Follow-up: bigger logo (img max-width 420→620px desktop / 280→360px mobile) and the whole
+  `.standards__container` (text + logo) shifted up via transform:translateY(-20%).
