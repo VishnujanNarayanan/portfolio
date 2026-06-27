@@ -2058,3 +2058,176 @@
 
   /* Vanta NET background is initialised inline in index.html (#vanta-bg). */
 })();
+
+/* ============================================================
+   What's Up — On Socials: scroll-driven fanned-card spread.
+   Cards start stacked at centre (pushed down 10rem, upright) and
+   fan out into a symmetric peacock spread as the section scrolls
+   into view. Pure function of scroll → reverses on scroll-up.
+   ============================================================ */
+(function socialsFan() {
+  const layout = document.querySelector(".callout-socials-card-layout");
+  if (!layout) return;
+  const cards = Array.from(layout.querySelectorAll(".callout-socials-card-w"));
+  if (!cards.length) return;
+
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const mq = window.matchMedia("(max-width: 820px)");
+
+  // px-per-rem (root font-size) for the rem-based fan offsets.
+  const rem = () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+
+
+  /* ---- Exact fan + hover, reverse-engineered from the live Lando matrices ----
+     (lando_social_hover_matrix + lando_social_hover_bouncy_matrix). All px values
+     are at 20rem card width (rem=16) and scale responsively with the card size. */
+
+  // REST (settled) fan pose per card, decoded from REST matrices. px @ rem16.
+  // rotation is exactly 7deg x slot; x/y/scale lifted verbatim from the capture.
+  const REST = [
+    { x: -380,    y: 92.47, r: -21, s: 0.7756 },
+    { x: -278.67, y: 50.67, r: -14, s: 0.8498 },
+    { x: -139.33, y: 16.47, r:  -7, s: 0.9346 },
+    { x:    0,    y:  0,    r:   0, s: 1.0000 },
+    { x:  139.33, y: 16.47, r:   7, s: 0.9346 },
+    { x:  278.67, y: 50.67, r:  14, s: 0.8498 },
+    { x:  380,    y: 92.47, r:  21, s: 0.7756 },
+  ];
+  const STACK_Y = 160;     // px: stacked start offset (reference translate(0,10rem))
+  const POP_LIFT = 31.67;  // px: hovered card lifts up (matrix-exact)
+  const POP_SCALE = 1.08;  // hovered card scale multiplier (matrix-exact)
+  // Δx (px @ rem16) per [hovered][card] — room-dependent slide-away, hardcoded
+  // from the settled matrices (rows 4-6 mirror 2-0). Hovered card's own Δx = 0.
+  const DX = [
+    [   0,  47.29,  81.06, 101.33,  67.56,  33.78,   0],
+    [   0,   0,     94.57, 121.60,  67.56,  33.78,   0],
+    [   0, -47.28,   0,    141.87,  81.07,  33.78,   0],
+    [   0, -40.53, -94.58,   0,     94.58,  40.53,   0],
+    [   0, -33.78, -81.07,-141.87,   0,     47.28,   0],
+    [   0, -33.78, -67.56,-121.60, -94.57,   0,      0],
+    [   0, -33.78, -67.56,-101.33, -81.06, -47.29,   0],
+  ];
+  // Δr (deg) is the clean closed form sign(i-h) * 3/(|i-h|+1) (matrix-exact).
+  const drot = (h, i) => (i === h ? 0 : Math.sign(i - h) * 3 / (Math.abs(i - h) + 1));
+
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+
+  // Extra horizontal/vertical spread of the fan offsets (NOT the card size) so the
+  // cards sit a little less congested — applied consistently to rest AND hover.
+  const SPREAD = 1.16;
+  // Responsive: the captured values are at 20rem cards; scale offsets to the
+  // actual rendered card width so the fan stays proportional on smaller screens.
+  function sizeFactor() {
+    const cw = cards[0].offsetWidth || 320; // layout width, ignores transform
+    return (cw / (20 * rem())) * SPREAD;
+  }
+
+  // ---- target pose (px, pre-sizeFactor) for the current hover state ----
+  let hovered = -1;
+  function targetOf(i) {
+    const base = REST[i];
+    if (hovered < 0) return { x: base.x, y: base.y, r: base.r, s: base.s };
+    if (i === hovered) return { x: base.x, y: base.y - POP_LIFT, r: base.r, s: base.s * POP_SCALE };
+    return { x: base.x + DX[hovered][i], y: base.y, r: base.r + drot(hovered, i), s: base.s };
+  }
+
+  // ---- hover spring (snappy, with bounce): underdamped spring to the target ----
+  const STIFF = 320, DAMP = 21; // zeta ~0.59 (~10% overshoot), settle ~0.37s — snappy
+  const cur = REST.map((p) => ({ x: p.x, y: p.y, r: p.r, s: p.s }));
+  const vel = REST.map(() => ({ x: 0, y: 0, r: 0, s: 0 }));
+
+  // ---- reveal spring (the initial fan-out also BOUNCES): pCur springs 0<->1,
+  // triggered when the section scrolls into view (a timed overshoot tween, like
+  // the reference ScrollTrigger — not a scroll-scrub). p can overshoot past 1 so
+  // the cards spring slightly past their fanned pose then settle = the fan bounce. */
+  const PR_STIFF = 260, PR_DAMP = 20; // zeta ~0.62 (~9% overshoot), settle ~0.4s
+  let pCur = reduce ? 1 : 0, pVel = 0, pT = reduce ? 1 : 0;
+
+  function springStep(dt) {
+    let moving = false;
+    // reveal
+    {
+      const f = PR_STIFF * (pT - pCur) - PR_DAMP * pVel;
+      pVel += f * dt; pCur += pVel * dt;
+      if (Math.abs(pT - pCur) > 0.0005 || Math.abs(pVel) > 0.0005) moving = true;
+    }
+    // hover
+    for (let i = 0; i < cur.length; i++) {
+      const t = targetOf(i);
+      for (const k of ["x", "y", "r", "s"]) {
+        const f = STIFF * (t[k] - cur[i][k]) - DAMP * vel[i][k];
+        vel[i][k] += f * dt;
+        cur[i][k] += vel[i][k] * dt;
+        if (Math.abs(t[k] - cur[i][k]) > 0.01 || Math.abs(vel[i][k]) > 0.01) moving = true;
+      }
+    }
+    return moving;
+  }
+
+  // fan out once the card layout is ~85% up the viewport; fold back when it leaves
+  function evalReveal() {
+    if (reduce) { pT = 1; return; }
+    const vh = window.innerHeight;
+    const rect = layout.getBoundingClientRect();
+    const center = rect.top + rect.height / 2;
+    pT = center < vh * 0.85 ? 1 : 0;
+  }
+
+  function paint() {
+    const p = pCur;
+    const S = sizeFactor();
+    for (let i = 0; i < cards.length; i++) {
+      const c = cur[i];
+      // arrival lerps stacked -> current spring pose; translations scale with S
+      const x = (c.x * S) * p;
+      const y = STACK_Y + (c.y * S - STACK_Y) * p;
+      const rot = c.r * p;
+      const s = 1 + (c.s - 1) * p;
+      cards[i].style.transform =
+        `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotate(${rot.toFixed(3)}deg) scale(${s.toFixed(4)})`;
+    }
+  }
+
+  function clearMobile() { cards.forEach((c, i) => { c.style.transform = ""; c.style.zIndex = origZ[i]; }); }
+
+  // ---- frame loop (runs while the spring is settling) ----
+  const origZ = cards.map((c) => c.style.zIndex || getComputedStyle(c).zIndex || "0");
+  let raf = 0, last = 0;
+  function frame(ts) {
+    if (mq.matches) { clearMobile(); raf = 0; return; }
+    const dt = Math.min(0.032, last ? (ts - last) / 1000 : 0.016);
+    last = ts;
+    const moving = springStep(dt);
+    paint();
+    raf = moving ? requestAnimationFrame(frame) : 0;
+    if (!moving) last = 0;
+  }
+  function kick() { if (!raf && !mq.matches) { last = 0; raf = requestAnimationFrame(frame); } }
+
+  function setHover(h) {
+    if (mq.matches) return;
+    hovered = h;
+    // z-index is intentionally NOT changed on hover — the rest stacking
+    // (1,2,3,10,3,2,1) holds throughout, exactly like the reference.
+    kick();
+  }
+
+  // scroll re-evaluates the reveal trigger, then springs (fan-out/fold bounce)
+  let ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      if (mq.matches) clearMobile();
+      else { evalReveal(); kick(); }
+      ticking = false;
+    });
+  }
+
+  cards.forEach((c, i) => c.addEventListener("pointerenter", () => setHover(i)));
+  layout.addEventListener("pointerleave", () => setHover(-1));
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", () => { if (mq.matches) clearMobile(); else { evalReveal(); kick(); } });
+  if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
+  if (mq.matches) clearMobile(); else { evalReveal(); kick(); }
+})();
