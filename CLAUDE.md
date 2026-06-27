@@ -1797,3 +1797,15 @@ Keep this section updated after every change. Format:
   Frame loop runs only while the spring is settling; scroll/resize just repaint the current pose.
 - node --check OK; spring overshoot/settle verified numerically. Couldn't eyeball (chromium-snap
   still broken in this WSL env). Committed the capture file lando_social_hover_bouncy_matrix.
+
+### 2026-06-27 (socials: snappier hover + bouncy fan-out arrival)
+- User: site feels snappier and the INITIAL fan-out also bounces. Two changes in socialsFan():
+  • Hover spring stiffer/snappier: STIFF 150→320, DAMP 15→21 (zeta ~0.59, ~7-10% overshoot,
+    settle ~0.32s, was ~0.6s).
+  • Arrival/exit reveal is no longer a scroll-SCRUB — it's now a triggered REVEAL SPRING. pCur
+    springs 0<->1 (PR_STIFF 260 / PR_DAMP 20, ~5% overshoot) when the card layout passes ~0.85vh
+    (evalReveal sets pT 0/1 on scroll); p can overshoot past 1 so the cards spring slightly past
+    their fanned pose then settle = the fan-out BOUNCE (matches the reference ScrollTrigger tween).
+    Folds back with a bounce when scrolled above the trigger. paint() now uses pCur (not easeOut
+    scrub). Reduced-motion pins p=1; mobile unchanged. node --check OK; both springs verified
+    numerically (hover 7%/0.32s, reveal 5.4%/0.33s).
