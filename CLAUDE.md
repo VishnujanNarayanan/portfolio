@@ -1847,3 +1847,22 @@ Keep this section updated after every change. Format:
   (800×400 cover box). Mobile (≤820): stacks column, both full-width, logo img max 280px.
 - Follow-up: bigger logo (img max-width 420→620px desktop / 280→360px mobile) and the whole
   `.standards__container` (text + logo) shifted up via transform:translateY(-20%).
+- Follow-up: text kept at -20%; the LOGO sits a touch higher via its own
+  `.standards__logo{transform:translateY(-10%)}` (net ~-30%, iterated by the user), and on TOP
+  of the dark bulge (.skills-curve z-index:3 < container z-index:4 < logo z-index:5). Removed the
+  logo's `reveal` class — `.reveal.show{transform:none}` was overriding the logo's static transform.
+
+### 2026-06-27 (Skills: small skill logos parallax around Linux)
+- User: scatter AWS/Docker/Git/Python/Vim/GitHub SVGs in and around the Linux logo, each ~5% of
+  Linux's size, all drifting UPWARD on scroll at different speeds.
+- index.html: wrapped the Linux img in `.standards__logo-stack` (the Linux img is now
+  `.standards__logo-main`) and added six `.skill-float` imgs, each with an inline top/left base
+  position (scattered in/around Linux) + a `data-speed` (0.09–0.30).
+- styles.css: `.standards__logo-stack{position:relative;width:100%;max-width:620px}` anchors the
+  floats; `.skill-float{position:absolute;width:5%;...drop-shadow}` (5% of the stack = ~5% of the
+  Linux logo). Replaced the old `.standards__logo img` sizing rule (now main vs floats). Mobile
+  caps the stack at 360px so floats scale with it.
+- main.js: new self-contained parallax IIFE — on scroll (window + Lenis), each float gets
+  translateY(-progress*speed) where progress = vh*0.7 − stackCentreY (px); higher data-speed = more
+  lift, so they part at different depths. rAF-throttled; prefers-reduced-motion leaves them static.
+  node --check OK.
