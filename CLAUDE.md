@@ -1809,3 +1809,11 @@ Keep this section updated after every change. Format:
     Folds back with a bounce when scrolled above the trigger. paint() now uses pCur (not easeOut
     scrub). Reduced-motion pins p=1; mobile unchanged. node --check OK; both springs verified
     numerically (hover 7%/0.32s, reveal 5.4%/0.33s).
+
+### 2026-06-27 (socials moved after the bulge → after Skills)
+- The "bulge" is the .skills-curve (dark scroll-animated curved seam at the top of the Skills
+  section; renders on desktop, display:none ≤820px). User wanted Socials AFTER the bulge.
+  Moved the .is-callout-socials section from between projects-tail and Skills to AFTER the
+  Skills section. New order: Projects → projects-tail (dark spacer) → [bulge] Skills → Socials
+  → Services. projects-tail now sits directly before Skills (dark→bulge→skills flow intact);
+  Socials (light) follows Skills (light). Verified single socials section + balanced <section> tags.
