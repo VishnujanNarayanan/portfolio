@@ -150,17 +150,16 @@
     // again past the checkpoint to start it. Every hero-phase consumer (video, handwriting,
     // marquee, GitHub card, CTA lift) maps real scrollY through __heroY so they all dwell in
     // lock-step; the .hero-spacer is lengthened by the same amount to provide the scroll room.
-    var HERO_DWELL = 0.6;
+    var HERO_DWELL = 0.16;
     function heroY(y, vh) { var d = vh * HERO_DWELL; return y < vh ? y : (y < vh + d ? vh : y - d); }
     window.__heroY = heroY;
     function updateHeroExit() {
       var vh = window.innerHeight;
       var y = window.scrollY;
-      // The header reaction (text shrink + colour flip) fires a little BEFORE the edge
-      // zoom-out actually begins — 4.5% of a viewport early — so it leads the motion. The
-      // edge zoom-out now starts AFTER the checkpoint dwell (at vh + HERO_DWELL·vh), so the
-      // flip tracks that point.
-      var HDR_FLIP = vh * (1 + HERO_DWELL) - vh * 0.045;
+      // The header reaction (text shrink + colour flip) fires a little BEFORE the video
+      // reaches fullscreen — 4.5% of a viewport early. Tied to fullscreen (NOT the dwell), so
+      // the checkpoint dwell doesn't shift the navbar switch.
+      var HDR_FLIP = vh * 0.955;
       // Phase A (0 → vh): the hero rides UP 1:1 with scroll (linear, so the video glued
       // to its bottom edge tracks it exactly). Past vh it's parked off the top.
       if (heroContent) heroContent.style.transform = "";
@@ -2021,6 +2020,36 @@
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll, { passive: true });
     update();
+  })();
+
+  /* ---------- Projects→Skills curved seam ---------- */
+  /* The dark projects band's bottom edge starts straight and bulges
+     (curves out) downward into the light skills section as it scrolls up. */
+  (function () {
+    var path = document.querySelector(".skills-curve__path");
+    var sec = document.querySelector(".standards");
+    if (!path || !sec) return;
+    var MAX_DEPTH = 100; // viewBox units (box is 140px tall)
+    var RANGE = 0.6;     // fraction of viewport over which it curves out
+    var ticking = false;
+    function render() {
+      ticking = false;
+      if (window.innerWidth <= 820) return;
+      var vh = window.innerHeight;
+      var top = sec.getBoundingClientRect().top;
+      // p = 0 when the seam first appears at the bottom of the screen,
+      // 1 once it has risen RANGE*vh — straight → fully curved.
+      var p = (vh - top) / (RANGE * vh);
+      p = p < 0 ? 0 : p > 1 ? 1 : p;
+      var d = (p * MAX_DEPTH).toFixed(1);
+      path.setAttribute("d", "M0 0 L100 0 Q50 " + d + " 0 0 Z");
+    }
+    function onScroll() {
+      if (!ticking) { ticking = true; requestAnimationFrame(render); }
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", render);
+    render();
   })();
 
   /* ---------- Flow journey ---------- */
