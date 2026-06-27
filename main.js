@@ -2128,14 +2128,27 @@
     return { x: base.x + DX[hovered][i], y: base.y, r: base.r + drot(hovered, i), s: base.s };
   }
 
-  // ---- spring state (the "bounce"): underdamped spring toward the target ----
-  // Decoded overshoot is small (~3.5%); tuned a touch livelier per the brief.
-  const STIFF = 150, DAMP = 15; // zeta ~0.61 (~9% overshoot), settle ~0.5s
+  // ---- hover spring (snappy, with bounce): underdamped spring to the target ----
+  const STIFF = 320, DAMP = 21; // zeta ~0.59 (~10% overshoot), settle ~0.37s — snappy
   const cur = REST.map((p) => ({ x: p.x, y: p.y, r: p.r, s: p.s }));
   const vel = REST.map(() => ({ x: 0, y: 0, r: 0, s: 0 }));
 
+  // ---- reveal spring (the initial fan-out also BOUNCES): pCur springs 0<->1,
+  // triggered when the section scrolls into view (a timed overshoot tween, like
+  // the reference ScrollTrigger — not a scroll-scrub). p can overshoot past 1 so
+  // the cards spring slightly past their fanned pose then settle = the fan bounce. */
+  const PR_STIFF = 260, PR_DAMP = 20; // zeta ~0.62 (~9% overshoot), settle ~0.4s
+  let pCur = reduce ? 1 : 0, pVel = 0, pT = reduce ? 1 : 0;
+
   function springStep(dt) {
     let moving = false;
+    // reveal
+    {
+      const f = PR_STIFF * (pT - pCur) - PR_DAMP * pVel;
+      pVel += f * dt; pCur += pVel * dt;
+      if (Math.abs(pT - pCur) > 0.0005 || Math.abs(pVel) > 0.0005) moving = true;
+    }
+    // hover
     for (let i = 0; i < cur.length; i++) {
       const t = targetOf(i);
       for (const k of ["x", "y", "r", "s"]) {
@@ -2148,17 +2161,17 @@
     return moving;
   }
 
-  // ---- arrival/exit reveal progress (scroll-driven) — UNCHANGED behaviour ----
-  function computeP() {
-    if (reduce) return 1;
+  // fan out once the card layout is ~85% up the viewport; fold back when it leaves
+  function evalReveal() {
+    if (reduce) { pT = 1; return; }
     const vh = window.innerHeight;
     const rect = layout.getBoundingClientRect();
     const center = rect.top + rect.height / 2;
-    return easeOut(Math.max(0, Math.min(1, (vh * 0.95 - center) / (vh * 0.5))));
+    pT = center < vh * 0.85 ? 1 : 0;
   }
 
   function paint() {
-    const p = computeP();
+    const p = pCur;
     const S = sizeFactor();
     for (let i = 0; i < cards.length; i++) {
       const c = cur[i];
@@ -2196,18 +2209,22 @@
     kick();
   }
 
-  // scroll/resize just repaint at the current spring pose (no reveal change)
+  // scroll re-evaluates the reveal trigger, then springs (fan-out/fold bounce)
   let ticking = false;
   function onScroll() {
     if (ticking) return;
     ticking = true;
-    requestAnimationFrame(() => { if (mq.matches) clearMobile(); else paint(); ticking = false; });
+    requestAnimationFrame(() => {
+      if (mq.matches) clearMobile();
+      else { evalReveal(); kick(); }
+      ticking = false;
+    });
   }
 
   cards.forEach((c, i) => c.addEventListener("pointerenter", () => setHover(i)));
   layout.addEventListener("pointerleave", () => setHover(-1));
   window.addEventListener("scroll", onScroll, { passive: true });
-  window.addEventListener("resize", () => { if (mq.matches) clearMobile(); else paint(); });
+  window.addEventListener("resize", () => { if (mq.matches) clearMobile(); else { evalReveal(); kick(); } });
   if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
-  if (mq.matches) clearMobile(); else paint();
+  if (mq.matches) clearMobile(); else { evalReveal(); kick(); }
 })();
