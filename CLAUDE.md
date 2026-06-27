@@ -1774,3 +1774,26 @@ Keep this section updated after every change. Format:
   real redistribution is room-weighted/asymmetric); the dominant, perceptible behaviour — hovered
   pops & lifts, neighbours part away decaying + edges pinned — matches. Couldn't screenshot to
   eyeball (chromium-snap is broken in this WSL env: "timeout waiting for snap system profiles").
+
+### 2026-06-27 (socials hover — matrix-EXACT rest + per-card tilt + spring bounce)
+- User captured time-series hover data (lando_social_hover_bouncy_matrix) → rebuilt the hover
+  to the exact site values (replaces the earlier symmetric-decay approximation; arrival/exit
+  scroll reveal mechanism kept, but REST values upgraded to the captured ones so arrival is
+  now exact too).
+- Decoded findings (main.js socialsFan, fully rewritten fan/hover block):
+  • REST fan = captured verbatim (px@rem16): x[-380,-278.67,-139.33,0,…], y[92.47,50.67,16.47,0,…],
+    rot = exactly 7°×slot, scale[0.7756,0.8498,0.9346,1,…].
+  • HOVERED card: lifts −31.67px, scale ×1.08, keeps its x/rotation (matrix-exact, constant).
+  • Δrotation of every other card = closed form sign(i−h)·3/(|i−h|+1)° — verified EXACT against
+    all 7 hovered states (this is the "cards tilt when another is selected", different per card).
+  • Δx (slide-away) is room-dependent (asymmetric, not a clean decay) → hardcoded the 7×7 px table
+    DX[h][i] straight from the settled matrices (rows 4–6 mirror 2–0).
+  • BOUNCE: the tweens overshoot then settle (~3.5% in data) → replaced the plain lerp with an
+    underdamped SPRING per card per prop (x,y,r,s): STIFF 150 / DAMP 15 (ζ≈0.61, ~6.5% overshoot,
+    ~0.6s settle — nudged a touch livelier than the raw capture per the user's "bouncier" ask).
+    Spring handles hover interruption (mouse moving between cards) continuously.
+- Responsive: captured values are at 20rem cards; offsets scale by sizeFactor()=cardWidth/(20rem)
+  so the fan stays proportional on smaller screens. Mobile (≤820)/reduced-motion unchanged.
+  Frame loop runs only while the spring is settling; scroll/resize just repaint the current pose.
+- node --check OK; spring overshoot/settle verified numerically. Couldn't eyeball (chromium-snap
+  still broken in this WSL env). Committed the capture file lando_social_hover_bouncy_matrix.
