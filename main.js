@@ -2077,125 +2077,136 @@
   // px-per-rem (root font-size) for the rem-based fan offsets.
   const rem = () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 
-  // Final fanned pose per card (index 0..6, centre = 3). Symmetric.
-  // x/y in rem, rot in deg, scale unitless. Centre is upright, highest, largest.
-  const FAN = [
-    { x: -31,   y: 9.5, rot: -18, s: 0.80 },
-    { x: -21,   y: 4.6, rot: -12, s: 0.86 },
-    { x: -10.5, y: 1.3, rot:  -6, s: 0.93 },
-    { x:   0,   y: 0,   rot:   0, s: 1.00 },
-    { x:  10.5, y: 1.3, rot:   6, s: 0.93 },
-    { x:  21,   y: 4.6, rot:  12, s: 0.86 },
-    { x:  31,   y: 9.5, rot:  18, s: 0.80 },
+
+  /* ---- Exact fan + hover, reverse-engineered from the live Lando matrices ----
+     (lando_social_hover_matrix + lando_social_hover_bouncy_matrix). All px values
+     are at 20rem card width (rem=16) and scale responsively with the card size. */
+
+  // REST (settled) fan pose per card, decoded from REST matrices. px @ rem16.
+  // rotation is exactly 7deg x slot; x/y/scale lifted verbatim from the capture.
+  const REST = [
+    { x: -380,    y: 92.47, r: -21, s: 0.7756 },
+    { x: -278.67, y: 50.67, r: -14, s: 0.8498 },
+    { x: -139.33, y: 16.47, r:  -7, s: 0.9346 },
+    { x:    0,    y:  0,    r:   0, s: 1.0000 },
+    { x:  139.33, y: 16.47, r:   7, s: 0.9346 },
+    { x:  278.67, y: 50.67, r:  14, s: 0.8498 },
+    { x:  380,    y: 92.47, r:  21, s: 0.7756 },
   ];
-  const START_Y = 10; // rem: stacked start offset (matches reference translate(0,10rem))
+  const STACK_Y = 160;     // px: stacked start offset (reference translate(0,10rem))
+  const POP_LIFT = 31.67;  // px: hovered card lifts up (matrix-exact)
+  const POP_SCALE = 1.08;  // hovered card scale multiplier (matrix-exact)
+  // Δx (px @ rem16) per [hovered][card] — room-dependent slide-away, hardcoded
+  // from the settled matrices (rows 4-6 mirror 2-0). Hovered card's own Δx = 0.
+  const DX = [
+    [   0,  47.29,  81.06, 101.33,  67.56,  33.78,   0],
+    [   0,   0,     94.57, 121.60,  67.56,  33.78,   0],
+    [   0, -47.28,   0,    141.87,  81.07,  33.78,   0],
+    [   0, -40.53, -94.58,   0,     94.58,  40.53,   0],
+    [   0, -33.78, -81.07,-141.87,   0,     47.28,   0],
+    [   0, -33.78, -67.56,-121.60, -94.57,   0,      0],
+    [   0, -33.78, -67.56,-101.33, -81.06, -47.29,   0],
+  ];
+  // Δr (deg) is the clean closed form sign(i-h) * 3/(|i-h|+1) (matrix-exact).
+  const drot = (h, i) => (i === h ? 0 : Math.sign(i - h) * 3 / (Math.abs(i - h) + 1));
 
   const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 
-  /* ---- Hover reaction (reconstructed from lando_social_hover_matrix) ----
-     Decoding the live matrices showed: the HOVERED card scales x1.08 and lifts
-     ~31.67px (keeping its rest x/rotation); every OTHER card SLIDES AWAY in x
-     (magnitude decaying with distance from the hovered card, clamped at the fan
-     edge), with a small rotation splay and unchanged y/scale. This layer is
-     applied ON TOP of the scroll-driven arrival/exit fan above. */
-  const POP_SCALE = 1.08;   // hovered card scale multiplier (matrix: x1.08)
-  const LIFT_REM = 1.98;    // hovered lift (matrix: 31.67px @16px = 1.98rem)
-  const PUSH_REM = 6.6;     // adjacent-card slide-away (matrix: 94.6px @16px ~ 5.9rem, scaled to this fan)
-  const DECAY = 0.45;       // per-card falloff with distance (matrix: 40.5/94.6 ~ 0.43)
-  const SPLAY = 0.25;       // extra rotation per rem of push (deg)
-  const LERP = 0.18;        // smoothing per frame (~power2 ease, GSAP-like)
-  const EDGE_X = Math.abs(FAN[0].x); // fan edge in rem — pushed cards clamp here
+  // Responsive: the captured values are at 20rem cards; scale offsets to the
+  // actual rendered card width so the fan stays proportional on smaller screens.
+  function sizeFactor() {
+    const cw = cards[0].offsetWidth || 320; // layout width, ignores transform
+    return cw / (20 * rem());
+  }
 
-  const origZ = cards.map((c) => c.style.zIndex || getComputedStyle(c).zIndex || "0");
+  // ---- target pose (px, pre-sizeFactor) for the current hover state ----
   let hovered = -1;
-  const hx = cards.map(() => 0);   // current push (rem)
-  const thx = cards.map(() => 0);  // target push (rem)
-  const pop = cards.map(() => 0);  // current pop amount 0..1
-  const tpop = cards.map(() => 0); // target pop amount
+  function targetOf(i) {
+    const base = REST[i];
+    if (hovered < 0) return { x: base.x, y: base.y, r: base.r, s: base.s };
+    if (i === hovered) return { x: base.x, y: base.y - POP_LIFT, r: base.r, s: base.s * POP_SCALE };
+    return { x: base.x + DX[hovered][i], y: base.y, r: base.r + drot(hovered, i), s: base.s };
+  }
 
+  // ---- spring state (the "bounce"): underdamped spring toward the target ----
+  // Decoded overshoot is small (~3.5%); tuned a touch livelier per the brief.
+  const STIFF = 150, DAMP = 15; // zeta ~0.61 (~9% overshoot), settle ~0.5s
+  const cur = REST.map((p) => ({ x: p.x, y: p.y, r: p.r, s: p.s }));
+  const vel = REST.map(() => ({ x: 0, y: 0, r: 0, s: 0 }));
+
+  function springStep(dt) {
+    let moving = false;
+    for (let i = 0; i < cur.length; i++) {
+      const t = targetOf(i);
+      for (const k of ["x", "y", "r", "s"]) {
+        const f = STIFF * (t[k] - cur[i][k]) - DAMP * vel[i][k];
+        vel[i][k] += f * dt;
+        cur[i][k] += vel[i][k] * dt;
+        if (Math.abs(t[k] - cur[i][k]) > 0.01 || Math.abs(vel[i][k]) > 0.01) moving = true;
+      }
+    }
+    return moving;
+  }
+
+  // ---- arrival/exit reveal progress (scroll-driven) — UNCHANGED behaviour ----
   function computeP() {
     if (reduce) return 1;
     const vh = window.innerHeight;
     const rect = layout.getBoundingClientRect();
     const center = rect.top + rect.height / 2;
-    // Fan from when the layout centre is near the bottom (.95vh) to upper-mid (.45vh).
-    const raw = (vh * 0.95 - center) / (vh * 0.5);
-    return easeOut(Math.max(0, Math.min(1, raw)));
+    return easeOut(Math.max(0, Math.min(1, (vh * 0.95 - center) / (vh * 0.5))));
   }
 
-  function drawCard(card, i, p) {
-    const f = FAN[i] || FAN[FAN.length - 1];
-    const r = rem();
-    // base arrival/exit fan pose (rem) — UNCHANGED
-    let x = f.x * p;
-    let y = START_Y + (f.y - START_Y) * p;
-    let rot = f.rot * p;
-    let s = 1 + (f.s - 1) * p;
-    // hover layer, scaled by reveal p (so it only acts once arrived)
-    const h = p;
-    x += hx[i] * h;
-    rot += hx[i] * h * SPLAY;
-    y += -LIFT_REM * pop[i] * h;
-    s *= 1 + (POP_SCALE - 1) * pop[i] * h;
-    card.style.transform =
-      `translate(${(x * r).toFixed(2)}px, ${(y * r).toFixed(2)}px) ` +
-      `rotate(${rot.toFixed(3)}deg) scale(${s.toFixed(4)})`;
-  }
-
-  let ticking = false;
-  function render() {
-    if (mq.matches) { cards.forEach((c) => { c.style.transform = ""; c.style.zIndex = origZ[cards.indexOf(c)]; }); return; }
+  function paint() {
     const p = computeP();
-    cards.forEach((c, i) => drawCard(c, i, p));
-  }
-  function onScroll() {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => { render(); ticking = false; });
+    const S = sizeFactor();
+    for (let i = 0; i < cards.length; i++) {
+      const c = cur[i];
+      // arrival lerps stacked -> current spring pose; translations scale with S
+      const x = (c.x * S) * p;
+      const y = STACK_Y + (c.y * S - STACK_Y) * p;
+      const rot = c.r * p;
+      const s = 1 + (c.s - 1) * p;
+      cards[i].style.transform =
+        `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotate(${rot.toFixed(3)}deg) scale(${s.toFixed(4)})`;
+    }
   }
 
-  // hover smoothing loop
-  let raf = 0;
-  function animate() {
-    let moving = false;
-    for (let i = 0; i < cards.length; i++) {
-      const dh = thx[i] - hx[i];
-      if (Math.abs(dh) > 0.002) { hx[i] += dh * LERP; moving = true; } else hx[i] = thx[i];
-      const dp = tpop[i] - pop[i];
-      if (Math.abs(dp) > 0.001) { pop[i] += dp * LERP; moving = true; } else pop[i] = tpop[i];
-    }
-    render();
-    raf = moving ? requestAnimationFrame(animate) : 0;
+  function clearMobile() { cards.forEach((c, i) => { c.style.transform = ""; c.style.zIndex = origZ[i]; }); }
+
+  // ---- frame loop (runs while the spring is settling) ----
+  const origZ = cards.map((c) => c.style.zIndex || getComputedStyle(c).zIndex || "0");
+  let raf = 0, last = 0;
+  function frame(ts) {
+    if (mq.matches) { clearMobile(); raf = 0; return; }
+    const dt = Math.min(0.032, last ? (ts - last) / 1000 : 0.016);
+    last = ts;
+    const moving = springStep(dt);
+    paint();
+    raf = moving ? requestAnimationFrame(frame) : 0;
+    if (!moving) last = 0;
   }
-  function kick() { if (!raf) raf = requestAnimationFrame(animate); }
+  function kick() { if (!raf && !mq.matches) { last = 0; raf = requestAnimationFrame(frame); } }
 
   function setHover(h) {
     if (mq.matches) return;
     hovered = h;
-    for (let i = 0; i < cards.length; i++) {
-      if (i === h) { thx[i] = 0; tpop[i] = 1; }
-      else if (h < 0) { thx[i] = 0; tpop[i] = 0; }
-      else {
-        const d = Math.abs(i - h);
-        const dir = Math.sign(i - h);
-        const push = dir * PUSH_REM * Math.pow(DECAY, d - 1);
-        const baseX = (FAN[i] || FAN[FAN.length - 1]).x;
-        const clamped = Math.max(-EDGE_X, Math.min(EDGE_X, baseX + push));
-        thx[i] = clamped - baseX;
-        tpop[i] = 0;
-      }
-      cards[i].style.zIndex = i === h ? "30" : origZ[i];
-    }
+    cards.forEach((c, i) => { c.style.zIndex = i === h ? "30" : origZ[i]; });
     kick();
   }
 
-  cards.forEach((c, i) => {
-    c.addEventListener("pointerenter", () => setHover(i));
-  });
-  layout.addEventListener("pointerleave", () => setHover(-1));
+  // scroll/resize just repaint at the current spring pose (no reveal change)
+  let ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { if (mq.matches) clearMobile(); else paint(); ticking = false; });
+  }
 
+  cards.forEach((c, i) => c.addEventListener("pointerenter", () => setHover(i)));
+  layout.addEventListener("pointerleave", () => setHover(-1));
   window.addEventListener("scroll", onScroll, { passive: true });
-  window.addEventListener("resize", render);
+  window.addEventListener("resize", () => { if (mq.matches) clearMobile(); else paint(); });
   if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
-  render();
+  if (mq.matches) clearMobile(); else paint();
 })();
