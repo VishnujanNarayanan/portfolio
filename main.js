@@ -974,9 +974,16 @@
       el.insertBefore(c, el.firstChild);
       // The projects section (.features) keeps the solid backing but NO contour
       // lines (user request) — and a DARKER near-black navy fill so it reads like the
-      // black terminal bar; Skills/Services keep the standard navy + their lines.
-      var isFeatures = sel === ".features";
-      darkSecs.push({ el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0, noLines: isFeatures, fill: isFeatures ? "rgb(15,22,40)" : "rgb(27,34,54)" });
+      // black terminal bar. Skills (.standards) uses the SAME LIGHT field as the blog
+      // (light-blue fill + dark indigo lines), not the dark navy one. Services (.faq)
+      // keeps the standard dark navy + its light-blue lines.
+      var isFeatures = sel === ".features", isSkills = sel === ".standards";
+      darkSecs.push({
+        el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0,
+        noLines: isFeatures,
+        fill: isFeatures ? "rgb(15,22,40)" : isSkills ? "rgb(208,225,235)" : "rgb(27,34,54)",
+        line: isSkills ? "rgba(57,50,220,0.5)" : "rgba(77,139,255,0.45)"
+      });
     });
     var W = 0, H = 0, DPR = 1, CELL = 26, cols = 0, rows = 0, field = [];
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
@@ -1145,7 +1152,7 @@
         if (sec.noLines) continue;                         // projects: solid fill, no contour lines
         sg.save(); sg.translate(0, -sr.top);
         sg.lineCap = "round"; sg.lineJoin = "round";
-        sg.strokeStyle = "rgba(77,139,255,0.45)"; sg.lineWidth = 0.45;
+        sg.strokeStyle = sec.line; sg.lineWidth = 0.45;
         strokeIso(sg);
         sg.restore();
       }
@@ -2230,4 +2237,36 @@
   window.addEventListener("resize", () => { if (mq.matches) clearMobile(); else { evalReveal(); kick(); } });
   if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
   if (mq.matches) clearMobile(); else { evalReveal(); kick(); }
+})();
+
+/* ---------- Skills: small skill logos parallax around the Linux logo ----------
+   Each .skill-float drifts UPWARD as the page scrolls, at its own data-speed, so
+   the cluster reads as floating at different depths in/around the big Linux SVG. */
+(function () {
+  var stack = document.querySelector(".standards__logo-stack");
+  if (!stack) return;
+  var floats = Array.prototype.slice.call(stack.querySelectorAll(".skill-float"));
+  if (!floats.length) return;
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+  if (reduce) return;                                  // leave them at their base positions
+  var data = floats.map(function (el) {
+    return { el: el, speed: parseFloat(el.getAttribute("data-speed")) || 0.15 };
+  });
+  var ticking = false;
+  function render() {
+    ticking = false;
+    var r = stack.getBoundingClientRect();
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    // progress in px: 0 when the stack centre sits ~70% down the viewport, growing
+    // (positive) as it scrolls up past that line → each float lifts by progress*speed.
+    var progress = (vh * 0.7) - (r.top + r.height / 2);
+    for (var i = 0; i < data.length; i++) {
+      data[i].el.style.transform = "translateY(" + (-progress * data[i].speed).toFixed(1) + "px)";
+    }
+  }
+  function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(render); } }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll, { passive: true });
+  if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
+  render();
 })();
