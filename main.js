@@ -2191,7 +2191,8 @@
   function setHover(h) {
     if (mq.matches) return;
     hovered = h;
-    cards.forEach((c, i) => { c.style.zIndex = i === h ? "30" : origZ[i]; });
+    // z-index is intentionally NOT changed on hover — the rest stacking
+    // (1,2,3,10,3,2,1) holds throughout, exactly like the reference.
     kick();
   }
 
