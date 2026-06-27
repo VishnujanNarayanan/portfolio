@@ -145,11 +145,20 @@
       if (!ease) navLinks.forEach(function (a) { a.style.setProperty("--hc", c >= 128 ? "#4d8bff" : "#231d7a"); });
     }
     window.__headerTheme = setHeaderTheme;
+    // CHECKPOINT/DWELL: once the video reaches fullscreen (y = vh) it HOLDS there for an extra
+    // HERO_DWELL·vh of scroll before the edge zoom-out (phase B) begins — so you have to scroll
+    // again past the checkpoint to start it. Every hero-phase consumer (video, handwriting,
+    // marquee, GitHub card, CTA lift) maps real scrollY through __heroY so they all dwell in
+    // lock-step; the .hero-spacer is lengthened by the same amount to provide the scroll room.
+    var HERO_DWELL = 0.16;
+    function heroY(y, vh) { var d = vh * HERO_DWELL; return y < vh ? y : (y < vh + d ? vh : y - d); }
+    window.__heroY = heroY;
     function updateHeroExit() {
       var vh = window.innerHeight;
       var y = window.scrollY;
-      // The header reaction (text shrink + colour flip) fires a little BEFORE the edge
-      // zoom-out actually begins — 4.5% of a viewport early — so it leads the motion.
+      // The header reaction (text shrink + colour flip) fires a little BEFORE the video
+      // reaches fullscreen — 4.5% of a viewport early. Tied to fullscreen (NOT the dwell), so
+      // the checkpoint dwell doesn't shift the navbar switch.
       var HDR_FLIP = vh * 0.955;
       // Phase A (0 → vh): the hero rides UP 1:1 with scroll (linear, so the video glued
       // to its bottom edge tracks it exactly). Past vh it's parked off the top.
@@ -158,16 +167,19 @@
       // Phases B/C act on the video once it fully covers the screen (y ≥ vh):
       //   B (vh → 2vh): zoom OUT from the centre (camera pull-back), 1 → EXIT_MIN_SCALE.
       //   C (2vh → 3vh): ride UP with the page, handing over to the flow below.
+      // Effective scroll with the checkpoint dwell removed — phases B/C read this so the video
+      // stays fullscreen through the dwell, then resumes exactly where it would have.
+      var ye = heroY(y, vh);
       if (heroVid) {
         // Y: below the fold (top edge at the hero's bottom) → 0 (full screen) over phase A,
-        // locked at 0 through the zoom, then rides up off the top in phase C.
-        var vTy = (y < vh) ? (vh - y) : -Math.max(0, y - 2 * vh);
+        // locked at 0 through the zoom + the dwell, then rides up off the top in phase C.
+        var vTy = (ye < vh) ? (vh - ye) : -Math.max(0, ye - 2 * vh);
         var scale, grey = 0, blue = 0;                 // grey 0→1 (greyed out); blue 0→1 (blue tint, kicks in later)
-        if (y < vh) {
+        if (ye < vh) {
           // Phase A CONTENT zoom (a normal camera zoom; object-fit:cover keeps it full-frame):
           // held zoomed-in 1.55 for the first 50% of the pull-up, then eased back to 1.0 (full
           // view) between 50% and 100% (reaching 1.0 at the top). Distinct from the edge zoom below.
-          var zt = Math.max(0, Math.min((y - 0.5 * vh) / (0.5 * vh), 1));
+          var zt = Math.max(0, Math.min((ye - 0.5 * vh) / (0.5 * vh), 1));
           var ze = zt * zt * (3 - 2 * zt);             // smoothstep
           scale = 1.55 - 0.55 * ze;                    // 1.55 → 1.0
           setVidPlay(1);                               // full speed through the pull-up
@@ -178,7 +190,7 @@
           // cert IIFE fires a TIMED completion (cw.t 0→1) and the video finishes its zoom-out,
           // grey, blue tint and PAUSE on that same timer — threshold-driven, not scroll-driven —
           // so the video and the last strokes land together at the pop. Reverses on scroll-up.
-          var pB = Math.max(0, Math.min((y - vh) / vh, 1));
+          var pB = Math.max(0, Math.min((ye - vh) / vh, 1));
           var cw = window.__certWrite;
           var prog;
           if (cw && cw.crossed) {
@@ -232,7 +244,7 @@
       var wantFlip = y >= HDR_FLIP;
       if (wantFlip !== hdrFlipped) {
         hdrFlipped = wantFlip;
-        if (y <= 2 * vh) setHeaderTheme(wantFlip ? 1 : 0);   // timed (.3s), not scrubbed
+        if (ye <= 2 * vh) setHeaderTheme(wantFlip ? 1 : 0);   // timed (.3s), not scrubbed
         var hs = wantFlip ? 0.88 : 1;                        // shrink 1 ↔ 0.88 (subtle)
         if (navLeft)  { navLeft.style.transition  = "transform .3s var(--ease-default)"; navLeft.style.transformOrigin  = "left center";  navLeft.style.transform  = "scale(" + hs + ")"; }
         if (navRight) { navRight.style.transition = "transform .3s var(--ease-default)"; navRight.style.transformOrigin = "right center"; navRight.style.transform = "scale(" + hs + ")"; }
@@ -383,7 +395,8 @@
     function frameScale() { return pullStart.s; }
     function layerTransform() {                                        // CTA: remembered position + TEXT_SCALE
       var y = window.scrollY, vh = window.innerHeight;                 // (always — so the text size never changes
-      return "translateY(" + (-Math.max(0, y - 2 * vh)).toFixed(2) + "px) scale(" + TEXT_SCALE + ")";  // before↔after)
+      var ye = window.__heroY ? window.__heroY(y, vh) : y;
+      return "translateY(" + (-Math.max(0, ye - 2 * vh)).toFixed(2) + "px) scale(" + TEXT_SCALE + ")";  // before↔after)
     }
     // Mirror updateHeroExit's phase-B `prog` so we know when the office video would resume playing.
     function heroProg() {
@@ -411,8 +424,8 @@
     }
     function liftFrozen(y) {                                     // forward scroll: ride UP with the text
       if (!receive) return;
-      var vh = window.innerHeight;
-      var lift = Math.max(0, y - 2 * vh) - Math.max(0, freezeY - 2 * vh);
+      var vh = window.innerHeight, hy = window.__heroY || function (v) { return v; };
+      var lift = Math.max(0, hy(y, vh) - 2 * vh) - Math.max(0, hy(freezeY, vh) - 2 * vh);
       receive.style.transform = "translateY(" + (pullStart.ty - lift).toFixed(2) + "px) scale(" + frameScale().toFixed(4) + ")";
     }
     function heroHandoff() {
@@ -636,7 +649,7 @@
     var rafId = 0, lastT = 0;
     var DUR = 550;               // ms for the FORWARD timed completion (strokes 23..45 + the video finish) — sped up from 1100
 
-    function pBNow() { var vh = window.innerHeight; return Math.max(0, Math.min((window.scrollY - vh) / vh, 1)); }
+    function pBNow() { var vh = window.innerHeight, ye = window.__heroY ? window.__heroY(window.scrollY, vh) : window.scrollY; return Math.max(0, Math.min((ye - vh) / vh, 1)); }
     function scrollInk() {       // scroll-driven ink length (drives strokes BEFORE the threshold)
       var pB = pBNow();
       var p = reduce ? (pB > 0.5 ? 1 : 0) : Math.max(0, Math.min((pB - 0.5) / 0.5, 1));
@@ -770,11 +783,12 @@
       if (y < lastY) scrollSign = -1;
       else if (y > lastY) scrollSign = 1;
       lastY = y;
-      // The marquee sits BEHIND the video — hidden during the pull-up (phase A, y < vh),
-      // it fades in as the video zooms out and uncovers it (phase B, vh → 1.55·vh)...
-      marquee.style.opacity = Math.max(0, Math.min((y - vh) / (vh * 0.55), 1));
-      // ...then rides UP with the video as it hands over to the flow (phase C, y > 2vh).
-      var lift = Math.max(0, y - 2 * vh);
+      // The marquee sits BEHIND the video — hidden during the pull-up (phase A, y < vh) AND
+      // the fullscreen checkpoint dwell; it fades in as the video zooms out (phase B)...
+      var ye = window.__heroY ? window.__heroY(y, vh) : y;
+      marquee.style.opacity = Math.max(0, Math.min((ye - vh) / (vh * 0.55), 1));
+      // ...then rides UP with the video as it hands over to the flow (phase C, ye > 2vh).
+      var lift = Math.max(0, ye - 2 * vh);
       marquee.style.transform = "translate3d(0," + (-lift) + "px,0)";
     }
     var lastT = 0;
@@ -898,23 +912,25 @@
     var GH_START = 0.40, GH_END = 0.65;           // visual height (× viewport): at reveal → at fullscreen
     function updateGhCard() {
       var y = window.scrollY, vh = window.innerHeight;
+      var ye = window.__heroY ? window.__heroY(y, vh) : y;   // dwell-aware effective scroll
       var sc, op, ty;
-      if (y <= vh) {
-        // Phase A: ride up WITH the video (ty = vh − y, the video's own translate), so the
+      if (ye <= vh) {
+        // Phase A: ride up WITH the video (ty = vh − ye, the video's own translate), so the
         // card emerges from the video's bottom and settles as the video fills the screen.
-        ty = vh - y;
-        var g = smooth(Math.max(0, Math.min(y / vh, 1)));
+        // Through the fullscreen checkpoint dwell ye == vh, so it stays settled.
+        ty = vh - ye;
+        var g = smooth(Math.max(0, Math.min(ye / vh, 1)));
         var frac = GH_START + (GH_END - GH_START) * g;   // 0.40 → 0.75 of the viewport
         sc = frac / GH_END;                              // 0.533 → 1 (card's base height is GH_END)
         op = 1;                                          // off-screen below at the top, so no fade needed
       } else {
         // Phase B: shrink + fade back out so the fixed card never covers the sections below.
-        var x = smooth(Math.max(0, Math.min((y - vh) / (0.35 * vh), 1)));
+        var x = smooth(Math.max(0, Math.min((ye - vh) / (0.35 * vh), 1)));
         ty = 0; sc = 1 - 0.5 * x; op = 1 - x;
       }
       ghReveal.style.opacity = op.toFixed(3);
       ghCard.style.transform = "translateY(" + ty.toFixed(1) + "px) scale(" + sc.toFixed(3) + ")";
-      ghReveal.classList.toggle("is-live", op > 0.6 && y >= 0.6 * vh && y <= vh * 1.02);
+      ghReveal.classList.toggle("is-live", op > 0.6 && ye >= 0.6 * vh && ye <= vh * 1.02);
     }
     window.addEventListener("scroll", updateGhCard, { passive: true });
     window.addEventListener("resize", updateGhCard, { passive: true });
@@ -2004,6 +2020,36 @@
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll, { passive: true });
     update();
+  })();
+
+  /* ---------- Projects→Skills curved seam ---------- */
+  /* The dark projects band's bottom edge starts straight and bulges
+     (curves out) downward into the light skills section as it scrolls up. */
+  (function () {
+    var path = document.querySelector(".skills-curve__path");
+    var sec = document.querySelector(".standards");
+    if (!path || !sec) return;
+    var MAX_DEPTH = 100; // viewBox units (box is 140px tall)
+    var RANGE = 0.6;     // fraction of viewport over which it curves out
+    var ticking = false;
+    function render() {
+      ticking = false;
+      if (window.innerWidth <= 820) return;
+      var vh = window.innerHeight;
+      var top = sec.getBoundingClientRect().top;
+      // p = 0 when the seam first appears at the bottom of the screen,
+      // 1 once it has risen RANGE*vh — straight → fully curved.
+      var p = (vh - top) / (RANGE * vh);
+      p = p < 0 ? 0 : p > 1 ? 1 : p;
+      var d = (p * MAX_DEPTH).toFixed(1);
+      path.setAttribute("d", "M0 0 L100 0 Q50 " + d + " 0 0 Z");
+    }
+    function onScroll() {
+      if (!ticking) { ticking = true; requestAnimationFrame(render); }
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", render);
+    render();
   })();
 
   /* ---------- Flow journey ---------- */
