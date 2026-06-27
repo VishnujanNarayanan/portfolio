@@ -1723,3 +1723,97 @@ Keep this section updated after every change. Format:
   (updateHeroExit reads window.__certWrite.t — no separate video timer), so DUR is the single knob.
 - main.js cert IIFE: DUR 1100 → 550 ms. Writing completion AND the video finish are now ~2× faster
   and stay in lock-step (they land together at the pop, as before). node --check OK.
+
+### 2026-06-27 (What's Up On Socials — Lando fanned-card spread)
+- Branch work: replicated Lando's "WHAT'S UP / ON SOCIALS" section (the fanned peacock
+  card spread) and placed it BELOW the projects terminal, AFTER the dark `.projects-tail`
+  breathing strip and BEFORE skills (order: dark terminal → dark tail → light socials →
+  light skills, so the tail still bridges the two dark areas and socials/skills both read
+  light — inserting it before the tail would have stranded the dark tail between two light
+  sections).
+- index.html: new `<section class="s is-callout-socials" id="socials">` — heading
+  ("What's Up" + highlighted "On Socials"), `.callout-socials-card-layout` with 7
+  `.callout-socials-card-w` cards (z-index 1,2,3,10,3,2,1 = centre on top, exactly as the
+  reference), placeholder images cycling images/flow/*.jpg, and a "Follow me on social media"
+  intro with GitHub / LinkedIn / Email links (from master_profile.yaml).
+- styles.css (supplemental): exact reference card dimensions — `.callout-socials-card-w`
+  border-radius 3.31625rem, width 20rem, height 35rem, position absolute, overflow clip,
+  transform-origin 50% 50%; `.callout-socials-card-layout` max-width 80rem, height 36rem;
+  `.image.is-social-card` inset:0 object-fit:cover. Section bg var(--color-bg-muted), heading
+  + follow line use the blue --color-highlight (theme) in place of Lando's lime. Mobile
+  (≤820px): cards drop to a static wrapped flex grid (transform:none!important).
+- main.js: new self-contained `socialsFan()` IIFE (appended after the main IIFE). The fan is
+  scroll-driven (pure function of scroll → reverses on scroll-up): cards start STACKED at
+  centre pushed down 10rem upright (matches the reference inline translate(0,10rem)) and lerp
+  to a symmetric fanned pose as the layout scrolls from ~.95vh to ~.45vh (easeOutCubic).
+  Per-card FAN table (x/y rem, rot deg, scale): centre upright/highest/largest (s1.0),
+  outermost x±31rem y+9.5rem rot±18° s0.8 — symmetric peacock. Skips on mobile (≤820) +
+  prefers-reduced-motion (snaps to fanned). Hooks window scroll/resize + __lenis scroll.
+- Verified: node --check main.js OK; markup served (7 cards / section / 3 links); fan pose
+  math confirmed symmetric. Visual fan needs a real-GPU browser to eyeball (chromium-snap
+  screenshots are flaky in this WSL env, per the standing headless caveat).
+
+### 2026-06-27 (socials cards — exact hover reaction from captured matrices; branch socials-fan-cards)
+- Branch `socials-fan-cards`. User captured the live Lando socials hover via a console snippet
+  (lando_social_hover_matrix). Decoded the matrix() values:
+  • REST fan (exact): rot = 7°×slot → [-21,-14,-7,0,7,14,21]; scale [0.776,0.850,0.935,1,…];
+    x [-380,-278.7,-139.3,0,…]px; y [92.5,50.7,16.5,0,…]px (the arrival/exit fan I already had
+    is KEPT per user instruction — this hover layer sits on top of it, not replacing it).
+  • HOVERED card: scale ×1.08, lift −31.67px (≈1.98rem), keeps its rest x/rotation.
+  • OTHER cards: SLIDE AWAY in x from the hovered card, magnitude decaying with distance
+    (≈94.6px adjacent → 40.5px next → clamped at the ±edge), y/scale unchanged, small rot splay.
+- main.js socialsFan(): added a hover layer (FAN/START_Y/easeOut/scroll-mapping for arrival+exit
+  UNCHANGED). New constants POP_SCALE 1.08, LIFT_REM 1.98, PUSH_REM 6.6, DECAY 0.45 (=40.5/94.6),
+  SPLAY 0.25°/rem, LERP 0.18. Per-card animated push (hx) + pop (pop) lerp toward targets in a
+  rAF loop (GSAP-like ease-out); drawCard() composes base-fan + hover, scaled by reveal p so hover
+  only acts once arrived. pointerenter on each card sets the hovered index (others compute a
+  decaying push clamped to the fan edge ±EDGE_X, hovered pops + z-index 30); pointerleave on the
+  layout resets. Mobile (≤820) + reduced-motion skip hover. Verified node --check OK and the push
+  table (center: ±6.6/±3.0/edge-pinned, mirrors the decoded 94.6/40.5/clamp pattern).
+- NOTE: off-centre hovers are slightly approximated (the live values were noisy/mid-tween and the
+  real redistribution is room-weighted/asymmetric); the dominant, perceptible behaviour — hovered
+  pops & lifts, neighbours part away decaying + edges pinned — matches. Couldn't screenshot to
+  eyeball (chromium-snap is broken in this WSL env: "timeout waiting for snap system profiles").
+
+### 2026-06-27 (socials hover — matrix-EXACT rest + per-card tilt + spring bounce)
+- User captured time-series hover data (lando_social_hover_bouncy_matrix) → rebuilt the hover
+  to the exact site values (replaces the earlier symmetric-decay approximation; arrival/exit
+  scroll reveal mechanism kept, but REST values upgraded to the captured ones so arrival is
+  now exact too).
+- Decoded findings (main.js socialsFan, fully rewritten fan/hover block):
+  • REST fan = captured verbatim (px@rem16): x[-380,-278.67,-139.33,0,…], y[92.47,50.67,16.47,0,…],
+    rot = exactly 7°×slot, scale[0.7756,0.8498,0.9346,1,…].
+  • HOVERED card: lifts −31.67px, scale ×1.08, keeps its x/rotation (matrix-exact, constant).
+  • Δrotation of every other card = closed form sign(i−h)·3/(|i−h|+1)° — verified EXACT against
+    all 7 hovered states (this is the "cards tilt when another is selected", different per card).
+  • Δx (slide-away) is room-dependent (asymmetric, not a clean decay) → hardcoded the 7×7 px table
+    DX[h][i] straight from the settled matrices (rows 4–6 mirror 2–0).
+  • BOUNCE: the tweens overshoot then settle (~3.5% in data) → replaced the plain lerp with an
+    underdamped SPRING per card per prop (x,y,r,s): STIFF 150 / DAMP 15 (ζ≈0.61, ~6.5% overshoot,
+    ~0.6s settle — nudged a touch livelier than the raw capture per the user's "bouncier" ask).
+    Spring handles hover interruption (mouse moving between cards) continuously.
+- Responsive: captured values are at 20rem cards; offsets scale by sizeFactor()=cardWidth/(20rem)
+  so the fan stays proportional on smaller screens. Mobile (≤820)/reduced-motion unchanged.
+  Frame loop runs only while the spring is settling; scroll/resize just repaint the current pose.
+- node --check OK; spring overshoot/settle verified numerically. Couldn't eyeball (chromium-snap
+  still broken in this WSL env). Committed the capture file lando_social_hover_bouncy_matrix.
+
+### 2026-06-27 (socials: snappier hover + bouncy fan-out arrival)
+- User: site feels snappier and the INITIAL fan-out also bounces. Two changes in socialsFan():
+  • Hover spring stiffer/snappier: STIFF 150→320, DAMP 15→21 (zeta ~0.59, ~7-10% overshoot,
+    settle ~0.32s, was ~0.6s).
+  • Arrival/exit reveal is no longer a scroll-SCRUB — it's now a triggered REVEAL SPRING. pCur
+    springs 0<->1 (PR_STIFF 260 / PR_DAMP 20, ~5% overshoot) when the card layout passes ~0.85vh
+    (evalReveal sets pT 0/1 on scroll); p can overshoot past 1 so the cards spring slightly past
+    their fanned pose then settle = the fan-out BOUNCE (matches the reference ScrollTrigger tween).
+    Folds back with a bounce when scrolled above the trigger. paint() now uses pCur (not easeOut
+    scrub). Reduced-motion pins p=1; mobile unchanged. node --check OK; both springs verified
+    numerically (hover 7%/0.32s, reveal 5.4%/0.33s).
+
+### 2026-06-27 (socials moved after the bulge → after Skills)
+- The "bulge" is the .skills-curve (dark scroll-animated curved seam at the top of the Skills
+  section; renders on desktop, display:none ≤820px). User wanted Socials AFTER the bulge.
+  Moved the .is-callout-socials section from between projects-tail and Skills to AFTER the
+  Skills section. New order: Projects → projects-tail (dark spacer) → [bulge] Skills → Socials
+  → Services. projects-tail now sits directly before Skills (dark→bulge→skills flow intact);
+  Socials (light) follows Skills (light). Verified single socials section + balanced <section> tags.
