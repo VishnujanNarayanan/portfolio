@@ -1723,3 +1723,54 @@ Keep this section updated after every change. Format:
   (updateHeroExit reads window.__certWrite.t — no separate video timer), so DUR is the single knob.
 - main.js cert IIFE: DUR 1100 → 550 ms. Writing completion AND the video finish are now ~2× faster
   and stay in lock-step (they land together at the pop, as before). node --check OK.
+
+### 2026-06-27 (What's Up On Socials — Lando fanned-card spread)
+- Branch work: replicated Lando's "WHAT'S UP / ON SOCIALS" section (the fanned peacock
+  card spread) and placed it BELOW the projects terminal, AFTER the dark `.projects-tail`
+  breathing strip and BEFORE skills (order: dark terminal → dark tail → light socials →
+  light skills, so the tail still bridges the two dark areas and socials/skills both read
+  light — inserting it before the tail would have stranded the dark tail between two light
+  sections).
+- index.html: new `<section class="s is-callout-socials" id="socials">` — heading
+  ("What's Up" + highlighted "On Socials"), `.callout-socials-card-layout` with 7
+  `.callout-socials-card-w` cards (z-index 1,2,3,10,3,2,1 = centre on top, exactly as the
+  reference), placeholder images cycling images/flow/*.jpg, and a "Follow me on social media"
+  intro with GitHub / LinkedIn / Email links (from master_profile.yaml).
+- styles.css (supplemental): exact reference card dimensions — `.callout-socials-card-w`
+  border-radius 3.31625rem, width 20rem, height 35rem, position absolute, overflow clip,
+  transform-origin 50% 50%; `.callout-socials-card-layout` max-width 80rem, height 36rem;
+  `.image.is-social-card` inset:0 object-fit:cover. Section bg var(--color-bg-muted), heading
+  + follow line use the blue --color-highlight (theme) in place of Lando's lime. Mobile
+  (≤820px): cards drop to a static wrapped flex grid (transform:none!important).
+- main.js: new self-contained `socialsFan()` IIFE (appended after the main IIFE). The fan is
+  scroll-driven (pure function of scroll → reverses on scroll-up): cards start STACKED at
+  centre pushed down 10rem upright (matches the reference inline translate(0,10rem)) and lerp
+  to a symmetric fanned pose as the layout scrolls from ~.95vh to ~.45vh (easeOutCubic).
+  Per-card FAN table (x/y rem, rot deg, scale): centre upright/highest/largest (s1.0),
+  outermost x±31rem y+9.5rem rot±18° s0.8 — symmetric peacock. Skips on mobile (≤820) +
+  prefers-reduced-motion (snaps to fanned). Hooks window scroll/resize + __lenis scroll.
+- Verified: node --check main.js OK; markup served (7 cards / section / 3 links); fan pose
+  math confirmed symmetric. Visual fan needs a real-GPU browser to eyeball (chromium-snap
+  screenshots are flaky in this WSL env, per the standing headless caveat).
+
+### 2026-06-27 (socials cards — exact hover reaction from captured matrices; branch socials-fan-cards)
+- Branch `socials-fan-cards`. User captured the live Lando socials hover via a console snippet
+  (lando_social_hover_matrix). Decoded the matrix() values:
+  • REST fan (exact): rot = 7°×slot → [-21,-14,-7,0,7,14,21]; scale [0.776,0.850,0.935,1,…];
+    x [-380,-278.7,-139.3,0,…]px; y [92.5,50.7,16.5,0,…]px (the arrival/exit fan I already had
+    is KEPT per user instruction — this hover layer sits on top of it, not replacing it).
+  • HOVERED card: scale ×1.08, lift −31.67px (≈1.98rem), keeps its rest x/rotation.
+  • OTHER cards: SLIDE AWAY in x from the hovered card, magnitude decaying with distance
+    (≈94.6px adjacent → 40.5px next → clamped at the ±edge), y/scale unchanged, small rot splay.
+- main.js socialsFan(): added a hover layer (FAN/START_Y/easeOut/scroll-mapping for arrival+exit
+  UNCHANGED). New constants POP_SCALE 1.08, LIFT_REM 1.98, PUSH_REM 6.6, DECAY 0.45 (=40.5/94.6),
+  SPLAY 0.25°/rem, LERP 0.18. Per-card animated push (hx) + pop (pop) lerp toward targets in a
+  rAF loop (GSAP-like ease-out); drawCard() composes base-fan + hover, scaled by reveal p so hover
+  only acts once arrived. pointerenter on each card sets the hovered index (others compute a
+  decaying push clamped to the fan edge ±EDGE_X, hovered pops + z-index 30); pointerleave on the
+  layout resets. Mobile (≤820) + reduced-motion skip hover. Verified node --check OK and the push
+  table (center: ±6.6/±3.0/edge-pinned, mirrors the decoded 94.6/40.5/clamp pattern).
+- NOTE: off-centre hovers are slightly approximated (the live values were noisy/mid-tween and the
+  real redistribution is room-weighted/asymmetric); the dominant, perceptible behaviour — hovered
+  pops & lifts, neighbours part away decaying + edges pinned — matches. Couldn't screenshot to
+  eyeball (chromium-snap is broken in this WSL env: "timeout waiting for snap system profiles").

@@ -2058,3 +2058,144 @@
 
   /* Vanta NET background is initialised inline in index.html (#vanta-bg). */
 })();
+
+/* ============================================================
+   What's Up — On Socials: scroll-driven fanned-card spread.
+   Cards start stacked at centre (pushed down 10rem, upright) and
+   fan out into a symmetric peacock spread as the section scrolls
+   into view. Pure function of scroll → reverses on scroll-up.
+   ============================================================ */
+(function socialsFan() {
+  const layout = document.querySelector(".callout-socials-card-layout");
+  if (!layout) return;
+  const cards = Array.from(layout.querySelectorAll(".callout-socials-card-w"));
+  if (!cards.length) return;
+
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const mq = window.matchMedia("(max-width: 820px)");
+
+  // px-per-rem (root font-size) for the rem-based fan offsets.
+  const rem = () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+
+  // Final fanned pose per card (index 0..6, centre = 3). Symmetric.
+  // x/y in rem, rot in deg, scale unitless. Centre is upright, highest, largest.
+  const FAN = [
+    { x: -31,   y: 9.5, rot: -18, s: 0.80 },
+    { x: -21,   y: 4.6, rot: -12, s: 0.86 },
+    { x: -10.5, y: 1.3, rot:  -6, s: 0.93 },
+    { x:   0,   y: 0,   rot:   0, s: 1.00 },
+    { x:  10.5, y: 1.3, rot:   6, s: 0.93 },
+    { x:  21,   y: 4.6, rot:  12, s: 0.86 },
+    { x:  31,   y: 9.5, rot:  18, s: 0.80 },
+  ];
+  const START_Y = 10; // rem: stacked start offset (matches reference translate(0,10rem))
+
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+
+  /* ---- Hover reaction (reconstructed from lando_social_hover_matrix) ----
+     Decoding the live matrices showed: the HOVERED card scales x1.08 and lifts
+     ~31.67px (keeping its rest x/rotation); every OTHER card SLIDES AWAY in x
+     (magnitude decaying with distance from the hovered card, clamped at the fan
+     edge), with a small rotation splay and unchanged y/scale. This layer is
+     applied ON TOP of the scroll-driven arrival/exit fan above. */
+  const POP_SCALE = 1.08;   // hovered card scale multiplier (matrix: x1.08)
+  const LIFT_REM = 1.98;    // hovered lift (matrix: 31.67px @16px = 1.98rem)
+  const PUSH_REM = 6.6;     // adjacent-card slide-away (matrix: 94.6px @16px ~ 5.9rem, scaled to this fan)
+  const DECAY = 0.45;       // per-card falloff with distance (matrix: 40.5/94.6 ~ 0.43)
+  const SPLAY = 0.25;       // extra rotation per rem of push (deg)
+  const LERP = 0.18;        // smoothing per frame (~power2 ease, GSAP-like)
+  const EDGE_X = Math.abs(FAN[0].x); // fan edge in rem — pushed cards clamp here
+
+  const origZ = cards.map((c) => c.style.zIndex || getComputedStyle(c).zIndex || "0");
+  let hovered = -1;
+  const hx = cards.map(() => 0);   // current push (rem)
+  const thx = cards.map(() => 0);  // target push (rem)
+  const pop = cards.map(() => 0);  // current pop amount 0..1
+  const tpop = cards.map(() => 0); // target pop amount
+
+  function computeP() {
+    if (reduce) return 1;
+    const vh = window.innerHeight;
+    const rect = layout.getBoundingClientRect();
+    const center = rect.top + rect.height / 2;
+    // Fan from when the layout centre is near the bottom (.95vh) to upper-mid (.45vh).
+    const raw = (vh * 0.95 - center) / (vh * 0.5);
+    return easeOut(Math.max(0, Math.min(1, raw)));
+  }
+
+  function drawCard(card, i, p) {
+    const f = FAN[i] || FAN[FAN.length - 1];
+    const r = rem();
+    // base arrival/exit fan pose (rem) — UNCHANGED
+    let x = f.x * p;
+    let y = START_Y + (f.y - START_Y) * p;
+    let rot = f.rot * p;
+    let s = 1 + (f.s - 1) * p;
+    // hover layer, scaled by reveal p (so it only acts once arrived)
+    const h = p;
+    x += hx[i] * h;
+    rot += hx[i] * h * SPLAY;
+    y += -LIFT_REM * pop[i] * h;
+    s *= 1 + (POP_SCALE - 1) * pop[i] * h;
+    card.style.transform =
+      `translate(${(x * r).toFixed(2)}px, ${(y * r).toFixed(2)}px) ` +
+      `rotate(${rot.toFixed(3)}deg) scale(${s.toFixed(4)})`;
+  }
+
+  let ticking = false;
+  function render() {
+    if (mq.matches) { cards.forEach((c) => { c.style.transform = ""; c.style.zIndex = origZ[cards.indexOf(c)]; }); return; }
+    const p = computeP();
+    cards.forEach((c, i) => drawCard(c, i, p));
+  }
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { render(); ticking = false; });
+  }
+
+  // hover smoothing loop
+  let raf = 0;
+  function animate() {
+    let moving = false;
+    for (let i = 0; i < cards.length; i++) {
+      const dh = thx[i] - hx[i];
+      if (Math.abs(dh) > 0.002) { hx[i] += dh * LERP; moving = true; } else hx[i] = thx[i];
+      const dp = tpop[i] - pop[i];
+      if (Math.abs(dp) > 0.001) { pop[i] += dp * LERP; moving = true; } else pop[i] = tpop[i];
+    }
+    render();
+    raf = moving ? requestAnimationFrame(animate) : 0;
+  }
+  function kick() { if (!raf) raf = requestAnimationFrame(animate); }
+
+  function setHover(h) {
+    if (mq.matches) return;
+    hovered = h;
+    for (let i = 0; i < cards.length; i++) {
+      if (i === h) { thx[i] = 0; tpop[i] = 1; }
+      else if (h < 0) { thx[i] = 0; tpop[i] = 0; }
+      else {
+        const d = Math.abs(i - h);
+        const dir = Math.sign(i - h);
+        const push = dir * PUSH_REM * Math.pow(DECAY, d - 1);
+        const baseX = (FAN[i] || FAN[FAN.length - 1]).x;
+        const clamped = Math.max(-EDGE_X, Math.min(EDGE_X, baseX + push));
+        thx[i] = clamped - baseX;
+        tpop[i] = 0;
+      }
+      cards[i].style.zIndex = i === h ? "30" : origZ[i];
+    }
+    kick();
+  }
+
+  cards.forEach((c, i) => {
+    c.addEventListener("pointerenter", () => setHover(i));
+  });
+  layout.addEventListener("pointerleave", () => setHover(-1));
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", render);
+  if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
+  render();
+})();
