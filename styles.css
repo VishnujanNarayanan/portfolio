@@ -769,5 +769,5 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 @media (max-width:820px){.skills-curve{display:none}}
 /* Blank dark breathing room below the projects terminal, before the curved
    seam + Skills section — so the transition doesn't feel congested. */
-.projects-tail{position:relative;z-index:1;height:clamp(110px,21vh,230px);background-color:#0f1628}
-@media (max-width:820px){.projects-tail{height:60px}}
+.projects-tail{position:relative;z-index:1;height:clamp(66px,12.6vh,138px);background-color:#0f1628}
+@media (max-width:820px){.projects-tail{height:36px}}
