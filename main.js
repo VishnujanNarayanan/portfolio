@@ -2112,11 +2112,14 @@
 
   const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 
+  // Extra horizontal/vertical spread of the fan offsets (NOT the card size) so the
+  // cards sit a little less congested — applied consistently to rest AND hover.
+  const SPREAD = 1.16;
   // Responsive: the captured values are at 20rem cards; scale offsets to the
   // actual rendered card width so the fan stays proportional on smaller screens.
   function sizeFactor() {
     const cw = cards[0].offsetWidth || 320; // layout width, ignores transform
-    return cw / (20 * rem());
+    return (cw / (20 * rem())) * SPREAD;
   }
 
   // ---- target pose (px, pre-sizeFactor) for the current hover state ----
