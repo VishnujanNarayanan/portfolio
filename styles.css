@@ -784,8 +784,8 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .callout-socials-heading__line{display:inline-block;padding:.02em .18em}
 .callout-socials-heading__line.is-hl{background-color:var(--color-highlight);color:var(--color-text-light)}
 /* card spread — exact reference dimensions */
-.callout-socials-card-layout{justify-content:center;align-items:center;width:100%;max-width:80rem;height:36rem;display:flex;position:relative}
-.callout-socials-card-w{z-index:0;backface-visibility:hidden;will-change:transform;border-radius:3.31625rem;flex:none;width:20rem;height:35rem;position:absolute;overflow:clip;transform-origin:50% 50%;box-shadow:0 1.6rem 3rem rgba(5,4,25,.22)}
+.callout-socials-card-layout{justify-content:center;align-items:center;width:100%;max-width:80rem;height:32.5rem;display:flex;position:relative}
+.callout-socials-card-w{z-index:0;backface-visibility:hidden;will-change:transform;border-radius:2.985rem;flex:none;width:18rem;height:31.5rem;position:absolute;overflow:clip;transform-origin:50% 50%;box-shadow:0 1.44rem 2.7rem rgba(5,4,25,.22)}
 .image.is-social-card{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .callout-socials-intro-w{margin-top:1rem;row-gap:1.25rem;flex-flow:column;justify-content:flex-start;align-items:center;display:flex}
 .callout-socials-follow{font-family:var(--font-ui),sans-serif;font-size:clamp(1.25rem,2.6vw,1.75rem);font-weight:500;color:var(--color-text);background-color:var(--color-highlight);color:var(--color-text-light);padding:.05em .35em}
