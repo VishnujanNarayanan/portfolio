@@ -450,12 +450,18 @@ header .header__nav-left a{color:#050419;font-size:16px}
 .standards .standards__content{flex:1 1 50%;min-width:0;max-width:none}
 .standards__logo{flex:0 0 50%;width:50%;height:auto;border-radius:0;overflow:visible;display:flex;align-items:center;justify-content:center;position:relative;z-index:5;transform:translateY(-10%)}
 .standards__logo-stack{position:relative;width:100%;max-width:620px}
-.standards__logo-stack img.standards__logo-main{display:block;width:100%;height:auto;object-fit:contain}
+.standards__logo-stack img.standards__logo-main{display:block;width:100%;height:auto;object-fit:contain;position:relative;z-index:2;will-change:transform;filter:url(#duotone-blue)}
+/* slower logos sit ON TOP of Linux (z 3), faster ones BEHIND it (z 1) */
+.standards__logo-stack img.skill-float--front{z-index:3}
+.standards__logo-stack img.skill-float--back{z-index:1}
 /* small skill logos scattered in/around Linux — 5% of its size, each parallaxes
    upward on scroll at its own data-speed (driven in main.js). The high-specificity
    selector beats the reference `.standards__image img{height:100%;object-fit:cover}`
    rule that was stretching+cropping them into thin vertical slices. */
-.standards__logo-stack img.skill-float{position:absolute;width:15%;height:auto;object-fit:contain;will-change:transform;filter:drop-shadow(0 4px 10px rgba(15,22,40,.25))}
+/* recolour each (multi-colour) logo with the SVG luminance→blue duotone (defined
+   in index.html) — keeps internal light/dark detail (recognisable) but fully blue,
+   no warm wash. Same filter as the penguin for a cohesive look. */
+.standards__logo-stack img.skill-float{position:absolute;width:15%;height:auto;object-fit:contain;will-change:transform;filter:url(#duotone-blue) drop-shadow(0 4px 10px rgba(15,22,40,.25))}
 @media (max-width:820px){
   .standards .standards__container{flex-direction:column;align-items:flex-start;transform:translateY(-20%)}
   .standards .standards__content,.standards__logo{flex:1 1 100%;width:100%}

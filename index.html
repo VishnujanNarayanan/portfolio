@@ -555,6 +555,20 @@
 
     <div class="projects-tail" aria-hidden="true"></div>
 
+    <!-- Duotone filter for the skill logos: maps each pixel's LUMINANCE (brightness)
+         onto a blue ramp (dark→#161a4d, light→#7d8be0) — no warm/sepia contamination,
+         alpha preserved (transparent stays transparent, no background impact). -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+      <filter id="duotone-blue" color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0 0 0 1 0"></feColorMatrix>
+        <feComponentTransfer>
+          <feFuncR type="table" tableValues="0.039 0.725"></feFuncR>
+          <feFuncG type="table" tableValues="0.047 0.769"></feFuncG>
+          <feFuncB type="table" tableValues="0.20 1.0"></feFuncB>
+        </feComponentTransfer>
+      </filter>
+    </svg>
+
     <section class="standards" id="skills">
       <div class="skills-curve" aria-hidden="true"><svg class="skills-curve__svg" viewBox="0 0 100 100" preserveAspectRatio="none"><path class="skills-curve__path" d="M0 0 L100 0 Q50 0 0 0 Z"></path></svg></div>
       <div class="standards__container">
@@ -577,13 +591,17 @@
         </div>
         <div class="standards__image standards__logo" aria-hidden="true">
           <div class="standards__logo-stack">
-            <img class="standards__logo-main" src="images/logos/Linux.svg" alt="" loading="lazy">
-            <img class="skill-float" data-speed="0.30" style="top:2%;left:6%"   src="images/logos/AWS.svg" alt="" loading="lazy">
-            <img class="skill-float" data-speed="0.14" style="top:10%;left:78%" src="images/logos/Docker.svg" alt="" loading="lazy">
-            <img class="skill-float" data-speed="0.22" style="top:44%;left:-7%" src="images/logos/Git.svg" alt="" loading="lazy">
-            <img class="skill-float" data-speed="0.09" style="top:72%;left:84%" src="images/logos/Python.svg" alt="" loading="lazy">
-            <img class="skill-float" data-speed="0.26" style="top:86%;left:22%" src="images/logos/Vim.svg" alt="" loading="lazy">
-            <img class="skill-float" data-speed="0.18" style="top:30%;left:95%" src="images/logos/GitHub.svg" alt="" loading="lazy">
+            <!-- FASTER than Linux → sit BEHIND it (lower z); placed at the edges so they
+                 peek out from behind the penguin instead of hiding under its body -->
+            <img class="skill-float skill-float--back" data-speed="0.38" style="top:64%;left:10%"  src="images/logos/Python.svg" alt="" loading="lazy">
+            <img class="skill-float skill-float--back" data-speed="0.34" style="top:24%;left:68%"  src="images/logos/Vim.svg" alt="" loading="lazy">
+            <img class="skill-float skill-float--back" data-speed="0.29" style="top:79%;left:85%"  src="images/logos/GitHub.svg" alt="" loading="lazy">
+            <!-- the Linux logo itself parallaxes (rests at its current spot at mid-scroll) -->
+            <img class="standards__logo-main" data-speed="0.18" src="images/logos/Linux.svg" alt="" loading="lazy">
+            <!-- SLOWER than Linux → sit ON TOP of it (higher z) -->
+            <img class="skill-float skill-float--front" data-speed="0.15" style="top:83%;left:18%"  src="images/logos/AWS.svg" alt="" loading="lazy">
+            <img class="skill-float skill-float--front" data-speed="0.11" style="top:78%;left:70%" src="images/logos/Docker.svg" alt="" loading="lazy">
+            <img class="skill-float skill-float--front" data-speed="0.13" style="top:40%;left:22%" src="images/logos/Git.svg" alt="" loading="lazy">
           </div>
         </div>
       </div>

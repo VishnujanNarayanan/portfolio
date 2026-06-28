@@ -2239,17 +2239,22 @@
   if (mq.matches) clearMobile(); else { evalReveal(); kick(); }
 })();
 
-/* ---------- Skills: small skill logos parallax around the Linux logo ----------
-   Each .skill-float drifts UPWARD as the page scrolls, at its own data-speed, so
-   the cluster reads as floating at different depths in/around the big Linux SVG. */
+/* ---------- Skills: logo cluster parallax around/with the Linux logo ----------
+   The Linux logo AND the six small skill logos each drift UPWARD as the page
+   scrolls, at their own data-speed. progress = 0 (everything at its base/current
+   position) when the cluster centre crosses the viewport centre — i.e. roughly
+   HALFWAY through the section's scroll — then they keep lifting past that point.
+   3 logos are faster than Linux (data-speed > 0.14, z BEHIND it) and 3 are slower
+   (< 0.14, z ON TOP), giving real depth. */
 (function () {
   var stack = document.querySelector(".standards__logo-stack");
   if (!stack) return;
-  var floats = Array.prototype.slice.call(stack.querySelectorAll(".skill-float"));
-  if (!floats.length) return;
+  // include the Linux main image — it parallaxes too (rests at mid-scroll).
+  var imgs = Array.prototype.slice.call(stack.querySelectorAll("[data-speed]"));
+  if (!imgs.length) return;
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
   if (reduce) return;                                  // leave them at their base positions
-  var data = floats.map(function (el) {
+  var data = imgs.map(function (el) {
     return { el: el, speed: parseFloat(el.getAttribute("data-speed")) || 0.15 };
   });
   var ticking = false;
@@ -2257,9 +2262,10 @@
     ticking = false;
     var r = stack.getBoundingClientRect();
     var vh = window.innerHeight || document.documentElement.clientHeight;
-    // progress in px: 0 when the stack centre sits ~70% down the viewport, growing
-    // (positive) as it scrolls up past that line → each float lifts by progress*speed.
-    var progress = (vh * 0.7) - (r.top + r.height / 2);
+    // progress in px: 0 when the cluster centre sits at the viewport centre (mid-
+    // scroll), growing positive as it scrolls up past that line → each logo (Linux
+    // included) lifts by progress*speed and keeps going.
+    var progress = (vh * 0.5) - (r.top + r.height / 2);
     for (var i = 0; i < data.length; i++) {
       data[i].el.style.transform = "translateY(" + (-progress * data[i].speed).toFixed(1) + "px)";
     }
