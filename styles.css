@@ -311,7 +311,9 @@ header .header__nav-left a{color:#050419;font-size:16px}
   --cw:230px;                        /* fixed width a panel opens by — a constant px (no vw) so the open text column never resizes with the viewport. Smaller = narrower open panel; the freed width spreads to every closed strip via flex-grow. */
   --h:clamp(540px,82vh,880px);
   position:relative;z-index:2;background:transparent;color:#fff;
-  height:200vh;                      /* 100vh visible + 100vh sticky window so features slides over */
+  /* 100vh visible + 30vh DWELL (the pin holds the revealed blog while the fan-out plays — like the
+     hero's phase-1→2 checkpoint dwell) + 100vh sticky window for features to slide over. */
+  height:230vh;
 }
 /* Stage holds the layout centred (timed reveal fires on a threshold, main.js — not scroll-pinned). */
 .writing__pin{position:sticky;top:0;height:100vh;
