@@ -968,7 +968,7 @@
     // straight through them. Canvas is sized to the WHOLE section (handles tall / sticky / the
     // accordion growing) and inserted first so the section content paints on top.
     var darkSecs = [];
-    [".features", ".standards", ".faq"].forEach(function (sel) {
+    [".features", ".brand-teaser", ".brand-manifesto", ".faq"].forEach(function (sel) {
       var el = document.querySelector(sel); if (!el) return;
       var c = document.createElement("canvas"); c.className = "section-contours";
       el.insertBefore(c, el.firstChild);
@@ -977,10 +977,18 @@
       // black terminal bar. Skills (.standards) uses the SAME LIGHT field as the blog
       // (light-blue fill + dark indigo lines), not the dark navy one. Services (.faq)
       // keeps the standard dark navy + its light-blue lines.
-      var isFeatures = sel === ".features", isSkills = sel === ".standards";
+      var isFeatures = sel === ".features", isSkills = sel === ".brand-teaser" || sel === ".brand-manifesto";
       darkSecs.push({
         el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0,
         noLines: isFeatures,
+        // Brand zone: contour lines fade to the fill colour so they're invisible
+        // by the time the manifesto ("I build data systems...") fills the screen.
+        // Teaser fades as it scrolls OUT the top; manifesto fades as it scrolls IN
+        // (gone once its top reaches the viewport top) — the two stay continuous
+        // across the seam (both 100vh).
+        fadeOut: sel === ".brand-teaser" || sel === ".brand-manifesto",
+        fadeMode: sel === ".brand-manifesto" ? "enter" : "through",
+        lineBaseA: isSkills ? 0.5 : 0.45,
         fill: isFeatures ? "rgb(15,22,40)" : isSkills ? "rgb(208,225,235)" : "rgb(27,34,54)",
         line: isSkills ? "rgba(57,50,220,0.5)" : "rgba(77,139,255,0.45)"
       });
@@ -1152,7 +1160,19 @@
         if (sec.noLines) continue;                         // projects: solid fill, no contour lines
         sg.save(); sg.translate(0, -sr.top);
         sg.lineCap = "round"; sg.lineJoin = "round";
-        sg.strokeStyle = sec.line; sg.lineWidth = 0.45;
+        var lineStyle = sec.line;
+        if (sec.fadeOut) {
+          // ft = 0 → full-strength lines, 1 → fully blended into the fill.
+          // "enter" (manifesto): 0 when its top is one viewport below, 1 once its
+          // top reaches the viewport top (full screen). "through" (teaser): 0 when
+          // its top sits at the viewport top, 1 once a full section-height scrolls past.
+          var ft = sec.fadeMode === "enter"
+            ? (H - sr.top) / H
+            : (sh > 0 ? -sr.top / sh : 0);
+          ft = ft < 0 ? 0 : ft > 1 ? 1 : ft;
+          lineStyle = "rgba(57,50,220," + (sec.lineBaseA * (1 - ft)).toFixed(3) + ")";
+        }
+        sg.strokeStyle = lineStyle; sg.lineWidth = 0.45;
         strokeIso(sg);
         sg.restore();
       }
@@ -2034,7 +2054,7 @@
      (curves out) downward into the light skills section as it scrolls up. */
   (function () {
     var path = document.querySelector(".skills-curve__path");
-    var sec = document.querySelector(".standards");
+    var sec = document.querySelector(".brand-teaser");
     if (!path || !sec) return;
     var MAX_DEPTH = 100; // viewBox units (box is 140px tall)
     var RANGE = 0.6;     // fraction of viewport over which it curves out
@@ -2239,34 +2259,79 @@
   if (mq.matches) clearMobile(); else { evalReveal(); kick(); }
 })();
 
-/* ---------- Skills: small skill logos parallax around the Linux logo ----------
-   Each .skill-float drifts UPWARD as the page scrolls, at its own data-speed, so
-   the cluster reads as floating at different depths in/around the big Linux SVG. */
+/* ---------- Skills: logo cluster parallax around/with the Linux logo ----------
+   The Linux logo AND the six small skill logos each drift UPWARD as the page
+   scrolls, at their own data-speed. progress = 0 (everything at its base/current
+   position) when the cluster centre crosses the viewport centre — i.e. roughly
+   HALFWAY through the section's scroll — then they keep lifting past that point.
+   3 logos are faster than Linux (data-speed > 0.14, z BEHIND it) and 3 are slower
+   (< 0.14, z ON TOP), giving real depth. */
 (function () {
   var stack = document.querySelector(".standards__logo-stack");
   if (!stack) return;
-  var floats = Array.prototype.slice.call(stack.querySelectorAll(".skill-float"));
-  if (!floats.length) return;
+  // include the Linux main image — it parallaxes too (rests at mid-scroll).
+  var imgs = Array.prototype.slice.call(stack.querySelectorAll("[data-speed]"));
+  if (!imgs.length) return;
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
   if (reduce) return;                                  // leave them at their base positions
-  var data = floats.map(function (el) {
-    return { el: el, speed: parseFloat(el.getAttribute("data-speed")) || 0.15 };
+  var data = imgs.map(function (el) {
+    return {
+      el: el,
+      speed: parseFloat(el.getAttribute("data-speed")) || 0.15,
+      rot: parseFloat(el.getAttribute("data-rot")) || 0    // static tilt for an organic scatter
+    };
   });
   var ticking = false;
   function render() {
     ticking = false;
     var r = stack.getBoundingClientRect();
     var vh = window.innerHeight || document.documentElement.clientHeight;
-    // progress in px: 0 when the stack centre sits ~70% down the viewport, growing
-    // (positive) as it scrolls up past that line → each float lifts by progress*speed.
-    var progress = (vh * 0.7) - (r.top + r.height / 2);
+    // progress in px: 0 when the cluster centre sits at the viewport centre (mid-
+    // scroll), growing positive as it scrolls up past that line → each logo (Linux
+    // included) lifts by progress*speed and keeps going.
+    var progress = (vh * 0.5) - (r.top + r.height / 2);
     for (var i = 0; i < data.length; i++) {
-      data[i].el.style.transform = "translateY(" + (-progress * data[i].speed).toFixed(1) + "px)";
+      data[i].el.style.transform = "translateY(" + (-progress * data[i].speed).toFixed(1) + "px) rotate(" + data[i].rot + "deg)";
     }
   }
   function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(render); } }
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onScroll, { passive: true });
   if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
+  render();
+})();
+
+/* ============================================================
+   QuickForge chat window — the messages image scrolls within a
+   fixed "window" connected under the header bar. Scroll-driven &
+   reversible: as the section scrolls up through the viewport, the
+   feed pans so the window travels down through the messages.
+   ============================================================ */
+(function chatFeedScroll() {
+  var win  = document.querySelector(".bt-chat__window");
+  var feed = document.querySelector(".bt-chat__feed");
+  if (!win || !feed) return;
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+  var ticking = false;
+
+  function render() {
+    ticking = false;
+    if (window.innerWidth <= 820) { feed.style.transform = ""; return; }
+    var maxShift = feed.offsetHeight - win.clientHeight;     // travel room
+    if (maxShift <= 0) { feed.style.transform = "translateY(0)"; return; }
+    var r = win.getBoundingClientRect(), vh = window.innerHeight;
+    // p: 0 when the window sits low in the viewport, 1 once it has risen near
+    // the top — scrubs the feed up so we read down through the messages.
+    var p = (vh * 1.0 - r.top) / (vh * 1.35);
+    p = p < 0 ? 0 : p > 1 ? 1 : p;
+    feed.style.transform = "translateY(" + (-p * maxShift).toFixed(1) + "px)";
+  }
+  function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(render); } }
+
+  if (reduce) { render(); return; }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", render);
+  if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
+  if (feed.complete) render(); else feed.addEventListener("load", render);
   render();
 })();
