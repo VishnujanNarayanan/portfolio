@@ -1254,9 +1254,10 @@
       var wr = wstack.getBoundingClientRect();
       G.W = wr.width; G.H = wr.height;
       var rail = panels[0].querySelector(".wpanel__rail");
-      var content = panels[0].querySelector(".wpanel__content");
       var strip = rail ? parseFloat(getComputedStyle(rail).minWidth) : 90;     // = --strip
-      var cw = content ? parseFloat(getComputedStyle(content).width) : 300;     // = --cw
+      // The open panel's basis is strip + --cw (the CSS `.wpanel.is-open{flex-basis:calc(--strip + --cw)}`),
+      // NOT the content's own (wider) clamped width — otherwise the JS "open" overshoots the real settled width.
+      var cw = parseFloat(getComputedStyle(section).getPropertyValue("--cw")) || 230;
       G.openBasis = strip + cw;                          // the open panel's extra basis (main accordion)
       G.per = G.W / N;                                   // equal width (Part-1 end)
       G.stripW = (G.W - G.openBasis) / N;                // a closed strip's final width (accordion)
@@ -1277,17 +1278,22 @@
     function leftPos(i) { return i * G.per; }                     // equal-width slots (W/N each)
     function stackDX(i) { return leftPos(N - 1) - leftPos(i); }   // px to slide panel i onto the rightmost
 
-    // Place the panels in their ARRIVAL layout — equal widths, NONE open — so the fan only adds a
-    // transform on top. setSettled then opens panel 0 (its .95s flex-basis transition), so the
-    // first panel opens AFTER everything has fanned into place.
+    // Place the panels in their ARRIVAL layout. Panel 0 ARRIVES CLOSED (equal width) and stays
+    // closed until the reveal spring passes OPEN_START; from there it WIDENS from its equal-width
+    // slot toward the open width (the others shrink to their strip width to match) and gets
+    // `is-open` so its content/divider/READ reveal in step — finishing exactly as the fan settles.
+    var OPEN_START = 0.9;                                        // fraction of the reveal spring at which panel 0 starts opening
+    function easeIO(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
     function applyFanLayout() {
+      var op = easeIO(clamp((pCur - OPEN_START) / (1 - OPEN_START), 0, 1));   // 0 → 1 open progress
       panels.forEach(function (p, i) {
         p.style.transition = "none";
         p.style.flexGrow = "0"; p.style.flexShrink = "0";
-        p.style.flexBasis = G.per.toFixed(2) + "px";
+        var basis = (i === 0) ? lerp(G.per, G.openW, op) : lerp(G.per, G.stripW, op);   // widths always sum to G.W
+        p.style.flexBasis = basis.toFixed(2) + "px";
         p.style.height = G.H + "px";
         p.style.transformOrigin = "50% 100%";
-        p.classList.remove("is-open");                            // equal size while arriving
+        p.classList.toggle("is-open", i === 0 && op > 0);        // closed until op>0, then reveals as it widens
       });
     }
     // FAN(p): stacked-onto-the-rightmost (p=0) → in place (p=1). p can overshoot past 1, so q
