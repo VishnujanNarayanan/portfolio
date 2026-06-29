@@ -1278,14 +1278,16 @@
     function leftPos(i) { return i * G.per; }                     // equal-width slots (W/N each)
     function stackDX(i) { return leftPos(N - 1) - leftPos(i); }   // px to slide panel i onto the rightmost
 
-    // Place the panels in their ARRIVAL layout. Panel 0 ARRIVES CLOSED (equal width) and stays
-    // closed until the reveal spring passes OPEN_START; from there it WIDENS from its equal-width
-    // slot toward the open width (the others shrink to their strip width to match) and gets
-    // `is-open` so its content/divider/READ reveal in step — finishing exactly as the fan settles.
-    var OPEN_START = 0.9;                                        // fraction of the reveal spring at which panel 0 starts opening
+    // Place the panels in their ARRIVAL layout. Panel 0 ARRIVES CLOSED (equal width). It only starts
+    // opening once the reveal spring reaches its PEAK (velocity flips negative = the bounce begins),
+    // then WIDENS over OPEN_DUR — so the open plays DURING the bouncy settling window (not before the
+    // bounce like a pCur threshold would, nor only after it fully rests). The others shrink to their
+    // strip width to match, and panel 0 gets `is-open` so its content/divider/READ reveal in step.
+    var OPEN_DUR = 0.5;                                          // seconds the open takes, played across the settle/bounce
+    var openClock = -1, openProg = 0;                           // -1 = not started; advances once the spring peaks
     function easeIO(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
     function applyFanLayout() {
-      var op = easeIO(clamp((pCur - OPEN_START) / (1 - OPEN_START), 0, 1));   // 0 → 1 open progress
+      var op = openProg;                                        // 0 → 1 open progress (driven in render, peak-triggered)
       panels.forEach(function (p, i) {
         p.style.transition = "none";
         p.style.flexGrow = "0"; p.style.flexShrink = "0";
@@ -1390,6 +1392,12 @@
       pVel += f * dt; pCur += pVel * dt;
       var atRest = pT === 1 && Math.abs(1 - pCur) < 0.0015 && Math.abs(pVel) < 0.0015;
 
+      // Panel-0 open: start it the instant the spring PEAKS (velocity goes non-positive while near
+      // the top), then advance over OPEN_DUR — so the widening plays through the bouncy settle.
+      if (latched && openClock < 0 && pCur > 0.85 && pVel <= 0) openClock = 0;
+      if (openClock >= 0) openClock += dt;
+      openProg = openClock < 0 ? 0 : easeIO(clamp(openClock / OPEN_DUR, 0, 1));
+
       // Hold the cover-scroll while the fan is still springing in: lock once the pin reaches
       // the top (rect.top ≤ 0), release the instant it settles.
       if (!atRest && latched && rect.top <= 0) engageLock(); else if (atRest) releaseLock();
@@ -1400,7 +1408,7 @@
       fanPaint(pCur);
     }
 
-    function resize() { geom(); settled = null; }       // force a clean re-apply after a resize
+    function resize() { geom(); settled = null; openClock = -1; openProg = 0; }   // force a clean re-apply after a resize
     geom();
     function frame(now) { render(now || performance.now()); requestAnimationFrame(frame); }
     requestAnimationFrame(frame);
