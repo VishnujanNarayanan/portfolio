@@ -416,12 +416,16 @@ header .header__nav-left a{color:#050419;font-size:16px}
 .wpanel__title--light{font-weight:400}
 .wpanel__title--regular{font-weight:500}
 .wpanel__text{margin:0;font-family:"Inter",sans-serif;font-size:.98rem;line-height:1.5;color:rgba(255,255,255,.78)}
-/* READ button sits in the STRIP, centred under the number (the strip x-range is to the LEFT of
-   the content's origin, hence the negative left). It reveals with the rest of the open content. */
-.wpanel__link{position:absolute;left:calc(-1 * var(--strip));bottom:24px;width:var(--strip);box-sizing:border-box;
+/* READ button sits in the STRIP, centred under the number. It's a panel child (not inside the
+   content), so it has its OWN motion: it reels in from the LEFT on open and retreats left on
+   close — like the divider line — rather than sliding from the right with the text. */
+.wpanel__link{position:absolute;left:0;bottom:24px;width:var(--strip);box-sizing:border-box;z-index:4;
   text-align:center;font-family:"Roboto",sans-serif;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
   color:#fff;text-decoration:underline;text-underline-offset:5px;text-decoration-color:rgba(77,139,255,.6);
-  transition:color .25s,text-decoration-color .25s}
+  pointer-events:none;opacity:0;transform:translateX(-22px);
+  transition:opacity .5s ease-in-out .12s, transform .7s cubic-bezier(.32,0,.16,1) .05s, color .25s, text-decoration-color .25s}
+.wpanel.is-open .wpanel__link,
+.wpanel:focus-within .wpanel__link{opacity:1;transform:translateX(0);pointer-events:auto}
 .wpanel__link:hover{color:#4d8bff;text-decoration-color:#4d8bff}
 
 /* Mobile / no-hover: drop the accordion — heading + plain full-width post blocks, all open */
@@ -438,7 +442,7 @@ header .header__nav-left a{color:#050419;font-size:16px}
   .wpanel__title{font-size:clamp(1.8rem,7vw,2.4rem)}
   .wpanel__text{font-size:.95rem}
   /* rail is hidden on mobile, so put READ back into normal flow (not the off-screen strip slot) */
-  .wpanel__link{position:static;left:auto;bottom:auto;width:auto;text-align:left;align-self:flex-start;font-size:.72rem}
+  .wpanel__link{position:static;left:auto;bottom:auto;width:auto;text-align:left;font-size:.72rem;opacity:1;transform:none}
 }
 
 /* ============================================================
