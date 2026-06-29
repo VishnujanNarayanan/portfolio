@@ -337,9 +337,10 @@ header .header__nav-left a{color:#050419;font-size:16px}
   flex:1 1 0;                         /* grow:1 shrink:1 stay CONSTANT — only the basis below changes */
   align-self:center;height:var(--ph,100%);   /* subtle height taper: far-left slightly shorter */
   background:var(--bg);
-  /* Hairline safety: bleed each panel's own colour a few px to the RIGHT so the seam where it
-     meets the next panel is always covered (panels are contiguous at rest). */
-  box-shadow:5px 0 0 0 var(--bg);
+  /* Bleed each panel's own colour to the RIGHT so the seam where it meets the next panel is
+     always covered. Generous bleed (was 5px) closes the gaps that the fan-out's per-panel
+     scale/tilt opens between adjacent panels while they spring into place. */
+  box-shadow:22px 0 0 0 var(--bg);
   will-change:flex-basis,transform;   /* transform = the JS fly-in reveal (main.js) */
   /* The hover accordion animates ONLY flex-basis (not flex-grow): grow/shrink stay constant so
      the free-space redistribution is monotonic — no per-frame wobble. Gentle ease at both ends. */
