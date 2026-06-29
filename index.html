@@ -582,9 +582,17 @@
           <p class="bt-tagline">Fresh postings.<span>Instant alerts.</span>Tailored r&eacute;sum&eacute;, every time.</p>
           <p class="brand-teaser__desc">QuickForge monitors job listings in real time, scores every posting against your profile, and delivers a tailored r&eacute;sum&eacute; for each match &mdash; send quality applications before quantity shows up.</p>
         </div>
-        <!-- right: product image -->
+        <!-- right: product image + connected chat window (header on top, messages
+             scrolling through a fixed window beneath it) -->
         <div class="brand-teaser__media reveal">
-          <img src="images/product_image.png" alt="QuickForge product preview" loading="lazy">
+          <img class="bt-media-main" src="images/product_image.png" alt="QuickForge product preview" loading="lazy">
+          <div class="bt-chat" aria-hidden="true">
+            <img class="bt-chat__head" src="images/heading_area.png" alt="">
+            <div class="bt-chat__window">
+              <img class="bt-chat__feed" src="images/messages_part.png" alt="">
+            </div>
+            <img class="bt-chat__foot" src="images/bottom_part.png" alt="">
+          </div>
         </div>
       </div>
     </section>
