@@ -19,7 +19,7 @@
 <meta name="twitter:image" content="https://vishnujannarayanan.com/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&family=Roboto+Flex:wght@100..900&family=Bodoni+Moda:ital,wght@0,700;0,900;1,700;1,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&family=Roboto+Flex:wght@100..900&family=Bodoni+Moda:ital,wght@0,700;0,900;1,700;1,900&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 <script>document.documentElement.classList.remove("no-js");</script>
@@ -555,37 +555,104 @@
 
     <div class="projects-tail" aria-hidden="true"></div>
 
-    <section class="standards" id="skills">
+    <!-- Ink filter for the skill logos: BINARY two-tone on luminance, alpha preserved.
+         feColorMatrix → R=G=B=luminance, A=original alpha (so the area OUTSIDE the logo
+         stays transparent). Then discrete feFuncs split at 0.5: DARK pixels → flat blue
+         #2a2a8e (0.165,0.165,0.557), LIGHT pixels → white. No in-between. -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+      <filter id="ink-blue" color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0 0 0 1 0"></feColorMatrix>
+        <feComponentTransfer>
+          <feFuncR type="discrete" tableValues="0.165 1"></feFuncR>
+          <feFuncG type="discrete" tableValues="0.165 1"></feFuncG>
+          <feFuncB type="discrete" tableValues="0.557 1"></feFuncB>
+        </feComponentTransfer>
+      </filter>
+    </svg>
+
+    <!-- ===== Product canvas — Lando Collabs treatment ===== -->
+    <!-- Section 1: editorial hero — product title + sweep script + description -->
+    <section class="brand-teaser" id="skills">
       <div class="skills-curve" aria-hidden="true"><svg class="skills-curve__svg" viewBox="0 0 100 100" preserveAspectRatio="none"><path class="skills-curve__path" d="M0 0 L100 0 Q50 0 0 0 Z"></path></svg></div>
-      <div class="standards__container">
-        <div class="standards__content">
-          <h2 class="standards__title reveal"><span>What I</span><span>Build With</span></h2>
-          <div class="skills-groups reveal">
-            <div class="skill-group">
-              <p class="skill-group__name">Languages &amp; Backend</p>
-              <div class="skill-tags"><span class="skill-tag">Python</span><span class="skill-tag">TypeScript</span><span class="skill-tag">JavaScript</span><span class="skill-tag">SQL</span><span class="skill-tag">FastAPI</span><span class="skill-tag">NestJS</span><span class="skill-tag">Node.js</span><span class="skill-tag">PostgreSQL</span><span class="skill-tag">Redis</span></div>
+      <div class="brand-teaser__inner">
+        <!-- left: title + tagline + description, stacked -->
+        <div class="brand-teaser__copy reveal">
+          <p class="bt-eyebrow"><span class="bt-eyebrow__dash" aria-hidden="true"></span>The Product</p>
+          <h2 class="brand-teaser__title"><span class="bt-sans">Quick</span><span class="bt-serif">Forge</span></h2>
+          <p class="bt-tagline">Fresh postings.<span>Instant alerts.</span>Tailored r&eacute;sum&eacute;, every time.</p>
+          <p class="brand-teaser__desc">QuickForge monitors job listings in real time, scores every posting against your profile, and delivers a tailored r&eacute;sum&eacute; for each match &mdash; send quality applications before quantity shows up.</p>
+        </div>
+        <!-- right: product image + connected chat window (header on top, messages
+             scrolling through a fixed window beneath it) -->
+        <div class="brand-teaser__media reveal">
+          <img class="bt-media-main" src="images/product_image.png" alt="QuickForge product preview" loading="lazy">
+          <div class="bt-chat" aria-hidden="true">
+            <img class="bt-chat__head" src="images/heading_area.png" alt="">
+            <div class="bt-chat__window">
+              <img class="bt-chat__feed" src="images/messages_part.png" alt="">
             </div>
-            <div class="skill-group">
-              <p class="skill-group__name">Data, Scraping &amp; ML</p>
-              <div class="skill-tags"><span class="skill-tag">ETL Pipelines</span><span class="skill-tag">Web Scraping</span><span class="skill-tag">Playwright</span><span class="skill-tag">Scrapy</span><span class="skill-tag">pandas</span><span class="skill-tag">NumPy</span><span class="skill-tag">scikit-learn</span><span class="skill-tag">PyTorch</span><span class="skill-tag">Feature Engineering</span></div>
-            </div>
-            <div class="skill-group">
-              <p class="skill-group__name">Quant &amp; Infra</p>
-              <div class="skill-tags"><span class="skill-tag">Time-Series Analysis</span><span class="skill-tag">Backtesting</span><span class="skill-tag">Market Data</span><span class="skill-tag">Docker</span><span class="skill-tag">AWS</span><span class="skill-tag">Git / GitHub</span><span class="skill-tag">CI/CD</span></div>
-            </div>
+            <img class="bt-chat__foot" src="images/bottom_part.png" alt="">
           </div>
         </div>
-        <div class="standards__image standards__logo" aria-hidden="true">
-          <div class="standards__logo-stack">
-            <img class="standards__logo-main" src="images/logos/Linux.svg" alt="" loading="lazy">
-            <img class="skill-float" data-speed="0.30" style="top:2%;left:6%"   src="images/logos/AWS.svg" alt="" loading="lazy">
-            <img class="skill-float" data-speed="0.14" style="top:10%;left:78%" src="images/logos/Docker.svg" alt="" loading="lazy">
-            <img class="skill-float" data-speed="0.22" style="top:44%;left:-7%" src="images/logos/Git.svg" alt="" loading="lazy">
-            <img class="skill-float" data-speed="0.09" style="top:72%;left:84%" src="images/logos/Python.svg" alt="" loading="lazy">
-            <img class="skill-float" data-speed="0.26" style="top:86%;left:22%" src="images/logos/Vim.svg" alt="" loading="lazy">
-            <img class="skill-float" data-speed="0.18" style="top:30%;left:95%" src="images/logos/GitHub.svg" alt="" loading="lazy">
+      </div>
+    </section>
+
+    <!-- Section 2: pain points + coming soon -->
+    <section class="brand-manifesto">
+      <div class="brand-manifesto__inner">
+
+        <!-- 01 -->
+        <div class="bm-row reveal">
+          <div class="bm-row__left">
+            <span class="bm-num" aria-hidden="true">01</span>
+            <h2 class="bm-headline">No callbacks?<br><em>Your resume isn&rsquo;t talking their language.</em></h2>
+            <p class="bm-body">Recruiters get 200+ per role. Generic gets filtered before a human looks. Your experience isn&rsquo;t the problem.</p>
+          </div>
+          <div class="bm-row__right">
+            <span class="bm-solve-label">The fix</span>
+            <p class="bm-solve-text">The bot reads the JD and selects the exact bullets, title and skill framing that match it. Every application speaks that role&rsquo;s specific language. Automatically. Every time.</p>
           </div>
         </div>
+
+        <div class="bm-divider" aria-hidden="true"></div>
+
+        <!-- 02 -->
+        <div class="bm-row bm-row--flip reveal">
+          <div class="bm-row__left">
+            <span class="bm-num" aria-hidden="true">02</span>
+            <h2 class="bm-headline">Applicant&nbsp;#847.<br><em>Window closed 3 hours ago.</em></h2>
+            <p class="bm-body">Recruiters stop reading after the first 50. The window is under an hour from posting. You can&rsquo;t watch three boards while that window opens and shuts.</p>
+          </div>
+          <div class="bm-row__right">
+            <span class="bm-solve-label">The fix</span>
+            <p class="bm-solve-text">The bot monitors Indeed, Glassdoor and LinkedIn continuously. The moment a match posts, you get a Telegram ping with the apply link and a tailored r&eacute;sum&eacute; ready to go. First wave, not after it.</p>
+          </div>
+        </div>
+
+        <div class="bm-divider" aria-hidden="true"></div>
+
+        <!-- 03 -->
+        <div class="bm-row reveal">
+          <div class="bm-row__left">
+            <span class="bm-num" aria-hidden="true">03</span>
+            <h2 class="bm-headline">Tweaking the same<br><em>r&eacute;sum&eacute;. Again.</em></h2>
+            <p class="bm-body">10 roles a day is 10 tailoring sessions. You&rsquo;re spending more time in Word than applying. And the rushed ones always look it.</p>
+          </div>
+          <div class="bm-row__right">
+            <span class="bm-solve-label">The fix</span>
+            <p class="bm-solve-text">You write your bullets once. The bot selects the right ones per role, every time. Your master profile becomes every tailored r&eacute;sum&eacute; you&rsquo;ll ever need.</p>
+          </div>
+        </div>
+
+        <!-- Coming Soon footer -->
+        <div class="bm-coming-soon reveal">
+          <span class="bm-cs-eyebrow"><span class="bm-cs-dot"></span>In development &middot; Lab 01</span>
+          <p class="bm-cs-label">Coming <em>soon</em></p>
+          <div class="bm-cs-chips">
+            <span class="brand-chip">Python</span><span class="brand-chip">FastAPI</span><span class="brand-chip">Postgres + pgvector</span><span class="brand-chip">Playwright</span><span class="brand-chip">Telegram</span>
+          </div>
+        </div>
+
       </div>
     </section>
 

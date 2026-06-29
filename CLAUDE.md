@@ -1866,3 +1866,18 @@ Keep this section updated after every change. Format:
   translateY(-progress*speed) where progress = vh*0.7 − stackCentreY (px); higher data-speed = more
   lift, so they part at different depths. rAF-throttled; prefers-reduced-motion leaves them static.
   node --check OK.
+
+### 2026-06-28 (Skills: Linux logo parallaxes too + faster-behind / slower-on-top depth)
+- User: the Linux image itself should move up on scroll; 3 logos faster than Linux + 3 slower; the
+  SLOWER ones on top of Linux (z-index), the FASTER ones behind it; Linux should rest at its CURRENT
+  position at the scroll midpoint and keep going up after.
+- index.html: Linux main img gained data-speed 0.14. Split the six floats — FASTER (behind): Python
+  0.28 / Vim 0.34 / GitHub 0.22, repositioned to overlap the penguin body (so they slide up behind
+  it); SLOWER (on top): AWS 0.05 / Docker 0.08 / Git 0.11. Added `.skill-float--back` / `--front`.
+- styles.css: within the `.standards__logo` stacking context — `.skill-float--front` z-index 3 (on
+  top), main img z-index 2, `.skill-float--back` z-index 1 (behind). Main img got position:relative
+  + will-change.
+- main.js parallax IIFE: now selects ALL `[data-speed]` in the stack (Linux + floats), and the
+  progress reference moved vh*0.7 → vh*0.5, so progress=0 (every logo at its base/current position)
+  when the cluster centre crosses the viewport centre = ~halfway through the section scroll; Linux
+  rests there then keeps lifting. node --check OK.
