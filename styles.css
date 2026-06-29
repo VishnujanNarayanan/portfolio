@@ -386,8 +386,13 @@ header .header__nav-left a{color:#050419;font-size:16px}
   display:flex;flex-direction:column;justify-content:center;gap:20px;
   padding:clamp(32px,3vw,52px) clamp(28px,2.6vw,44px);
   opacity:0;transition:opacity .5s ease-in-out .15s}
+/* Open panel: pin the rail to exactly --strip (it otherwise grows by the panel's shared
+   width and shoves the text to the far right) and let the content fill all the remaining
+   space — so the article text spreads LEFT, right up against the strip. */
+.wpanel.is-open .wpanel__rail,
+.wpanel:focus-within .wpanel__rail{flex:0 0 var(--strip)}
 .wpanel.is-open .wpanel__content,
-.wpanel:focus-within .wpanel__content{opacity:1}
+.wpanel:focus-within .wpanel__content{flex:1 1 auto;width:auto;opacity:1}
 
 .wpanel__meta{display:flex;gap:16px;font-family:"Roboto",sans-serif;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.55)}
 .wpanel__meta span:first-child{color:#4d8bff}
