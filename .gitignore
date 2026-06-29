@@ -49,8 +49,10 @@ yarn-error.log*
 *.cache
 *.part
 
-# Media files (optional - uncomment if you want to ignore these)
+# Media files — ignore heavy reference/source videos by default,
+# but KEEP the ones the site actually loads so they deploy.
 *.mp4
+!videos/*.mp4
 # *.avi
 # *.mov
 # *.mkv
@@ -102,10 +104,29 @@ coverage/
 *.pid
 *.seed
 *.pid.lock
-*.mp4
+
+# Project-specific: dev notes & reference material (not part of the deployed site)
+CLAUDE.md
+SEO.md
+todo.md
+tips
+master_profile.yaml
+
+# Reference HTML/CSS dumps & scratch experiments
 examp.html
-css_reference
 example.html.txt
 html_reference.html
 inner_html.html
-master_profile.yaml
+__bartest.html
+css_reference
+blog_reference
+projects_reference
+image_and_box_reference
+lando-css-reference
+lando-reference.html
+lando_social_hover_matrix
+lando_social_hover_bouncy_matrix
+
+# Unused scratch images (not referenced by the site)
+images/get_notified.png
+images/messages_part1.png
