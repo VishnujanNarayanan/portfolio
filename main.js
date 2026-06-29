@@ -968,7 +968,7 @@
     // straight through them. Canvas is sized to the WHOLE section (handles tall / sticky / the
     // accordion growing) and inserted first so the section content paints on top.
     var darkSecs = [];
-    [".features", ".brand-teaser", ".faq"].forEach(function (sel) {
+    [".features", ".brand-teaser", ".brand-manifesto", ".faq"].forEach(function (sel) {
       var el = document.querySelector(sel); if (!el) return;
       var c = document.createElement("canvas"); c.className = "section-contours";
       el.insertBefore(c, el.firstChild);
@@ -977,10 +977,18 @@
       // black terminal bar. Skills (.standards) uses the SAME LIGHT field as the blog
       // (light-blue fill + dark indigo lines), not the dark navy one. Services (.faq)
       // keeps the standard dark navy + its light-blue lines.
-      var isFeatures = sel === ".features", isSkills = sel === ".brand-teaser";
+      var isFeatures = sel === ".features", isSkills = sel === ".brand-teaser" || sel === ".brand-manifesto";
       darkSecs.push({
         el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0,
         noLines: isFeatures,
+        // Brand zone: contour lines fade to the fill colour so they're invisible
+        // by the time the manifesto ("I build data systems...") fills the screen.
+        // Teaser fades as it scrolls OUT the top; manifesto fades as it scrolls IN
+        // (gone once its top reaches the viewport top) — the two stay continuous
+        // across the seam (both 100vh).
+        fadeOut: sel === ".brand-teaser" || sel === ".brand-manifesto",
+        fadeMode: sel === ".brand-manifesto" ? "enter" : "through",
+        lineBaseA: isSkills ? 0.5 : 0.45,
         fill: isFeatures ? "rgb(15,22,40)" : isSkills ? "rgb(208,225,235)" : "rgb(27,34,54)",
         line: isSkills ? "rgba(57,50,220,0.5)" : "rgba(77,139,255,0.45)"
       });
@@ -1152,7 +1160,19 @@
         if (sec.noLines) continue;                         // projects: solid fill, no contour lines
         sg.save(); sg.translate(0, -sr.top);
         sg.lineCap = "round"; sg.lineJoin = "round";
-        sg.strokeStyle = sec.line; sg.lineWidth = 0.45;
+        var lineStyle = sec.line;
+        if (sec.fadeOut) {
+          // ft = 0 → full-strength lines, 1 → fully blended into the fill.
+          // "enter" (manifesto): 0 when its top is one viewport below, 1 once its
+          // top reaches the viewport top (full screen). "through" (teaser): 0 when
+          // its top sits at the viewport top, 1 once a full section-height scrolls past.
+          var ft = sec.fadeMode === "enter"
+            ? (H - sr.top) / H
+            : (sh > 0 ? -sr.top / sh : 0);
+          ft = ft < 0 ? 0 : ft > 1 ? 1 : ft;
+          lineStyle = "rgba(57,50,220," + (sec.lineBaseA * (1 - ft)).toFixed(3) + ")";
+        }
+        sg.strokeStyle = lineStyle; sg.lineWidth = 0.45;
         strokeIso(sg);
         sg.restore();
       }
