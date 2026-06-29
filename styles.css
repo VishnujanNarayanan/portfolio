@@ -359,10 +359,10 @@ header .header__nav-left a{color:#050419;font-size:16px}
 .wpanel:nth-child(7){--bg:#202840;--ph:95%;z-index:7}
 .wpanel:nth-child(8){--bg:#1b2236;--ph:97.5%;z-index:8}
 .wpanel:nth-child(9){--bg:#161d2e;--ph:100%;z-index:9}
-/* The OPEN panel lifts above all of them so its sliding-in text is never hidden behind a
-   right-hand neighbour. */
-.wpanel.is-open,
-.wpanel:focus-within{z-index:20}
+/* NOTE: the open panel deliberately KEEPS its own left→right z-index (it must stay BELOW its
+   right neighbour) — its content is clipped to its own panel by overflow:hidden, so it never
+   needs to overlap the neighbour. Lifting it above would push its blurred right-bleed shadow
+   (box-shadow on .wpanel) over the next panel, softening that panel's edge. */
 
 /* Open state: ONLY flex-basis changes (grow/shrink constant at 1/1). The open panel
    carries +(--strip + --cw) of basis, so it ends up exactly one content column wider
@@ -390,11 +390,11 @@ header .header__nav-left a{color:#050419;font-size:16px}
 /* Content — pinned ABSOLUTELY at a fixed place (just right of the strip) with a FIXED width, so
    it's out of the flex flow: the panel's width animating open/closed never reflows or resizes the
    text. Opening/closing ONLY fades it in/out. Clipped by the panel's overflow:hidden while closed. */
-.wpanel__content{position:absolute;left:var(--strip);top:0;bottom:0;z-index:2;
+.wpanel__content{position:absolute;left:calc(var(--strip) - 34px);top:0;bottom:0;z-index:2;   /* rest position pulled further LEFT */
   width:clamp(230px,23vw,360px);box-sizing:border-box;   /* FIXED width (vw-stable) so the text wraps the same the whole way — opening no longer re-flows it; it just slides in. */
   display:flex;flex-direction:column;justify-content:center;gap:20px;
   padding:clamp(32px,3vw,52px) clamp(28px,2.6vw,44px);
-  pointer-events:none;opacity:0;transform:translateX(56px);   /* parked off to the RIGHT (clipped by the panel) while closed */
+  pointer-events:none;opacity:0;transform:translateX(104px);   /* parked further off to the RIGHT (clipped by the panel) while closed — longer slide-in */
   transition:opacity .5s ease-in-out .12s, transform .7s cubic-bezier(.32,0,.16,1) .05s}
 .wpanel.is-open .wpanel__content,
 .wpanel:focus-within .wpanel__content{opacity:1;transform:translateX(0);pointer-events:auto}   /* slides left into place */
