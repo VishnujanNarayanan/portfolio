@@ -308,7 +308,7 @@ header .header__nav-left a{color:#050419;font-size:16px}
    ============================================================ */
 .writing{
   --strip:clamp(64px,7vw,108px);     /* collapsed strip width */
-  --cw:clamp(180px,15vw,250px);      /* fixed width a panel opens by (narrower open panel → flex-grow gives the freed width back to every closed strip) */
+  --cw:300px;                        /* fixed width a panel opens by — a constant px (no vw) so the open text column never resizes with the viewport */
   --h:clamp(540px,82vh,880px);
   position:relative;z-index:2;background:transparent;color:#fff;
   height:200vh;                      /* 100vh visible + 100vh sticky window so features slides over */
@@ -381,20 +381,15 @@ header .header__nav-left a{color:#050419;font-size:16px}
 .wpanel__num{position:absolute;left:0;right:auto;width:var(--strip);bottom:26px;text-align:center;will-change:opacity;
   font-family:"Inter",sans-serif;font-weight:300;font-size:1.5rem;color:#4d8bff}
 
-/* Content — fixed width (clipped while collapsed); fades in as the panel opens */
-.wpanel__content{flex:0 0 var(--cw);width:var(--cw);box-sizing:border-box;
+/* Content — pinned ABSOLUTELY at a fixed place (just right of the strip) with a FIXED width, so
+   it's out of the flex flow: the panel's width animating open/closed never reflows or resizes the
+   text. Opening/closing ONLY fades it in/out. Clipped by the panel's overflow:hidden while closed. */
+.wpanel__content{position:absolute;left:var(--strip);top:0;bottom:0;width:var(--cw);box-sizing:border-box;
   display:flex;flex-direction:column;justify-content:center;gap:20px;
   padding:clamp(32px,3vw,52px) clamp(28px,2.6vw,44px);
-  opacity:0;transition:opacity .5s ease-in-out .15s}
-/* Open panel: pin the rail to exactly --strip (it otherwise grows by the panel's shared
-   width and shoves the text to the far right) and let the content fill all the remaining
-   space — so the article text spreads LEFT, right up against the strip. */
-.wpanel.is-open .wpanel__rail,
-.wpanel:focus-within .wpanel__rail{flex:0 0 var(--strip)}
-/* Content spreads left up to a FIXED max width, then stops — it does NOT keep widening as the
-   panel/viewport grows (no fluid resize-driven growth). */
+  pointer-events:none;opacity:0;transition:opacity .5s ease-in-out .15s}
 .wpanel.is-open .wpanel__content,
-.wpanel:focus-within .wpanel__content{flex:0 1 auto;width:auto;max-width:520px;margin-right:auto;opacity:1}
+.wpanel:focus-within .wpanel__content{opacity:1;pointer-events:auto}
 
 .wpanel__meta{display:flex;gap:16px;font-family:"Roboto",sans-serif;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.55)}
 .wpanel__meta span:first-child{color:#4d8bff}
@@ -416,7 +411,7 @@ header .header__nav-left a{color:#050419;font-size:16px}
   .wstack{display:block;height:auto}
   .wpanel{display:block;flex:none;transform:none!important;height:auto!important;align-self:auto;box-shadow:none}
   .wpanel__rail{display:none}
-  .wpanel__content{flex:none;width:100%;opacity:1!important;padding:48px 28px;gap:16px;justify-content:flex-start}
+  .wpanel__content{position:static;flex:none;width:100%;opacity:1!important;padding:48px 28px;gap:16px;justify-content:flex-start}
   .wpanel:nth-child(odd){background:#1b2236}
   .wpanel:nth-child(even){background:#243049}
   .wpanel__title{font-size:clamp(1.8rem,7vw,2.4rem)}
