@@ -968,7 +968,7 @@
     // straight through them. Canvas is sized to the WHOLE section (handles tall / sticky / the
     // accordion growing) and inserted first so the section content paints on top.
     var darkSecs = [];
-    [".features", ".standards", ".faq"].forEach(function (sel) {
+    [".features", ".brand-teaser", ".faq"].forEach(function (sel) {
       var el = document.querySelector(sel); if (!el) return;
       var c = document.createElement("canvas"); c.className = "section-contours";
       el.insertBefore(c, el.firstChild);
@@ -977,7 +977,7 @@
       // black terminal bar. Skills (.standards) uses the SAME LIGHT field as the blog
       // (light-blue fill + dark indigo lines), not the dark navy one. Services (.faq)
       // keeps the standard dark navy + its light-blue lines.
-      var isFeatures = sel === ".features", isSkills = sel === ".standards";
+      var isFeatures = sel === ".features", isSkills = sel === ".brand-teaser";
       darkSecs.push({
         el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0,
         noLines: isFeatures,
@@ -2034,7 +2034,7 @@
      (curves out) downward into the light skills section as it scrolls up. */
   (function () {
     var path = document.querySelector(".skills-curve__path");
-    var sec = document.querySelector(".standards");
+    var sec = document.querySelector(".brand-teaser");
     if (!path || !sec) return;
     var MAX_DEPTH = 100; // viewBox units (box is 140px tall)
     var RANGE = 0.6;     // fraction of viewport over which it curves out
@@ -2255,7 +2255,11 @@
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
   if (reduce) return;                                  // leave them at their base positions
   var data = imgs.map(function (el) {
-    return { el: el, speed: parseFloat(el.getAttribute("data-speed")) || 0.15 };
+    return {
+      el: el,
+      speed: parseFloat(el.getAttribute("data-speed")) || 0.15,
+      rot: parseFloat(el.getAttribute("data-rot")) || 0    // static tilt for an organic scatter
+    };
   });
   var ticking = false;
   function render() {
@@ -2267,7 +2271,7 @@
     // included) lifts by progress*speed and keeps going.
     var progress = (vh * 0.5) - (r.top + r.height / 2);
     for (var i = 0; i < data.length; i++) {
-      data[i].el.style.transform = "translateY(" + (-progress * data[i].speed).toFixed(1) + "px)";
+      data[i].el.style.transform = "translateY(" + (-progress * data[i].speed).toFixed(1) + "px) rotate(" + data[i].rot + "deg)";
     }
   }
   function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(render); } }

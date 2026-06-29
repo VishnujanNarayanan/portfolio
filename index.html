@@ -19,7 +19,7 @@
 <meta name="twitter:image" content="https://vishnujannarayanan.com/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&family=Roboto+Flex:wght@100..900&family=Bodoni+Moda:ital,wght@0,700;0,900;1,700;1,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&family=Roboto+Flex:wght@100..900&family=Bodoni+Moda:ital,wght@0,700;0,900;1,700;1,900&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 <script>document.documentElement.classList.remove("no-js");</script>
@@ -555,55 +555,63 @@
 
     <div class="projects-tail" aria-hidden="true"></div>
 
-    <!-- Duotone filter for the skill logos: maps each pixel's LUMINANCE (brightness)
-         onto a blue ramp (dark→#161a4d, light→#7d8be0) — no warm/sepia contamination,
-         alpha preserved (transparent stays transparent, no background impact). -->
+    <!-- Ink filter for the skill logos: BINARY two-tone on luminance, alpha preserved.
+         feColorMatrix → R=G=B=luminance, A=original alpha (so the area OUTSIDE the logo
+         stays transparent). Then discrete feFuncs split at 0.5: DARK pixels → flat blue
+         #2a2a8e (0.165,0.165,0.557), LIGHT pixels → white. No in-between. -->
     <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-      <filter id="duotone-blue" color-interpolation-filters="sRGB">
+      <filter id="ink-blue" color-interpolation-filters="sRGB">
         <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0 0 0 1 0"></feColorMatrix>
         <feComponentTransfer>
-          <feFuncR type="table" tableValues="0.039 0.725"></feFuncR>
-          <feFuncG type="table" tableValues="0.047 0.769"></feFuncG>
-          <feFuncB type="table" tableValues="0.20 1.0"></feFuncB>
+          <feFuncR type="discrete" tableValues="0.165 1"></feFuncR>
+          <feFuncG type="discrete" tableValues="0.165 1"></feFuncG>
+          <feFuncB type="discrete" tableValues="0.557 1"></feFuncB>
         </feComponentTransfer>
       </filter>
     </svg>
 
-    <section class="standards" id="skills">
+    <!-- ===== Product teaser — the Job-Application Bot (Coming Soon) ===== -->
+    <section class="brand-teaser" id="skills">
       <div class="skills-curve" aria-hidden="true"><svg class="skills-curve__svg" viewBox="0 0 100 100" preserveAspectRatio="none"><path class="skills-curve__path" d="M0 0 L100 0 Q50 0 0 0 Z"></path></svg></div>
-      <div class="standards__container">
-        <div class="standards__content">
-          <h2 class="standards__title reveal"><span>What I</span><span>Build With</span></h2>
-          <div class="skills-groups reveal">
-            <div class="skill-group">
-              <p class="skill-group__name">Languages &amp; Backend</p>
-              <div class="skill-tags"><span class="skill-tag">Python</span><span class="skill-tag">TypeScript</span><span class="skill-tag">JavaScript</span><span class="skill-tag">SQL</span><span class="skill-tag">FastAPI</span><span class="skill-tag">NestJS</span><span class="skill-tag">Node.js</span><span class="skill-tag">PostgreSQL</span><span class="skill-tag">Redis</span></div>
-            </div>
-            <div class="skill-group">
-              <p class="skill-group__name">Data, Scraping &amp; ML</p>
-              <div class="skill-tags"><span class="skill-tag">ETL Pipelines</span><span class="skill-tag">Web Scraping</span><span class="skill-tag">Playwright</span><span class="skill-tag">Scrapy</span><span class="skill-tag">pandas</span><span class="skill-tag">NumPy</span><span class="skill-tag">scikit-learn</span><span class="skill-tag">PyTorch</span><span class="skill-tag">Feature Engineering</span></div>
-            </div>
-            <div class="skill-group">
-              <p class="skill-group__name">Quant &amp; Infra</p>
-              <div class="skill-tags"><span class="skill-tag">Time-Series Analysis</span><span class="skill-tag">Backtesting</span><span class="skill-tag">Market Data</span><span class="skill-tag">Docker</span><span class="skill-tag">AWS</span><span class="skill-tag">Git / GitHub</span><span class="skill-tag">CI/CD</span></div>
-            </div>
+      <div class="brand-teaser__inner">
+        <div class="brand-teaser__copy reveal">
+          <p class="brand-eyebrow"><span class="brand-eyebrow__dot"></span>In development &middot; Lab 01</p>
+          <h2 class="brand-teaser__title"><span class="bt-sans">Coming</span><span class="bt-serif">soon</span></h2>
+          <p class="brand-teaser__name">The Job-Application Bot</p>
+          <p class="brand-teaser__desc">It watches Indian job boards while you sleep, scores every new posting against your profile, and hands you a r&eacute;sum&eacute; tailored to each match &mdash; before the recruiter&rsquo;s first-fifty window closes.</p>
+          <div class="brand-teaser__chips">
+            <span class="brand-chip">Python</span><span class="brand-chip">FastAPI</span><span class="brand-chip">Postgres + pgvector</span><span class="brand-chip">Playwright</span><span class="brand-chip">Telegram</span>
+          </div>
+          <div class="brand-teaser__status">
+            <span class="bt-status-label">Iteration 2</span>
+            <span class="bt-bar"><span class="bt-bar__fill"></span></span>
+            <span class="bt-status-pct">in progress</span>
           </div>
         </div>
-        <div class="standards__image standards__logo" aria-hidden="true">
-          <div class="standards__logo-stack">
-            <!-- FASTER than Linux → sit BEHIND it (lower z); placed at the edges so they
-                 peek out from behind the penguin instead of hiding under its body -->
-            <img class="skill-float skill-float--back" data-speed="0.38" style="top:64%;left:10%"  src="images/logos/Python.svg" alt="" loading="lazy">
-            <img class="skill-float skill-float--back" data-speed="0.34" style="top:24%;left:68%"  src="images/logos/Vim.svg" alt="" loading="lazy">
-            <img class="skill-float skill-float--back" data-speed="0.29" style="top:79%;left:85%"  src="images/logos/GitHub.svg" alt="" loading="lazy">
-            <!-- the Linux logo itself parallaxes (rests at its current spot at mid-scroll) -->
-            <img class="standards__logo-main" data-speed="0.18" src="images/logos/Linux.svg" alt="" loading="lazy">
-            <!-- SLOWER than Linux → sit ON TOP of it (higher z) -->
-            <img class="skill-float skill-float--front" data-speed="0.15" style="top:83%;left:18%"  src="images/logos/AWS.svg" alt="" loading="lazy">
-            <img class="skill-float skill-float--front" data-speed="0.11" style="top:78%;left:70%" src="images/logos/Docker.svg" alt="" loading="lazy">
-            <img class="skill-float skill-float--front" data-speed="0.13" style="top:40%;left:22%" src="images/logos/Git.svg" alt="" loading="lazy">
+        <div class="brand-teaser__art reveal" aria-hidden="true">
+          <div class="bt-frame bt-frame--a"><img src="images/flow/processing-storage.jpg" alt="" loading="lazy"></div>
+          <div class="bt-frame bt-frame--b"><img src="images/flow/ml-analysis.jpg" alt="" loading="lazy"></div>
+          <div class="bt-notif">
+            <div class="bt-notif__head"><span class="bt-notif__bot"><span class="bt-notif__avatar">VJ</span>Application Bot</span><span class="bt-notif__time">now</span></div>
+            <p class="bt-notif__match"><span class="bt-notif__score">0.82</span>&nbsp;match</p>
+            <p class="bt-notif__role">Data Engineer &middot; Bengaluru</p>
+            <p class="bt-notif__sub">Tailored r&eacute;sum&eacute; ready &middot; posted 6&nbsp;min ago</p>
+            <div class="bt-notif__btns"><span class="bt-notif__btn bt-notif__btn--p">Apply</span><span class="bt-notif__btn">R&eacute;sum&eacute;</span></div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- ===== Personal manifesto — the signature beat ===== -->
+    <section class="brand-manifesto">
+      <div class="brand-manifesto__inner">
+        <span class="bm-script reveal" aria-hidden="true">Vishnujan</span>
+        <h2 class="bm-statement reveal">
+          <span class="bm-line bm-line--sans">I build</span>
+          <span class="bm-line bm-line--serif">data systems</span>
+          <span class="bm-line bm-line--muted">that don&rsquo;t break.</span>
+        </h2>
+        <p class="bm-note reveal">Data &amp; backend engineer. Pipelines that fetch only what&rsquo;s new, dedupe safely, and repair on rerun instead of corrupting history.</p>
       </div>
     </section>
 
