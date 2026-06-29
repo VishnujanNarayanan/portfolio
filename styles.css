@@ -308,7 +308,7 @@ header .header__nav-left a{color:#050419;font-size:16px}
    ============================================================ */
 .writing{
   --strip:clamp(64px,7vw,108px);     /* collapsed strip width */
-  --cw:clamp(260px,22vw,360px);      /* fixed width a panel opens by */
+  --cw:clamp(180px,15vw,250px);      /* fixed width a panel opens by (narrower open panel → flex-grow gives the freed width back to every closed strip) */
   --h:clamp(540px,82vh,880px);
   position:relative;z-index:2;background:transparent;color:#fff;
   height:200vh;                      /* 100vh visible + 100vh sticky window so features slides over */
