@@ -348,15 +348,21 @@ header .header__nav-left a{color:#050419;font-size:16px}
   transition:flex-basis .95s cubic-bezier(.32,0,.16,1) 70ms;
 }
 /* --ph = panel height: a GENTLE taper (far-left ~91% → front 100%) for a touch of depth. */
-.wpanel:nth-child(1){--bg:#3b518a;--ph:80%}
-.wpanel:nth-child(2){--bg:#374a7c;--ph:82.5%}
-.wpanel:nth-child(3){--bg:#32436f;--ph:85%}
-.wpanel:nth-child(4){--bg:#2d3c63;--ph:87.5%}
-.wpanel:nth-child(5){--bg:#293754;--ph:90%}
-.wpanel:nth-child(6){--bg:#243049;--ph:92.5%}
-.wpanel:nth-child(7){--bg:#202840;--ph:95%}
-.wpanel:nth-child(8){--bg:#1b2236;--ph:97.5%}
-.wpanel:nth-child(9){--bg:#161d2e;--ph:100%}
+/* z-index rises left→right: leftmost panel sits at the BOTTOM, rightmost on TOP (so each
+   panel's right-bleed covers the seam with the panel to its right). */
+.wpanel:nth-child(1){--bg:#3b518a;--ph:80%;z-index:1}
+.wpanel:nth-child(2){--bg:#374a7c;--ph:82.5%;z-index:2}
+.wpanel:nth-child(3){--bg:#32436f;--ph:85%;z-index:3}
+.wpanel:nth-child(4){--bg:#2d3c63;--ph:87.5%;z-index:4}
+.wpanel:nth-child(5){--bg:#293754;--ph:90%;z-index:5}
+.wpanel:nth-child(6){--bg:#243049;--ph:92.5%;z-index:6}
+.wpanel:nth-child(7){--bg:#202840;--ph:95%;z-index:7}
+.wpanel:nth-child(8){--bg:#1b2236;--ph:97.5%;z-index:8}
+.wpanel:nth-child(9){--bg:#161d2e;--ph:100%;z-index:9}
+/* The OPEN panel lifts above all of them so its sliding-in text is never hidden behind a
+   right-hand neighbour. */
+.wpanel.is-open,
+.wpanel:focus-within{z-index:20}
 
 /* Open state: ONLY flex-basis changes (grow/shrink constant at 1/1). The open panel
    carries +(--strip + --cw) of basis, so it ends up exactly one content column wider
@@ -384,12 +390,14 @@ header .header__nav-left a{color:#050419;font-size:16px}
 /* Content — pinned ABSOLUTELY at a fixed place (just right of the strip) with a FIXED width, so
    it's out of the flex flow: the panel's width animating open/closed never reflows or resizes the
    text. Opening/closing ONLY fades it in/out. Clipped by the panel's overflow:hidden while closed. */
-.wpanel__content{position:absolute;left:var(--strip);top:0;bottom:0;width:var(--cw);box-sizing:border-box;
+.wpanel__content{position:absolute;left:var(--strip);top:0;bottom:0;z-index:2;
+  width:clamp(230px,23vw,360px);box-sizing:border-box;   /* FIXED width (vw-stable) so the text wraps the same the whole way — opening no longer re-flows it; it just slides in. */
   display:flex;flex-direction:column;justify-content:center;gap:20px;
   padding:clamp(32px,3vw,52px) clamp(28px,2.6vw,44px);
-  pointer-events:none;opacity:0;transition:opacity .5s ease-in-out .15s}
+  pointer-events:none;opacity:0;transform:translateX(56px);   /* parked off to the RIGHT (clipped by the panel) while closed */
+  transition:opacity .5s ease-in-out .12s, transform .7s cubic-bezier(.32,0,.16,1) .05s}
 .wpanel.is-open .wpanel__content,
-.wpanel:focus-within .wpanel__content{opacity:1;pointer-events:auto}
+.wpanel:focus-within .wpanel__content{opacity:1;transform:translateX(0);pointer-events:auto}   /* slides left into place */
 
 .wpanel__meta{display:flex;gap:16px;font-family:"Roboto",sans-serif;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.55)}
 .wpanel__meta span:first-child{color:#4d8bff}
