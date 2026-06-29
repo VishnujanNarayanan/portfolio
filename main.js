@@ -2300,3 +2300,38 @@
   if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
   render();
 })();
+
+/* ============================================================
+   QuickForge chat window — the messages image scrolls within a
+   fixed "window" connected under the header bar. Scroll-driven &
+   reversible: as the section scrolls up through the viewport, the
+   feed pans so the window travels down through the messages.
+   ============================================================ */
+(function chatFeedScroll() {
+  var win  = document.querySelector(".bt-chat__window");
+  var feed = document.querySelector(".bt-chat__feed");
+  if (!win || !feed) return;
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+  var ticking = false;
+
+  function render() {
+    ticking = false;
+    if (window.innerWidth <= 820) { feed.style.transform = ""; return; }
+    var maxShift = feed.offsetHeight - win.clientHeight;     // travel room
+    if (maxShift <= 0) { feed.style.transform = "translateY(0)"; return; }
+    var r = win.getBoundingClientRect(), vh = window.innerHeight;
+    // p: 0 when the window sits low in the viewport, 1 once it has risen near
+    // the top — scrubs the feed up so we read down through the messages.
+    var p = (vh * 1.0 - r.top) / (vh * 1.35);
+    p = p < 0 ? 0 : p > 1 ? 1 : p;
+    feed.style.transform = "translateY(" + (-p * maxShift).toFixed(1) + "px)";
+  }
+  function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(render); } }
+
+  if (reduce) { render(); return; }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", render);
+  if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
+  if (feed.complete) render(); else feed.addEventListener("load", render);
+  render();
+})();
