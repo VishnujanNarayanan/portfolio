@@ -1217,16 +1217,13 @@
     revealTargets.forEach(function (el) { el.classList.add("show"); });
   }
 
-  /* ---------- Writing — threshold-driven timed intro, ONE overlapping right→left timeline ----------
-     A SINGLE threshold (the section's top crossing mid-viewport, handing off from flow) fires the
-     whole sequence on a TIMER over DUR seconds. Two waves overlap, both sweeping RIGHT→LEFT:
-       • ARRIVAL — reversed gapless reveal: rightmost panel lands first (as the big absorber, then
-         shrinks to size), the rest reveal leftward; the leftmost (opener) is NOT present until the
-         reveal reaches it last.
-       • RISE+SETTLE — each panel begins rising the moment it itself arrives (so rises overlap the
-         arrivals still in flight and the settles in front of them), then settles into place.
-     Scrolling back out the top reverses it; once landed it hands off to the live sticky-hover
-     accordion. Stacking (rightmost on top) is the CSS default — unchanged. */
+  /* ---------- Writing — APPEAR: bouncy fan-out from the rightmost panel ----------
+     A SINGLE threshold (the section's top crossing mid-viewport, handing off from flow) springs
+     the panels in. They start STACKED onto the rightmost panel and FAN OUT leftward into their
+     final accordion layout — the same idea as the socials cards, but anchored on the RIGHTMOST
+     panel (it never moves; the rest emerge from behind it) and with a BOUNCE (a reveal spring
+     that overshoots past its resting pose then settles). Once it settles it hands off to the
+     live sticky-hover accordion — everything the panels do AFTER they're in place is untouched. */
   (function () {
     var section = document.querySelector(".writing");
     var wstack = section && section.querySelector(".wstack");
@@ -1234,38 +1231,22 @@
     var panels = Array.prototype.slice.call(wstack.querySelectorAll(".wpanel"));
     if (!panels.length) return;
     var N = panels.length;
-    var DUR = 2.6;                                      // whole sequence duration (s) — timed, not scrolled
-    // ONE OVERLAPPING right→left timeline (no Part-1/Part-2 boundary). Two waves run at once:
-    //   ARRIVAL — a reversed gapless reveal: the RIGHTMOST panel lands first, the rest reveal
-    //     leftward, the leftmost (panel 0, the opener) being the big absorber that arrives last.
-    //   RISE+SETTLE — a panel STARTS rising the moment it itself arrives (rise stagger === arrival
-    //     stagger), so later panels begin adjusting earlier and rises overlap freely with the
-    //     settles in front of them rather than waiting one-settle-per-rise.
-    // Panel order j = (N-1)-i, j=0 = rightmost. rise-start(j) === arrival(j) === T_ARR*(j+1)/N;
-    // settle-start(j) === rise-start(j)+rDur(j). Rise + settle windows both shrink with j (faster
-    // leftward). All times are raw units normalised by L so the
-    // timed progress T∈[0,1] covers the whole thing.
-    var T_ARR = 0.6;                                    // raw time for all arrivals (single right→left sweep)
-    // RISE has two INDEPENDENTLY-timed clip edges:
-    //   LEFT edge  — progressively SLOWER toward the left (its window GROWS with j).
-    //   RIGHT edge — CONSTANT window for EVERY panel (same rise rate left→right).
-    var L_DUR0 = 0.16;                                  // rightmost panel's LEFT-edge rise window — quickest
-    var L_DUR1 = 0.40;                                  // leftmost panel's LEFT-edge rise window — slowest
-    var R_DURC = 0.22;                                  // RIGHT-edge rise window — identical for all panels
-    var S_DUR0 = 0.28;                                  // FIRST (rightmost) panel's settle window (raw) — slowest
-    var S_DUR1 = 0.06;                                  // LAST (leftmost) panel's settle window — fastest
-    function ramp(a, b, j) { return lerp(a, b, N > 1 ? j / (N - 1) : 0); }      // progressively from a (j=0, rightmost) → b (j=N-1, leftmost)
-    function lDur(j) { return ramp(L_DUR0, L_DUR1, j); }  // LEFT edge gets progressively SLOWER leftward (window grows with j)
-    function rDur(j) { return lDur(j) + R_DURC; }       // rise is SEQUENTIAL: left edge fully first, THEN the right edge → drives settle-start + L
-    function sDur(j) { return ramp(S_DUR0, S_DUR1, j); }  // settle gets progressively QUICKER leftward (j↑)
-    var R_STEP = T_ARR / N;                             // rise stagger === arrival stagger → each panel rises the moment it arrives
-    var riseStart0 = T_ARR / N;                         // rightmost rises as soon as it itself has arrived (not after N panels to its left)
-    var L = riseStart0 + (N - 1) * R_STEP + rDur(N - 1) + sDur(N - 1);  // total raw length → normalises T∈[0,1]
+    // ---- Appear: FAN-OUT from the rightmost panel (bouncy), like the socials cards ----
+    // The panels are laid out in their FINAL (settled) layout and then transformed so they
+    // start STACKED onto the rightmost panel and SPRING out leftward into place. A reveal
+    // spring (pCur 0<->1) overshoots past 1 → the fan settles with a BOUNCE. The rightmost
+    // panel is the anchor (it never moves); the rest emerge from behind it. Once the spring
+    // comes to rest we hand off to the live accordion (setSettled) — everything the panels
+    // do AFTER they're in place is untouched. The trigger one-shot latches.
+    var ROT_STEP = 0.8;        // deg of fan tilt per panel of distance from the rightmost
+    var ROT_MAX  = 7;          // cap the tilt so the tall panels don't skew oddly
+    var Y_STEP   = 9;          // px downward dip per distance-step when stacked (eased to 0)
+    var S_STEP   = 0.012;      // scale-down per distance-step when stacked (eased to 1)
+    var PR_STIFF = 260, PR_DAMP = 20;                   // reveal spring — ~9% overshoot, ~0.4s settle
+    var reduceMo = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+    var pCur = reduceMo ? 1 : 0, pVel = 0, pT = reduceMo ? 1 : 0;
     function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
     function lerp(a, b, t) { return a + (b - a) * t; }
-    function smooth(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
-    function smoother(t) { t = clamp(t, 0, 1); return t * t * t * (t * (t * 6 - 15) + 10); }  // ease-in + ease-out (pronounced)
-    function easeOut(t) { t = clamp(t, 0, 1); return 1 - Math.pow(1 - t, 3); }   // nonzero slope at 0 → immediate start
 
     // Resolved geometry (clamps → px), cached; recomputed on resize.
     var G = { W: 0, H: 0, openBasis: 0, per: 0, stripW: 0, openW: 0, ph: [] };
@@ -1291,22 +1272,36 @@
       return { vert: p.querySelector(".wpanel__vert"), num: p.querySelector(".wpanel__num") };
     });
 
-    // BOTH parts render a panel identically: a FULL-height box clipped to a (possibly tapered)
-    // band, with the right-edge bleed extended past the clip so seams can't reopen, AND the rail
-    // text pinned to the band's edge (not the box edge) so it never jumps when the box height /
-    // taper representation is the same across the Part-1 → Part-2 seam.
-    //   tlPct/trPct = top inset (%) of the left/right edge; bleed = px of right-bleed; w = px width.
-    function paintPanel(pan, i, w, tlPct, trPct, bleed) {
-      var rx = (100 + bleed / Math.max(w, 1) * 100).toFixed(2);
-      var tl = tlPct.toFixed(2), tr = trPct.toFixed(2);
-      pan.style.height = G.H + "px";
-      pan.style.boxShadow = bleed.toFixed(1) + "px 0 0 0 var(--bg)";
-      pan.style.clipPath =
-        "polygon(0% " + tl + "%, " + rx + "% " + tr + "%, " + rx + "% " + (100 - tr) + "%, 0% " + (100 - tl) + "%)";
-      // text sits in the LEFT band (the strip zone): follow the left edge's top/bottom inset.
-      var t = TXT[i], ins = tlPct / 100 * G.H;
-      if (t.vert) t.vert.style.top = (30 + ins).toFixed(1) + "px";
-      if (t.num) t.num.style.bottom = (26 + ins).toFixed(1) + "px";
+    // Final settled positions + the per-panel offset that stacks it onto the rightmost panel.
+    function leftPos(i) { return i === 0 ? 0 : G.openW + (i - 1) * G.stripW; }
+    function stackDX(i) { return leftPos(N - 1) - leftPos(i); }   // px to slide panel i onto the rightmost
+
+    // Place the panels in their FINAL layout (panel 0 open, the rest closed strips) — the same
+    // layout setSettled hands off to — so the fan only adds a transform on top (no jump at handoff).
+    function applyFanLayout() {
+      panels.forEach(function (p, i) {
+        p.style.transition = "none";
+        p.style.flexGrow = "0"; p.style.flexShrink = "0";
+        p.style.flexBasis = (i === 0 ? G.openW : G.stripW).toFixed(2) + "px";
+        p.style.height = G.H + "px";
+        p.style.transformOrigin = "50% 100%";
+        p.classList.toggle("is-open", i === 0);
+      });
+    }
+    // FAN(p): stacked-onto-the-rightmost (p=0) → in place (p=1). p can overshoot past 1, so q
+    // goes slightly negative → the panels spring a touch past their resting pose then settle = bounce.
+    function fanPaint(p) {
+      var q = 1 - p;
+      panels.forEach(function (pan, i) {
+        var d = (N - 1) - i;                             // distance from the rightmost anchor (0)
+        var tx = q * stackDX(i);
+        var ty = q * d * Y_STEP;
+        var rot = -q * clamp(d * ROT_STEP, 0, ROT_MAX);  // tilt up-left as it fans out
+        var sc = 1 - q * d * S_STEP;
+        pan.style.transform =
+          "translate(" + tx.toFixed(1) + "px," + ty.toFixed(1) + "px) rotate(" + rot.toFixed(2) + "deg) scale(" + sc.toFixed(4) + ")";
+        pan.style.opacity = clamp(0.15 + p * 1.25, 0, 1).toFixed(3);
+      });
     }
 
     var settled = null;                                 // tri-state: null/false/true
@@ -1317,7 +1312,7 @@
         if (on) {                                        // hand off to the live CSS accordion
           p.style.transition = ""; p.style.transform = ""; p.style.transformOrigin = ""; p.style.clipPath = "";
           p.style.flexBasis = ""; p.style.flexGrow = ""; p.style.flexShrink = "";
-          p.style.boxShadow = "";                        // back to the CSS base bleed
+          p.style.boxShadow = ""; p.style.opacity = "";  // back to the CSS base (bleed + full opacity)
           p.style.height = G.H + "px";                   // uniform height (overrides the --ph taper)
           if (TXT[i].vert) { TXT[i].vert.style.top = ""; TXT[i].vert.style.opacity = ""; }  // rail text back to CSS (box edges, fully visible)
           if (TXT[i].num) { TXT[i].num.style.bottom = ""; TXT[i].num.style.opacity = ""; }
@@ -1329,93 +1324,12 @@
       });
     }
 
-    // PAINT(T) — the whole sequence in ONE overlapping pass. For each panel we know three
-    // progresses derived from the single timed clock t = T*L:
-    //   • settle/target width (per → stripW) from its settle window;
-    //   • a gapless ARRIVAL reveal (rightmost first) that grows each panel from 0 to its target,
-    //     with panel 0 as the residual absorber (so freed settle-space and un-arrived space both
-    //     flow into the opening panel) — guarantees the widths always sum to W with no gaps;
-    //   • a RISE clip (trapezoid: LEFT edge first, then RIGHT edge to full height).
-    function paint(T) {
-      var W = G.W, per = G.per, t = T * L;
-      var pA = clamp(t / T_ARR, 0, 1);
-      var af = pA * N;                                  // revealed count from the RIGHT (fractional)
-      var fl = Math.min(Math.floor(af), N - 1);         // frontier index (distance-from-right)
-      var frac = clamp(af - fl, 0, 1);                  // progress of the frontier hand-off
-
-      // settle width of an already-revealed strip (per → stripW over its own settle window).
-      function settleWidth(i) {
-        var j = (N - 1) - i;
-        var sS = riseStart0 + j * R_STEP + rDur(j);     // settle starts right after this panel's rise
-        var setP = clamp((t - sS) / sDur(j), 0, 1);     // window shrinks with j → progressively faster settle
-        return lerp(per, G.stripW, smoother(setP));     // ease IN + ease INTO place
-      }
-
-      // Reversed gapless reveal. The RIGHTMOST panel (d=0) appears FIRST as the big absorber and
-      // shrinks to per as the frontier sweeps LEFT; the LEFTMOST panel (panel 0) appears LAST and
-      // ends as the opener — it is NOT special-cased and is never present until the frontier reaches
-      // it. The frontier panel (d==fl) holds the remainder R; the next one (d==fl+1) grows into it;
-      // as revealed strips settle (shrink) the freed width flows left into R → the opener.
-      var rightSettled = 0, widths = new Array(N);
-      panels.forEach(function (pan, i) {
-        if ((N - 1 - i) < fl) { var w = settleWidth(i); widths[i] = w; rightSettled += w; }
-      });
-      var R = W - rightSettled;                         // space to the LEFT of the settled block
-      var nextGrow = (fl + 1 <= N - 1) ? frac * (R - per) : 0;
-      if (nextGrow < 0) nextGrow = 0;
-      panels.forEach(function (pan, i) {
-        var d = (N - 1) - i;
-        if (d < fl) return;                             // already settled above
-        widths[i] = d === fl ? (R - nextGrow)           // active absorber → shrinks toward per
-          : d === fl + 1 ? nextGrow                     // next panel grows 0 → R-per
-            : 0;                                        // not yet revealed
-      });
-
-      // bleed grows with how much the opener has OPENED UP, so the rise's clip can't reopen seams.
-      var opened = widths[0] - per; if (opened < 0) opened = 0;
-      var bleed = 18 + opened;
-
-      var accRaw = 0, accSnap = 0;
-      panels.forEach(function (pan, i) {
-        var j = (N - 1) - i;
-        var rS = riseStart0 + j * R_STEP;                // rise start per panel (staggered with arrival)
-        var inset = (1 - G.ph[i] / 100) / 2;
-        var eL = easeOut(clamp((t - rS) / lDur(j), 0, 1));            // LEFT edge — fully first; progressively SLOWER toward the left
-        var eR = easeOut(clamp((t - rS - lDur(j)) / R_DURC, 0, 1));   // RIGHT edge — starts only after the left edge finishes; CONSTANT rate for all panels
-        var tl = inset * (1 - eL) * 100;
-        var tr = inset * (1 - eR) * 100;
-        accRaw += widths[i];                             // explicit + integer-snapped → strips stay flush
-        var snap = Math.round(accRaw);
-        var bw = snap - accSnap;
-        pan.style.flexGrow = "0"; pan.style.flexShrink = "0";
-        pan.style.flexBasis = bw + "px";
-        accSnap = snap;
-        paintPanel(pan, i, bw, tl, tr, bleed);
-        // RAIL TEXT: hidden through the entire rise — it only fades in once THIS panel has SETTLED
-        // (its own settle window, after its rise). Plain opacity fade, no transform/clip. Reverses
-        // on scroll-up (setP falls back to 0 → fades out).
-        var setP = clamp((t - rS - rDur(j)) / sDur(j), 0, 1);
-        var op = smooth(setP).toFixed(3);
-        var tx = TXT[i];
-        if (tx.num) tx.num.style.opacity = op;
-        if (tx.vert) tx.vert.style.opacity = op;
-        // opener's content fades in as it opens, gated by its OWN rise (eR) so it never shows
-        // while still a clipped, tapered band.
-        if (i === 0) {
-          var c = pan.querySelector(".wpanel__content");
-          var openFrac = clamp((widths[0] - per) / (G.openW - per), 0, 1);
-          if (c) c.style.opacity = (openFrac * eR).toFixed(2);
-        }
-      });
-    }
-
-    var T = 0, lastT = 0, prepStart = 0, latched = false;  // single timed progress 0→1 + last frame stamp; reverse-handoff timer; one-shot latch
-    var PREP_MS = 800;                                  // matches the .wpanel flex-basis transition (.8s)
+    var lastT = 0, latched = false;                     // last frame stamp + one-shot trigger latch
 
     // ---- Cover-scroll lock --------------------------------------------------
     // The features section is pulled up 100vh (margin-top:-100svh) and rides OVER
-    // the pinned blog during .writing's second (sticky) 100vh. The panel reveal,
-    // though, is TIMED (DUR s) — so scrolling fast pushes features up over panels
+    // the pinned blog during .writing's second (sticky) 100vh. The fan-out, though,
+    // springs over its own time — so scrolling fast could push features up over panels
     // that are still animating. While the reveal is playing we LOCK the scroll the
     // instant the pin reaches the top (rect.top ≤ 0 = cover-start), freezing in
     // place, and release it the moment the panels settle — so features can only
@@ -1445,48 +1359,37 @@
       if (window.innerWidth <= 820) {
         releaseLock();                                   // never lock on mobile (no cover-scroll)
         if (settled !== null) { panels.forEach(function (p, i) {
-          ["transition", "transform", "transformOrigin", "clipPath", "flexBasis", "flexGrow", "flexShrink", "height", "boxShadow"].forEach(function (k) { p.style[k] = ""; });
+          ["transition", "transform", "transformOrigin", "clipPath", "flexBasis", "flexGrow", "flexShrink", "height", "boxShadow", "opacity"].forEach(function (k) { p.style[k] = ""; });
           if (TXT[i].vert) { TXT[i].vert.style.top = ""; TXT[i].vert.style.opacity = ""; }
           if (TXT[i].num) { TXT[i].num.style.bottom = ""; TXT[i].num.style.opacity = ""; }
           p.classList.remove("is-open");
         }); settled = null; }
-        T = 0; lastT = 0;
+        lastT = 0;
         return;
       }
+      if (reduceMo) { setSettled(true); return; }        // no fan: land in place immediately
       var vh = window.innerHeight;
       var rect = section.getBoundingClientRect();
-      // SINGLE THRESHOLD: as the section's top crosses the middle of the viewport (still rising
-      // into view from flow) the WHOLE sequence plays on a TIMER over DUR seconds, regardless of
-      // further scroll; scrolling back below it reverses.
+      // SINGLE THRESHOLD: as the section's top crosses mid-viewport (rising in from flow) the
+      // fan-out springs in. It ONE-SHOT latches, so it always completes once started.
       var triggered = rect.top <= vh * 0.5;
-      if (triggered) latched = true;                               // ONE-SHOT: once it has played in, it never reverses
+      if (triggered) latched = true;
       if (!lastT) lastT = now;
       var dt = Math.min((now - lastT) / 1000, 0.05); lastT = now;  // clamp dt (tab-switch safety)
 
-      // REVERSE HANDOFF: when scrolling back up out of the live accordion with a NON-first panel
-      // open, the reverse reveal (paint) assumes panel 0 is the opener — snapping there would jump.
-      // First ease the open panel back to the canonical panel-0-open state (the CSS flex-basis
-      // transition), holding the reverse, so it then animates backward continuously from there.
-      if (settled === true && !latched) {
-        var openI = -1;
-        panels.forEach(function (p, i) { if (p.classList.contains("is-open")) openI = i; });
-        if (openI > 0) {
-          panels.forEach(function (p, i) { p.classList.toggle("is-open", i === 0); });
-          if (!prepStart) prepStart = now;
-        }
-        if (prepStart && now - prepStart < PREP_MS) return;        // hold reverse during the ease
-      }
-      if (triggered) prepStart = 0;                                // re-entering forward → reset
+      pT = (latched || triggered) ? 1 : 0;
+      var f = PR_STIFF * (pT - pCur) - PR_DAMP * pVel;             // step the reveal spring (overshoots → bounce)
+      pVel += f * dt; pCur += pVel * dt;
+      var atRest = pT === 1 && Math.abs(1 - pCur) < 0.0015 && Math.abs(pVel) < 0.0015;
 
-      T = clamp(T + (latched ? 1 : -1) * dt / DUR, 0, 1);          // latched → always forward (no scroll-up reversal)
+      // Hold the cover-scroll while the fan is still springing in: lock once the pin reaches
+      // the top (rect.top ≤ 0), release the instant it settles.
+      if (!atRest && latched && rect.top <= 0) engageLock(); else if (atRest) releaseLock();
 
-      // Hold the cover-scroll while the reveal is still playing: lock once the pin
-      // reaches the top (rect.top ≤ 0), release the instant the panels settle.
-      if (T < 1 && latched && rect.top <= 0) engageLock(); else if (T >= 1) releaseLock();
-
-      if (T >= 1) { setSettled(true); return; }                    // landed → live accordion
+      if (atRest) { pCur = 1; pVel = 0; setSettled(true); return; }  // landed → live accordion
       setSettled(false);
-      paint(T);                                                    // one overlapping right→left timeline
+      applyFanLayout();
+      fanPaint(pCur);
     }
 
     function resize() { geom(); settled = null; }       // force a clean re-apply after a resize
