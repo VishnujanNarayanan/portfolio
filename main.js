@@ -1284,7 +1284,7 @@
     // bounce like a pCur threshold would, nor only after it fully rests). The others shrink to their
     // strip width to match, and panel 0 gets `is-open` so its content/divider/READ reveal in step.
     var OPEN_DUR = 0.5;                                          // seconds the open takes, played across the settle/bounce
-    var openClock = -1, openProg = 0;                           // -1 = not started; advances once the spring peaks
+    var openArmed = false, openU = 0, openProg = 0;             // armed once the spring peaks; openU eases 0↔1 (reversible)
     function easeIO(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
     function applyFanLayout() {
       var op = openProg;                                        // 0 → 1 open progress (driven in render, peak-triggered)
@@ -1310,7 +1310,7 @@
         var sc = 1 - q * d * S_STEP;
         pan.style.transform =
           "translate(" + tx.toFixed(1) + "px," + ty.toFixed(1) + "px) rotate(" + rot.toFixed(2) + "deg) scale(" + sc.toFixed(4) + ")";
-        pan.style.opacity = clamp(0.15 + p * 1.25, 0, 1).toFixed(3);
+        pan.style.opacity = clamp(p * 1.4, 0, 1).toFixed(3);   // fully INVISIBLE until the reveal begins (no faint right-side sit)
       });
     }
 
@@ -1334,7 +1334,7 @@
       });
     }
 
-    var lastT = 0, latched = false;                     // last frame stamp + one-shot trigger latch
+    var lastT = 0;                                      // last frame stamp
 
     // ---- Cover-scroll lock --------------------------------------------------
     // The features section is pulled up 100vh (margin-top:-100svh) and rides OVER
@@ -1380,27 +1380,28 @@
       if (reduceMo) { setSettled(true); return; }        // no fan: land in place immediately
       var vh = window.innerHeight;
       var rect = section.getBoundingClientRect();
-      // SINGLE THRESHOLD: as the section's top crosses mid-viewport (rising in from flow) the
-      // fan-out springs in. It ONE-SHOT latches, so it always completes once started.
+      // SINGLE THRESHOLD: the section's top crossing mid-viewport. REVERSIBLE — pT follows the
+      // threshold live, so scrolling back UP past the SAME line folds the fan + open back out.
       var triggered = rect.top <= vh * 0.5;
-      if (triggered) latched = true;
       if (!lastT) lastT = now;
       var dt = Math.min((now - lastT) / 1000, 0.05); lastT = now;  // clamp dt (tab-switch safety)
 
-      pT = (latched || triggered) ? 1 : 0;
+      pT = triggered ? 1 : 0;
       var f = PR_STIFF * (pT - pCur) - PR_DAMP * pVel;             // step the reveal spring (overshoots → bounce)
       pVel += f * dt; pCur += pVel * dt;
       var atRest = pT === 1 && Math.abs(1 - pCur) < 0.0015 && Math.abs(pVel) < 0.0015;
 
-      // Panel-0 open: start it the instant the spring PEAKS (velocity goes non-positive while near
-      // the top), then advance over OPEN_DUR — so the widening plays through the bouncy settle.
-      if (latched && openClock < 0 && pCur > 0.85 && pVel <= 0) openClock = 0;
-      if (openClock >= 0) openClock += dt;
-      openProg = openClock < 0 ? 0 : easeIO(clamp(openClock / OPEN_DUR, 0, 1));
+      // Panel-0 open: ARM it the instant the spring PEAKS (velocity goes non-positive while near the
+      // top) → openU eases toward 1 over OPEN_DUR (the widening plays through the bouncy settle).
+      // On reverse (pT→0) it disarms and openU eases back to 0, so the panel folds closed too.
+      if (pT === 0) openArmed = false;
+      else if (!openArmed && pCur > 0.85 && pVel <= 0) openArmed = true;
+      openU = clamp(openU + (openArmed ? 1 : -1) * dt / OPEN_DUR, 0, 1);
+      openProg = easeIO(openU);
 
-      // Hold the cover-scroll while the fan is still springing in: lock once the pin reaches
-      // the top (rect.top ≤ 0), release the instant it settles.
-      if (!atRest && latched && rect.top <= 0) engageLock(); else if (atRest) releaseLock();
+      // Hold the cover-scroll while the fan is springing IN: lock once the pin reaches the top
+      // (rect.top ≤ 0) and isn't settled; release at rest. On reverse rect.top > 0 so it never locks.
+      if (!atRest && triggered && rect.top <= 0) engageLock(); else if (atRest) releaseLock();
 
       if (atRest) { pCur = 1; pVel = 0; setSettled(true); return; }  // landed → live accordion
       setSettled(false);
@@ -1408,7 +1409,7 @@
       fanPaint(pCur);
     }
 
-    function resize() { geom(); settled = null; openClock = -1; openProg = 0; }   // force a clean re-apply after a resize
+    function resize() { geom(); settled = null; openArmed = false; openU = 0; openProg = 0; }   // force a clean re-apply after a resize
     geom();
     function frame(now) { render(now || performance.now()); requestAnimationFrame(frame); }
     requestAnimationFrame(frame);
