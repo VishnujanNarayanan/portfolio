@@ -1242,7 +1242,7 @@
     var ROT_MAX  = 7;          // cap the tilt so the tall panels don't skew oddly
     var Y_STEP   = 9;          // px downward dip per distance-step when stacked (eased to 0)
     var S_STEP   = 0.012;      // scale-down per distance-step when stacked (eased to 1)
-    var PR_STIFF = 260, PR_DAMP = 20;                   // reveal spring — ~9% overshoot, ~0.4s settle
+    var PR_STIFF = 80, PR_DAMP = 11;                    // reveal spring — slower (~0.9s settle), same ~9% bounce (zeta ~0.62)
     var reduceMo = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
     var pCur = reduceMo ? 1 : 0, pVel = 0, pT = reduceMo ? 1 : 0;
     function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
