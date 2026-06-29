@@ -1272,20 +1272,22 @@
       return { vert: p.querySelector(".wpanel__vert"), num: p.querySelector(".wpanel__num") };
     });
 
-    // Final settled positions + the per-panel offset that stacks it onto the rightmost panel.
-    function leftPos(i) { return i === 0 ? 0 : G.openW + (i - 1) * G.stripW; }
+    // Arrival positions: ALL panels are the SAME (equal) width while fanning in — none is open
+    // yet. The per-panel offset stacks each panel onto the rightmost one.
+    function leftPos(i) { return i * G.per; }                     // equal-width slots (W/N each)
     function stackDX(i) { return leftPos(N - 1) - leftPos(i); }   // px to slide panel i onto the rightmost
 
-    // Place the panels in their FINAL layout (panel 0 open, the rest closed strips) — the same
-    // layout setSettled hands off to — so the fan only adds a transform on top (no jump at handoff).
+    // Place the panels in their ARRIVAL layout — equal widths, NONE open — so the fan only adds a
+    // transform on top. setSettled then opens panel 0 (its .95s flex-basis transition), so the
+    // first panel opens AFTER everything has fanned into place.
     function applyFanLayout() {
       panels.forEach(function (p, i) {
         p.style.transition = "none";
         p.style.flexGrow = "0"; p.style.flexShrink = "0";
-        p.style.flexBasis = (i === 0 ? G.openW : G.stripW).toFixed(2) + "px";
+        p.style.flexBasis = G.per.toFixed(2) + "px";
         p.style.height = G.H + "px";
         p.style.transformOrigin = "50% 100%";
-        p.classList.toggle("is-open", i === 0);
+        p.classList.remove("is-open");                            // equal size while arriving
       });
     }
     // FAN(p): stacked-onto-the-rightmost (p=0) → in place (p=1). p can overshoot past 1, so q
