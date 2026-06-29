@@ -570,48 +570,84 @@
       </filter>
     </svg>
 
-    <!-- ===== Product teaser — the Job-Application Bot (Coming Soon) ===== -->
+    <!-- ===== Product canvas — Lando Collabs treatment ===== -->
+    <!-- Section 1: editorial hero — product title + sweep script + description -->
     <section class="brand-teaser" id="skills">
       <div class="skills-curve" aria-hidden="true"><svg class="skills-curve__svg" viewBox="0 0 100 100" preserveAspectRatio="none"><path class="skills-curve__path" d="M0 0 L100 0 Q50 0 0 0 Z"></path></svg></div>
       <div class="brand-teaser__inner">
+        <!-- giant script sweep behind everything -->
+        <span class="bt-script" aria-hidden="true">apply</span>
+        <!-- left: editorial title -->
         <div class="brand-teaser__copy reveal">
-          <p class="brand-eyebrow"><span class="brand-eyebrow__dot"></span>In development &middot; Lab 01</p>
-          <h2 class="brand-teaser__title"><span class="bt-sans">Coming</span><span class="bt-serif">soon</span></h2>
-          <p class="brand-teaser__name">The Job-Application Bot</p>
-          <p class="brand-teaser__desc">It watches Indian job boards while you sleep, scores every new posting against your profile, and hands you a r&eacute;sum&eacute; tailored to each match &mdash; before the recruiter&rsquo;s first-fifty window closes.</p>
-          <div class="brand-teaser__chips">
-            <span class="brand-chip">Python</span><span class="brand-chip">FastAPI</span><span class="brand-chip">Postgres + pgvector</span><span class="brand-chip">Playwright</span><span class="brand-chip">Telegram</span>
-          </div>
-          <div class="brand-teaser__status">
-            <span class="bt-status-label">Iteration 2</span>
-            <span class="bt-bar"><span class="bt-bar__fill"></span></span>
-            <span class="bt-status-pct">in progress</span>
-          </div>
+          <h2 class="brand-teaser__title">
+            <span class="bt-line bt-sans">The Job</span>
+            <span class="bt-line bt-serif">Application</span>
+            <span class="bt-line bt-sans">Bot.</span>
+          </h2>
         </div>
-        <div class="brand-teaser__art reveal" aria-hidden="true">
-          <div class="bt-frame bt-frame--a"><img src="images/flow/processing-storage.jpg" alt="" loading="lazy"></div>
-          <div class="bt-frame bt-frame--b"><img src="images/flow/ml-analysis.jpg" alt="" loading="lazy"></div>
-          <div class="bt-notif">
-            <div class="bt-notif__head"><span class="bt-notif__bot"><span class="bt-notif__avatar">VJ</span>Application Bot</span><span class="bt-notif__time">now</span></div>
-            <p class="bt-notif__match"><span class="bt-notif__score">0.82</span>&nbsp;match</p>
-            <p class="bt-notif__role">Data Engineer &middot; Bengaluru</p>
-            <p class="bt-notif__sub">Tailored r&eacute;sum&eacute; ready &middot; posted 6&nbsp;min ago</p>
-            <div class="bt-notif__btns"><span class="bt-notif__btn bt-notif__btn--p">Apply</span><span class="bt-notif__btn">R&eacute;sum&eacute;</span></div>
-          </div>
+        <!-- right: description -->
+        <div class="brand-teaser__desc-col reveal">
+          <p class="brand-teaser__desc">It watches Indian job boards while you sleep, scores every new posting against your profile, and hands you a r&eacute;sum&eacute; tailored to each match &mdash; before the recruiter&rsquo;s first-fifty window closes.</p>
         </div>
       </div>
     </section>
 
-    <!-- ===== Personal manifesto — the signature beat ===== -->
+    <!-- Section 2: pain points + coming soon -->
     <section class="brand-manifesto">
       <div class="brand-manifesto__inner">
-        <span class="bm-script reveal" aria-hidden="true">Vishnujan</span>
-        <h2 class="bm-statement reveal">
-          <span class="bm-line bm-line--sans">I build</span>
-          <span class="bm-line bm-line--serif">data systems</span>
-          <span class="bm-line bm-line--muted">that don&rsquo;t break.</span>
-        </h2>
-        <p class="bm-note reveal">Data &amp; backend engineer. Pipelines that fetch only what&rsquo;s new, dedupe safely, and repair on rerun instead of corrupting history.</p>
+
+        <!-- 01 -->
+        <div class="bm-row reveal">
+          <div class="bm-row__left">
+            <span class="bm-num" aria-hidden="true">01</span>
+            <h2 class="bm-headline">No callbacks?<br><em>Your resume isn&rsquo;t talking their language.</em></h2>
+            <p class="bm-body">Recruiters get 200+ per role. Generic gets filtered before a human looks. Your experience isn&rsquo;t the problem.</p>
+          </div>
+          <div class="bm-row__right">
+            <span class="bm-solve-label">The fix</span>
+            <p class="bm-solve-text">The bot reads the JD and selects the exact bullets, title and skill framing that match it. Every application speaks that role&rsquo;s specific language. Automatically. Every time.</p>
+          </div>
+        </div>
+
+        <div class="bm-divider" aria-hidden="true"></div>
+
+        <!-- 02 -->
+        <div class="bm-row bm-row--flip reveal">
+          <div class="bm-row__left">
+            <span class="bm-num" aria-hidden="true">02</span>
+            <h2 class="bm-headline">Applicant&nbsp;#847.<br><em>Window closed 3 hours ago.</em></h2>
+            <p class="bm-body">Recruiters stop reading after the first 50. The window is under an hour from posting. You can&rsquo;t watch three boards while that window opens and shuts.</p>
+          </div>
+          <div class="bm-row__right">
+            <span class="bm-solve-label">The fix</span>
+            <p class="bm-solve-text">The bot monitors Indeed, Glassdoor and LinkedIn continuously. The moment a match posts, you get a Telegram ping with the apply link and a tailored r&eacute;sum&eacute; ready to go. First wave, not after it.</p>
+          </div>
+        </div>
+
+        <div class="bm-divider" aria-hidden="true"></div>
+
+        <!-- 03 -->
+        <div class="bm-row reveal">
+          <div class="bm-row__left">
+            <span class="bm-num" aria-hidden="true">03</span>
+            <h2 class="bm-headline">Tweaking the same<br><em>r&eacute;sum&eacute;. Again.</em></h2>
+            <p class="bm-body">10 roles a day is 10 tailoring sessions. You&rsquo;re spending more time in Word than applying. And the rushed ones always look it.</p>
+          </div>
+          <div class="bm-row__right">
+            <span class="bm-solve-label">The fix</span>
+            <p class="bm-solve-text">You write your bullets once. The bot selects the right ones per role, every time. Your master profile becomes every tailored r&eacute;sum&eacute; you&rsquo;ll ever need.</p>
+          </div>
+        </div>
+
+        <!-- Coming Soon footer -->
+        <div class="bm-coming-soon reveal">
+          <span class="bm-cs-eyebrow"><span class="bm-cs-dot"></span>In development &middot; Lab 01</span>
+          <p class="bm-cs-label">Coming <em>soon</em></p>
+          <div class="bm-cs-chips">
+            <span class="brand-chip">Python</span><span class="brand-chip">FastAPI</span><span class="brand-chip">Postgres + pgvector</span><span class="brand-chip">Playwright</span><span class="brand-chip">Telegram</span>
+          </div>
+        </div>
+
       </div>
     </section>
 
