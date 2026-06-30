@@ -600,12 +600,15 @@
     // motion is scroll-driven; globalRaw (−1..N) gives the first/last their lead travel.
     var csel = Math.round(globalRaw);
     var clocal = globalRaw - csel;                   // [−0.5, 0.5] within the active stage
-    var REST_X = 5.6, OFF_L = -22, OFF_R = 22;       // REST_X reduced 30% (8→5.6): less left scroll
+    // Active stage slides from R_END (right, entry) to L_END (leftmost). R_END=8 is the
+    // original right entry (unchanged). L_END raised 0→2.4 so the card stops short of
+    // centre — 30% less leftward travel. OFF_L/OFF_R = off-screen park (passed/upcoming).
+    var R_END = 8, L_END = 2.4, OFF_L = -22, OFF_R = 22;
     var F = vh / 16.658;                             // 1 world unit in px (2·(17−1)·tan(55°/2))
     panels.forEach(function (panel, pi) {
       var cardsEl = panel.querySelector(".flow-panel__cards");
       if (!cardsEl) return;
-      var target = (pi === csel) ? (REST_X * (0.5 - clocal)) : (pi < csel ? OFF_L : OFF_R);
+      var target = (pi === csel) ? (L_END + (R_END - L_END) * (0.5 - clocal)) : (pi < csel ? OFF_L : OFF_R);
       panel._coff = (panel._coff === undefined) ? target : panel._coff + (target - panel._coff) * 0.08;
       var pinX = -(pi * vw + trackX);
       cardsEl.style.transform = "translate(calc(-50% + " + (panel._coff * F + pinX).toFixed(1) + "px),-50%)";
