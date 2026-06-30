@@ -646,7 +646,7 @@
     // drifts into its final row. Per-column rates: the left column settles quickly,
     // the right column eases in WAY slower, so the two columns don't land together.
     // On scroll-BACK (up) the rates flip per column — the column that led now trails.
-    var SETTLE_FAST = 0.06, SETTLE_SLOW = 0.035;
+    var SETTLE_FAST = 0.052, SETTLE_SLOW = 0.035;
     var leftFast = scrollDir >= 0;   // forward: left col fast; back: left col slow (flipped)
     for (var pc = 0; pc < pcardList.length; pc++) {
       var o = pcardList[pc];
