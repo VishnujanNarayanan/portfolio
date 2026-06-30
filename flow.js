@@ -214,7 +214,9 @@
   var pcardList = [];
   panels.forEach(function (panel) {
     Array.prototype.slice.call(panel.querySelectorAll(".flow-panel__cards .flow-pcard")).forEach(function (el, i) {
-      pcardList.push({ el: el, depth: 0.45 + (i % 4) * 0.2, baseY: (i % 2 === 0) ? -STAGGER : STAGGER });
+      // dir = +1 for the left column, −1 for the right — the two columns drift in
+      // OPPOSITE directions with the cursor (mouse up → left up / right down, etc.).
+      pcardList.push({ el: el, dir: (i % 2 === 0) ? 1 : -1, baseY: (i % 2 === 0) ? -STAGGER : STAGGER });
     });
   });
   var mTX = 0, mTY = 0, mCX = 0, mCY = 0;       // mouse target / current (smoothed), normalised
@@ -614,14 +616,15 @@
       cardsEl.style.pointerEvents = (pi === csel && Math.abs(clocal) < 0.4) ? "auto" : "none";
     });
 
-    // Per-card stagger + cursor parallax: lerp toward the mouse, then offset each card
-    // by its column baseY plus a depth-scaled drift toward the cursor.
+    // Stagger + opposite-direction column parallax: lerp toward the mouse, then move
+    // the two columns OPPOSITE each other (dir) — driven mainly by cursor Y, so raising
+    // the mouse pushes one column up and the other down, and lowering it reverses.
     mCX += (mTX - mCX) * 0.08;
     mCY += (mTY - mCY) * 0.08;
-    var MAG = 26;
+    var MAG_X = 18, MAG_Y = 46;
     for (var pc = 0; pc < pcardList.length; pc++) {
       var o = pcardList[pc];
-      o.el.style.transform = "translate(" + (mCX * o.depth * MAG).toFixed(1) + "px," + (o.baseY + mCY * o.depth * MAG * 0.7).toFixed(1) + "px)";
+      o.el.style.transform = "translate(" + (o.dir * mCX * MAG_X).toFixed(1) + "px," + (o.baseY + o.dir * mCY * MAG_Y).toFixed(1) + "px)";
     }
 
     // On desktop the GL image planes replace the DOM card floats (hidden via
