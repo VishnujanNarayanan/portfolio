@@ -165,11 +165,6 @@
       { k: "b", n: "Idempotent Webhook Handlers", d: "Exactly-once effects from at-least-once delivery.", t: ["Backend", "APIs"], href: "blog/index.html" }
     ]
   ];
-  var F_BASE = "M8 .5h390.89a7.5 7.5 0 0 1 7.5 7.5v356.983a7.5 7.5 0 0 1-7.5 7.5H263.329a23.502 23.502 0 0 0-18.375 8.849l-16.499 20.695a22.502 22.502 0 0 1-17.593 8.473H8A7.5 7.5 0 0 1 .5 403V8A7.5 7.5 0 0 1 8 .5Z";
-  var F_OVER = "M8 1h390.89a7 7 0 0 1 7 7v356.983a7 7 0 0 1-7 7H263.329a23.999 23.999 0 0 0-18.766 9.038l-16.499 20.694A21.999 21.999 0 0 1 210.862 410H8a7 7 0 0 1-7-7V8a7 7 0 0 1 7-7Z";
-  function frameSvg(cls, d) {
-    return '<span class="proj-card__frame ' + cls + '"><svg viewBox="0 0 407 411" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="' + d + '" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></span>';
-  }
   function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
   function cardHtml(c, i, idStr) {
     var tags = c.t.map(function (x) { return '<span class="proj-tag">' + esc(x) + "</span>"; }).join("");
@@ -185,7 +180,6 @@
           '<span class="proj-tags">' + tags + "</span>" +
           '<span class="proj-card__cta">' + cta + "</span></span>" +
       closeA +
-      frameSvg("is-base", F_BASE) + frameSvg("is-overlay", F_OVER) +
       '<span class="proj-card__label"><span class="proj-card__id">' + idStr + "</span>" +
         '<span class="proj-card__title">' + esc(c.n) + "</span></span>" +
     "</div>";
