@@ -129,6 +129,99 @@
       });
     });
   });
+  /* ---------- Per-stage cards (the GL "image" replaced by 4 square cards) ----------
+     Each stage shows a 2x2 grid of square cards reusing the Projects-section
+     .proj-card look (notched frame + hover reveal + blue activation). Hovering a
+     card OR its matching text item in .flow-panel__list activates BOTH (the
+     .is-active class mirrors the card's :hover). Built here from CARD_DATA so the
+     verbose frame SVG isn't duplicated 16× in the HTML. */
+  var IMG = {
+    dc: "images/flow/data-collection.jpg", ps: "images/flow/processing-storage.jpg",
+    ml: "images/flow/ml-analysis.jpg", bs: "images/flow/build-ship.jpg"
+  };
+  var CARD_DATA = [
+    [ // 01 Browser Automation
+      { k: "p", n: "Market Data Platform", img: IMG.dc, d: "28-pipeline NSE ingestion layer feeding 12+ datasets.", t: ["Python", "Playwright", "ETL"], href: "projects/market-data-pipeline/index.html" },
+      { k: "p", n: "Job Application Bot", img: IMG.dc, d: "Scrapes Indeed, Glassdoor & LinkedIn; tailors a resume per match.", t: ["Python", "Playwright", "FastAPI"] },
+      { k: "p", n: "Product Explorer", img: IMG.ps, d: "Crawlee/Playwright scraper streaming a catalog over WebSockets.", t: ["Crawlee", "Playwright", "NestJS"], href: "projects/product-explorer/index.html" },
+      { k: "b", n: "Scraping 20 Years of NSE Filings", d: "Beating bot defenses to backfill two decades of insider filings.", t: ["Scraping", "Playwright"], href: "blog/how-i-scraped-nse-insider-filings/index.html" }
+    ],
+    [ // 02 Applied ML
+      { k: "p", n: "Fraud Detection", img: IMG.ml, d: "95% of fraud caught at 0.995 ROC-AUC on 6.4M transactions.", t: ["scikit-learn", "pandas"], href: "projects/fraud-detection/index.html" },
+      { k: "p", n: "Minute-Level Stock Prediction", img: IMG.bs, d: "Next-minute price direction over 9.4M NSE ticks.", t: ["scikit-learn", "Backtesting"], href: "projects/nse-stock-prediction/index.html" },
+      { k: "p", n: "Trader Sentiment Analysis", img: IMG.dc, d: "Fear & Greed sentiment vs trader PnL across 211K crypto trades.", t: ["pandas", "SciPy"], href: "https://github.com/VishnujanNarayanan/Trader_sentiment_analysis", ext: true },
+      { k: "b", n: "Next-Minute Price Direction", d: "Features, leakage traps, and honest backtests on 9.4M ticks.", t: ["Quant", "ML"], href: "blog/minute-level-stock-prediction/index.html" }
+    ],
+    [ // 03 Cloud & DevOps
+      { k: "p", n: "DekhLaw Platform", img: IMG.bs, d: "Production legal-tech on Railway/Vercel — Docker, self-healing schema.", t: ["Railway", "Docker", "PostgreSQL"] },
+      { k: "p", n: "Job Application Bot", img: IMG.dc, d: "Dockerized pipeline on AWS & GCP, Postgres on Neon.", t: ["Docker", "AWS", "GCP"] },
+      { k: "b", n: "Zero-Downtime Deploys", d: "Rolling restarts for background workers without dropping jobs.", t: ["DevOps", "Deploy"], href: "blog/index.html" },
+      { k: "b", n: "Rate Limiting with Redis", d: "Tiered limits that curb abuse without hurting real users.", t: ["Redis", "Backend"], href: "blog/index.html" }
+    ],
+    [ // 04 Web & API Endpoints
+      { k: "p", n: "DekhLaw API", img: IMG.bs, d: "~30 Express endpoints, JWT auth, and Twilio voice orchestration.", t: ["Express", "Twilio", "JWT"] },
+      { k: "p", n: "Law Firm Website", img: IMG.ps, d: "Next.js 14 site — 14 routes, Resend lead capture, full SEO.", t: ["Next.js", "TypeScript", "Resend"] },
+      { k: "p", n: "Professional Directory App", img: IMG.ps, d: "React Native across 12 screens over a FastAPI REST service.", t: ["React Native", "FastAPI"], href: "https://github.com/VishnujanNarayanan/professional-directory-app", ext: true },
+      { k: "b", n: "Idempotent Webhook Handlers", d: "Exactly-once effects from at-least-once delivery.", t: ["Backend", "APIs"], href: "blog/index.html" }
+    ]
+  ];
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function cardHtml(c, i, idStr) {
+    var tags = c.t.map(function (x) { return '<span class="proj-tag">' + esc(x) + "</span>"; }).join("");
+    var cta = c.k === "b" ? "Read →" : (c.href ? (c.ext ? "View code ↗" : "View project →") : "Project");
+    var face = c.k === "b"
+      ? '<span class="proj-card__shot" aria-hidden="true"></span>'
+      : '<img class="proj-card__img" src="' + c.img + '" alt="" loading="lazy">';
+    var openA = c.href ? '<a class="proj-card__media" href="' + c.href + '"' + (c.ext ? ' target="_blank" rel="noopener"' : "") + ">" : '<span class="proj-card__media">';
+    var closeA = c.href ? "</a>" : "</span>";
+    return '<div class="proj-card flow-pcard' + (c.k === "b" ? " proj-card--blog" : "") + '" data-card="' + i + '">' +
+      openA + face +
+        '<span class="proj-card__reveal"><span class="proj-card__desc">' + esc(c.d) + "</span>" +
+          '<span class="proj-tags">' + tags + "</span>" +
+          '<span class="proj-card__cta">' + cta + "</span></span>" +
+      closeA +
+      '<span class="proj-card__label"><span class="proj-card__id">' + idStr + "</span>" +
+        '<span class="proj-card__title">' + esc(c.n) + "</span></span>" +
+    "</div>";
+  }
+  Array.prototype.slice.call(flow.querySelectorAll(".flow-panel__cards")).forEach(function (grid) {
+    var pi = parseInt(grid.getAttribute("data-panel"), 10) || 0;
+    var data = CARD_DATA[pi] || [];
+    grid.innerHTML = data.map(function (c, i) {
+      return cardHtml(c, i, ("0" + (pi + 1)) + "." + (i + 1));
+    }).join("");
+  });
+  // Hover coupling — hovering an item OR a card activates the matching pair.
+  panels.forEach(function (panel) {
+    var items = Array.prototype.slice.call(panel.querySelectorAll(".flow-panel__item"));
+    var pcards = Array.prototype.slice.call(panel.querySelectorAll(".flow-panel__cards .proj-card"));
+    function setActive(idx, on) {
+      items.forEach(function (el) { if (+el.getAttribute("data-card") === idx) el.classList.toggle("is-active", on); });
+      pcards.forEach(function (el) { if (+el.getAttribute("data-card") === idx) el.classList.toggle("is-active", on); });
+    }
+    items.concat(pcards).forEach(function (el) {
+      var idx = +el.getAttribute("data-card");
+      el.addEventListener("pointerenter", function () { setActive(idx, true); });
+      el.addEventListener("pointerleave", function () { setActive(idx, false); });
+    });
+  });
+  // Staggered columns + cursor parallax (like the reference nav images, whose two
+  // columns sit offset by ±2.25rem and drift with the mouse). Each card carries a
+  // per-COLUMN baseY offset (left col up, right col down) so it's not a flat grid, plus
+  // a DEPTH so it drifts toward the cursor by a different amount. Both are folded into
+  // the card's own transform (the .flow-panel__cards container still owns the slide).
+  var pcardList = [];
+  panels.forEach(function (panel) {
+    Array.prototype.slice.call(panel.querySelectorAll(".flow-panel__cards .flow-pcard")).forEach(function (el, i) {
+      // dir matches the reference: left column y = −p, right column y = +p.
+      pcardList.push({ el: el, dir: (i % 2 === 0) ? -1 : 1 });
+    });
+  });
+  var mTY = 0, mCY = 0;       // cursor Y target / current (smoothed), normalised −0.5..0.5
+  if (!reduce) window.addEventListener("pointermove", function (e) {
+    mTY = e.clientY / window.innerHeight - 0.5;
+  }, { passive: true });
+
   // pp-space: 0 = one zone before, 0.5 = centred, 1 = one zone after. The
   // entry/exit windows are kept SHORT (0.12 wide) so cards snap into and out of
   // place over less scroll, with a wider rest band (.36–.64) in between. They
@@ -288,8 +381,11 @@
     // Warm point light driven by the hanging HTML bulb; travels with the camera.
     bulbLight = new THREE.PointLight(0xfff0d0, 0.0, 60, 2); bulbLight.position.set(9, 7, 9); scene.add(bulbLight);
 
-    // Hero image plane per panel
-    panels.forEach(createImageObject);
+    // Hero image plane per panel — DISABLED: the panel image is now a DOM grid of
+    // four square project/blog cards (.flow-panel__cards, built below), so the GL
+    // scene renders nothing but the camera/light rig still runs harmlessly. Keeping
+    // createImageObject + the empty render path avoids touching the rest of the loop.
+    // panels.forEach(createImageObject);
 
     // (Background geometric forms — icosahedron / torus / knot / octahedron — removed.)
 
@@ -495,6 +591,42 @@
       }
     });
 
+    // Per-stage cards: ported 1:1 from the GL image motion (renderGL). Same model,
+    // same distances — REST_X / OFF_L / OFF_R world units, same `REST_X*(0.5-local)`
+    // formula, same 0.08 smoothed catch-up (_coff == the image's u.off). World units
+    // → px via the camera's world→screen factor F (camZ 17, IMG_Z 1, fov 55), and the
+    // grid is centred (offset 0 = screen centre) so the cards rest right-of-centre and
+    // park fully off-screen exactly like the image. pinX cancels the track slide so the
+    // motion is scroll-driven; globalRaw (−1..N) gives the first/last their lead travel.
+    var csel = Math.round(globalRaw);
+    var clocal = globalRaw - csel;                   // [−0.5, 0.5] within the active stage
+    // Active stage slides from R_END (right, entry) to L_END (leftmost). R_END=8 is the
+    // original right entry (unchanged). L_END raised 0→2.4 so the card stops short of
+    // centre — 30% less leftward travel. OFF_L/OFF_R = off-screen park (passed/upcoming).
+    var R_END = 8, L_END = 2.4, OFF_L = -22, OFF_R = 22;
+    var F = vh / 16.658;                             // 1 world unit in px (2·(17−1)·tan(55°/2))
+    panels.forEach(function (panel, pi) {
+      var cardsEl = panel.querySelector(".flow-panel__cards");
+      if (!cardsEl) return;
+      var target = (pi === csel) ? (L_END + (R_END - L_END) * (0.5 - clocal)) : (pi < csel ? OFF_L : OFF_R);
+      panel._coff = (panel._coff === undefined) ? target : panel._coff + (target - panel._coff) * 0.08;
+      var pinX = -(pi * vw + trackX);
+      cardsEl.style.transform = "translate(calc(-50% + " + (panel._coff * F + pinX).toFixed(1) + "px),-50%)";
+      cardsEl.style.opacity = 1;
+      cardsEl.style.pointerEvents = (pi === csel && Math.abs(clocal) < 0.4) ? "auto" : "none";
+    });
+
+    // Opposite-direction column parallax — VERTICAL ONLY (horizontal is the scroll-slide
+    // above). Ported 1:1 from the reference nav-images: p = (clientY/vh − 0.5)·2·6 rem
+    // (≈±6rem ≈ ±96px), left column y = −p, right column y = +p, eased. mCY is the
+    // smoothed (clientY/vh − 0.5); the 0.05 lerp stands in for GSAP's duration-2 ease.
+    mCY += (mTY - mCY) * 0.05;
+    var p = mCY * 2 * 6;            // rem
+    for (var pc = 0; pc < pcardList.length; pc++) {
+      var o = pcardList[pc];
+      o.el.style.transform = "translateY(" + (o.dir * p).toFixed(3) + "rem)";
+    }
+
     // On desktop the GL image planes replace the DOM card floats (hidden via
     // CSS), so skip their per-frame transforms entirely. Mobile never reaches
     // this loop (it returns early in boot), so the card code still serves it.
@@ -620,23 +752,16 @@
   // so each title POPS UP already in that colour when its zone appears.
   (function setupZoneText() {
     panels.forEach(function (panel, pi) {
-      var sub = panel.querySelector(".flow-panel__sub");
-      if (pi < 2) {                                      // zones 1-2: sub colour scroll-driven (light side)
-        if (sub) lightSubs.push(sub);
+      var list = panel.querySelector(".flow-panel__list");   // the 4 project/blog links
+      if (pi < 2) {                                      // zones 1-2 (dark bg): list colour scroll-driven
+        if (list) lightSubs.push(list);                  // ul colour cascades to the items (color:inherit)
         return;
       }
       var ttl = panel.querySelector(".flow-panel__title");
       var idx = panel.querySelector(".flow-panel__index");
       if (ttl) ttl.style.color = "#231d7a";              // deep blue (darker than #3932DC)
       if (idx) idx.style.color = "#231d7a";
-      if (sub) darkSubs.push(sub);                       // colour driven by scroll in loop()
-      // pills get the same black shade (text + border) and a light chip bg so
-      // they read on the light background instead of staying white-on-white.
-      Array.prototype.forEach.call(panel.querySelectorAll(".flow-panel__pill"), function (p) {
-        p.style.color = "#050419";
-        p.style.borderColor = "rgba(5,4,25,.3)";
-        p.style.background = "rgba(255,255,255,.5)";
-      });
+      if (list) list.style.color = "#231d7a";            // deep blue, readable on the light bg
     });
   })();
   paintSky(0);

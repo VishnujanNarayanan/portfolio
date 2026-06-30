@@ -1002,3 +1002,39 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
   .brand-teaser__copy{flex:none;max-width:none}
   .brand-teaser__media{display:none}
 }
+
+/* ============================================================
+   Flow stages — 4-item text list + 4 square project/blog cards.
+   The list (left, inside .flow-panel__content) and the cards (right,
+   pinned + scroll-faded by flow.js) are coupled: hovering an item OR a
+   card adds .is-active to the matching pair, which lights the card up
+   exactly like the Projects-section .proj-card :hover.
+   ============================================================ */
+.flow-panel__list{list-style:none;margin:30px 0 0;padding:0;display:flex;flex-direction:column;gap:2px;max-width:480px;color:#fff}
+.flow-panel__list li{margin:0}
+.flow-panel__item{display:inline-block;padding:7px 0;font-size:clamp(18px,1.7vw,25px);font-weight:600;line-height:1.18;letter-spacing:-.01em;color:inherit;text-decoration:none;cursor:pointer;transition:color .25s var(--ease-default),transform .25s var(--ease-default)}
+.flow-panel__item:hover,.flow-panel__item.is-active{color:#4d8bff;transform:translateX(8px)}
+/* grouped reveal in step with the index/title (mirrors the old sub/pills fade) */
+.flow-panel__content .flow-panel__list{opacity:0;transform:translateY(26px);transition:opacity .5s var(--ease-default),transform .5s var(--ease-default)}
+.flow-panel--passed .flow-panel__content .flow-panel__list{transform:translateY(-26px)}
+.flow-panel--active .flow-panel__content .flow-panel__list{opacity:1;transform:none;transition-delay:.2s}
+
+/* The card grid that replaced the GL image. flow.js pins + fades it. */
+.flow-panel__cards{position:absolute;z-index:4;top:50%;left:50%;width:min(50vw,660px);display:grid;grid-template-columns:1fr 1fr;align-items:start;gap:20px;opacity:0;will-change:transform,opacity}
+/* Plain SQUARE cards (not the notched .proj-card shape): drop the corner notch and
+   the notched SVG frame; use a square inset border that lights up on activation. */
+.flow-panel__cards .proj-card{aspect-ratio:1/1;width:100%;overflow:hidden;box-shadow:inset 0 0 0 1.5px rgba(124,208,255,.28);transition:box-shadow .35s ease}
+.flow-pcard .proj-card__media{clip-path:none}
+/* Blog cards have no photo — an indigo→blue gradient face instead of an <img>. */
+.flow-panel__cards .proj-card__shot{position:absolute;inset:0;background:linear-gradient(150deg,#222a6b,#3f6fd8)}
+/* Class-driven activation = the same look as a :hover, so text-hover and card-hover
+   both light the card up: zoom/darken the image, wipe the reveal open, blue border. */
+.proj-card.is-active .proj-card__img{transform:scale(1.06);filter:saturate(.7) brightness(.5)}
+.proj-card.is-active .proj-card__shot{filter:brightness(.78)}
+.proj-card.is-active .proj-card__reveal{clip-path:ellipse(142% 120% at 50% 0)}
+.flow-pcard.is-active{box-shadow:inset 0 0 0 2px #4d8bff}
+
+@media (max-width:820px){
+  .flow-panel__list{max-width:none}
+  .flow-panel__cards{position:static;width:100%;transform:none!important;opacity:1!important;margin-top:26px;gap:12px}
+}
