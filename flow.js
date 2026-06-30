@@ -205,15 +205,16 @@
       el.addEventListener("pointerleave", function () { setActive(idx, false); });
     });
   });
-  // Mouse-motion parallax (like the reference nav images): each card drifts toward
-  // the cursor at its own DEPTH so the 2×2 grid separates into layers instead of
-  // sitting flat. Cursor is tracked viewport-normalised (−0.5..0.5); the loop lerps
-  // toward it and writes a per-card translate (this is the card's own transform — the
-  // .flow-panel__cards container still owns the scroll-slide).
+  // Staggered columns + cursor parallax (like the reference nav images, whose two
+  // columns sit offset by ±2.25rem and drift with the mouse). Each card carries a
+  // per-COLUMN baseY offset (left col up, right col down) so it's not a flat grid, plus
+  // a DEPTH so it drifts toward the cursor by a different amount. Both are folded into
+  // the card's own transform (the .flow-panel__cards container still owns the slide).
+  var STAGGER = 32;   // px column offset (≈2.25rem, matching .nav-menu-images-col)
   var pcardList = [];
   panels.forEach(function (panel) {
     Array.prototype.slice.call(panel.querySelectorAll(".flow-panel__cards .flow-pcard")).forEach(function (el, i) {
-      pcardList.push({ el: el, depth: 0.45 + (i % 4) * 0.2 });   // TL<TR<BL<BR depth → different drift
+      pcardList.push({ el: el, depth: 0.45 + (i % 4) * 0.2, baseY: (i % 2 === 0) ? -STAGGER : STAGGER });
     });
   });
   var mTX = 0, mTY = 0, mCX = 0, mCY = 0;       // mouse target / current (smoothed), normalised
@@ -613,13 +614,14 @@
       cardsEl.style.pointerEvents = (pi === csel && Math.abs(clocal) < 0.4) ? "auto" : "none";
     });
 
-    // Per-card cursor parallax: lerp toward the mouse, drift each card by its depth.
+    // Per-card stagger + cursor parallax: lerp toward the mouse, then offset each card
+    // by its column baseY plus a depth-scaled drift toward the cursor.
     mCX += (mTX - mCX) * 0.08;
     mCY += (mTY - mCY) * 0.08;
-    var MAG = 40;
+    var MAG = 26;
     for (var pc = 0; pc < pcardList.length; pc++) {
       var o = pcardList[pc];
-      o.el.style.transform = "translate(" + (mCX * o.depth * MAG).toFixed(1) + "px," + (mCY * o.depth * MAG * 0.7).toFixed(1) + "px)";
+      o.el.style.transform = "translate(" + (mCX * o.depth * MAG).toFixed(1) + "px," + (o.baseY + mCY * o.depth * MAG * 0.7).toFixed(1) + "px)";
     }
 
     // On desktop the GL image planes replace the DOM card floats (hidden via
