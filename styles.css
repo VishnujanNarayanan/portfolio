@@ -676,10 +676,11 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    viewBox: shelf top y=371.983→90.5%, ledge x=263.329→64.7%, bevel x=210.862→51.8%. */
 .proj-card__media{position:absolute;inset:0;overflow:hidden;clip-path:polygon(0 0,100% 0,100% 90.5%,64.7% 90.5%,51.8% 100%,0 100%)}
 .proj-card__img{width:100%;height:100%;object-fit:cover;filter:saturate(.92) brightness(.78);transition:transform .7s cubic-bezier(.19,1,.22,1),filter .5s}
-.proj-card:hover .proj-card__img{transform:scale(1.06);filter:saturate(.7) brightness(.5)}
-/* hover image-reveal wipe (ref: clip-path ellipse from the top) */
-.proj-card__reveal{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;padding:22px;background:linear-gradient(160deg,rgba(18,28,58,.72),rgba(38,62,128,.92));clip-path:ellipse(100% 0% at 50% 0);transition:clip-path .65s cubic-bezier(.19,1,.22,1)}
-.proj-card:hover .proj-card__reveal,.proj-card:focus-within .proj-card__reveal{clip-path:ellipse(142% 120% at 50% 0)}
+.proj-card:hover .proj-card__img{transform:scale(1.06);filter:saturate(1.05) brightness(1.03)}
+/* Inverted: blue reveal panel is OPEN by default (blue tint), and the SAME wipe
+   animation closes it on hover/active to expose the full-colour photo. */
+.proj-card__reveal{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;padding:22px;background:linear-gradient(160deg,rgba(18,28,58,.72),rgba(38,62,128,.92));clip-path:polygon(0% -14%,12.5% -7.9%,25% -3.5%,37.5% -0.9%,50% 0%,62.5% -0.9%,75% -3.5%,87.5% -7.9%,100% -14%,100% 100%,0% 100%);transition:clip-path .32s cubic-bezier(.4,0,.2,1)}
+.proj-card:hover .proj-card__reveal,.proj-card:focus-within .proj-card__reveal{clip-path:polygon(0% 100%,12.5% 100%,25% 100%,37.5% 100%,50% 100%,62.5% 100%,75% 100%,87.5% 100%,100% 100%,100% 100%,0% 100%);transition:clip-path .65s cubic-bezier(.19,1,.22,1)}
 .proj-card__desc{font-size:13.5px;line-height:1.55;color:#eaf0ff}
 .proj-card__reveal .proj-tags{display:flex;flex-wrap:wrap;gap:6px}
 .proj-card__reveal .proj-tag{font-size:11px;padding:2px 9px;border:1px solid rgba(159,198,239,.4);border-radius:999px;color:#cfe0ff}
@@ -1029,9 +1030,9 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .flow-panel__cards .proj-card__shot{position:absolute;inset:0;background:linear-gradient(150deg,#222a6b,#3f6fd8)}
 /* Class-driven activation = the same look as a :hover, so text-hover and card-hover
    both light the card up: zoom/darken the image, wipe the reveal open, blue border. */
-.proj-card.is-active .proj-card__img{transform:scale(1.06);filter:saturate(.7) brightness(.5)}
+.proj-card.is-active .proj-card__img{transform:scale(1.06);filter:saturate(1.05) brightness(1.03)}
 .proj-card.is-active .proj-card__shot{filter:brightness(.78)}
-.proj-card.is-active .proj-card__reveal{clip-path:ellipse(142% 120% at 50% 0)}
+.proj-card.is-active .proj-card__reveal{clip-path:polygon(0% 100%,12.5% 100%,25% 100%,37.5% 100%,50% 100%,62.5% 100%,75% 100%,87.5% 100%,100% 100%,100% 100%,0% 100%);transition:clip-path .65s cubic-bezier(.19,1,.22,1)}
 .flow-pcard.is-active,.flow-pcard:hover{box-shadow:inset 0 0 0 2px #4d8bff;border-radius:44px}
 
 @media (max-width:820px){
