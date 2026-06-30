@@ -219,9 +219,8 @@
       pcardList.push({ el: el, dir: (i % 2 === 0) ? 1 : -1, baseY: (i % 2 === 0) ? -STAGGER : STAGGER });
     });
   });
-  var mTX = 0, mTY = 0, mCX = 0, mCY = 0;       // mouse target / current (smoothed), normalised
+  var mTY = 0, mCY = 0;       // cursor Y target / current (smoothed), normalised −0.5..0.5
   if (!reduce) window.addEventListener("pointermove", function (e) {
-    mTX = e.clientX / window.innerWidth - 0.5;
     mTY = e.clientY / window.innerHeight - 0.5;
   }, { passive: true });
 
@@ -616,15 +615,15 @@
       cardsEl.style.pointerEvents = (pi === csel && Math.abs(clocal) < 0.4) ? "auto" : "none";
     });
 
-    // Stagger + opposite-direction column parallax: lerp toward the mouse, then move
-    // the two columns OPPOSITE each other (dir) — driven mainly by cursor Y, so raising
-    // the mouse pushes one column up and the other down, and lowering it reverses.
-    mCX += (mTX - mCX) * 0.08;
+    // Opposite-direction column parallax — VERTICAL ONLY (horizontal motion is the
+    // scroll-slide above). Lerp toward the cursor Y, then move the two columns opposite
+    // each other (dir): raising the mouse pushes the left column up and the right down,
+    // lowering reverses. Big magnitude to match the reference's pronounced travel.
     mCY += (mTY - mCY) * 0.08;
-    var MAG_X = 18, MAG_Y = 46;
+    var MAG_Y = 180;
     for (var pc = 0; pc < pcardList.length; pc++) {
       var o = pcardList[pc];
-      o.el.style.transform = "translate(" + (o.dir * mCX * MAG_X).toFixed(1) + "px," + (o.baseY + o.dir * mCY * MAG_Y).toFixed(1) + "px)";
+      o.el.style.transform = "translateY(" + (o.baseY + o.dir * mCY * MAG_Y).toFixed(1) + "px)";
     }
 
     // On desktop the GL image planes replace the DOM card floats (hidden via
