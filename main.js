@@ -1227,6 +1227,7 @@
   (function () {
     var section = document.querySelector(".writing");
     var wstack = section && section.querySelector(".wstack");
+    var pin = section && section.querySelector(".writing__pin");
     if (!section || !wstack) return;
     var panels = Array.prototype.slice.call(wstack.querySelectorAll(".wpanel"));
     if (!panels.length) return;
@@ -1336,38 +1337,35 @@
 
     var lastT = 0;                                      // last frame stamp
 
-    // ---- Cover-scroll lock --------------------------------------------------
-    // The features section is pulled up 100vh (margin-top:-100svh) and rides OVER
-    // the pinned blog during .writing's second (sticky) 100vh. The fan-out, though,
-    // springs over its own time — so scrolling fast could push features up over panels
-    // that are still animating. While the reveal is playing we LOCK the scroll the
-    // instant the pin reaches the top (rect.top ≤ 0 = cover-start), freezing in
-    // place, and release it the moment the panels settle — so features can only
-    // begin covering once the animation has finished.
-    var locked = false, lockY = 0;
-    var SCROLL_KEYS = { 32: 1, 33: 1, 34: 1, 35: 1, 36: 1, 38: 1, 40: 1 };  // space,pgup/dn,end,home,up,down
-    function blockScroll(e) { e.preventDefault(); }
-    function blockKeys(e) { if (SCROLL_KEYS[e.keyCode]) e.preventDefault(); }
-    function clampScroll() { if (locked && window.scrollY !== lockY) window.scrollTo(0, lockY); }
-    function engageLock() {
-      if (locked) return; locked = true; lockY = window.scrollY;
-      if (lenis) lenis.stop();
-      window.addEventListener("wheel", blockScroll, { passive: false });
-      window.addEventListener("touchmove", blockScroll, { passive: false });
-      window.addEventListener("keydown", blockKeys, false);
-      window.addEventListener("scroll", clampScroll, { passive: true });  // catch scrollbar drags too
+    // ---- Cover dwell (no scroll lock) ---------------------------------------
+    // Instead of freezing the scroll while the fan-out springs in, .writing is lengthened by
+    // BLOG_DWELL·100vh of extra pinned scroll (see styles.css `.writing{height:...}`). The
+    // features section (margin-top:-100svh) only rides OVER the LAST 100vh, so that extra
+    // length is a DWELL: the pin holds the fully-revealed blog at the top while you scroll
+    // through it — giving the reveal time to play — before features begins covering. This
+    // mirrors the hero's phase-1→phase-2 fullscreen checkpoint dwell (HERO_DWELL).
+    //
+    // DWELL DRIFT + FOLD-BACK (scroll-driven, reversible): while pinned, s = -rect.top is how far we've
+    // scrolled into the pinned region (dwell = s∈[0,.3vh], features cover = s∈[.3vh,1.3vh]).
+    //  • From HALFWAY through the dwell the blog eases UP at a FRACTION of scroll (DRIFT) — not 1:1,
+    //    just enough to confirm the scroll is registering while it's otherwise held.
+    //  • HALFWAY through the features cover (s≈.8vh = rect.top≈-VANISH) the reveal folds back the SAME
+    //    way it came in (see pT below — the fan-out runs in reverse); scrolling back up past that same
+    //    line plays it forward again. Both are pure functions of scroll, so it's fully reversible.
+    var DRIFT = 0.25;                                   // fraction of scroll the pinned blog drifts up
+    var VANISH = 0.8;                                   // fold-back threshold as a fraction of vh into the cover
+    function updatePinDwell(rect, vh) {
+      if (!pin) return;
+      if (rect.top > 0) { pin.style.transform = ""; return; }
+      var s = -rect.top;
+      var driftStart = 0.15 * vh;                       // halfway through the 0.3vh dwell
+      var drift = (!reduceMo && s > driftStart) ? (s - driftStart) * DRIFT : 0;
+      pin.style.transform = drift ? "translateY(" + (-drift).toFixed(1) + "px)" : "";
     }
-    function releaseLock() {
-      if (!locked) return; locked = false;
-      if (lenis) lenis.start();
-      window.removeEventListener("wheel", blockScroll, { passive: false });
-      window.removeEventListener("touchmove", blockScroll, { passive: false });
-      window.removeEventListener("keydown", blockKeys, false);
-      window.removeEventListener("scroll", clampScroll, { passive: true });
-    }
+
     function render(now) {
       if (window.innerWidth <= 820) {
-        releaseLock();                                   // never lock on mobile (no cover-scroll)
+        if (pin) pin.style.transform = "";
         if (settled !== null) { panels.forEach(function (p, i) {
           ["transition", "transform", "transformOrigin", "clipPath", "flexBasis", "flexGrow", "flexShrink", "height", "boxShadow", "opacity"].forEach(function (k) { p.style[k] = ""; });
           if (TXT[i].vert) { TXT[i].vert.style.top = ""; TXT[i].vert.style.opacity = ""; }
@@ -1377,12 +1375,15 @@
         lastT = 0;
         return;
       }
-      if (reduceMo) { setSettled(true); return; }        // no fan: land in place immediately
       var vh = window.innerHeight;
       var rect = section.getBoundingClientRect();
-      // SINGLE THRESHOLD: the section's top crossing mid-viewport. REVERSIBLE — pT follows the
-      // threshold live, so scrolling back UP past the SAME line folds the fan + open back out.
-      var triggered = rect.top <= vh * 0.5;
+      updatePinDwell(rect, vh);                          // drift + vanish run every frame (even after the fan settles)
+      if (reduceMo) { setSettled(true); return; }        // no fan: land in place immediately
+      // REVEAL WINDOW (reversible): revealed while the section top is between the appear line (mid-
+      // viewport) and the fold-back line (VANISH·vh into the cover). pT follows it live, so scrolling
+      // DOWN past the fold line OR back UP past the appear line plays the fan-out in reverse — the same
+      // animation either way.
+      var triggered = rect.top <= vh * 0.5 && rect.top > -VANISH * vh;
       if (!lastT) lastT = now;
       var dt = Math.min((now - lastT) / 1000, 0.05); lastT = now;  // clamp dt (tab-switch safety)
 
@@ -1398,10 +1399,6 @@
       else if (!openArmed && pCur > 0.85 && pVel <= 0) openArmed = true;
       openU = clamp(openU + (openArmed ? 1 : -1) * dt / OPEN_DUR, 0, 1);
       openProg = easeIO(openU);
-
-      // Hold the cover-scroll while the fan is springing IN: lock once the pin reaches the top
-      // (rect.top ≤ 0) and isn't settled; release at rest. On reverse rect.top > 0 so it never locks.
-      if (!atRest && triggered && rect.top <= 0) engageLock(); else if (atRest) releaseLock();
 
       if (atRest) { pCur = 1; pVel = 0; setSettled(true); return; }  // landed → live accordion
       setSettled(false);
