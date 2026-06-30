@@ -205,6 +205,22 @@
       el.addEventListener("pointerleave", function () { setActive(idx, false); });
     });
   });
+  // Mouse-motion parallax (like the reference nav images): each card drifts toward
+  // the cursor at its own DEPTH so the 2×2 grid separates into layers instead of
+  // sitting flat. Cursor is tracked viewport-normalised (−0.5..0.5); the loop lerps
+  // toward it and writes a per-card translate (this is the card's own transform — the
+  // .flow-panel__cards container still owns the scroll-slide).
+  var pcardList = [];
+  panels.forEach(function (panel) {
+    Array.prototype.slice.call(panel.querySelectorAll(".flow-panel__cards .flow-pcard")).forEach(function (el, i) {
+      pcardList.push({ el: el, depth: 0.45 + (i % 4) * 0.2 });   // TL<TR<BL<BR depth → different drift
+    });
+  });
+  var mTX = 0, mTY = 0, mCX = 0, mCY = 0;       // mouse target / current (smoothed), normalised
+  if (!reduce) window.addEventListener("pointermove", function (e) {
+    mTX = e.clientX / window.innerWidth - 0.5;
+    mTY = e.clientY / window.innerHeight - 0.5;
+  }, { passive: true });
 
   // pp-space: 0 = one zone before, 0.5 = centred, 1 = one zone after. The
   // entry/exit windows are kept SHORT (0.12 wide) so cards snap into and out of
@@ -596,6 +612,15 @@
       cardsEl.style.opacity = 1;
       cardsEl.style.pointerEvents = (pi === csel && Math.abs(clocal) < 0.4) ? "auto" : "none";
     });
+
+    // Per-card cursor parallax: lerp toward the mouse, drift each card by its depth.
+    mCX += (mTX - mCX) * 0.08;
+    mCY += (mTY - mCY) * 0.08;
+    var MAG = 40;
+    for (var pc = 0; pc < pcardList.length; pc++) {
+      var o = pcardList[pc];
+      o.el.style.transform = "translate(" + (mCX * o.depth * MAG).toFixed(1) + "px," + (mCY * o.depth * MAG * 0.7).toFixed(1) + "px)";
+    }
 
     // On desktop the GL image planes replace the DOM card floats (hidden via
     // CSS), so skip their per-frame transforms entirely. Mobile never reaches
