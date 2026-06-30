@@ -37,6 +37,15 @@
   function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
   function easeIn(t) { return t * t * t; }
   function smooth(t) { return t * t * (3 - 2 * t); }
+  // A panel's grid offset (_coff) as it was delayMs ago, read from a short history
+  // ring — used to give one card column a true time-delayed entrance at the swap.
+  function coffDelayed(panel, delayMs, now) {
+    var h = panel._coffHist;
+    if (!h || !h.length) return panel._coff;
+    var tt = now - delayMs;
+    for (var i = h.length - 1; i >= 0; i--) { if (h[i].t <= tt) return h[i].v; }
+    return h[0].v;
+  }
 
   /* ---------- Zone-title poses ----------
      A title pose = where the .flow-panel__content sits relative to its rest spot:
@@ -454,7 +463,6 @@
   /* ---------- Main loop ---------- */
   var lastSel = -1;
   var lastGlobalRaw = 0, scrollDir = 1;   // scroll direction: +1 forward (down), −1 back (up)
-  var lastCsel = 0, swapT0 = -1e9;        // set-change threshold timestamp (slow-column delay)
   var darkSubs = [];   // zone 3-4 sub paragraphs; colour scroll-driven black→grey
   var lightSubs = [];  // zone 1-2 sub paragraphs; colour scroll-driven grey→white
   var navOn = false;   // top-nav reel state; fired once per threshold crossing
@@ -607,7 +615,6 @@
     // park fully off-screen exactly like the image. pinX cancels the track slide so the
     // motion is scroll-driven; globalRaw (−1..N) gives the first/last their lead travel.
     var csel = Math.round(globalRaw);
-    if (csel !== lastCsel) { swapT0 = now; lastCsel = csel; }   // stamp the set-change threshold
     var clocal = globalRaw - csel;                   // [−0.5, 0.5] within the active stage
     // Active stage slides from R_END (right, entry) to L_END (leftmost). R_END=8 is the
     // original right entry (unchanged). L_END raised 0→2.4 so the card stops short of
@@ -619,6 +626,11 @@
       if (!cardsEl) return;
       var target = (pi === csel) ? (L_END + (R_END - L_END) * (0.5 - clocal)) : (pi < csel ? OFF_L : OFF_R);
       panel._coff = (panel._coff === undefined) ? target : panel._coff + (target - panel._coff) * 0.08;
+      var hist = panel._coffHist || (panel._coffHist = []);   // short history for the delayed column
+      hist.push({ t: now, v: panel._coff });
+      while (hist.length > 1 && hist[1].t < now - 250) hist.shift();
+      if (pi === csel) { if (!panel._wasActive) panel._arriveT0 = now; panel._wasActive = true; }
+      else panel._wasActive = false;                          // stamp the moment a panel becomes active
       var pinX = -(pi * vw + trackX);
       cardsEl.style.transform = "translate(calc(-50% + " + (panel._coff * F + pinX).toFixed(1) + "px),-50%)";
       cardsEl.style.opacity = 1;
@@ -642,31 +654,43 @@
     // shallow then steepens as it flies off. rowSign sends the top row up (top-right in /
     // top-left out), the bottom row down. The column stagger (o.dir·p) is preserved.
     var DIAG_STEEP = 200, DIAG_P = 1.7;
-    // Settle ease — the diagonal offset doesn't SNAP to the grid line when the card
-    // reaches the band; it eases out as a threshold-driven side effect (frame-based,
-    // not scroll-position), so the offset BLEEDS into the scroll zone and the card
-    // drifts into its final row. Per-column rates: the left column settles quickly,
-    // the right column eases in WAY slower, so the two columns don't land together.
-    // On scroll-BACK (up) the rates flip per column — the column that led now trails.
-    // The slow column also STARTS a touch later: held frozen for SLOW_DELAY_MS after the
-    // set-change threshold so it arrives just after the fast column (which reacts at the
-    // threshold). Frame-based, so it's a threshold side effect, not scroll-position.
-    var SETTLE_FAST = 0.052, SETTLE_SLOW = 0.035, SLOW_DELAY_MS = 15;
-    var leftFast = scrollDir >= 0;   // forward: left col fast; back: left col slow (flipped)
+    // Two layered effects, BOTH active only on the ENTRANCE/EXIT swap (gated to outside
+    // the rest band [L_END,R_END] via dn / g, so NEITHER does anything while you scroll
+    // within a zone):
+    //  1) Diagonal OFFSET that EASES in — diagY = rowSign·STEEP·dn^P is the target, and
+    //     o.diagCur lerps toward it (per-column rate; the lag column eases in slower), so
+    //     the offset settles into the row instead of snapping. dn=0 in the band ⇒ no
+    //     within-zone offset.
+    //  2) Per-column ENTRANCE DELAY — the LAG column renders the grid position from
+    //     COL_DELAY_MS ago (coffDelayed), so it flies in/out a touch later than the lead
+    //     column. dx is gated by g (0 inside the band) so the lag only happens during the
+    //     swap and fades out as the column joins the band — never during scrolling.
+    // On scroll-BACK the lead/lag (and the fast/slow ease) flip per column.
+    var COL_DELAY_MS = 90, SETTLE_FAST = 0.052, SETTLE_SLOW = 0.048, ARRIVE_WINDOW = 650;
+    var leftLeads = scrollDir >= 0;   // forward: left col leads; back: right col leads
     for (var pc = 0; pc < pcardList.length; pc++) {
       var o = pcardList[pc];
-      var coff = (o.panel._coff === undefined) ? L_END : o.panel._coff;
-      var dn = 0;
-      if (coff > R_END) dn = (coff - R_END) / (OFF_R - R_END);        // arriving from the right
-      else if (coff < L_END) dn = (coff - L_END) / (OFF_L - L_END);   // leaving to the left
-      dn = clamp(dn, 0, 1);
-      var diagTarget = o.rowSign * DIAG_STEEP * Math.pow(dn, DIAG_P);
-      var settle = ((o.dir < 0) === leftFast) ? SETTLE_FAST : SETTLE_SLOW;  // flips on scroll-back
+      var coffNow = (o.panel._coff === undefined) ? L_END : o.panel._coff;
+      var isLag = (o.dir < 0) !== leftLeads;                  // the delayed (later) column
+      var coffUse = isLag ? coffDelayed(o.panel, COL_DELAY_MS, now) : coffNow;
+      // Vertical-diagonal ramp: 0 inside the rest band, ramps to 1 off either edge.
+      var g = 0;
+      if (coffUse > R_END) g = clamp((coffUse - R_END) / (OFF_R - R_END), 0, 1);
+      else if (coffUse < L_END) g = clamp((coffUse - L_END) / (OFF_L - L_END), 0, 1);
+      // Horizontal per-column delay is ARRIVAL-ONLY, gated by TIME since the panel became
+      // active — NOT by off-band position. (Position-gating spent the whole delay off the
+      // right edge, so the cards looked aligned by the time they were visible.) wDelay = 1
+      // at the swap, eases to 0 over ARRIVE_WINDOW, covering the visible entrance and then
+      // releasing before the within-zone scrub (no scroll lag). Only the active panel; on
+      // EXIT it's 0 so both columns leave together.
+      var aw = (o.panel._arriveT0 === undefined) ? 0 : clamp(1 - (now - o.panel._arriveT0) / ARRIVE_WINDOW, 0, 1);
+      var wDelay = (o.panel === panels[csel]) ? aw : 0;
+      var dx = isLag ? (coffUse - coffNow) * F * wDelay : 0;
+      var diagTarget = o.rowSign * DIAG_STEEP * Math.pow(g, DIAG_P);  // super-linear off the band
+      var settle = ((o.dir < 0) === leftLeads) ? SETTLE_FAST : SETTLE_SLOW;  // lag col eases slower
       if (o.diagCur === undefined) o.diagCur = diagTarget;
-      // Slow column waits SLOW_DELAY_MS past the threshold before it starts easing in.
-      if (!(settle === SETTLE_SLOW && (now - swapT0) < SLOW_DELAY_MS))
-        o.diagCur += (diagTarget - o.diagCur) * settle;
-      o.el.style.transform = "translateY(" + o.diagCur.toFixed(1) + "px) translateY(" + (o.dir * p).toFixed(3) + "rem)";
+      o.diagCur += (diagTarget - o.diagCur) * settle;
+      o.el.style.transform = "translate(" + dx.toFixed(1) + "px," + o.diagCur.toFixed(1) + "px) translateY(" + (o.dir * p).toFixed(3) + "rem)";
     }
 
     // On desktop the GL image planes replace the DOM card floats (hidden via
