@@ -210,13 +210,11 @@
   // per-COLUMN baseY offset (left col up, right col down) so it's not a flat grid, plus
   // a DEPTH so it drifts toward the cursor by a different amount. Both are folded into
   // the card's own transform (the .flow-panel__cards container still owns the slide).
-  var STAGGER = 32;   // px column offset (≈2.25rem, matching .nav-menu-images-col)
   var pcardList = [];
   panels.forEach(function (panel) {
     Array.prototype.slice.call(panel.querySelectorAll(".flow-panel__cards .flow-pcard")).forEach(function (el, i) {
-      // dir = +1 for the left column, −1 for the right — the two columns drift in
-      // OPPOSITE directions with the cursor (mouse up → left up / right down, etc.).
-      pcardList.push({ el: el, dir: (i % 2 === 0) ? 1 : -1, baseY: (i % 2 === 0) ? -STAGGER : STAGGER });
+      // dir matches the reference: left column y = −p, right column y = +p.
+      pcardList.push({ el: el, dir: (i % 2 === 0) ? -1 : 1 });
     });
   });
   var mTY = 0, mCY = 0;       // cursor Y target / current (smoothed), normalised −0.5..0.5
@@ -615,15 +613,15 @@
       cardsEl.style.pointerEvents = (pi === csel && Math.abs(clocal) < 0.4) ? "auto" : "none";
     });
 
-    // Opposite-direction column parallax — VERTICAL ONLY (horizontal motion is the
-    // scroll-slide above). Lerp toward the cursor Y, then move the two columns opposite
-    // each other (dir): raising the mouse pushes the left column up and the right down,
-    // lowering reverses. Big magnitude to match the reference's pronounced travel.
-    mCY += (mTY - mCY) * 0.08;
-    var MAG_Y = 180;
+    // Opposite-direction column parallax — VERTICAL ONLY (horizontal is the scroll-slide
+    // above). Ported 1:1 from the reference nav-images: p = (clientY/vh − 0.5)·2·6 rem
+    // (≈±6rem ≈ ±96px), left column y = −p, right column y = +p, eased. mCY is the
+    // smoothed (clientY/vh − 0.5); the 0.05 lerp stands in for GSAP's duration-2 ease.
+    mCY += (mTY - mCY) * 0.05;
+    var p = mCY * 2 * 6;            // rem
     for (var pc = 0; pc < pcardList.length; pc++) {
       var o = pcardList[pc];
-      o.el.style.transform = "translateY(" + (o.baseY + o.dir * mCY * MAG_Y).toFixed(1) + "px)";
+      o.el.style.transform = "translateY(" + (o.dir * p).toFixed(3) + "rem)";
     }
 
     // On desktop the GL image planes replace the DOM card floats (hidden via
