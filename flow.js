@@ -454,6 +454,7 @@
   /* ---------- Main loop ---------- */
   var lastSel = -1;
   var lastGlobalRaw = 0, scrollDir = 1;   // scroll direction: +1 forward (down), −1 back (up)
+  var lastCsel = 0, swapT0 = -1e9;        // set-change threshold timestamp (slow-column delay)
   var darkSubs = [];   // zone 3-4 sub paragraphs; colour scroll-driven black→grey
   var lightSubs = [];  // zone 1-2 sub paragraphs; colour scroll-driven grey→white
   var navOn = false;   // top-nav reel state; fired once per threshold crossing
@@ -606,6 +607,7 @@
     // park fully off-screen exactly like the image. pinX cancels the track slide so the
     // motion is scroll-driven; globalRaw (−1..N) gives the first/last their lead travel.
     var csel = Math.round(globalRaw);
+    if (csel !== lastCsel) { swapT0 = now; lastCsel = csel; }   // stamp the set-change threshold
     var clocal = globalRaw - csel;                   // [−0.5, 0.5] within the active stage
     // Active stage slides from R_END (right, entry) to L_END (leftmost). R_END=8 is the
     // original right entry (unchanged). L_END raised 0→2.4 so the card stops short of
@@ -646,7 +648,10 @@
     // drifts into its final row. Per-column rates: the left column settles quickly,
     // the right column eases in WAY slower, so the two columns don't land together.
     // On scroll-BACK (up) the rates flip per column — the column that led now trails.
-    var SETTLE_FAST = 0.052, SETTLE_SLOW = 0.035;
+    // The slow column also STARTS a touch later: held frozen for SLOW_DELAY_MS after the
+    // set-change threshold so it arrives just after the fast column (which reacts at the
+    // threshold). Frame-based, so it's a threshold side effect, not scroll-position.
+    var SETTLE_FAST = 0.052, SETTLE_SLOW = 0.035, SLOW_DELAY_MS = 15;
     var leftFast = scrollDir >= 0;   // forward: left col fast; back: left col slow (flipped)
     for (var pc = 0; pc < pcardList.length; pc++) {
       var o = pcardList[pc];
@@ -658,7 +663,9 @@
       var diagTarget = o.rowSign * DIAG_STEEP * Math.pow(dn, DIAG_P);
       var settle = ((o.dir < 0) === leftFast) ? SETTLE_FAST : SETTLE_SLOW;  // flips on scroll-back
       if (o.diagCur === undefined) o.diagCur = diagTarget;
-      o.diagCur += (diagTarget - o.diagCur) * settle;
+      // Slow column waits SLOW_DELAY_MS past the threshold before it starts easing in.
+      if (!(settle === SETTLE_SLOW && (now - swapT0) < SLOW_DELAY_MS))
+        o.diagCur += (diagTarget - o.diagCur) * settle;
       o.el.style.transform = "translateY(" + o.diagCur.toFixed(1) + "px) translateY(" + (o.dir * p).toFixed(3) + "rem)";
     }
 
