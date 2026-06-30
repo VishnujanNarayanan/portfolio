@@ -1227,6 +1227,7 @@
   (function () {
     var section = document.querySelector(".writing");
     var wstack = section && section.querySelector(".wstack");
+    var pin = section && section.querySelector(".writing__pin");
     if (!section || !wstack) return;
     var panels = Array.prototype.slice.call(wstack.querySelectorAll(".wpanel"));
     if (!panels.length) return;
@@ -1343,8 +1344,28 @@
     // length is a DWELL: the pin holds the fully-revealed blog at the top while you scroll
     // through it — giving the reveal time to play — before features begins covering. This
     // mirrors the hero's phase-1→phase-2 fullscreen checkpoint dwell (HERO_DWELL).
+    //
+    // DWELL DRIFT + FOLD-BACK (scroll-driven, reversible): while pinned, s = -rect.top is how far we've
+    // scrolled into the pinned region (dwell = s∈[0,.3vh], features cover = s∈[.3vh,1.3vh]).
+    //  • From HALFWAY through the dwell the blog eases UP at a FRACTION of scroll (DRIFT) — not 1:1,
+    //    just enough to confirm the scroll is registering while it's otherwise held.
+    //  • HALFWAY through the features cover (s≈.8vh = rect.top≈-VANISH) the reveal folds back the SAME
+    //    way it came in (see pT below — the fan-out runs in reverse); scrolling back up past that same
+    //    line plays it forward again. Both are pure functions of scroll, so it's fully reversible.
+    var DRIFT = 0.25;                                   // fraction of scroll the pinned blog drifts up
+    var VANISH = 0.8;                                   // fold-back threshold as a fraction of vh into the cover
+    function updatePinDwell(rect, vh) {
+      if (!pin) return;
+      if (rect.top > 0) { pin.style.transform = ""; return; }
+      var s = -rect.top;
+      var driftStart = 0.15 * vh;                       // halfway through the 0.3vh dwell
+      var drift = (!reduceMo && s > driftStart) ? (s - driftStart) * DRIFT : 0;
+      pin.style.transform = drift ? "translateY(" + (-drift).toFixed(1) + "px)" : "";
+    }
+
     function render(now) {
       if (window.innerWidth <= 820) {
+        if (pin) pin.style.transform = "";
         if (settled !== null) { panels.forEach(function (p, i) {
           ["transition", "transform", "transformOrigin", "clipPath", "flexBasis", "flexGrow", "flexShrink", "height", "boxShadow", "opacity"].forEach(function (k) { p.style[k] = ""; });
           if (TXT[i].vert) { TXT[i].vert.style.top = ""; TXT[i].vert.style.opacity = ""; }
@@ -1354,12 +1375,15 @@
         lastT = 0;
         return;
       }
-      if (reduceMo) { setSettled(true); return; }        // no fan: land in place immediately
       var vh = window.innerHeight;
       var rect = section.getBoundingClientRect();
-      // SINGLE THRESHOLD: the section's top crossing mid-viewport. REVERSIBLE — pT follows the
-      // threshold live, so scrolling back UP past the SAME line folds the fan + open back out.
-      var triggered = rect.top <= vh * 0.5;
+      updatePinDwell(rect, vh);                          // drift + vanish run every frame (even after the fan settles)
+      if (reduceMo) { setSettled(true); return; }        // no fan: land in place immediately
+      // REVEAL WINDOW (reversible): revealed while the section top is between the appear line (mid-
+      // viewport) and the fold-back line (VANISH·vh into the cover). pT follows it live, so scrolling
+      // DOWN past the fold line OR back UP past the appear line plays the fan-out in reverse — the same
+      // animation either way.
+      var triggered = rect.top <= vh * 0.5 && rect.top > -VANISH * vh;
       if (!lastT) lastT = now;
       var dt = Math.min((now - lastT) / 1000, 0.05); lastT = now;  // clamp dt (tab-switch safety)
 
