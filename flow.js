@@ -214,7 +214,10 @@
   panels.forEach(function (panel) {
     Array.prototype.slice.call(panel.querySelectorAll(".flow-panel__cards .flow-pcard")).forEach(function (el, i) {
       // dir matches the reference: left column y = −p, right column y = +p.
-      pcardList.push({ el: el, dir: (i % 2 === 0) ? -1 : 1 });
+      // panel = owning stage (for the grid's _coff slide); rowSign drives the
+      // per-ROW diagonal enter/exit (top row up, bottom row down) — i<2 = top row
+      // since the 2-col grid is filled row-major.
+      pcardList.push({ el: el, panel: panel, dir: (i % 2 === 0) ? -1 : 1, rowSign: (i < 2) ? -1 : 1 });
     });
   });
   var mTY = 0, mCY = 0;       // cursor Y target / current (smoothed), normalised −0.5..0.5
@@ -450,6 +453,7 @@
 
   /* ---------- Main loop ---------- */
   var lastSel = -1;
+  var lastGlobalRaw = 0, scrollDir = 1;   // scroll direction: +1 forward (down), −1 back (up)
   var darkSubs = [];   // zone 3-4 sub paragraphs; colour scroll-driven black→grey
   var lightSubs = [];  // zone 1-2 sub paragraphs; colour scroll-driven grey→white
   var navOn = false;   // top-nav reel state; fired once per threshold crossing
@@ -467,6 +471,9 @@
     // of overscroll on each side: at -1 the first zone waits off-right (pre-entry),
     // crossing -0.5 fires its appear + image entry; at N the last zone has exited.
     var globalRaw = total > 0 ? clamp((-rect.top) / total * (N - 1), -1, N) : 0;
+    if (globalRaw > lastGlobalRaw + 1e-4) scrollDir = 1;
+    else if (globalRaw < lastGlobalRaw - 1e-4) scrollDir = -1;
+    lastGlobalRaw = globalRaw;
 
     journey.classList.toggle("is-live", rect.top <= 1 && rect.bottom > vh * 0.6);
 
@@ -622,9 +629,37 @@
     // smoothed (clientY/vh − 0.5); the 0.05 lerp stands in for GSAP's duration-2 ease.
     mCY += (mTY - mCY) * 0.05;
     var p = mCY * 2 * 6;            // rem
+    // Per-ROW diagonal — ONLY on the SET-CHANGE swap, NOT the within-zone scroll-slide.
+    // The active set scrubs horizontally inside the rest band [L_END, R_END] (that
+    // right→left slide stays purely horizontal, unchanged). A set only travels OUTSIDE
+    // that band when the active stage changes: arriving from OFF_R or leaving to OFF_L.
+    // So the diagonal is gated to outside-the-band: dn = 0 within [L_END, R_END]; it
+    // ramps 0→1 as the grid heads to OFF_R (arriving) or OFF_L (leaving). A super-linear
+    // dn^P keeps the path flat near the band edge and steep far out — so an arriving set
+    // comes in steep-from-the-corner then eases to horizontal, and a leaving set starts
+    // shallow then steepens as it flies off. rowSign sends the top row up (top-right in /
+    // top-left out), the bottom row down. The column stagger (o.dir·p) is preserved.
+    var DIAG_STEEP = 200, DIAG_P = 1.7;
+    // Settle ease — the diagonal offset doesn't SNAP to the grid line when the card
+    // reaches the band; it eases out as a threshold-driven side effect (frame-based,
+    // not scroll-position), so the offset BLEEDS into the scroll zone and the card
+    // drifts into its final row. Per-column rates: the left column settles quickly,
+    // the right column eases in WAY slower, so the two columns don't land together.
+    // On scroll-BACK (up) the rates flip per column — the column that led now trails.
+    var SETTLE_FAST = 0.06, SETTLE_SLOW = 0.035;
+    var leftFast = scrollDir >= 0;   // forward: left col fast; back: left col slow (flipped)
     for (var pc = 0; pc < pcardList.length; pc++) {
       var o = pcardList[pc];
-      o.el.style.transform = "translateY(" + (o.dir * p).toFixed(3) + "rem)";
+      var coff = (o.panel._coff === undefined) ? L_END : o.panel._coff;
+      var dn = 0;
+      if (coff > R_END) dn = (coff - R_END) / (OFF_R - R_END);        // arriving from the right
+      else if (coff < L_END) dn = (coff - L_END) / (OFF_L - L_END);   // leaving to the left
+      dn = clamp(dn, 0, 1);
+      var diagTarget = o.rowSign * DIAG_STEEP * Math.pow(dn, DIAG_P);
+      var settle = ((o.dir < 0) === leftFast) ? SETTLE_FAST : SETTLE_SLOW;  // flips on scroll-back
+      if (o.diagCur === undefined) o.diagCur = diagTarget;
+      o.diagCur += (diagTarget - o.diagCur) * settle;
+      o.el.style.transform = "translateY(" + o.diagCur.toFixed(1) + "px) translateY(" + (o.dir * p).toFixed(3) + "rem)";
     }
 
     // On desktop the GL image planes replace the DOM card floats (hidden via
