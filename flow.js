@@ -214,7 +214,10 @@
   panels.forEach(function (panel) {
     Array.prototype.slice.call(panel.querySelectorAll(".flow-panel__cards .flow-pcard")).forEach(function (el, i) {
       // dir matches the reference: left column y = −p, right column y = +p.
-      pcardList.push({ el: el, dir: (i % 2 === 0) ? -1 : 1 });
+      // panel = owning stage (for the grid's _coff slide); rowSign drives the
+      // per-ROW diagonal enter/exit (top row up, bottom row down) — i<2 = top row
+      // since the 2-col grid is filled row-major.
+      pcardList.push({ el: el, panel: panel, dir: (i % 2 === 0) ? -1 : 1, rowSign: (i < 2) ? -1 : 1 });
     });
   });
   var mTY = 0, mCY = 0;       // cursor Y target / current (smoothed), normalised −0.5..0.5
@@ -622,9 +625,26 @@
     // smoothed (clientY/vh − 0.5); the 0.05 lerp stands in for GSAP's duration-2 ease.
     mCY += (mTY - mCY) * 0.05;
     var p = mCY * 2 * 6;            // rem
+    // Per-ROW diagonal — ONLY on the SET-CHANGE swap, NOT the within-zone scroll-slide.
+    // The active set scrubs horizontally inside the rest band [L_END, R_END] (that
+    // right→left slide stays purely horizontal, unchanged). A set only travels OUTSIDE
+    // that band when the active stage changes: arriving from OFF_R or leaving to OFF_L.
+    // So the diagonal is gated to outside-the-band: dn = 0 within [L_END, R_END]; it
+    // ramps 0→1 as the grid heads to OFF_R (arriving) or OFF_L (leaving). A super-linear
+    // dn^P keeps the path flat near the band edge and steep far out — so an arriving set
+    // comes in steep-from-the-corner then eases to horizontal, and a leaving set starts
+    // shallow then steepens as it flies off. rowSign sends the top row up (top-right in /
+    // top-left out), the bottom row down. The column stagger (o.dir·p) is preserved.
+    var DIAG_STEEP = 200, DIAG_P = 1.7;
     for (var pc = 0; pc < pcardList.length; pc++) {
       var o = pcardList[pc];
-      o.el.style.transform = "translateY(" + (o.dir * p).toFixed(3) + "rem)";
+      var coff = (o.panel._coff === undefined) ? L_END : o.panel._coff;
+      var dn = 0;
+      if (coff > R_END) dn = (coff - R_END) / (OFF_R - R_END);        // arriving from the right
+      else if (coff < L_END) dn = (coff - L_END) / (OFF_L - L_END);   // leaving to the left
+      dn = clamp(dn, 0, 1);
+      var diagY = o.rowSign * DIAG_STEEP * Math.pow(dn, DIAG_P);
+      o.el.style.transform = "translateY(" + diagY.toFixed(1) + "px) translateY(" + (o.dir * p).toFixed(3) + "rem)";
     }
 
     // On desktop the GL image planes replace the DOM card floats (hidden via
