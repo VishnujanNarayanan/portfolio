@@ -581,23 +581,24 @@
       }
     });
 
-    // Per-stage cards: SLIDE like the old GL image — NO fade. The active stage's
-    // cards enter from the right and slide to rest; the passed stage is parked
-    // off-screen LEFT, the upcoming one off-screen RIGHT; the .flow__wrapper overflow
-    // clips them so they physically scroll away. A smoothed catch-up (_coff, like the
-    // image's u.off) turns the threshold swap into a continuous slide rather than a
-    // jump. pinX cancels the track slide so the slide is scroll-driven; globalRaw
-    // (−1..N) gives the first/last stages their lead-in / lead-out travel.
+    // Per-stage cards: ported 1:1 from the GL image motion (renderGL). Same model,
+    // same distances — REST_X / OFF_L / OFF_R world units, same `REST_X*(0.5-local)`
+    // formula, same 0.08 smoothed catch-up (_coff == the image's u.off). World units
+    // → px via the camera's world→screen factor F (camZ 17, IMG_Z 1, fov 55), and the
+    // grid is centred (offset 0 = screen centre) so the cards rest right-of-centre and
+    // park fully off-screen exactly like the image. pinX cancels the track slide so the
+    // motion is scroll-driven; globalRaw (−1..N) gives the first/last their lead travel.
     var csel = Math.round(globalRaw);
     var clocal = globalRaw - csel;                   // [−0.5, 0.5] within the active stage
-    var OFF_X = vw * 1.3;                            // parked fully off-screen
+    var REST_X = 8, OFF_L = -22, OFF_R = 22;         // identical to the GL image constants
+    var F = vh / 16.658;                             // 1 world unit in px (2·(17−1)·tan(55°/2))
     panels.forEach(function (panel, pi) {
       var cardsEl = panel.querySelector(".flow-panel__cards");
       if (!cardsEl) return;
-      var target = (pi === csel) ? (-clocal * vw * 1.1) : (pi < csel ? -OFF_X : OFF_X);
-      panel._coff = (panel._coff === undefined) ? target : panel._coff + (target - panel._coff) * 0.1;
+      var target = (pi === csel) ? (REST_X * (0.5 - clocal)) : (pi < csel ? OFF_L : OFF_R);
+      panel._coff = (panel._coff === undefined) ? target : panel._coff + (target - panel._coff) * 0.08;
       var pinX = -(pi * vw + trackX);
-      cardsEl.style.transform = "translate(" + (panel._coff + pinX).toFixed(1) + "px,-50%)";
+      cardsEl.style.transform = "translate(calc(-50% + " + (panel._coff * F + pinX).toFixed(1) + "px),-50%)";
       cardsEl.style.opacity = 1;
       cardsEl.style.pointerEvents = (pi === csel && Math.abs(clocal) < 0.4) ? "auto" : "none";
     });

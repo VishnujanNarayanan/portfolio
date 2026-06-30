@@ -1020,7 +1020,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .flow-panel--active .flow-panel__content .flow-panel__list{opacity:1;transform:none;transition-delay:.2s}
 
 /* The card grid that replaced the GL image. flow.js pins + fades it. */
-.flow-panel__cards{position:absolute;z-index:4;top:50%;right:clamp(24px,5vw,96px);width:min(42vw,520px);display:grid;grid-template-columns:1fr 1fr;gap:16px;opacity:0;will-change:transform,opacity}
+.flow-panel__cards{position:absolute;z-index:4;top:50%;left:50%;width:min(42vw,520px);display:grid;grid-template-columns:1fr 1fr;gap:16px;opacity:0;will-change:transform,opacity}
 .flow-panel__cards .proj-card{aspect-ratio:1/1;width:100%}
 /* Blog cards have no photo — an indigo→blue gradient face instead of an <img>. */
 .flow-panel__cards .proj-card__shot{position:absolute;inset:0;background:linear-gradient(150deg,#222a6b,#3f6fd8)}
