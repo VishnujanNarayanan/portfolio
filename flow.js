@@ -581,23 +581,25 @@
       }
     });
 
-    // Per-stage cards: they SLIDE right→left across the zone, mirroring the old GL
-    // image (which entered from the right and slid to centre as you scrolled). The
-    // counter-translateX (pinX) cancels the track slide so the slide is driven purely
-    // by scroll, and a fade keeps one stage's cards on screen at a time, reversible on
-    // scroll-up. globalRaw (unclamped −1..N) lets the first stage slide in from the
-    // right during the lead-in and the last slide out left at the end, like the image.
+    // Per-stage cards: SLIDE like the old GL image — NO fade. The active stage's
+    // cards enter from the right and slide to rest; the passed stage is parked
+    // off-screen LEFT, the upcoming one off-screen RIGHT; the .flow__wrapper overflow
+    // clips them so they physically scroll away. A smoothed catch-up (_coff, like the
+    // image's u.off) turns the threshold swap into a continuous slide rather than a
+    // jump. pinX cancels the track slide so the slide is scroll-driven; globalRaw
+    // (−1..N) gives the first/last stages their lead-in / lead-out travel.
+    var csel = Math.round(globalRaw);
+    var clocal = globalRaw - csel;                   // [−0.5, 0.5] within the active stage
+    var OFF_X = vw * 1.3;                            // parked fully off-screen
     panels.forEach(function (panel, pi) {
       var cardsEl = panel.querySelector(".flow-panel__cards");
       if (!cardsEl) return;
-      var local = globalRaw - pi;                    // 0 centred, <0 entering (right), >0 exiting (left)
-      var ap = clamp(1 - Math.abs(local) / 0.5, 0, 1);
-      var e = ap * ap * (3 - 2 * ap);
-      var slideX = -local * vw * 0.4;                // right→left travel across the zone
-      var pinX = -(pi * vw + trackX);                // cancel the track slide (so slideX is the only motion)
-      cardsEl.style.transform = "translate(" + (slideX + pinX).toFixed(1) + "px,-50%)";
-      cardsEl.style.opacity = e.toFixed(3);
-      cardsEl.style.pointerEvents = e > 0.6 ? "auto" : "none";
+      var target = (pi === csel) ? (-clocal * vw * 1.1) : (pi < csel ? -OFF_X : OFF_X);
+      panel._coff = (panel._coff === undefined) ? target : panel._coff + (target - panel._coff) * 0.1;
+      var pinX = -(pi * vw + trackX);
+      cardsEl.style.transform = "translate(" + (panel._coff + pinX).toFixed(1) + "px,-50%)";
+      cardsEl.style.opacity = 1;
+      cardsEl.style.pointerEvents = (pi === csel && Math.abs(clocal) < 0.4) ? "auto" : "none";
     });
 
     // On desktop the GL image planes replace the DOM card floats (hidden via
