@@ -600,7 +600,7 @@
     // motion is scroll-driven; globalRaw (−1..N) gives the first/last their lead travel.
     var csel = Math.round(globalRaw);
     var clocal = globalRaw - csel;                   // [−0.5, 0.5] within the active stage
-    var REST_X = 8, OFF_L = -22, OFF_R = 22;         // identical to the GL image constants
+    var REST_X = 5.6, OFF_L = -22, OFF_R = 22;       // REST_X reduced 30% (8→5.6): less left scroll
     var F = vh / 16.658;                             // 1 world unit in px (2·(17−1)·tan(55°/2))
     panels.forEach(function (panel, pi) {
       var cardsEl = panel.querySelector(".flow-panel__cards");
