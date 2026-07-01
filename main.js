@@ -540,12 +540,63 @@
       active = on;
       layer.classList.toggle("is-active", on);
       if (heroVid) { heroVid.style.pointerEvents = on ? "auto" : "none"; heroVid.style.cursor = on ? "pointer" : ""; }
-      if (!on) setHover(false);
+      if (!on) { setHover(false); pressCancel(heroVid); }   // clear any held press when the frame stops being clickable
     }
     // Frozen frame → frozenHover (text white off / blue on). Normal hero → hovering. During the closing
     // zoom (closing, not yet frozen) ignore hover so `hovering` can't get stuck true into the frozen state.
-    var onEnter = function () { if (frozen) setFrozenHover(true); else if (!closing) setHover(true); };
-    var onLeave = function () { if (frozen) setFrozenHover(false); else if (!closing) setHover(false); };
+    // Snappy "press" on hover so the frame reads as CLICKABLE: a quick shrink to TROUGH, then it springs
+    // back but RESTS a hair pressed (only 20% of the shrink recovered — REST), held while hovered and
+    // released to full on leave. Uses the independent `scale` property (via WAAPI) so it composes with the
+    // frame's inline transform (set by updateHeroExit / liftFrozen) instead of being clobbered by it.
+    var TROUGH = "0.95";                          // dips a touch past the rest on the way down
+    var REST   = "0.96";                          // springs back to 96% and holds while hovered
+    // (leaves back to 100% on hover-out via pressRelease)
+    var lastPress = 0, releaseTimer = 0;
+    var perfNow = function () { return (window.performance && performance.now) ? performance.now() : Date.now(); };
+    function pressCancel(el) { if (el && el.__pressAnim) { try { el.__pressAnim.cancel(); } catch (e) {} el.__pressAnim = null; } }
+    function animPress(el) {                       // shrink → settle at REST (held)
+      if (!el || !el.animate) return;
+      pressCancel(el);
+      try {
+        el.__pressAnim = el.animate([{ scale: "1" }, { offset: 0.5, scale: TROUGH }, { scale: REST }],
+          { duration: 300, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" });
+      } catch (e) {}
+    }
+    function animRelease(el) {                      // ease REST → full
+      if (!el || !el.animate) return;
+      pressCancel(el);
+      try {
+        var a = el.animate([{ scale: REST }, { scale: "1" }], { duration: 200, easing: "ease-out", fill: "forwards" });
+        el.__pressAnim = a;
+        a.onfinish = function () { pressCancel(el); };  // clear so `scale` unsets (no lingering shrink)
+      } catch (e) {}
+    }
+    // Press/release ALL given frames together — when collapsed there's a frozen frame on top with the
+    // hero behind it at the same rect, so pressing only the top one would reveal a full-size frame behind.
+    function pressPulse() {
+      if (reduce) return;
+      if (releaseTimer) { clearTimeout(releaseTimer); releaseTimer = 0; }
+      var t = perfNow(); if (t - lastPress < 320) return; lastPress = t;   // debounce cross-element re-enter
+      for (var i = 0; i < arguments.length; i++) animPress(arguments[i]);
+    }
+    function pressRelease() {
+      if (reduce) return;
+      var els = Array.prototype.slice.call(arguments);
+      if (releaseTimer) clearTimeout(releaseTimer);
+      releaseTimer = setTimeout(function () {
+        releaseTimer = 0;
+        if (frozen ? frozenHover : hovering) return;   // moved onto the CTA text, not actually leaving
+        els.forEach(animRelease);
+      }, 90);
+    }
+    var onEnter = function () {
+      if (frozen) { pressPulse(receive, heroVid); setFrozenHover(true); }
+      else if (!closing) { pressPulse(heroVid); setHover(true); }
+    };
+    var onLeave = function () {
+      if (frozen) { setFrozenHover(false); pressRelease(receive, heroVid); }
+      else if (!closing) { setHover(false); pressRelease(heroVid); }
+    };
 
     // ---- Pull-IN transition on click: zoom the pullout clip from the hero video's CURRENT
     // on-screen rectangle (position-aware) to full screen, the reverse of the scroll zoom-out,
@@ -669,6 +720,7 @@
     }
     function dismissFrozen() {
       frozen = false; frozenHover = false; hovering = false;   // clear any stuck hover before the hero takes over
+      pressCancel(receive); pressCancel(heroVid);              // drop any held press so the resuming hero is full-size
       heroHandoffArmed = false;
       window.removeEventListener("scroll", heroHandoff);
       if (receive) {
@@ -757,14 +809,21 @@
       try { var m = new DOMMatrixReadOnly(getComputedStyle(heroVid).transform); return { s: m.a || 1, ty: m.f || 0 }; }
       catch (e) { return { s: 1, ty: 0 }; }
     }
+    // Current hover-press factor (the independent `scale` property, separate from the transform above).
+    function curScale(el) {
+      if (!el) return 1;
+      try { var s = getComputedStyle(el).scale; return (!s || s === "none") ? 1 : (parseFloat(s) || 1); }
+      catch (e) { return 1; }
+    }
     function playPullout() {
       if (!pullout || pullActive) return;
       pullActive = true;
-      dismissFrozen();            // clear any frozen collapse frame left from a previous close
+      var pressScale = curScale(heroVid);         // the frame is pressed to REST (0.96) on hover — open from THAT size
+      dismissFrozen();            // clear any frozen collapse frame left from a previous close (cancels the press)
       setHover(false);
       lockScroll(true);
-      pullStart = heroXf();                       // remember the hero rectangle (closing returns to it)
-      var start = pullStart;                      // where the image is RIGHT NOW (start of the zoom-in)
+      pullStart = heroXf();                       // clean hero rectangle — closing/frameScale rest here at 100% (unpressed)
+      var start = { s: pullStart.s * pressScale, ty: pullStart.ty };   // OPEN zoom BEGINS from the pressed size, not 100%
       pullout.classList.add("is-playing");
       pullout.style.transform = "translateY(" + start.ty + "px) scale(" + start.s.toFixed(4) + ")";
       pullout.style.filter = vidFilter(1, 1, false);   // starts GREY (matches the paused frame), colours in as it opens
