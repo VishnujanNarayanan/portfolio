@@ -15,26 +15,250 @@
     requestAnimationFrame(raf);
   }
 
+  /* ---------- Linux terminal boot loader + asset/animation warming ----------
+     Holds an opaque "pip install" terminal over the page while the critical
+     first-view assets decode and the deferred inits (Three.js bg shader,
+     flow.js WebGL, Lenis, scroll listeners) finish. Resolves window.__bootReady
+     when it lifts, which drives the hero entrance below. A quick minimum display
+     time keeps the animation readable when assets are already cached; if assets
+     are still loading it EXTENDS past the minimum until they resolve. */
+  (function () {
+    var bootResolve;
+    window.__bootReady = new Promise(function (res) { bootResolve = res; });
+
+    var boot = document.getElementById("boot-loader");
+    if (!boot) { bootResolve(); return; }
+
+    var out    = document.getElementById("boot-out");
+    var fill   = boot.querySelector(".boot-bar__fill");
+    var pctEl  = boot.querySelector(".boot-bar__pct");
+    var docEl  = document.documentElement;
+    var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var MIN_MS = reduce ? 600 : 3200;
+    var start  = (window.performance && performance.now) ? performance.now() : Date.now();
+    var now    = function () { return (window.performance && performance.now) ? performance.now() : Date.now(); };
+
+    docEl.classList.add("boot-active");
+    if (window.__lenis && window.__lenis.stop) window.__lenis.stop();
+
+    /* ----- critical assets (gate the reveal) ----- */
+    // pip-flavoured label → real asset. The label is what the terminal "collects".
+    var IMG = [
+      ["numpy",        "images/flow/data-collection.jpg"],
+      ["pandas",       "images/flow/processing-storage.jpg"],
+      ["scikit-learn", "images/flow/ml-analysis.jpg"],
+      ["matplotlib",   "images/flow/build-ship.jpg"],
+      ["fastapi",      "images/heading_area.png"],
+      ["uvicorn",      "images/messages_part.png"],
+      ["pydantic",     "images/product_image.png"],
+      ["httpx",        "images/bottom_part.png"]
+    ];
+
+    function loadImage(src) {
+      return new Promise(function (resolve) {
+        var im = new Image(), done = function () { resolve(); };
+        im.onload  = function () { if (im.decode) { im.decode().then(done, done); } else { done(); } };
+        im.onerror = done;
+        im.src = src;
+        setTimeout(done, 8000); // never hang on a single asset
+      });
+    }
+    function loadVideo(src) {
+      return new Promise(function (resolve) {
+        var v = document.querySelector('video[src="' + src + '"]'), done = function () { resolve(); };
+        if (!v) { done(); return; }
+        if (v.readyState >= 3) { done(); return; }
+        v.preload = "auto";
+        v.addEventListener("canplaythrough", done, { once: true });
+        v.addEventListener("loadeddata", done, { once: true });
+        try { v.load(); } catch (e) {}
+        setTimeout(done, 8000);
+      });
+    }
+
+    // Ordered typing queue: [label, promise]. Labels drive the "Collecting …" lines.
+    var tasks = [];
+    tasks.push(["setuptools",    (document.fonts && document.fonts.ready) ? document.fonts.ready.catch(function () {}) : Promise.resolve()]);
+    tasks.push(["opencv-python", loadVideo("videos/interview_office.mp4")]);
+    IMG.forEach(function (p) { tasks.push([p[0], loadImage(p[1])]); });
+
+    var total = tasks.length, resolved = 0;
+    var assetsReady = Promise.all(tasks.map(function (t) { return t[1]; }));
+
+    function setPct(f) {
+      var p = Math.max(0, Math.min(100, Math.round(f * 100)));
+      if (fill)  fill.style.width = p + "%";
+      if (pctEl) pctEl.textContent = p + "%";
+    }
+    var HOME = "~", DIR = "~/portfolio-website";
+    // Coloured prompt (green user@host, blue path). Output is plain white.
+    function promptHTML(path) {
+      return '<span class="b-usr">vishnu@portfolio</span>:<span class="b-path">' + path + '</span>$ ';
+    }
+    function appendLine(html) {
+      var d = document.createElement("div");
+      d.className = "boot-line";
+      if (html != null) d.innerHTML = html;
+      out.appendChild(d);
+      out.scrollTop = out.scrollHeight;
+      return d;
+    }
+
+    // Progress bar = overall readiness: the SLOWER of "time toward the minimum"
+    // and "critical assets loaded", so it only reaches 100% right as we reveal
+    // (not the instant the fast/cached assets resolve).
+    tasks.forEach(function (t) { t[1].then(function () { resolved++; }); });
+    var barTimer = setInterval(function () {
+      var tp = Math.min(1, (now() - start) / MIN_MS);
+      var ap = resolved / total;
+      setPct(Math.min(tp, ap));
+    }, 60);
+
+    // Real-terminal script: each STEP is a prompt+command that TYPES OUT (quick),
+    // then its output lines appear, THEN the next prompt shows — the pip step's
+    // "Collecting/Successfully installed" only lands after the commands run.
+    var collecting = tasks.map(function (t) { return "Collecting " + t[0] + " ... done"; });
+    var STEPS = [
+      { cwd: HOME, cmd: "git clone https://github.com/VishnujanNarayanan/portfolio-website.git", out: [
+        "Cloning into 'portfolio-website'...",
+        "remote: Enumerating objects: 1467, done.",
+        "remote: Counting objects: 100% (1467/1467), done.",
+        "remote: Compressing objects: 100% (842/842), done.",
+        "Receiving objects: 100% (1467/1467), 18.42 MiB | 6.10 MiB/s, done.",
+        "Resolving deltas: 100% (623/623), done." ] },
+      { cwd: HOME, cmd: "cd portfolio-website", out: [] },
+      { cwd: DIR, cmd: "python3 -m venv .venv", out: [] },
+      { cwd: DIR, cmd: "source .venv/bin/activate", out: [] },
+      { cwd: DIR, cmd: "python -m pip install --upgrade pip", out: ["Successfully installed pip-24.0"] },
+      { cwd: DIR, cmd: "pip install -r requirements.txt", out:
+        collecting.concat([
+          "Building wheels for collected packages: numpy, pandas, scikit-learn ... done",
+          "Successfully installed " + total + " packages" ]) }
+    ];
+
+    var OUT  = reduce ? 0 : 16;   // ms between output lines
+    var RUN  = reduce ? 0 : 60;   // pause after Enter before output
+    var GAP  = reduce ? 0 : 45;   // pause between commands
+
+    var linesDone = false, finished = false, assetsDone = false;
+
+    // Type a command over a CAPPED total duration (rAF, so no setTimeout clamp) —
+    // this keeps long commands (the git-clone URL) roughly as quick as short ones,
+    // instead of the line length dictating the speed.
+    function typeCmd(step, done) {
+      var line = appendLine(promptHTML(step.cwd));
+      var typed = document.createElement("span"); typed.className = "b-cmd";
+      var caret = document.createElement("span"); caret.className = "boot-caret";
+      line.appendChild(typed); line.appendChild(caret);
+      var c = step.cmd;
+      var dur = reduce ? 0 : Math.min(210, 90 + c.length * 1.3); // ~90–210ms whole line
+      var t0 = now();
+      (function frame() {
+        var p = dur ? Math.min(1, (now() - t0) / dur) : 1;
+        typed.textContent = c.slice(0, Math.round(p * c.length));
+        out.scrollTop = out.scrollHeight;
+        if (p < 1) requestAnimationFrame(frame);
+        else {
+          caret.parentNode && caret.parentNode.removeChild(caret); // Enter pressed
+          setTimeout(done, RUN);
+        }
+      })();
+    }
+    function showOut(step, done) {
+      var j = 0, lines = step.out || [];
+      (function tick() {
+        if (j < lines.length) {
+          var d = appendLine(); d.textContent = lines[j++]; // plain white output
+          setTimeout(tick, OUT);
+        } else { setTimeout(done, GAP); }
+      })();
+    }
+    function runStep(k) {
+      if (k >= STEPS.length) { linesDone = true; tryFinish(); return; }
+      typeCmd(STEPS[k], function () { showOut(STEPS[k], function () { runStep(k + 1); }); });
+    }
+    runStep(0);
+
+    function tryFinish() {
+      if (finished) return;
+      // Reveal only once BOTH hold: the commands have run out AND every critical
+      // asset resolved (extends for slow loads); then honour the MIN_MS floor.
+      if (!linesDone || !assetsDone) return;
+      finished = true;
+      var wait = Math.max(0, MIN_MS - (now() - start));
+      setTimeout(function () {
+        clearInterval(barTimer);
+        setPct(1);
+        typeCmd({ cwd: DIR, cmd: "xdg-open index.html" }, function () {
+          boot.classList.add("is-done");
+          setTimeout(function () {
+            boot.style.display = "none";
+            docEl.classList.remove("boot-active");
+            if (window.__lenis && window.__lenis.start) window.__lenis.start();
+            // Warm a layout pass so the first scroll pays no reflow cost.
+            var f = document.querySelector(".flow");     if (f)  void f.offsetHeight;
+            var ft = document.querySelector(".features"); if (ft) void ft.offsetHeight;
+            bootResolve();
+          }, 480);
+        });
+      }, wait);
+    }
+
+    assetsReady.then(function () { assetsDone = true; tryFinish(); });
+    setTimeout(function () { linesDone = true; assetsDone = true; tryFinish(); }, 14000); // hard cap
+
+    // Non-gating background warm-up AFTER the reveal: certificates + transition videos.
+    window.__bootReady.then(function () {
+      var idle = window.requestIdleCallback || function (cb) { return setTimeout(cb, 1); };
+      idle(function () {
+        ["images/certificates/dsa-python.png",
+         "images/certificates/google-advanced-data-scientist.png",
+         "images/certificates/google-capstone.png",
+         "images/certificates/ibm-generative-ai.png",
+         "images/certificates/intro-database-systems.png",
+         "images/certificates/modern-cpp.png"].forEach(function (s) { var im = new Image(); im.src = s; });
+        ["videos/pullout_animation.mp4", "videos/recieve_animation.mp4"].forEach(function (s) {
+          var v = document.querySelector('video[src="' + s + '"]');
+          if (v) { v.preload = "auto"; try { v.load(); } catch (e) {} }
+        });
+      });
+    });
+  })();
+
   /* ---------- Hero entrance reveal ---------- */
   var hero = document.querySelector(".hero");
   if (hero) {
-    requestAnimationFrame(function () {
-      void hero.offsetWidth; // commit the pre-reveal state, then transition in
-      hero.classList.add("show");
-    });
-    // Safety net: if the entrance transition fails to settle (some engines
-    // stall a combined 3D-transform + opacity transition), force the end
-    // state so the hero is never left invisible.
-    setTimeout(function () {
-      var t = hero.querySelector(".hero__title");
-      if (t && parseFloat(getComputedStyle(t).opacity) < 0.9 && window.scrollY < 4) {
-        hero.querySelectorAll(".hero__title, .hero__subtitle").forEach(function (el) {
-          el.style.transition = "none";
-          el.style.opacity = "1";
-          el.style.transform = "none";
-        });
-      }
-    }, 1700);
+    // Gate the entrance on the boot loader lifting (window.__bootReady). The boot
+    // loader already waits on fonts + the hero video + key images, so by the time
+    // it resolves the text renders in Roboto (no weight snap) over warm assets.
+    var showHero = function () {
+      requestAnimationFrame(function () {
+        void hero.offsetWidth; // commit the pre-reveal state, then transition in
+        hero.classList.add("show");
+      });
+      // Safety net (relative to the reveal): if the combined 3D-transform + opacity
+      // transition stalls, force the end state so the hero is never left invisible.
+      setTimeout(function () {
+        var t = hero.querySelector(".hero__title");
+        if (t && parseFloat(getComputedStyle(t).opacity) < 0.9 && window.scrollY < 4) {
+          hero.querySelectorAll(".hero__title, .hero__subtitle").forEach(function (el) {
+            el.style.transition = "none";
+            el.style.opacity = "1";
+            el.style.transform = "none";
+          });
+        }
+      }, 1700);
+    };
+    var revealed = false;
+    var go = function () { if (!revealed) { revealed = true; showHero(); } };
+    if (window.__bootReady && window.__bootReady.then) {
+      window.__bootReady.then(go);
+    } else if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(go);
+      setTimeout(go, 1200);
+    } else {
+      go();
+    }
 
     // Hero exit is a scroll-SCRUBBED sequence, in three phases, no fade:
     //   Phase A (0 → vh): the hero and the video scroll up together as a rigid pair —
