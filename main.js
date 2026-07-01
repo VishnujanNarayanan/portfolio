@@ -440,10 +440,9 @@
         // that grey toward BLUE only between 80% and 90% of the zoom-out (blue), at 0.33 strength so it
         // ends as a softer blue-grey (≈ #969ba8). grayscale/brightness ride grey; sepia+hue-rotate+
         // saturate (the blue tint) ride blue.
-        // Hovering the cert CTA de-greys the video back to TRUE colour — a QUICK SNAP (no fade) and
-        // ONLY at the pop (cT≥1). window.__certColor is 1/0 (set by the cert IIFE); dg=1 scales every
-        // greyed channel to none (true colour), dg=0 leaves the scroll-driven grey untouched.
-        var dg = 1 - (window.__certColor ? 1 : 0);
+        // The paused hero image stays GREY while paused — hovering the cert CTA no longer
+        // re-colours the video (only the handwriting text reacts to hover; see applyColor).
+        var dg = 1;
         heroVid.style.filter =
           "grayscale(" + (grey * dg).toFixed(3) + ") brightness(" + (1 - 0.18 * grey * dg).toFixed(3) +
           ") sepia(" + (0.33 * blue * dg).toFixed(3) + ") hue-rotate(" + (185 * blue * dg).toFixed(1) +
@@ -629,9 +628,10 @@
       var pBT = pBThreshold();
       return pBT + (1 - pBT) * ct;
     }
-    // Same grey + blue "blush" filter the hero zoom-out uses (see updateHeroExit). colorOn → true colour.
+    // Same grey + blue "blush" filter the hero zoom-out uses (see updateHeroExit). The paused/
+    // frozen frame stays grey regardless of hover (colorOn kept for call-site compatibility).
     function vidFilter(grey, blue, colorOn) {
-      var dg = colorOn ? 0 : 1;
+      var dg = 1;
       return "grayscale(" + (grey * dg).toFixed(3) + ") brightness(" + (1 - 0.18 * grey * dg).toFixed(3) +
         ") sepia(" + (0.33 * blue * dg).toFixed(3) + ") hue-rotate(" + (185 * blue * dg).toFixed(1) +
         "deg) saturate(" + (1 + 0.33 * blue * dg).toFixed(3) + ")";
@@ -696,7 +696,7 @@
       // Keep the handwritten "Certificates" CTA on top of the frozen frame, at its remembered position
       // (render() left it at the click-time scroll spot), at its constant TEXT_SCALE size.
       if (layer) { layer.classList.add("is-collapsing"); layer.style.transform = layerTransform(); layer.style.opacity = "1"; }
-      if (pullout) { pullout.classList.remove("is-playing"); pullout.style.transform = ""; try { pullout.pause(); } catch (e) {} }
+      if (pullout) { pullout.classList.remove("is-playing"); pullout.style.transform = ""; pullout.style.filter = ""; try { pullout.pause(); } catch (e) {} }
       // Do NOT reveal the hero video here — heroHandoff swaps back ONLY on a backward scroll.
       pullDone = false; pullActive = false;
       lockScroll(false);
@@ -720,7 +720,7 @@
       if (gallery) { gallery.classList.remove("is-open"); gallery.setAttribute("aria-hidden", "true"); }
       // Hide the pull-in clip NOW (it's still full-screen at z-50) so it isn't seen behind the
       // shrinking receive clip — only the hero scene should show around it.
-      if (pullout) { pullout.classList.remove("is-playing"); pullout.style.transform = ""; try { pullout.pause(); } catch (e) {} }
+      if (pullout) { pullout.classList.remove("is-playing"); pullout.style.transform = ""; pullout.style.filter = ""; try { pullout.pause(); } catch (e) {} }
       var DUR = 700;                               // snappy zoom-out, decoupled from the looping clip's length
       var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
       function frame(now) {
@@ -767,6 +767,7 @@
       var start = pullStart;                      // where the image is RIGHT NOW (start of the zoom-in)
       pullout.classList.add("is-playing");
       pullout.style.transform = "translateY(" + start.ty + "px) scale(" + start.s.toFixed(4) + ")";
+      pullout.style.filter = vidFilter(1, 1, false);   // starts GREY (matches the paused frame), colours in as it opens
       var RATE = 1.2;                             // clip speed → shorter zoom-in
       try { pullout.currentTime = 0; } catch (e) {}
       pullout.playbackRate = RATE;
@@ -783,6 +784,8 @@
         var s = start.s + (1 - start.s) * e;      // current scale → 1 (full screen)
         var ty = start.ty * (1 - e);              // current offset → 0
         pullout.style.transform = "translateY(" + ty.toFixed(2) + "px) scale(" + s.toFixed(4) + ")";
+        // grey fades over the whole open; the BLUE tint clears EARLY (gone by ~30%), not gradually.
+        pullout.style.filter = vidFilter(1 - e, Math.max(0, 1 - e / 0.3), false);
         if (t < 1) pullRAF = requestAnimationFrame(frame); else finishPullout();
       }
       pullRAF = requestAnimationFrame(frame);
@@ -794,7 +797,7 @@
       if (pullDone) return;
       pullDone = true;
       if (pullRAF) { cancelAnimationFrame(pullRAF); pullRAF = 0; }
-      if (pullout) pullout.style.transform = "translateY(0) scale(1)";
+      if (pullout) { pullout.style.transform = "translateY(0) scale(1)"; pullout.style.filter = ""; }  // full colour, fully open
       openCertGallery();
     }
 
