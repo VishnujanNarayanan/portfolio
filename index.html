@@ -27,6 +27,27 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","@id":"https://vishnujannarayanan.com/#website","name":"Vishnujan Narayanan","url":"https://vishnujannarayanan.com/","inLanguage":"en-US","publisher":{"@id":"https://vishnujannarayanan.com/#person"}}</script>
 </head>
 <body>
+<!-- Linux-terminal boot loader: covers the page on load while critical assets
+     (hero video, flow images, fonts) decode and deferred inits finish. Removed
+     by the boot IIFE in main.js once window.__bootReady resolves. Static markup
+     so it paints immediately with the render-blocking CSS (no flash). -->
+<div id="boot-loader" aria-hidden="true">
+  <div class="boot-term">
+    <div class="boot-term__bar">
+      <span class="boot-dot boot-dot--r"></span>
+      <span class="boot-dot boot-dot--y"></span>
+      <span class="boot-dot boot-dot--g"></span>
+      <span class="boot-term__title">vishnu@portfolio: ~</span>
+    </div>
+    <div class="boot-term__body">
+      <pre id="boot-out" class="boot-out"></pre>
+      <div class="boot-bar">
+        <div class="boot-bar__track"><div class="boot-bar__fill"></div></div>
+        <span class="boot-bar__pct">0%</span>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="vanta-bg"></div>
 <div class="mobile-nav__overlay"></div>
 <header class="show">
