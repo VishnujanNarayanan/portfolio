@@ -1602,9 +1602,15 @@
     }
 
     var settled = null;                                 // tri-state: null/false/true
+    var hovered = null;                                 // panel the cursor is currently over (set by mouseenter)
     function setSettled(on) {
       if (on === settled) return;
       settled = on;
+      // On hand-off the accordion opens panel 0 by default — but if the cursor is already
+      // resting on another panel while the fan-out plays, open THAT one instead (so the
+      // reveal finishes into the panel the user is pointing at, not a snap to panel 0).
+      var openIdx = (on && hovered) ? panels.indexOf(hovered) : 0;
+      if (openIdx < 0) openIdx = 0;
       panels.forEach(function (p, i) {
         if (on) {                                        // hand off to the live CSS accordion
           p.style.transition = ""; p.style.transform = ""; p.style.transformOrigin = ""; p.style.clipPath = "";
@@ -1613,7 +1619,7 @@
           p.style.height = G.H + "px";                   // uniform height (overrides the --ph taper)
           if (TXT[i].vert) { TXT[i].vert.style.top = ""; TXT[i].vert.style.opacity = ""; }  // rail text back to CSS (box edges, fully visible)
           if (TXT[i].num) { TXT[i].num.style.bottom = ""; TXT[i].num.style.opacity = ""; }
-          p.classList.toggle("is-open", i === 0);
+          p.classList.toggle("is-open", i === openIdx);
           var c = p.querySelector(".wpanel__content"); if (c) c.style.opacity = "";
         } else {
           p.style.transition = "none"; p.classList.remove("is-open");
@@ -1718,10 +1724,10 @@
     // but through the single toggle, so only ever one is open.
     function open(p) { if (settled) panels.forEach(function (x) { x.classList.toggle("is-open", x === p); }); }
     panels.forEach(function (p) {
-      p.addEventListener("mouseenter", function () { open(p); });
+      p.addEventListener("mouseenter", function () { hovered = p; open(p); });
       p.addEventListener("focusin", function () { open(p); });
     });
-    wstack.addEventListener("mouseleave", function () { open(panels[0]); });
+    wstack.addEventListener("mouseleave", function () { hovered = null; open(panels[0]); });
   })();
 
   /* ---------- Accordion (Services + any .faq-item) ---------- */
