@@ -579,12 +579,118 @@
             <span class="callout-socials-heading__line is-hl">On Socials</span>
           </h2>
           <div data-social-callout="wrap" class="callout-socials-card-layout">
+            <!-- edge (left) — left as a plain image -->
             <div class="callout-socials-card-w" style="z-index:1"><img src="images/flow/data-collection.jpg" alt="" loading="lazy" class="image is-social-card"></div>
-            <div class="callout-socials-card-w" style="z-index:2"><img src="images/flow/processing-storage.jpg" alt="" loading="lazy" class="image is-social-card"></div>
-            <div class="callout-socials-card-w" style="z-index:3"><img src="images/flow/ml-analysis.jpg" alt="" loading="lazy" class="image is-social-card"></div>
-            <div class="callout-socials-card-w" style="z-index:10"><img src="images/flow/build-ship.jpg" alt="" loading="lazy" class="image is-social-card"></div>
-            <div class="callout-socials-card-w" style="z-index:3"><img src="images/flow/data-collection.jpg" alt="" loading="lazy" class="image is-social-card"></div>
-            <div class="callout-socials-card-w" style="z-index:2"><img src="images/flow/processing-storage.jpg" alt="" loading="lazy" class="image is-social-card"></div>
+
+            <!-- Email -->
+            <div class="callout-socials-card-w" style="z-index:2">
+              <a class="soc-card soc-card--email" href="mailto:narayanan.vishnujan@gmail.com" aria-label="Email">
+                <div class="soc-card__top">
+                  <svg class="soc-card__logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2 4h20a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm10 7.24 8.24-5.24H3.76L12 11.24zM3 7.4V18h18V7.4l-8.47 5.39a1 1 0 0 1-1.06 0L3 7.4z"></path></svg>
+                  <span class="soc-card__brand">Email</span>
+                </div>
+                <div class="soc-card__mid">
+                  <span class="soc-card__handle">narayanan.vishnujan<br>@gmail.com</span>
+                  <p class="soc-card__desc">Got a project or a question? Drop me a line.</p>
+                </div>
+                <span class="soc-card__cta">Mail me <span aria-hidden="true">&#8599;</span></span>
+              </a>
+            </div>
+
+            <!-- LinkedIn -->
+            <div class="callout-socials-card-w" style="z-index:3">
+              <a class="soc-card soc-card--linkedin" href="http://www.linkedin.com/in/vishnujan-narayanan" target="_blank" rel="noopener" aria-label="LinkedIn">
+                <div class="soc-card__li-cover">
+                  <div class="soc-card__li-brand">
+                    <svg class="soc-card__li-logo" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="4" fill="#fff"></rect><path fill="#0a66c2" d="M18.45 18.45h-2.56v-4.01c0-.96-.02-2.19-1.34-2.19-1.34 0-1.54 1.04-1.54 2.12v4.08H10.4V9.75h2.46v1.19h.04c.34-.65 1.18-1.34 2.43-1.34 2.6 0 3.08 1.71 3.08 3.94v4.91zM7.52 8.56a1.49 1.49 0 1 1 0-2.98 1.49 1.49 0 0 1 0 2.98zM8.8 18.45H6.23V9.75H8.8v8.7z"></path></svg>
+                    <span class="soc-card__li-wordmark">Linked<b>in</b></span>
+                  </div>
+                </div>
+                <img class="soc-card__li-avatar" src="https://github.com/VishnujanNarayanan.png" alt="Vishnujan Narayanan" width="88" height="88" loading="lazy">
+                <div class="soc-card__li-body">
+                  <div class="soc-card__li-nameline">
+                    <span class="soc-card__handle">Vishnujan Narayanan</span>
+                    <span class="soc-card__li-pronoun">He/Him</span>
+                  </div>
+                  <p class="soc-card__desc">Data Engineer — Financial &amp; Market Data</p>
+                  <span class="soc-card__li-loc">Ernakulam, Kerala, India</span>
+                  <span class="soc-card__li-conn">500+ connections</span>
+                  <span class="soc-card__cta">Connect <span aria-hidden="true">&#8599;</span></span>
+                </div>
+              </a>
+            </div>
+
+            <!-- GitHub (centre) — mirrors the hero GitHub card, sized for the fan -->
+            <div class="callout-socials-card-w" style="z-index:10">
+              <a class="soc-card soc-card--github" href="https://github.com/VishnujanNarayanan" target="_blank" rel="noopener" aria-label="GitHub">
+                <div class="soc-card__gh-head">
+                  <div class="soc-card__gh-headrow">
+                    <div class="soc-card__gh-idcol">
+                      <div class="soc-card__top">
+                        <svg class="soc-card__logo" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+                        <span class="soc-card__brand">GitHub</span>
+                      </div>
+                      <span class="soc-card__handle">@VishnujanNarayanan</span>
+                    </div>
+                    <img class="soc-card__gh-avatar" src="https://github.com/VishnujanNarayanan.png" alt="Vishnujan Narayanan" width="60" height="60" loading="lazy">
+                  </div>
+                </div>
+                <div class="soc-card__gh-body">
+                  <p class="soc-card__desc">Data &amp; ML engineer building systems that scale — pipelines, backends, ML.</p>
+                  <ul class="soc-card__repos">
+                    <li>Fraud_Transaction_Detection</li>
+                    <li>minute-level-stock-prediction</li>
+                    <li>Trader_sentiment_analysis</li>
+                  </ul>
+                  <span class="soc-card__cta">View profile <span aria-hidden="true">&#8599;</span></span>
+                </div>
+              </a>
+            </div>
+
+            <!-- Instagram -->
+            <div class="callout-socials-card-w" style="z-index:3">
+              <a class="soc-card soc-card--instagram" href="https://www.instagram.com/___vi5hnu___/" target="_blank" rel="noopener" aria-label="Instagram">
+                <div class="soc-card__ig-head">
+                  <svg class="soc-card__logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41a3.7 3.7 0 0 1-1.38-.9 3.7 3.7 0 0 1-.9-1.38c-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.31-1.46.72-2.12 1.38C1.35 2.67.94 3.34.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.31.8.72 1.47 1.38 2.13.66.66 1.33 1.07 2.12 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.8-.31 1.47-.72 2.13-1.38.66-.66 1.07-1.33 1.38-2.13.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91a5.9 5.9 0 0 0-1.38-2.12A5.9 5.9 0 0 0 19.86.63c-.76-.3-1.64-.5-2.91-.56C15.67.01 15.26 0 12 0m0 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84m0 10.16A4 4 0 1 1 16 12a4 4 0 0 1-4 4m6.41-10.85a1.44 1.44 0 1 0 1.44 1.44 1.44 1.44 0 0 0-1.44-1.44"></path></svg>
+                  <span class="soc-card__brand">Instagram</span>
+                </div>
+                <div class="soc-card__ig-body">
+                  <div class="soc-card__ig-top">
+                    <span class="soc-card__ig-ring"><img class="soc-card__ig-avatar" src="https://github.com/VishnujanNarayanan.png" alt="Vishnujan Narayanan" width="72" height="72" loading="lazy"></span>
+                    <div class="soc-card__ig-stats">
+                      <span><b>4</b>posts</span>
+                      <span><b>1,485</b>followers</span>
+                      <span><b>1,542</b>following</span>
+                    </div>
+                  </div>
+                  <span class="soc-card__handle">@___vi5hnu___</span>
+                  <p class="soc-card__desc">Vishnu · Ex-chinmayite · UPES&rsquo;25</p>
+                  <div class="soc-card__ig-grid">
+                    <img src="images/flow/data-collection.jpg" alt="" loading="lazy">
+                    <img src="images/flow/processing-storage.jpg" alt="" loading="lazy">
+                    <img src="images/flow/ml-analysis.jpg" alt="" loading="lazy">
+                  </div>
+                  <span class="soc-card__cta">Follow <span aria-hidden="true">&#8599;</span></span>
+                </div>
+              </a>
+            </div>
+
+            <!-- Substack -->
+            <div class="callout-socials-card-w" style="z-index:2">
+              <a class="soc-card soc-card--substack" href="https://substack.com/@vishnujannarayanan" target="_blank" rel="noopener" aria-label="Substack">
+                <div class="soc-card__top">
+                  <svg class="soc-card__logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.54 24V10.812H1.46zM22.54 0H1.46v2.836h21.08V0z"></path></svg>
+                  <span class="soc-card__brand">Substack</span>
+                </div>
+                <div class="soc-card__mid">
+                  <span class="soc-card__handle">Vishnujan Narayanan</span>
+                  <p class="soc-card__desc">Essays &amp; deep-dives on data, ML &amp; building systems.</p>
+                </div>
+                <span class="soc-card__cta">Subscribe <span aria-hidden="true">&#8599;</span></span>
+              </a>
+            </div>
+
+            <!-- edge (right) — left as a plain image -->
             <div class="callout-socials-card-w" style="z-index:1"><img src="images/flow/ml-analysis.jpg" alt="" loading="lazy" class="image is-social-card"></div>
           </div>
           <div class="callout-socials-intro-w">
