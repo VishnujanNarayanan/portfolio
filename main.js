@@ -1535,6 +1535,23 @@
     function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
     function lerp(a, b, t) { return a + (b - a) * t; }
 
+    // ---- Open/close STATE MACHINE (replaces the pure scroll-scrub) ------------------------
+    // The section top passes two lines as you scroll: t1 (appear, top = 0.5vh) and t2 (fold,
+    // top = −VANISH·vh). They split the scroll into three zones: above / inside / below.
+    //  • ENTER the inside zone (from above via ft1, or from below via bt2): if the blog is
+    //    CLOSED it OPENS. (Always — a must.) We remember which edge we entered by and whether
+    //    it was already open at that moment.
+    //  • EXIT the inside zone: it only CLOSES on a FULL PASS-THROUGH (out the FAR/opposite
+    //    edge from the one we entered) AND only if it was ALREADY OPEN before we entered.
+    //    A reversal (leaving the same edge we came in) never closes; a pass-through that the
+    //    entry itself opened stays open too.
+    var blogOpen = reduceMo, prevZone = null, entrySide = null, wasOpenAtEntry = false;
+    function zoneOf(topPx, vh) {
+      if (topPx > vh * 0.5) return "above";
+      if (topPx <= -VANISH * vh) return "below";
+      return "inside";
+    }
+
     // Resolved geometry (clamps → px), cached; recomputed on resize.
     var G = { W: 0, H: 0, openBasis: 0, per: 0, stripW: 0, openW: 0, ph: [] };
     function geom() {
@@ -1575,14 +1592,15 @@
     function easeIO(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
     function applyFanLayout() {
       var op = openProg;                                        // 0 → 1 open progress (driven in render, peak-triggered)
+      var oi = openTargetIdx();                                 // open the HOVERED panel (or 0) as the fan widens
       panels.forEach(function (p, i) {
         p.style.transition = "none";
         p.style.flexGrow = "0"; p.style.flexShrink = "0";
-        var basis = (i === 0) ? lerp(G.per, G.openW, op) : lerp(G.per, G.stripW, op);   // widths always sum to G.W
+        var basis = (i === oi) ? lerp(G.per, G.openW, op) : lerp(G.per, G.stripW, op);   // widths always sum to G.W
         p.style.flexBasis = basis.toFixed(2) + "px";
         p.style.height = G.H + "px";
         p.style.transformOrigin = "50% 100%";
-        p.classList.toggle("is-open", i === 0 && op > 0);        // closed until op>0, then reveals as it widens
+        p.classList.toggle("is-open", i === oi && op > 0);       // closed until op>0, then reveals as it widens
       });
     }
     // FAN(p): stacked-onto-the-rightmost (p=0) → in place (p=1). p can overshoot past 1, so q
@@ -1602,9 +1620,25 @@
     }
 
     var settled = null;                                 // tri-state: null/false/true
+    var hovered = null;                                 // panel the cursor is currently over (set by mouseenter)
+    // Which panel should be OPEN: the one the cursor is resting on, else panel 0. Used both
+    // DURING the fan-out (applyFanLayout) and at hand-off (setSettled) so the reveal widens
+    // the hovered panel from the start instead of opening panel 0 and switching at the end.
+    function openTargetIdx() { var i = hovered ? panels.indexOf(hovered) : 0; return i < 0 ? 0 : i; }
+    // Last known pointer position (tracked globally so we can resolve the hovered panel even
+    // when the cursor is stationary and no mouseenter fired). -1 = pointer never moved.
+    var ptrX = -1, ptrY = -1;
+    window.addEventListener("pointermove", function (e) { ptrX = e.clientX; ptrY = e.clientY; }, { passive: true });
+    function panelAtPointer() {
+      if (ptrX < 0) return null;
+      var el = document.elementFromPoint(ptrX, ptrY);
+      var w = el && el.closest ? el.closest(".wpanel") : null;
+      return (w && panels.indexOf(w) >= 0) ? w : null;
+    }
     function setSettled(on) {
       if (on === settled) return;
       settled = on;
+      var openIdx = on ? openTargetIdx() : 0;
       panels.forEach(function (p, i) {
         if (on) {                                        // hand off to the live CSS accordion
           p.style.transition = ""; p.style.transform = ""; p.style.transformOrigin = ""; p.style.clipPath = "";
@@ -1613,7 +1647,7 @@
           p.style.height = G.H + "px";                   // uniform height (overrides the --ph taper)
           if (TXT[i].vert) { TXT[i].vert.style.top = ""; TXT[i].vert.style.opacity = ""; }  // rail text back to CSS (box edges, fully visible)
           if (TXT[i].num) { TXT[i].num.style.bottom = ""; TXT[i].num.style.opacity = ""; }
-          p.classList.toggle("is-open", i === 0);
+          p.classList.toggle("is-open", i === openIdx);
           var c = p.querySelector(".wpanel__content"); if (c) c.style.opacity = "";
         } else {
           p.style.transition = "none"; p.classList.remove("is-open");
@@ -1665,15 +1699,31 @@
       var rect = section.getBoundingClientRect();
       updatePinDwell(rect, vh);                          // drift + vanish run every frame (even after the fan settles)
       if (reduceMo) { setSettled(true); return; }        // no fan: land in place immediately
-      // REVEAL WINDOW (reversible): revealed while the section top is between the appear line (mid-
-      // viewport) and the fold-back line (VANISH·vh into the cover). pT follows it live, so scrolling
-      // DOWN past the fold line OR back UP past the appear line plays the fan-out in reverse — the same
-      // animation either way.
-      var triggered = rect.top <= vh * 0.5 && rect.top > -VANISH * vh;
+      // Drive the open state off the threshold-crossing state machine (see zoneOf above),
+      // not a live scrub — so a pass-through can keep the blog open and a reversal never closes.
+      var zone = zoneOf(rect.top, vh);
+      if (prevZone === null) {                             // first frame: seed, no crossing
+        prevZone = zone;
+        if (zone === "inside" && !blogOpen) {              // loaded/refreshed already inside → arrive open
+          blogOpen = true; entrySide = "top"; wasOpenAtEntry = false;
+        }
+      }
+      else if (zone !== prevZone) {
+        if (zone === "inside") {                           // ENTER the open-zone (ft1 from above / bt2 from below)
+          entrySide = (prevZone === "above") ? "top" : "bottom";
+          wasOpenAtEntry = blogOpen;
+          if (!blogOpen) blogOpen = true;                  // entering closed → open (must)
+        } else if (prevZone === "inside") {                // EXIT the open-zone (bt1 to above / ft2 to below)
+          var exitSide = (zone === "above") ? "top" : "bottom";
+          var farSide = exitSide !== entrySide;            // opposite edge = full pass-through (not a reversal)
+          if (farSide && wasOpenAtEntry) blogOpen = false; // close ONLY on a pass-through that was already open
+        }
+        prevZone = zone;
+      }
       if (!lastT) lastT = now;
       var dt = Math.min((now - lastT) / 1000, 0.05); lastT = now;  // clamp dt (tab-switch safety)
 
-      pT = triggered ? 1 : 0;
+      pT = blogOpen ? 1 : 0;
       var f = PR_STIFF * (pT - pCur) - PR_DAMP * pVel;             // step the reveal spring (overshoots → bounce)
       pVel += f * dt; pCur += pVel * dt;
       var atRest = pT === 1 && Math.abs(1 - pCur) < 0.0015 && Math.abs(pVel) < 0.0015;
@@ -1682,7 +1732,13 @@
       // top) → openU eases toward 1 over OPEN_DUR (the widening plays through the bouncy settle).
       // On reverse (pT→0) it disarms and openU eases back to 0, so the panel folds closed too.
       if (pT === 0) openArmed = false;
-      else if (!openArmed && pCur > 0.85 && pVel <= 0) openArmed = true;
+      else if (!openArmed && pCur > 0.85 && pVel <= 0) {
+        openArmed = true;
+        // Seed the open target from the panel actually UNDER the cursor as the open arms —
+        // mouseenter won't have fired for a cursor that's been resting still over a panel
+        // while the fan animated under it, so detect it directly by pointer position.
+        var hp = panelAtPointer(); if (hp) hovered = hp;
+      }
       openU = clamp(openU + (openArmed ? 1 : -1) * dt / OPEN_DUR, 0, 1);
       openProg = easeIO(openU);
 
@@ -1698,10 +1754,31 @@
     requestAnimationFrame(frame);
     window.addEventListener("resize", resize, { passive: true });
 
-    // Sticky-hover accordion — only active once settled (sequence complete).
+    // Clicking a "Read" link navigates away; pressing Back restores this page from the
+    // bfcache with the DOM + JS state FROZEN — the panel you clicked keeps `is-open` and
+    // `settled` stays true, so setSettled(true)'s early-return never re-enforces "only
+    // panel 0 open" and you return with a stray open panel (→ two open once you hover
+    // another). On pageshow (fires on bfcache restore) drop any stale open state and force
+    // settled=null so the render loop re-derives a clean layout (panel 0 only).
+    window.addEventListener("pageshow", function () {
+      panels.forEach(function (p) { p.classList.remove("is-open"); });
+      resize();
+    });
+
+    // Sticky-hover accordion — only active once settled (sequence complete). `is-open` is
+    // the SINGLE source of truth for the open panel (toggle-all → exactly one open). We do
+    // NOT use CSS :focus-within to open (it was a parallel, unmanaged trigger: clicking a
+    // Read link focus-latched its panel open, and pressing Back restored that focus so the
+    // panel stayed open alongside the hover one = two open). Keyboard focus is routed through
+    // the same open() here (focusin bubbles from the link) so tabbing still opens a panel —
+    // but through the single toggle, so only ever one is open.
     function open(p) { if (settled) panels.forEach(function (x) { x.classList.toggle("is-open", x === p); }); }
-    panels.forEach(function (p) { p.addEventListener("mouseenter", function () { open(p); }); });
-    wstack.addEventListener("mouseleave", function () { open(panels[0]); });
+    panels.forEach(function (p) {
+      p.addEventListener("mouseenter", function () { hovered = p; open(p); });
+      p.addEventListener("focusin", function () { open(p); });
+    });
+    // Leaving the whole stack keeps the last-opened panel open (no reset to panel 0) —
+    // hovered stays pointing at it so the open state and geometry remain consistent.
   })();
 
   /* ---------- Accordion (Services + any .faq-item) ---------- */

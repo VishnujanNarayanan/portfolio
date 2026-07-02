@@ -370,10 +370,11 @@ header .header__nav-left a{color:#050419;font-size:16px}
    carries +(--strip + --cw) of basis, so it ends up exactly one content column wider
    than the others while every panel still shares the leftover space — fills the width,
    never overflows, and animates smoothly.
-   Which panel is open is driven by the `is-open` class set in main.js on mouseenter
-   (sticky — survives the resize, so no hover-flicker). :focus-within covers keyboard. */
-.wpanel.is-open,
-.wpanel:focus-within{flex-basis:calc(var(--strip) + var(--cw))}
+   Which panel is open is driven SOLELY by the `is-open` class set in main.js (on
+   mouseenter, and on focusin for keyboard) — one open at a time. We deliberately do NOT
+   open on :focus-within: a focused Read link would latch its panel open independently of
+   the hover accordion (and stick after Back via bfcache focus restore) → two open. */
+.wpanel.is-open{flex-basis:calc(var(--strip) + var(--cw))}
 
 /* Rail — the strip that always shows (vertical label top, number bottom).
    Fills the collapsed panel (so the label centres); resolves to --strip when the
@@ -398,8 +399,7 @@ header .header__nav-left a{color:#050419;font-size:16px}
   padding:clamp(32px,3vw,52px) clamp(28px,2.6vw,44px);
   pointer-events:none;opacity:0;transform:translateX(104px);   /* parked further off to the RIGHT (clipped by the panel) while closed — longer slide-in */
   transition:opacity .5s ease-in-out .12s, transform .7s cubic-bezier(.32,0,.16,1) .05s}
-.wpanel.is-open .wpanel__content,
-.wpanel:focus-within .wpanel__content{opacity:1;transform:translateX(0);pointer-events:auto}   /* slides left into place */
+.wpanel.is-open .wpanel__content{opacity:1;transform:translateX(0);pointer-events:auto}   /* slides left into place */
 
 /* Thin vertical divider just LEFT of the text (between the rail and the content), like the
    line in the reference's open panel. It enters from the left and settles slightly to the
@@ -408,8 +408,7 @@ header .header__nav-left a{color:#050419;font-size:16px}
   background:rgba(255,255,255,.22);pointer-events:none;
   opacity:0;transform:translateX(-22px);
   transition:opacity .5s ease-in-out .12s, transform .7s cubic-bezier(.32,0,.16,1) .05s}
-.wpanel.is-open::after,
-.wpanel:focus-within::after{opacity:1;transform:translateX(0)}
+.wpanel.is-open::after{opacity:1;transform:translateX(0)}
 
 .wpanel__meta{display:none}   /* category / read-time line removed */
 .wpanel__title{margin:0;font-family:"Inter",sans-serif;font-size:clamp(1.8rem,2.4vw,2.5rem);line-height:1.06;letter-spacing:-.02em}
@@ -426,8 +425,7 @@ header .header__nav-left a{color:#050419;font-size:16px}
   color:#fff;text-decoration:underline;text-underline-offset:5px;text-decoration-color:rgba(77,139,255,.6);
   pointer-events:none;opacity:0;transform:translateX(-22px);
   transition:opacity .5s ease-in-out .12s, transform .7s cubic-bezier(.32,0,.16,1) .05s, color .25s, text-decoration-color .25s}
-.wpanel.is-open .wpanel__link,
-.wpanel:focus-within .wpanel__link{opacity:1;transform:translateX(0);pointer-events:auto}
+.wpanel.is-open .wpanel__link{opacity:1;transform:translateX(0);pointer-events:auto}
 .wpanel__link:hover{color:#4d8bff;text-decoration-color:#4d8bff}
 
 /* Mobile / no-hover: drop the accordion — heading + plain full-width post blocks, all open */
