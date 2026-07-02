@@ -615,7 +615,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 /* Projects result = a side panel (LEFT, flush to the terminal's left edge) + cards grid.
    The panel breaks out of the body's 34px left padding (margin-left:-34px) so it starts
    right at the border with no gap; the grid keeps a gap after it. */
-.term-pgrid{flex:1 1 auto;min-height:0;display:flex;gap:28px;align-items:stretch;padding-top:24px;margin-left:-34px}
+.term-pgrid{flex:1 1 auto;min-height:0;display:flex;gap:28px;align-items:stretch;padding-top:44px;margin-left:-34px}
 .term-projects{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;align-content:start;align-items:start}
 /* Panel appears with the SAME rise+fade as the cards (Lando reveal), keyed off the
    LATCHED .is-revealing class (same as the cards) so once it appears it STAYS — it
