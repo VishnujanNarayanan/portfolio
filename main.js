@@ -2289,10 +2289,29 @@
     function blockScroll(e) { e.preventDefault(); }
     function blockKeys(e) { if (SCROLL_KEYS[e.keyCode]) e.preventDefault(); }
     function clampScroll() { if (locked && window.scrollY !== lockY) window.scrollTo(0, lockY); }
+    // Momentum carry: leftover scroll speed at the reveal becomes a decaying DOWNWARD
+    // offset on the cards layer (they start a bit lower and ease up), instead of panning
+    // them UP into the clip (which cut the top row). momOff eases to 0 on its own rAF so
+    // it still animates while the stick has scrolling frozen.
+    var momOff = 0, momRAF = 0, MOM_SCALE = 1.2, MOM_MAX = 60;
+    function animMom() {
+      momOff += (0 - momOff) * 0.09;
+      if (Math.abs(momOff) < 0.3) { momOff = 0; momRAF = 0; panCards(); return; }
+      panCards(); momRAF = requestAnimationFrame(animMom);
+    }
     function engageStick() {
       if (locked || window.innerWidth <= 820) return;        // no pin on mobile
-      locked = true; lockY = window.scrollY;
-      if (lenis) lenis.stop();
+      // Land EXACTLY at the cover line (rect.top = 0) so the base pan is 0 — the cards
+      // appear un-panned with full top clearance regardless of scroll overshoot/momentum.
+      var vel = (lenis && typeof lenis.velocity === "number") ? lenis.velocity : scrollVel;
+      lockY = window.scrollY + sec.getBoundingClientRect().top; // scrollY where rect.top = 0
+      locked = true;
+      if (lenis) { lenis.scrollTo(lockY, { immediate: true }); lenis.stop(); }
+      else window.scrollTo(0, lockY);
+      // Hand the killed momentum to the cards as a downward coast that eases up.
+      momOff = Math.min(MOM_MAX, Math.max(0, Math.abs(vel) * MOM_SCALE));
+      if (momRAF) cancelAnimationFrame(momRAF);
+      momRAF = requestAnimationFrame(animMom);
       window.addEventListener("wheel", blockScroll, { passive: false });
       window.addEventListener("touchmove", blockScroll, { passive: false });
       window.addEventListener("keydown", blockKeys, false);
@@ -2328,9 +2347,10 @@
     function panCards() {
       if (window.innerWidth <= 820) { panEl.style.transform = ""; return; }
       var pinScroll = sec.offsetHeight - window.innerHeight; // == cardOverflow()
-      if (pinScroll <= 0) { panEl.style.transform = "translateY(0px)"; return; }
+      if (pinScroll <= 0) { panEl.style.transform = "translateY(" + momOff.toFixed(1) + "px)"; return; }
       var past = Math.min(1, Math.max(0, -sec.getBoundingClientRect().top / pinScroll));
-      panEl.style.transform = "translateY(" + (-(past * pinScroll)).toFixed(1) + "px)";
+      // momOff (≥0) coasts the cards DOWN then eases to 0 — the reveal's momentum carry.
+      panEl.style.transform = "translateY(" + (-(past * pinScroll) + momOff).toFixed(1) + "px)";
     }
     function update() {
       raf = 0;
@@ -2363,7 +2383,7 @@
     // SNAP-TO-THRESHOLD: a pre-threshold buffer just ABOVE the full-cover position.
     // If a scroll SETTLES inside it (while still approaching DOWN), auto-scroll the
     // rest of the way so the section lands exactly at its cover position (rect.top = 0).
-    var snapT = 0, lastY = window.scrollY, dir = 1;
+    var snapT = 0, lastY = window.scrollY, dir = 1, scrollVel = 0;
     function maybeSnap() {
       if (locked || window.innerWidth <= 820 || dir < 0) return; // only approaching down
       var r = sec.getBoundingClientRect(), buffer = window.innerHeight * 0.2;
@@ -2378,7 +2398,7 @@
       }
     }
     function onScroll() {
-      var y = window.scrollY; dir = y >= lastY ? 1 : -1; lastY = y;
+      var y = window.scrollY; dir = y >= lastY ? 1 : -1; scrollVel = y - lastY; lastY = y;
       if (!raf) raf = requestAnimationFrame(update);
       clearTimeout(snapT); snapT = setTimeout(maybeSnap, 140); // fire once the scroll settles
     }
