@@ -2012,9 +2012,6 @@
     // is done, then a 0.3s gap, before the first card pops — so they don't appear
     // while the pre-text is still vanishing.
     var PRE_COLLAPSE = 0.6, GAP = 0.3, BASE_DELAY = PRE_COLLAPSE + GAP;
-    // Total time (ms) from the threshold firing to the LAST card settling — used to
-    // hold (stick) the section pinned until the reveal animation finishes.
-    var STICK_MS = 0;
     function layoutCardStagger() {
       var tpl = getComputedStyle(gridEl).gridTemplateColumns;
       var cols = tpl ? tpl.split(" ").filter(Boolean).length : 4;
@@ -2026,7 +2023,6 @@
         el.style.setProperty("--cd", (BASE_DELAY + diag * CARD_STEP) + "s");
       });
       projEl.style.setProperty("--meta-d", (BASE_DELAY + maxDiag * CARD_STEP + RISE_DUR) + "s");
-      STICK_MS = (BASE_DELAY + maxDiag * CARD_STEP + RISE_DUR + 0.15) * 1000; // +150ms buffer
       sizeSection();                                   // pin length tracks the card overflow
     }
     layoutCardStagger();
@@ -2084,7 +2080,10 @@
         // (not at the prior scrolled position — a 1-card result must be visible without
         // scrolling up). Realign scroll to the cover threshold so panCards() stays at 0.
         panEl.style.transform = "translateY(0px)";
-        var top = window.scrollY + sec.getBoundingClientRect().top; // scrollY where rect.top = 0
+        // Land a hair PAST the cover line (rect.top ≈ −2px, not exactly 0) so the nav
+        // reel — which flips dark on featuresEl.top ≤ 0 — stays dark instead of jittering
+        // to light when we realign right onto the boundary. 2px is negligible for the pan.
+        var top = window.scrollY + sec.getBoundingClientRect().top + 2; // just past rect.top = 0
         if (window.__lenis) window.__lenis.scrollTo(top, { immediate: true });
         else window.scrollTo(0, top);
         matching.forEach(function (c) {                    // reset to the appear "from" state, no transition
@@ -2165,31 +2164,7 @@
     //    LATCHED — once fired it never reverses, so scrolling back up keeps the
     //    cards on screen (and stops the per-frame re-typing fighting the scroll).
     var raf = 0, lastR = -1, atTop = false;
-    // Scroll LOCK: at the threshold the section STICKS (pins) just long enough for the
-    // card reveal animation to finish, so the cards aren't panned away mid-animation.
-    var lenis = window.__lenis, locked = false, lockY = 0, stickT = 0;
-    var SCROLL_KEYS = { 32: 1, 33: 1, 34: 1, 35: 1, 36: 1, 38: 1, 40: 1 };
-    function blockScroll(e) { e.preventDefault(); }
-    function blockKeys(e) { if (SCROLL_KEYS[e.keyCode]) e.preventDefault(); }
-    function clampScroll() { if (locked && window.scrollY !== lockY) window.scrollTo(0, lockY); }
-    function engageStick() {
-      if (locked || window.innerWidth <= 820) return;        // no pin on mobile
-      locked = true; lockY = window.scrollY;
-      if (lenis) lenis.stop();
-      window.addEventListener("wheel", blockScroll, { passive: false });
-      window.addEventListener("touchmove", blockScroll, { passive: false });
-      window.addEventListener("keydown", blockKeys, false);
-      window.addEventListener("scroll", clampScroll, { passive: true });
-      stickT = setTimeout(releaseStick, STICK_MS || 2500);
-    }
-    function releaseStick() {
-      if (!locked) return; locked = false; clearTimeout(stickT);
-      if (lenis) lenis.start();
-      window.removeEventListener("wheel", blockScroll, { passive: false });
-      window.removeEventListener("touchmove", blockScroll, { passive: false });
-      window.removeEventListener("keydown", blockKeys, false);
-      window.removeEventListener("scroll", clampScroll, { passive: true });
-    }
+    var lenis = window.__lenis;
     // How far the (visible) cards extend past their viewport — drives BOTH the section
     // height and the pan, so the two stay in lock-step.
     var PAN_PAD = 24;
@@ -2225,7 +2200,18 @@
       if (atTop) { panCards(); return; }                  // latched: cards stay; pan to reveal all rows
       if (r.top <= 0) {                                   // threshold reached → fire the reveal once
         atTop = true; term.classList.add("is-revealing");
-        renderText(total); lastR = total; engageStick(); panCards(); return;
+        renderText(total); lastR = total;
+        // The pin length was sized at init while .term-pre was still expanded, so the
+        // cards' viewport was shorter and the overflow (thus the pan) came out too big.
+        // Re-size once the pre-text collapse finishes so the revealed geometry drives the
+        // pin — matching what a filter click gets (last row lands as the pin releases).
+        var resize = function () { sizeSection(); panCards(); };
+        preEl.addEventListener("transitionend", function onEnd(e) {
+          if (e.propertyName !== "max-height") return;     // wait for the height collapse, not opacity
+          preEl.removeEventListener("transitionend", onEnd); resize();
+        });
+        setTimeout(resize, (PRE_COLLAPSE + 0.05) * 1000);  // fallback if no transitionend
+        panCards(); return;
       }
       var typeStart = vh * (6 / 7);
       var typeT = Math.min(1, Math.max(0, (typeStart - r.top) / (typeStart - 0)));
@@ -2237,7 +2223,7 @@
     // rest of the way so the section lands exactly at its cover position (rect.top = 0).
     var snapT = 0, lastY = window.scrollY, dir = 1;
     function maybeSnap() {
-      if (locked || window.innerWidth <= 820 || dir < 0) return; // only approaching down
+      if (window.innerWidth <= 820 || dir < 0) return; // only approaching down
       var r = sec.getBoundingClientRect(), buffer = window.innerHeight * 0.2;
       if (r.top > 0 && r.top <= buffer) {
         var target = window.scrollY + r.top;                 // scrollY that makes rect.top = 0
