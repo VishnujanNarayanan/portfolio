@@ -904,8 +904,6 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .soc-card__ig-stats b{font-size:1rem;color:#1a1a1a}
 .soc-card--instagram .soc-card__handle{color:#1a1a1a;font-size:1rem;font-weight:700;margin-top:.9rem}
 .soc-card--instagram .soc-card__desc{color:#3a3a3a;opacity:1;margin-top:.25rem;font-size:.82rem;line-height:1.4}
-.soc-card__ig-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.2rem;margin-top:.9rem}
-.soc-card__ig-grid img{width:100%;aspect-ratio:1;object-fit:cover;display:block;border-radius:.2rem}
 .soc-card--instagram .soc-card__cta{margin-top:auto;padding-top:1rem;color:#d6216f}
 
 /* Per-brand palettes */
@@ -950,7 +948,6 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
   .soc-card__ig-stats b{font-size:.55rem}
   .soc-card--instagram .soc-card__handle{font-size:.6rem;margin-top:.45rem}
   .soc-card--instagram .soc-card__desc{font-size:.48rem;margin-top:.15rem}
-  .soc-card__ig-grid{gap:.1rem;margin-top:.45rem}
   .soc-card__repos{font-size:.5rem;gap:.15rem;margin-top:.4rem;padding-top:.4rem}
   .s.is-callout-socials{padding:4rem 1.25rem}
 }
