@@ -1698,9 +1698,29 @@
     requestAnimationFrame(frame);
     window.addEventListener("resize", resize, { passive: true });
 
-    // Sticky-hover accordion — only active once settled (sequence complete).
+    // Clicking a "Read" link navigates away; pressing Back restores this page from the
+    // bfcache with the DOM + JS state FROZEN — the panel you clicked keeps `is-open` and
+    // `settled` stays true, so setSettled(true)'s early-return never re-enforces "only
+    // panel 0 open" and you return with a stray open panel (→ two open once you hover
+    // another). On pageshow (fires on bfcache restore) drop any stale open state and force
+    // settled=null so the render loop re-derives a clean layout (panel 0 only).
+    window.addEventListener("pageshow", function () {
+      panels.forEach(function (p) { p.classList.remove("is-open"); });
+      resize();
+    });
+
+    // Sticky-hover accordion — only active once settled (sequence complete). `is-open` is
+    // the SINGLE source of truth for the open panel (toggle-all → exactly one open). We do
+    // NOT use CSS :focus-within to open (it was a parallel, unmanaged trigger: clicking a
+    // Read link focus-latched its panel open, and pressing Back restored that focus so the
+    // panel stayed open alongside the hover one = two open). Keyboard focus is routed through
+    // the same open() here (focusin bubbles from the link) so tabbing still opens a panel —
+    // but through the single toggle, so only ever one is open.
     function open(p) { if (settled) panels.forEach(function (x) { x.classList.toggle("is-open", x === p); }); }
-    panels.forEach(function (p) { p.addEventListener("mouseenter", function () { open(p); }); });
+    panels.forEach(function (p) {
+      p.addEventListener("mouseenter", function () { open(p); });
+      p.addEventListener("focusin", function () { open(p); });
+    });
     wstack.addEventListener("mouseleave", function () { open(panels[0]); });
   })();
 
