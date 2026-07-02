@@ -200,20 +200,40 @@
       return cardHtml(c, i, ("0" + (pi + 1)) + "." + (i + 1));
     }).join("");
   });
-  // Hover coupling — hovering an item OR a card activates the matching pair.
-  panels.forEach(function (panel) {
-    var items = Array.prototype.slice.call(panel.querySelectorAll(".flow-panel__item"));
-    var pcards = Array.prototype.slice.call(panel.querySelectorAll(".flow-panel__cards .proj-card"));
-    function setActive(idx, on) {
-      items.forEach(function (el) { if (+el.getAttribute("data-card") === idx) el.classList.toggle("is-active", on); });
-      pcards.forEach(function (el) { if (+el.getAttribute("data-card") === idx) el.classList.toggle("is-active", on); });
+  // Hover coupling — hovering a card OR its matching text item activates BOTH (the
+  // .is-active class mirrors the card's :hover). The cards are transformed EVERY frame
+  // (cursor parallax + the horizontal scroll-slide) and their pointer-events toggle on
+  // and off per active stage, so per-element pointerenter/pointerleave miss transitions:
+  // a card slides under, or out from, a near-stationary cursor — or its pointer-events
+  // flip — without the pointer ever crossing an element boundary, leaving hovers stuck
+  // or never firing. Instead HIT-TEST the live geometry: read what's actually under the
+  // cursor on each pointer move AND each render frame (refreshHover in loop()), so the
+  // active pair always tracks the card that's really beneath the cursor right now.
+  function applyActive(panel, idx, on) {
+    var els = panel.querySelectorAll('.flow-panel__item[data-card="' + idx + '"], .flow-panel__cards .proj-card[data-card="' + idx + '"]');
+    Array.prototype.forEach.call(els, function (el) { el.classList.toggle("is-active", on); });
+  }
+  var hoverPanel = null, hoverIdx = -1, hoverX = -1, hoverY = -1;
+  function refreshHover() {
+    var host = null;
+    if (hoverX >= 0) {
+      var el = document.elementFromPoint(hoverX, hoverY);
+      host = el && el.closest ? el.closest("[data-card]") : null;
+      if (host && !flow.contains(host)) host = null;       // ignore data-card outside the flow
     }
-    items.concat(pcards).forEach(function (el) {
-      var idx = +el.getAttribute("data-card");
-      el.addEventListener("pointerenter", function () { setActive(idx, true); });
-      el.addEventListener("pointerleave", function () { setActive(idx, false); });
-    });
-  });
+    var panel = host ? host.closest(".flow-panel") : null;
+    var idx = host ? +host.getAttribute("data-card") : -1;
+    if (panel === hoverPanel && idx === hoverIdx) return;   // no change
+    if (hoverPanel && hoverIdx >= 0) applyActive(hoverPanel, hoverIdx, false); // clear the old pair
+    if (panel && idx >= 0) applyActive(panel, idx, true);   // activate the new pair
+    hoverPanel = panel; hoverIdx = idx;
+  }
+  window.addEventListener("pointermove", function (e) {
+    hoverX = e.clientX; hoverY = e.clientY; refreshHover();
+  }, { passive: true });
+  window.addEventListener("pointerleave", function () {     // cursor left the window
+    hoverX = hoverY = -1; refreshHover();
+  }, { passive: true });
   // Staggered columns + cursor parallax (like the reference nav images, whose two
   // columns sit offset by ±2.25rem and drift with the mouse). Each card carries a
   // per-COLUMN baseY offset (left col up, right col down) so it's not a flat grid, plus
@@ -480,6 +500,7 @@
     // of overscroll on each side: at -1 the first zone waits off-right (pre-entry),
     // crossing -0.5 fires its appear + image entry; at N the last zone has exited.
     var globalRaw = total > 0 ? clamp((-rect.top) / total * (N - 1), -1, N) : 0;
+    var sceneScrolled = Math.abs(globalRaw - lastGlobalRaw) > 1e-4;  // cards slid this frame
     if (globalRaw > lastGlobalRaw + 1e-4) scrollDir = 1;
     else if (globalRaw < lastGlobalRaw - 1e-4) scrollDir = -1;
     lastGlobalRaw = globalRaw;
@@ -756,6 +777,13 @@
     }
 
     if (dbg) updateDebug(progress, global);
+
+    // Re-hit-test the hover while the cards are actually drifting under the cursor —
+    // the scroll-slide (sceneScrolled) or the cursor parallax still easing (mTY≠mCY) —
+    // so is-active follows the moving card even when the pointer itself is still.
+    // (Deliberate cursor moves are already handled by the pointermove listener.) Gated
+    // to skip the layout flush when nothing under the cursor is moving.
+    if (hoverX >= 0 && (sceneScrolled || Math.abs(mTY - mCY) > 1e-4)) refreshHover();
 
     requestAnimationFrame(loop);
   }

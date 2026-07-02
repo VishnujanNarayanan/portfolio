@@ -2089,6 +2089,12 @@
     // is done, then a 0.3s gap, before the first card pops — so they don't appear
     // while the pre-text is still vanishing.
     var PRE_COLLAPSE = 0.6, GAP = 0.3, BASE_DELAY = PRE_COLLAPSE + GAP;
+    // Hold (stick) the section pinned at the threshold just long enough for the first
+    // cards to actually rise into view — so scrolling through the threshold can't pan
+    // them away before they've loaded (which was cutting off the first row). SHORTER
+    // than the full cascade: pre-collapse + gap + ~40% of one card's rise, then free
+    // scroll while the rest cascade in. Tune the 0.4 for a longer/shorter wait.
+    var STICK_MS = (BASE_DELAY + RISE_DUR * 0.4) * 1000;
     function layoutCardStagger() {
       var tpl = getComputedStyle(gridEl).gridTemplateColumns;
       var cols = tpl ? tpl.split(" ").filter(Boolean).length : 4;
@@ -2241,7 +2247,33 @@
     //    LATCHED — once fired it never reverses, so scrolling back up keeps the
     //    cards on screen (and stops the per-frame re-typing fighting the scroll).
     var raf = 0, lastR = -1, atTop = false;
-    var lenis = window.__lenis;
+    // Scroll LOCK: at the threshold the section STICKS (pins) just long enough for the
+    // first cards to rise in (STICK_MS), so they aren't panned away mid-animation — the
+    // cause of the first row getting cut off / not loading. Released early so you can
+    // start scrolling soon after.
+    var lenis = window.__lenis, locked = false, lockY = 0, stickT = 0;
+    var SCROLL_KEYS = { 32: 1, 33: 1, 34: 1, 35: 1, 36: 1, 38: 1, 40: 1 };
+    function blockScroll(e) { e.preventDefault(); }
+    function blockKeys(e) { if (SCROLL_KEYS[e.keyCode]) e.preventDefault(); }
+    function clampScroll() { if (locked && window.scrollY !== lockY) window.scrollTo(0, lockY); }
+    function engageStick() {
+      if (locked || window.innerWidth <= 820) return;        // no pin on mobile
+      locked = true; lockY = window.scrollY;
+      if (lenis) lenis.stop();
+      window.addEventListener("wheel", blockScroll, { passive: false });
+      window.addEventListener("touchmove", blockScroll, { passive: false });
+      window.addEventListener("keydown", blockKeys, false);
+      window.addEventListener("scroll", clampScroll, { passive: true });
+      stickT = setTimeout(releaseStick, STICK_MS || 1200);
+    }
+    function releaseStick() {
+      if (!locked) return; locked = false; clearTimeout(stickT);
+      if (lenis) lenis.start();
+      window.removeEventListener("wheel", blockScroll, { passive: false });
+      window.removeEventListener("touchmove", blockScroll, { passive: false });
+      window.removeEventListener("keydown", blockKeys, false);
+      window.removeEventListener("scroll", clampScroll, { passive: true });
+    }
     // How far the (visible) cards extend past their viewport — drives BOTH the section
     // height and the pan, so the two stay in lock-step.
     var PAN_PAD = 24;
@@ -2277,7 +2309,7 @@
       if (atTop) { panCards(); return; }                  // latched: cards stay; pan to reveal all rows
       if (r.top <= 0) {                                   // threshold reached → fire the reveal once
         atTop = true; term.classList.add("is-revealing");
-        renderText(total); lastR = total;
+        renderText(total); lastR = total; engageStick();
         // The pin length was sized at init while .term-pre was still expanded, so the
         // cards' viewport was shorter and the overflow (thus the pan) came out too big.
         // Re-size once the pre-text collapse finishes so the revealed geometry drives the
@@ -2300,10 +2332,14 @@
     // rest of the way so the section lands exactly at its cover position (rect.top = 0).
     var snapT = 0, lastY = window.scrollY, dir = 1;
     function maybeSnap() {
-      if (window.innerWidth <= 820 || dir < 0) return; // only approaching down
+      if (locked || window.innerWidth <= 820 || dir < 0) return; // only approaching down
       var r = sec.getBoundingClientRect(), buffer = window.innerHeight * 0.2;
       if (r.top > 0 && r.top <= buffer) {
-        var target = window.scrollY + r.top;                 // scrollY that makes rect.top = 0
+        // Land a few px PAST the cover line (rect.top ≈ −4, not exactly 0). Lenis easing
+        // tends to settle a hair short of the target, leaving rect.top a fraction above 0
+        // — which never trips the `r.top <= 0` reveal threshold, so the snap looked full
+        // screen but the cards never loaded. The overshoot guarantees the reveal fires.
+        var target = window.scrollY + r.top + 4;             // scrollY that makes rect.top ≈ −4
         if (lenis) lenis.scrollTo(target, { duration: 0.5 });
         else window.scrollTo({ top: target, behavior: "smooth" });
       }
