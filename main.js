@@ -1744,7 +1744,8 @@
       p.addEventListener("mouseenter", function () { hovered = p; open(p); });
       p.addEventListener("focusin", function () { open(p); });
     });
-    wstack.addEventListener("mouseleave", function () { hovered = null; open(panels[0]); });
+    // Leaving the whole stack keeps the last-opened panel open (no reset to panel 0) —
+    // hovered stays pointing at it so the open state and geometry remain consistent.
   })();
 
   /* ---------- Accordion (Services + any .faq-item) ---------- */
