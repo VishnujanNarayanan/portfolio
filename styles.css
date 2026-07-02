@@ -906,9 +906,20 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .soc-card--instagram .soc-card__desc{color:#3a3a3a;opacity:1;margin-top:.25rem;font-size:.82rem;line-height:1.4}
 .soc-card--instagram .soc-card__cta{margin-top:auto;padding-top:1rem;color:#d6216f}
 
+/* Substack — orange header over a white profile body */
+.soc-card--substack{padding:0;background:#fff;color:#1a1a1a;border:1px solid #e6e6e8;justify-content:flex-start}
+.soc-card__ss-head{flex:0 0 auto;display:flex;align-items:center;gap:.55rem;padding:1.1rem 1.3rem;background:#ff6719}
+.soc-card__ss-head .soc-card__logo{width:1.7rem;height:1.7rem}
+.soc-card__ss-head .soc-card__brand{color:#fff;font-size:1.15rem}
+.soc-card__ss-body{flex:1 1 auto;min-height:0;padding:1.3rem 1.3rem 1.5rem;display:flex;flex-direction:column}
+.soc-card__ss-avatar{width:4.4rem;height:4.4rem;border-radius:50%;object-fit:cover;border:1px solid #eee;background:#eee;margin-bottom:.8rem}
+.soc-card--substack .soc-card__handle{color:#1a1a1a;font-size:1.2rem;font-weight:700;line-height:1.15}
+.soc-card__ss-handle{margin-top:.15rem;font-size:.82rem;color:#8a8a8a}
+.soc-card--substack .soc-card__desc{color:#2c2c2c;opacity:1;margin-top:.6rem;font-size:.86rem;line-height:1.45}
+.soc-card--substack .soc-card__cta{margin-top:auto;padding-top:1rem;color:#ff6719}
+
 /* Per-brand palettes */
 .soc-card--email{background:linear-gradient(155deg,#3b3f47 0%,#16181d 100%);border:1px solid #2a2d34}
-.soc-card--substack{background:linear-gradient(155deg,#ff6719 0%,#c33f00 100%)}
 
 .callout-socials-intro-w{margin-top:1rem;row-gap:1.25rem;flex-flow:column;justify-content:flex-start;align-items:center;display:flex}
 .callout-socials-follow{font-family:var(--font-ui),sans-serif;font-size:clamp(1.25rem,2.6vw,1.75rem);font-weight:500;color:var(--color-text);background-color:var(--color-highlight);color:var(--color-text-light);padding:.05em .35em}
@@ -948,6 +959,14 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
   .soc-card__ig-stats b{font-size:.55rem}
   .soc-card--instagram .soc-card__handle{font-size:.6rem;margin-top:.45rem}
   .soc-card--instagram .soc-card__desc{font-size:.48rem;margin-top:.15rem}
+  .soc-card__ss-head{padding:.55rem .6rem;gap:.3rem}
+  .soc-card__ss-head .soc-card__logo{width:.95rem;height:.95rem}
+  .soc-card__ss-head .soc-card__brand{font-size:.62rem}
+  .soc-card__ss-body{padding:.7rem .7rem .8rem}
+  .soc-card__ss-avatar{width:2.2rem;height:2.2rem;margin-bottom:.4rem}
+  .soc-card--substack .soc-card__handle{font-size:.66rem}
+  .soc-card__ss-handle{font-size:.46rem}
+  .soc-card--substack .soc-card__desc{font-size:.5rem;margin-top:.3rem}
   .soc-card__repos{font-size:.5rem;gap:.15rem;margin-top:.4rem;padding-top:.4rem}
   .s.is-callout-socials{padding:4rem 1.25rem}
 }
