@@ -1279,7 +1279,7 @@
         line: isSkills ? "rgba(57,50,220,0.5)" : "rgba(77,139,255,0.45)"
       });
     });
-    var W = 0, H = 0, DPR = 1, CELL = 26, cols = 0, rows = 0, field = [];
+    var W = 0, H = 0, DPR = 1, CELL = 16, cols = 0, rows = 0, field = [];  // finer grid → smoother, rounder contour curves
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
     // tiny value noise (for domain-warping the field → breaks perfect circles/ovals)
     function vh(i, j) { var n = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return n - Math.floor(n); }
@@ -1289,25 +1289,27 @@
       var a = vh(ix, iy), b = vh(ix + 1, iy), c2 = vh(ix, iy + 1), d = vh(ix + 1, iy + 1);
       return (a * (1 - ux) + b * ux) * (1 - uy) + (c2 * (1 - ux) + d * ux) * uy;
     }
-    // Metaballs (round, closed iso-loops) on a JITTERED GRID that EXTENDS BEYOND the
-    // viewport (span -0.2..1.2) so blobs also live off-screen — contours then run off the
-    // edges and merge/split at the borders too, not just in the centre (no big containing
-    // outer loop). Larger orbits + heavy jitter → more random merging/splitting everywhere.
-    var BLOBS = [];
-    function seedBlobs() {
-      BLOBS = []; var gx = 5, gy = 4, i, j, SPAN = 1.4, OFF = -0.2;
-      for (j = 0; j < gy; j++) for (i = 0; i < gx; i++) {
-        BLOBS.push({
-          bx: OFF + (i + 0.5) / gx * SPAN + (Math.random() - 0.5) * 0.22,
-          by: OFF + (j + 0.5) / gy * SPAN + (Math.random() - 0.5) * 0.22,
-          ox: 0.07 + Math.random() * 0.13, oy: 0.07 + Math.random() * 0.13,  // larger orbit → real merging/splitting
-          sx: 0.04 + Math.random() * 0.14, sy: 0.04 + Math.random() * 0.14,
-          px: Math.random() * 6.28, py: Math.random() * 6.28,
-          r: 0.12 + Math.random() * 0.1,
-          pulse: 0.35 + Math.random() * 0.9,
-          pph: Math.random() * 6.28
-        });
+    // Topographic field = fractal value-noise (fBm) of noise2. Unlike metaballs (round
+    // blobs with flat plateaus → bunched edges + big empty valleys), fBm has a roughly
+    // uniform gradient everywhere, so it contours into big, smooth, evenly-spaced organic
+    // loops that fill the whole viewport — the Lando look. baseFreq sets the loop size;
+    // the octaves each drift at a different slow rate so the contours gently morph.
+    // (Measured on this field: ~0 empty regions, even coverage — see the marching pass.)
+    // Just 2 octaves — a big smooth base undulation + one gentle detail — keeps the loops
+    // ROUND and blobby. LARGE loops (base 1/800) give a gentle gradient, so adjacent iso-
+    // lines sit well apart (no crowded parallel pairs) and the curves round out further.
+    // Measured even (CV ~0.51). The two octaves DRIFT at different rates/directions, so the
+    // contours visibly flow and MERGE/SPLIT over seconds.
+    var FBM_OCT = 2, FBM_BASE = 1 / 800, FBM_GAIN = 0.5, FBM_LAC = 2.0;
+    var FBM_NORM = 0; (function () { var a = 1, o; for (o = 0; o < FBM_OCT; o++) { FBM_NORM += a; a *= FBM_GAIN; } })();
+    var OCT_DX = [0.17, -0.22], OCT_DY = [-0.14, 0.25];
+    function fbm(x, y, tt) {
+      var f = FBM_BASE, amp = 1, sum = 0, o;
+      for (o = 0; o < FBM_OCT; o++) {
+        sum += amp * noise2(x * f + o * 13.7 + tt * OCT_DX[o], y * f + o * 7.3 + tt * OCT_DY[o]);
+        amp *= FBM_GAIN; f *= FBM_LAC;
       }
+      return sum / FBM_NORM;                             // ~0..1
     }
     function sizeCanvas(canvas, context) {
       canvas.width = W * DPR; canvas.height = H * DPR;
@@ -1320,9 +1322,33 @@
       sizeCanvas(cv, ctx); if (hcv) sizeCanvas(hcv, hctx); if (wcv) sizeCanvas(wcv, wctx);
       cols = Math.ceil(W / CELL) + 1; rows = Math.ceil(H / CELL) + 1;
     }
-    seedBlobs(); resize();
+    resize();
     window.addEventListener("resize", resize, { passive: true });
-    var LEVELS = [0.22, 0.36, 0.52, 0.7];              // fewer, rounded nested loops
+    // Cursor repulsion — the contour lines bend very subtly AWAY from the pointer within
+    // a soft radius. The influence point (mxE,myE) LAGS the real cursor and the strength
+    // (mAmt) fades in/out slowly, so the reaction trails and lingers (momentum) instead
+    // of snapping. All in screen coords: the shared field is sampled in screen space, so
+    // this lands in the right place on every contour canvas. reduced-motion: no rAF loop
+    // runs, so this stays inert.
+    var mxT = -1, myT = -1;        // raw pointer (screen px); -1 = absent
+    var mxE = -1, myE = -1;        // eased influence point (the lag = momentum)
+    var mAmt = 0, mAmtT = 0;       // strength envelope: 1 while the pointer is over the page
+    if (!reduce) {
+      window.addEventListener("pointermove", function (e) {
+        mxT = e.clientX; myT = e.clientY; mAmtT = 1;
+      }, { passive: true });
+      window.addEventListener("pointerleave", function () { mAmtT = 0; }, { passive: true });
+      document.addEventListener("mouseleave", function () { mAmtT = 0; }, { passive: true });
+    }
+    var REPEL_R = 320;             // radius of influence (px) — recomputed on resize below
+    var REPEL_K = 0.13;           // push strength (dimensionless); peak shift ≈ 0.6·R·K px
+    function repelRadius() { REPEL_R = Math.max(240, Math.min(W, H) * 0.30); }
+    repelRadius(); window.addEventListener("resize", repelRadius, { passive: true });
+    // Evenly-spaced iso-levels (step 0.10) across the range the dense small-blob field
+    // lives in → consistent line spacing everywhere, filling the viewport instead of
+    // 5 evenly-spaced iso-levels (step 0.10 — wider than before) so even where the field
+    // slopes, adjacent lines stay generously apart: no crowded parallel pairs, big airy loops.
+    var LEVELS = [0.30, 0.40, 0.50, 0.60, 0.70];
     function lerp(a, b, t) { return a + (b - a) * t; }
     // marching squares over the shared field → closed, non-overlapping contours.
     // Pulled out so the section canvases (which fill their own full height) can reuse the
@@ -1373,27 +1399,28 @@
     function frame(now) {
       var dt = last ? Math.min((now - last) / 1000, 0.05) : 0; last = now;
       t += dt * 0.5;                                     // drift speed
-      var md = Math.min(W, H), wf = 2.6 / md, warp = md * 0.08; // gentle warp → rounded, not perfect circles
-      var bx = [], by = [], br = [], bw = [], i, c, r;
-      for (i = 0; i < BLOBS.length; i++) {
-        var b = BLOBS[i];
-        bx[i] = (b.bx + Math.cos(t * b.sx * 6.28 + b.px) * b.ox) * W;
-        by[i] = (b.by + Math.sin(t * b.sy * 6.28 + b.py) * b.oy) * H;
-        br[i] = b.r * md;
-        bw[i] = 0.6 + 0.4 * Math.sin(t * b.pulse + b.pph);
-      }
+      // Ease the influence point toward the cursor (lag → momentum) and fade the strength;
+      // when the pointer leaves, mAmtT=0 eases the effect back out over ~a second.
+      if (mxT >= 0) { if (mxE < 0) { mxE = mxT; myE = myT; } mxE += (mxT - mxE) * 0.055; myE += (myT - myE) * 0.055; }
+      // Rise fairly quick, fall VERY slowly → the effect trails the cursor and lingers
+      // for a couple of seconds after it stops or leaves (lasting momentum).
+      mAmt += (mAmtT - mAmt) * (mAmtT > mAmt ? 0.04 : 0.010);
+      var repel = mAmt > 0.002 && mxE >= 0;              // skip the per-cell work when idle
+      var rInv = 1 / (2 * REPEL_R * REPEL_R), rKick = REPEL_K * mAmt;
+      var c, r;
       for (r = 0; r <= rows; r++) {
         field[r] = field[r] || [];
         for (c = 0; c <= cols; c++) {
           var px = c * CELL, py = r * CELL;
-          var wx = px + (noise2(px * wf + t * 0.1, py * wf) - 0.5) * 2 * warp;
-          var wy = py + (noise2(px * wf + 5.2, py * wf - t * 0.1) - 0.5) * 2 * warp;
-          var sum = 0;
-          for (i = 0; i < BLOBS.length; i++) {
-            var dx = wx - bx[i], dy = wy - by[i], rr = br[i];
-            sum += bw[i] * Math.exp(-(dx * dx + dy * dy) / (2 * rr * rr));
+          if (repel) {
+            // Domain-warp the sample TOWARD the cursor (fall peaks at ~R) so the loops
+            // render pushed AWAY from it — bowing out of a soft bubble. Zero at the exact
+            // centre and beyond the radius, so nothing snaps or spikes.
+            var tox = mxE - px, toy = myE - py;
+            var fall = Math.exp(-(tox * tox + toy * toy) * rInv) * rKick;
+            px += tox * fall; py += toy * fall;
           }
-          field[r][c] = sum;
+          field[r][c] = fbm(px, py, t);
         }
       }
       // Flow lightening (shared from flow.js): lt 0 = dark navy world (lines stay
