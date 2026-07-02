@@ -1322,6 +1322,25 @@
     }
     seedBlobs(); resize();
     window.addEventListener("resize", resize, { passive: true });
+    // Cursor repulsion — the contour lines bend very subtly AWAY from the pointer within
+    // a soft radius. The influence point (mxE,myE) LAGS the real cursor and the strength
+    // (mAmt) fades in/out slowly, so the reaction trails and lingers (momentum) instead of
+    // snapping. All in screen coords: the shared field is sampled in screen space, so this
+    // lands in the right place on every contour canvas. reduced-motion: no rAF loop runs.
+    var mxT = -1, myT = -1;        // raw pointer (screen px); -1 = absent
+    var mxE = -1, myE = -1;        // eased influence point (the lag = momentum)
+    var mAmt = 0, mAmtT = 0;       // strength envelope: 1 while the pointer is over the page
+    if (!reduce) {
+      window.addEventListener("pointermove", function (e) {
+        mxT = e.clientX; myT = e.clientY; mAmtT = 1;
+      }, { passive: true });
+      window.addEventListener("pointerleave", function () { mAmtT = 0; }, { passive: true });
+      document.addEventListener("mouseleave", function () { mAmtT = 0; }, { passive: true });
+    }
+    var REPEL_R = 320;             // radius of influence (px) — recomputed on resize below
+    var REPEL_K = 0.13;            // push strength (dimensionless); peak shift ≈ 0.6·R·K px
+    function repelRadius() { REPEL_R = Math.max(240, Math.min(W, H) * 0.30); }
+    repelRadius(); window.addEventListener("resize", repelRadius, { passive: true });
     var LEVELS = [0.22, 0.36, 0.52, 0.7];              // fewer, rounded nested loops
     function lerp(a, b, t) { return a + (b - a) * t; }
     // marching squares over the shared field → closed, non-overlapping contours.
@@ -1373,6 +1392,12 @@
     function frame(now) {
       var dt = last ? Math.min((now - last) / 1000, 0.05) : 0; last = now;
       t += dt * 0.5;                                     // drift speed
+      // Ease the influence point toward the cursor (lag → momentum) and fade the strength;
+      // when the pointer leaves, mAmtT=0 eases the effect back out over ~a second.
+      if (mxT >= 0) { if (mxE < 0) { mxE = mxT; myE = myT; } mxE += (mxT - mxE) * 0.055; myE += (myT - myE) * 0.055; }
+      mAmt += (mAmtT - mAmt) * (mAmtT > mAmt ? 0.04 : 0.010);
+      var repel = mAmt > 0.002 && mxE >= 0;              // skip the per-cell work when idle
+      var rInv = 1 / (2 * REPEL_R * REPEL_R), rKick = REPEL_K * mAmt;
       var md = Math.min(W, H), wf = 2.6 / md, warp = md * 0.08; // gentle warp → rounded, not perfect circles
       var bx = [], by = [], br = [], bw = [], i, c, r;
       for (i = 0; i < BLOBS.length; i++) {
@@ -1388,6 +1413,14 @@
           var px = c * CELL, py = r * CELL;
           var wx = px + (noise2(px * wf + t * 0.1, py * wf) - 0.5) * 2 * warp;
           var wy = py + (noise2(px * wf + 5.2, py * wf - t * 0.1) - 0.5) * 2 * warp;
+          if (repel) {
+            // Sample TOWARD the cursor (fall peaks at ~R) so the pattern renders pushed
+            // AWAY from it — the lines bow out of a soft bubble. Zero at the exact centre
+            // and beyond the radius, so nothing snaps or spikes.
+            var tox = mxE - px, toy = myE - py;
+            var fall = Math.exp(-(tox * tox + toy * toy) * rInv) * rKick;
+            wx += tox * fall; wy += toy * fall;
+          }
           var sum = 0;
           for (i = 0; i < BLOBS.length; i++) {
             var dx = wx - bx[i], dy = wy - by[i], rr = br[i];
