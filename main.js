@@ -1535,6 +1535,23 @@
     function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
     function lerp(a, b, t) { return a + (b - a) * t; }
 
+    // ---- Open/close STATE MACHINE (replaces the pure scroll-scrub) ------------------------
+    // The section top passes two lines as you scroll: t1 (appear, top = 0.5vh) and t2 (fold,
+    // top = −VANISH·vh). They split the scroll into three zones: above / inside / below.
+    //  • ENTER the inside zone (from above via ft1, or from below via bt2): if the blog is
+    //    CLOSED it OPENS. (Always — a must.) We remember which edge we entered by and whether
+    //    it was already open at that moment.
+    //  • EXIT the inside zone: it only CLOSES on a FULL PASS-THROUGH (out the FAR/opposite
+    //    edge from the one we entered) AND only if it was ALREADY OPEN before we entered.
+    //    A reversal (leaving the same edge we came in) never closes; a pass-through that the
+    //    entry itself opened stays open too.
+    var blogOpen = reduceMo, prevZone = null, entrySide = null, wasOpenAtEntry = false;
+    function zoneOf(topPx, vh) {
+      if (topPx > vh * 0.5) return "above";
+      if (topPx <= -VANISH * vh) return "below";
+      return "inside";
+    }
+
     // Resolved geometry (clamps → px), cached; recomputed on resize.
     var G = { W: 0, H: 0, openBasis: 0, per: 0, stripW: 0, openW: 0, ph: [] };
     function geom() {
@@ -1682,15 +1699,31 @@
       var rect = section.getBoundingClientRect();
       updatePinDwell(rect, vh);                          // drift + vanish run every frame (even after the fan settles)
       if (reduceMo) { setSettled(true); return; }        // no fan: land in place immediately
-      // REVEAL WINDOW (reversible): revealed while the section top is between the appear line (mid-
-      // viewport) and the fold-back line (VANISH·vh into the cover). pT follows it live, so scrolling
-      // DOWN past the fold line OR back UP past the appear line plays the fan-out in reverse — the same
-      // animation either way.
-      var triggered = rect.top <= vh * 0.5 && rect.top > -VANISH * vh;
+      // Drive the open state off the threshold-crossing state machine (see zoneOf above),
+      // not a live scrub — so a pass-through can keep the blog open and a reversal never closes.
+      var zone = zoneOf(rect.top, vh);
+      if (prevZone === null) {                             // first frame: seed, no crossing
+        prevZone = zone;
+        if (zone === "inside" && !blogOpen) {              // loaded/refreshed already inside → arrive open
+          blogOpen = true; entrySide = "top"; wasOpenAtEntry = false;
+        }
+      }
+      else if (zone !== prevZone) {
+        if (zone === "inside") {                           // ENTER the open-zone (ft1 from above / bt2 from below)
+          entrySide = (prevZone === "above") ? "top" : "bottom";
+          wasOpenAtEntry = blogOpen;
+          if (!blogOpen) blogOpen = true;                  // entering closed → open (must)
+        } else if (prevZone === "inside") {                // EXIT the open-zone (bt1 to above / ft2 to below)
+          var exitSide = (zone === "above") ? "top" : "bottom";
+          var farSide = exitSide !== entrySide;            // opposite edge = full pass-through (not a reversal)
+          if (farSide && wasOpenAtEntry) blogOpen = false; // close ONLY on a pass-through that was already open
+        }
+        prevZone = zone;
+      }
       if (!lastT) lastT = now;
       var dt = Math.min((now - lastT) / 1000, 0.05); lastT = now;  // clamp dt (tab-switch safety)
 
-      pT = triggered ? 1 : 0;
+      pT = blogOpen ? 1 : 0;
       var f = PR_STIFF * (pT - pCur) - PR_DAMP * pVel;             // step the reveal spring (overshoots → bounce)
       pVel += f * dt; pCur += pVel * dt;
       var atRest = pT === 1 && Math.abs(1 - pCur) < 0.0015 && Math.abs(pVel) < 0.0015;
