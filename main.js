@@ -1575,14 +1575,15 @@
     function easeIO(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
     function applyFanLayout() {
       var op = openProg;                                        // 0 → 1 open progress (driven in render, peak-triggered)
+      var oi = openTargetIdx();                                 // open the HOVERED panel (or 0) as the fan widens
       panels.forEach(function (p, i) {
         p.style.transition = "none";
         p.style.flexGrow = "0"; p.style.flexShrink = "0";
-        var basis = (i === 0) ? lerp(G.per, G.openW, op) : lerp(G.per, G.stripW, op);   // widths always sum to G.W
+        var basis = (i === oi) ? lerp(G.per, G.openW, op) : lerp(G.per, G.stripW, op);   // widths always sum to G.W
         p.style.flexBasis = basis.toFixed(2) + "px";
         p.style.height = G.H + "px";
         p.style.transformOrigin = "50% 100%";
-        p.classList.toggle("is-open", i === 0 && op > 0);        // closed until op>0, then reveals as it widens
+        p.classList.toggle("is-open", i === oi && op > 0);       // closed until op>0, then reveals as it widens
       });
     }
     // FAN(p): stacked-onto-the-rightmost (p=0) → in place (p=1). p can overshoot past 1, so q
@@ -1603,14 +1604,24 @@
 
     var settled = null;                                 // tri-state: null/false/true
     var hovered = null;                                 // panel the cursor is currently over (set by mouseenter)
+    // Which panel should be OPEN: the one the cursor is resting on, else panel 0. Used both
+    // DURING the fan-out (applyFanLayout) and at hand-off (setSettled) so the reveal widens
+    // the hovered panel from the start instead of opening panel 0 and switching at the end.
+    function openTargetIdx() { var i = hovered ? panels.indexOf(hovered) : 0; return i < 0 ? 0 : i; }
+    // Last known pointer position (tracked globally so we can resolve the hovered panel even
+    // when the cursor is stationary and no mouseenter fired). -1 = pointer never moved.
+    var ptrX = -1, ptrY = -1;
+    window.addEventListener("pointermove", function (e) { ptrX = e.clientX; ptrY = e.clientY; }, { passive: true });
+    function panelAtPointer() {
+      if (ptrX < 0) return null;
+      var el = document.elementFromPoint(ptrX, ptrY);
+      var w = el && el.closest ? el.closest(".wpanel") : null;
+      return (w && panels.indexOf(w) >= 0) ? w : null;
+    }
     function setSettled(on) {
       if (on === settled) return;
       settled = on;
-      // On hand-off the accordion opens panel 0 by default — but if the cursor is already
-      // resting on another panel while the fan-out plays, open THAT one instead (so the
-      // reveal finishes into the panel the user is pointing at, not a snap to panel 0).
-      var openIdx = (on && hovered) ? panels.indexOf(hovered) : 0;
-      if (openIdx < 0) openIdx = 0;
+      var openIdx = on ? openTargetIdx() : 0;
       panels.forEach(function (p, i) {
         if (on) {                                        // hand off to the live CSS accordion
           p.style.transition = ""; p.style.transform = ""; p.style.transformOrigin = ""; p.style.clipPath = "";
@@ -1688,7 +1699,13 @@
       // top) → openU eases toward 1 over OPEN_DUR (the widening plays through the bouncy settle).
       // On reverse (pT→0) it disarms and openU eases back to 0, so the panel folds closed too.
       if (pT === 0) openArmed = false;
-      else if (!openArmed && pCur > 0.85 && pVel <= 0) openArmed = true;
+      else if (!openArmed && pCur > 0.85 && pVel <= 0) {
+        openArmed = true;
+        // Seed the open target from the panel actually UNDER the cursor as the open arms —
+        // mouseenter won't have fired for a cursor that's been resting still over a panel
+        // while the fan animated under it, so detect it directly by pointer position.
+        var hp = panelAtPointer(); if (hp) hovered = hp;
+      }
       openU = clamp(openU + (openArmed ? 1 : -1) * dt / OPEN_DUR, 0, 1);
       openProg = easeIO(openU);
 
