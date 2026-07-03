@@ -40,21 +40,27 @@
   // reversing back across a threshold un-spawns it and re-activates the previous one.
   var CD_HOME = "~/portfolio-website", CD_DIR = "~/portfolio-website/highlights";
   var LINE_CD = "cd highlights";
-  var CD_ROWS = [{ path: CD_HOME, cmd: LINE_CD }];   // 0: committed once the section pins
-  for (var _z = 0; _z < N; _z++) CD_ROWS.push({ path: CD_DIR, cmd: "" });  // one `cat domain N` line per zone
   var cdStack = flow.querySelector(".flow__cd-stack");
-  var cdCmdEls = [], cdRowEls = [];
-  if (cdStack) {
-    CD_ROWS.forEach(function (ln) {
-      var row = document.createElement("p"); row.className = "flow__cd-row flow__cd-row--pending";
-      row.innerHTML = '<span class="b-usr">vishnu@portfolio</span>:<span class="b-path">' + ln.path +
-        '</span>$&nbsp;<span class="flow__cd-cmd"></span><span class="flow__cd-caret"></span>';
-      cdStack.appendChild(row);
-      cdRowEls.push(row); cdCmdEls.push(row.querySelector(".flow__cd-cmd"));
-    });
+  // The stack is an APPEND-ONLY terminal log, like a real shell: the `cd highlights`
+  // row is committed first, then every zone threshold crossed — forward OR backward —
+  // appends a NEW `cat domain N` row UNDER the last one and the whole stack scrolls up.
+  // Scrolling back never rolls the stack back down; it just prints the next line below.
+  function makeRow(path) {
+    var row = document.createElement("p"); row.className = "flow__cd-row flow__cd-row--pending";
+    row.innerHTML = '<span class="b-usr">vishnu@portfolio</span>:<span class="b-path">' + path +
+      '</span>$&nbsp;<span class="flow__cd-cmd"></span><span class="flow__cd-caret"></span>';
+    if (cdStack) cdStack.appendChild(row);
+    return { row: row, cmd: row.querySelector(".flow__cd-cmd") };
+  }
+  var cdHead = cdStack ? makeRow(CD_HOME) : null;   // row 0: the `cd highlights` command
+  var domLines = [];                                 // appended `cat domain N` rows, oldest→newest
+  function resetLog() {                              // clear all domain rows (section scrolled out)
+    domLines.forEach(function (l) { if (l.row.parentNode) l.row.parentNode.removeChild(l.row); });
+    domLines = []; domActiveZ = -1;
+    if (cdStack) cdStack.style.transform = "translateY(0px)";
   }
   var cdLineH = 0;
-  function cdLineHeight() { return (cdLineH = cdRowEls.length ? (cdRowEls[0].offsetHeight || cdLineH) : 0); }
+  function cdLineHeight() { return (cdLineH = cdHead ? (cdHead.row.offsetHeight || cdLineH) : 0); }
 
   /* ---------- Domain lines — rolling stack, direction-aware, dynamically paced ------
      The ACTIVE zone z (= round(global)) owns the bottom line; committed zones behind
@@ -96,16 +102,15 @@
   }
   // inPlace = section pinned; approachP = `cd highlights` typing (0..1); gg = globalRaw.
   function driveTerminal(inPlace, approachP, gg) {
-    if (!cdStack || cdRowEls.length < 2) return;
-    if (!inPlace) {                                 // approach: type `cd highlights`, park every domain line
-      cdCmdEls[0].textContent = LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length));
-      cdRowEls[0].className = "flow__cd-row flow__cd-row--cur";
-      for (var q = 1; q < cdRowEls.length; q++) { cdRowEls[q].className = "flow__cd-row flow__cd-row--pending"; cdCmdEls[q].textContent = ""; }
-      cdStack.style.transform = "translateY(0px)";
-      domDisp = ""; domActiveZ = -1; domLastG = null; domDir = 1;
+    if (!cdStack || !cdHead) return;
+    if (!inPlace) {                                 // approach: type `cd highlights`, log empty
+      cdHead.cmd.textContent = LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length));
+      cdHead.row.className = "flow__cd-row flow__cd-row--cur";
+      if (domLines.length) resetLog();
+      domDisp = ""; domLastG = null; domDir = 1;
       return;
     }
-    cdCmdEls[0].textContent = LINE_CD;              // committed
+    cdHead.cmd.textContent = LINE_CD;              // committed
     if (domLastG === null) domLastG = gg;
     if (gg > domLastG + 1e-6) domDir = 1;           // keep last direction while paused
     else if (gg < domLastG - 1e-6) domDir = -1;
@@ -114,10 +119,11 @@
     var z = clamp(Math.round(gg), 0, N - 1);
     var thr = domDir >= 0 ? z + 0.5 : z - 0.5;          // the threshold ahead in the travel direction
     if (z !== domActiveZ) {
-      // Threshold crossed — forward OR backward: spawn a FRESH line and type the whole
-      // command again from empty toward this zone's value (e.g. zone 2 → `cat domain 3`).
-      // Going back is the SAME mechanism as forward, NOT a reverse untype. Types across
-      // the zone as you travel to the far threshold.
+      // Threshold crossed — forward OR backward: PRINT a fresh new line UNDER the last
+      // and type the whole command again from empty toward this zone's value (e.g. zone
+      // 2 → `cat domain 3`). Going back appends below just like forward — the stack only
+      // ever scrolls up, never rolls back down. Types across the zone as you travel.
+      domLines.push(makeRow(CD_DIR));
       setSwap("", domFwdTarget(z));
       domStartG = gg; domEndG = thr; domDisp = "";
       domActiveZ = z; domDirState = domDir;
@@ -140,19 +146,19 @@
     var span = domEndG - domStartG;
     domDisp = domainText(Math.abs(span) < 1e-6 ? 1 : (gg - domStartG) / span);
 
-    // Render: cd row + one line per zone, rolled so the active line + the one above show.
-    var actIdx = z + 1;
-    for (var r = 0; r < cdRowEls.length; r++) {
+    // Render: the bottom (newest) line is live/typing; every earlier line stays frozen
+    // at whatever it printed. Style the newest as --cur, the one above --prev, the rest
+    // --past, and scroll the whole stack up so the newest sits just under the previous.
+    if (domLines.length) domLines[domLines.length - 1].cmd.textContent = domDisp;
+    var rows = [cdHead].concat(domLines);
+    for (var r = 0; r < rows.length; r++) {
       var cls = "flow__cd-row";
-      cls += r === actIdx ? " flow__cd-row--cur" : r === actIdx - 1 ? " flow__cd-row--prev"
-           : r < actIdx - 1 ? " flow__cd-row--past" : " flow__cd-row--pending";
-      cdRowEls[r].className = cls;
-      if (r === 0) continue;                        // cd row text already set
-      var zone = r - 1;
-      cdCmdEls[r].textContent = zone === z ? domDisp : (zone < z ? domFwdTarget(zone) : "");
+      cls += r === rows.length - 1 ? " flow__cd-row--cur"
+           : r === rows.length - 2 ? " flow__cd-row--prev" : " flow__cd-row--past";
+      rows[r].row.className = cls;
     }
     var lh = cdLineH || cdLineHeight();
-    cdStack.style.transform = "translateY(" + (-z * lh).toFixed(1) + "px)";
+    cdStack.style.transform = "translateY(" + (-Math.max(0, domLines.length - 1) * lh).toFixed(1) + "px)";
   }
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
