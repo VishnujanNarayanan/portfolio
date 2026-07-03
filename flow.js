@@ -358,7 +358,7 @@
     var rect = flow.getBoundingClientRect();
     var top = rect.top + (window.scrollY || window.pageYOffset || 0);
     var total = flow.offsetHeight - window.innerHeight;
-    var y = top + (i / (N - 1)) * total;
+    var y = top + ((i + 0.5) / N) * total;   // land at zone i's centre (global = progress·N − 0.5)
     if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { duration: 1.2 });
     else window.scrollTo({ top: y, behavior: "smooth" });
   }
@@ -515,7 +515,12 @@
     var total = rect.height - vh;
     var scrolled = clamp(-rect.top, 0, total);
     var progress = total > 0 ? scrolled / total : 0;
-    var global = progress * (N - 1);
+    // Even zone spacing: each of the N zones gets an EQUAL 1/N slice of the pinned
+    // scroll, its panel centred in the MIDDLE of that slice (progress (2i+1)/2N).
+    // global = progress·N − 0.5 → centres at 0,1,…,N−1 land at 1/8,3/8,5/8,7/8, so
+    // the first/last zones are no longer squashed against the 0/1 ends (they now get
+    // the same dwell + the same card entry/exit runway as the middle two).
+    var global = progress * N - 0.5;
     // Terminal: "cd highlights" types out as the section scrolls INTO place — over
     // the approach, with rect.top travelling from ~0.85·vh down to 0. It finishes
     // exactly as the section pins (rect.top ≤ 0 = "in place"), the threshold below.
@@ -531,7 +536,7 @@
     // crossing -0.5 fires its appear + image entry; at N the last zone has exited.
     // Hold every zone parked (globalRaw at its pre-entry edge) until the section is
     // in place; release at the pin so zone 1 enters at the exact terminal threshold.
-    var globalRaw = !inPlace ? -1 : (total > 0 ? clamp((-rect.top) / total * (N - 1), -1, N) : 0);
+    var globalRaw = !inPlace ? -1 : (total > 0 ? clamp((-rect.top) / total * N - 0.5, -1, N) : 0);
     var sceneScrolled = Math.abs(globalRaw - lastGlobalRaw) > 1e-4;  // cards slid this frame
     if (globalRaw > lastGlobalRaw + 1e-4) scrollDir = 1;
     else if (globalRaw < lastGlobalRaw - 1e-4) scrollDir = -1;
@@ -540,7 +545,7 @@
     journey.classList.toggle("is-live", rect.top <= 1 && rect.bottom > vh * 0.6);
 
     var vw = window.innerWidth;
-    var trackX = -progress * (N - 1) * vw;
+    var trackX = -global * vw;
     track.style.transform = "translate3d(" + trackX + "px,0,0)";
     paintSky(global);
     // Progressive lighten: the flow bg is the dark navy world until 1/5 INTO zone 2
@@ -549,7 +554,7 @@
     // lightT (0→1) is shared with main.js (window.__flowLight) which lightens the
     // contour-canvas bg + inverts the lines. Here it also flips the foreground text:
     // title/index bright→deep blue, sub white→grey, readable as the bg turns light.
-    var LIGHT_START = 0.7 / 3;
+    var LIGHT_START = (0.7 + 0.5) / N;   // global 0.7 (1/5 into zone 2) under global = progress·N − 0.5
     var lightT = clamp((progress - LIGHT_START) / (1 - LIGHT_START), 0, 1);
     window.__flowLight = lightT;
     // Top nav (Projects/Skills/Services/Blog) rolls to black in a per-letter reel
@@ -565,7 +570,8 @@
     // Journey wheel/spine darkens with scroll from the HALF of zone 3 (zone 3 spans
     // global 1.5→2.5, half = global 2 → progress 2/3) to the end, so it reads on the
     // light bg: bright blue 77,139,255 → deep blue 35,29,122.
-    var jDark = clamp((progress - 2 / 3) / (1 - 2 / 3), 0, 1);
+    var jStart = (2 + 0.5) / N;   // global 2 (half of zone 3) under global = progress·N − 0.5
+    var jDark = clamp((progress - jStart) / (1 - jStart), 0, 1);
     flow.style.setProperty("--journey-rgb",
       Math.round(lerp(77, 35, jDark)) + "," + Math.round(lerp(139, 29, jDark)) + "," + Math.round(lerp(255, 122, jDark)));
     // Zone 3-4 sub text fades from a slightly-lighter black → a slightly-darker grey
@@ -593,8 +599,11 @@
     // overscroll edge) and the last zone's exit fires a bit EARLIER (while still on
     // screen). Interior crossings stay at the half-integers; only the pre-entry
     // (-1→0) and exit (N-1→N) shift.
-    var ENTER_LATE = 0.25;       // appear fires at globalRaw -0.5 + this (later, = -0.25)
-    var EXIT_EARLY = 0.40;       // exit fires at globalRaw N-0.5 - this (earlier)
+    // Zeroed so the first/last zones are symmetric with the middle two: zone 0
+    // enters at globalRaw -0.5 (= the pin, progress 0) and zone N-1 exits at
+    // globalRaw N-0.5 (= progress 1), giving each zone the full ±0.5 dwell.
+    var ENTER_LATE = 0;          // appear fires at globalRaw -0.5 (at the pin)
+    var EXIT_EARLY = 0;          // exit fires at globalRaw N-0.5 (at the section end)
     var rawSel;
     if (globalRaw < -0.5 + ENTER_LATE) rawSel = -1;             // first zone not yet entered
     else if (globalRaw >= N - 0.5 - EXIT_EARLY) rawSel = N;     // last zone has exited
@@ -776,8 +785,8 @@
     // reverses (un-draws) when you scroll back out the top.
     var drawP = 0, drawnX = 0;
     if (lineEl && fillEl && fillLen) {
-      // Completes at the half-way point of zone 2 (global == 1 → progress 1/3).
-      var DRAW_SPAN = 0.33;                   // fraction of section scroll to fully draw
+      // Completes when zone 2 centres (global == 1 → progress (1+0.5)/N).
+      var DRAW_SPAN = (1 + 0.5) / N;          // fraction of section scroll to fully draw
       var lin = clamp(progress / DRAW_SPAN, 0, 1);
       // Power ease-out: decelerates continuously from the first frame (fast at the
       // start, crawling at the end), so it visibly "eases into" the slow end rather
