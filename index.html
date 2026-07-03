@@ -247,6 +247,11 @@
     <section class="flow" id="process" aria-label="How I work — a four-stage journey">
       <div class="flow__wrapper">
 
+        <!-- Scroll-typed shell prompt, pinned top-left of the flow section:
+             continues the boot loader's shell; "cd highlights" types out as the
+             section scrolls in and untypes on scroll-up (main.js cdLineType). -->
+        <p class="flow__cd" aria-hidden="true"><span class="b-usr">vishnu@portfolio</span>:<span class="b-path">~/portfolio-website</span>$&nbsp;<span class="flow__cd-cmd"></span><span class="flow__cd-caret"></span></p>
+
         <!-- Airy light sky; hue cross-fades between stages (driven by JS) -->
         <div class="flow__sky" aria-hidden="true"></div>
         <div class="flow__horizon" aria-hidden="true"></div>
