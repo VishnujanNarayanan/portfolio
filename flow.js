@@ -32,27 +32,99 @@
   var hdr = document.querySelector("header");   // top nav flips to black at the bg threshold
   var N = panels.length || 4;
 
-  // Terminal — the "cd highlights" prompt pinned top-left. It types out as the
-  // section scrolls INTO place (over the approach); typing completes exactly as
-  // the section pins ("in place"), which is the single threshold where the old
-  // command line vanishes, a fresh prompt appears in the new directory, and
-  // zone 1's cards + text reveal.
-  var CD_CMD = "cd highlights";
-  var cdCmdEl  = flow.querySelector(".flow__cd-cmd");
-  var cdCaret1 = flow.querySelector(".flow__cd-caret--1");  // caret on the command line
-  var cdRow2   = flow.querySelector(".flow__cd-row--2");    // the new-directory prompt
-  var cdTypedN = -1, cdRan = null;
-  function driveTerminal(typeP, run) {
-    if (!cdCmdEl) return;
-    var n = Math.round(clamp(typeP, 0, 1) * CD_CMD.length);
-    if (n !== cdTypedN) { cdTypedN = n; cdCmdEl.textContent = CD_CMD.slice(0, n); }
-    if (run !== cdRan) {
-      cdRan = run;
-      // Like pressing Enter: the typed command LINE STAYS; the caret leaves it and a
-      // fresh prompt appears on a new line in the new directory, blinking there.
-      if (cdCaret1) cdCaret1.style.display = run ? "none" : "";
-      if (cdRow2) cdRow2.hidden = !run;
+  // Terminal — a shell pinned top-left of the flow section. Row 0 (`cd highlights`)
+  // types as the section scrolls INTO place, then commits when it pins. Row 1 is a
+  // SINGLE `cat domain N` line whose number MORPHS with scroll: it's direction-aware
+  // and stateful (see the domain-line engine below), NOT a pure function of scroll —
+  // the number latches at zone-centre crossings and holds until the next one.
+  var CD_HOME = "~/portfolio-website", CD_DIR = "~/portfolio-website/highlights";
+  var LINE_CD = "cd highlights";
+  var CD_ROWS = [
+    { path: CD_HOME, cmd: LINE_CD },   // 0: committed once the section pins
+    { path: CD_DIR,  cmd: "" }         // 1: the morphing `cat domain N` line
+  ];
+  var cdStack = flow.querySelector(".flow__cd-stack");
+  var cdCmdEls = [], cdRowEls = [];
+  if (cdStack) {
+    CD_ROWS.forEach(function (ln) {
+      var row = document.createElement("p"); row.className = "flow__cd-row flow__cd-row--pending";
+      row.innerHTML = '<span class="b-usr">vishnu@portfolio</span>:<span class="b-path">' + ln.path +
+        '</span>$&nbsp;<span class="flow__cd-cmd"></span><span class="flow__cd-caret"></span>';
+      cdStack.appendChild(row);
+      cdRowEls.push(row); cdCmdEls.push(row.querySelector(".flow__cd-cmd"));
+    });
+  }
+  var cdLineH = 0;
+  function cdLineHeight() { return (cdLineH = cdRowEls.length ? (cdRowEls[0].offsetHeight || cdLineH) : 0); }
+
+  /* ---------- Domain line — direction-aware, stateful typewriter ----------
+     Row 1 is a single `cat domain N` line whose number MORPHS as you scroll. The
+     target number is LATCHED at zone-CENTRE crossings (global == integer C), and
+     which value it latches to depends on the direction at that crossing:
+       forward across zone C's centre → that zone's NEXT domain (C+2)
+       backward across it            → its PREVIOUS domain (C; zone 0 → nothing)
+     The value HOLDS until the next centre is crossed — so reversing mid-zone keeps
+     the current number (e.g. `3`) until you scroll back through the centre, then it
+     untypes the changed word (`3` + its space) and retypes the new one (` 1`). The
+     untype/retype is SCROLL-SCRUBBED over SWAP_SPAN of the half-zone, so a mid-swap
+     reversal (before it completes) un-does cleanly; once complete it latches until
+     the next centre. Zone 0 has no previous domain, so back = untype to empty. */
+  var DOM_PRE = "cat domain ";
+  var SWAP_SPAN = 0.42;   // zone-fraction the untype/retype scrubs over (<0.5 → done a touch before the threshold, then holds)
+  var domFrom = "", domTarget = "", domCenterG = 0, domDir = 1, domLastG = null, domDone = true;
+  var domBoundary = 0, domBack = 0, domFwd = 0;   // cached transition geometry
+  function domainStr(num) { return num >= 1 ? DOM_PRE + num : ""; }
+  function scrub(gg) { return (gg - domCenterG) * domDir / SWAP_SPAN; }   // 0 at the centre → 1 at SWAP_SPAN out
+  // Set up a from→target swap: shared prefix backed up to the last common space so
+  // the whole changed word (space + number) untypes and retypes, per the spec.
+  function setSwap(from, target) {
+    domFrom = from; domTarget = target;
+    var m = Math.min(from.length, target.length), lcp = 0;
+    while (lcp < m && from.charCodeAt(lcp) === target.charCodeAt(lcp)) lcp++;
+    var sp = from.lastIndexOf(" ", lcp - 1);
+    domBoundary = sp >= 0 ? sp : 0;
+    domBack = from.length - domBoundary;            // chars to untype off `from`
+    domFwd = target.length - domBoundary;           // chars to type on for `target`
+    domDone = false;
+  }
+  // Text for scrub s (0..1): first untype `domBack` chars off `from`, then type
+  // `domFwd` chars of `target` — the shared prefix is common to both, so it's seamless.
+  function domainText(s) {
+    var total = domBack + domFwd;
+    if (total === 0) return domTarget;
+    var k = Math.round(clamp(s, 0, 1) * total);
+    return k <= domBack ? domFrom.slice(0, domFrom.length - k)
+                        : domTarget.slice(0, domBoundary + (k - domBack));
+  }
+  // inPlace = section pinned; approachP = `cd highlights` typing (0..1); gg = globalRaw.
+  function driveTerminal(inPlace, approachP, gg) {
+    if (!cdStack || cdRowEls.length < 2) return;
+    if (!inPlace) {                                 // approach: type `cd highlights`, park the domain line
+      cdCmdEls[0].textContent = LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length));
+      cdRowEls[0].className = "flow__cd-row flow__cd-row--cur";
+      cdRowEls[1].className = "flow__cd-row flow__cd-row--pending";
+      cdCmdEls[1].textContent = "";
+      domLastG = null; domFrom = domTarget = ""; domBack = domFwd = domBoundary = 0; domDone = true; domCenterG = 0; domDir = 1;
+      return;
     }
+    cdCmdEls[0].textContent = LINE_CD;              // committed
+    cdRowEls[0].className = "flow__cd-row flow__cd-row--prev";
+    cdRowEls[1].className = "flow__cd-row flow__cd-row--cur";
+    if (domLastG === null) domLastG = gg;
+    if (gg !== domLastG) {                          // commit a swap for each zone centre crossed this frame
+      var lo = Math.min(domLastG, gg), hi = Math.max(domLastG, gg), fwd = gg > domLastG;
+      for (var C = Math.floor(lo); C <= Math.ceil(hi); C++) {
+        if (C <= lo + 1e-9 || C > hi + 1e-9) continue;   // only integers strictly crossed this frame
+        if (C < 0 || C > N - 1) continue;                // centres are the N zones (0..N-1)
+        var num = clamp(fwd ? C + 2 : C, 0, N);
+        setSwap(domDone ? domTarget : domainText(scrub(gg)), domainStr(num));  // from = live text now
+        domCenterG = C; domDir = fwd ? 1 : -1;
+      }
+      domLastG = gg;
+    }
+    var raw = scrub(gg);
+    if (raw >= 1) domDone = true;                   // latch on completion; only a new centre crossing re-opens it
+    cdCmdEls[1].textContent = domainText(domDone ? 1 : raw);
   }
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
@@ -525,9 +597,8 @@
     // the approach, with rect.top travelling from ~0.85·vh down to 0. It finishes
     // exactly as the section pins (rect.top ≤ 0 = "in place"), the threshold below.
     var TYPE_START = vh * 0.85;
-    var typeP = clamp((TYPE_START - rect.top) / TYPE_START, 0, 1);
+    var approachP = clamp((TYPE_START - rect.top) / TYPE_START, 0, 1);
     var inPlace = rect.top <= 0;
-    driveTerminal(typeP, inPlace);
     // Unclamped global for the IMAGE + TITLE edge motion: lets the first zone enter
     // from the right during the lead-in scroll (before the section reaches the top)
     // and the last zone keep exiting left past the section end — so every zone covers
@@ -537,6 +608,10 @@
     // Hold every zone parked (globalRaw at its pre-entry edge) until the section is
     // in place; release at the pin so zone 1 enters at the exact terminal threshold.
     var globalRaw = !inPlace ? -1 : (total > 0 ? clamp((-rect.top) / total * N - 0.5, -1, N) : 0);
+    // Terminal: `cd highlights` types over the approach; after the pin the
+    // `cat domain N` line morphs its number, direction-aware + scroll-scrubbed
+    // (see driveTerminal / the domain-line engine above).
+    driveTerminal(inPlace, approachP, globalRaw);
     var sceneScrolled = Math.abs(globalRaw - lastGlobalRaw) > 1e-4;  // cards slid this frame
     if (globalRaw > lastGlobalRaw + 1e-4) scrollDir = 1;
     else if (globalRaw < lastGlobalRaw - 1e-4) scrollDir = -1;
@@ -865,12 +940,14 @@
   /* ---------- Boot ---------- */
   if (isMobile) {
     // Mobile: CSS stacks the stages and pins cards in normal flow. No GL / no pin.
-    driveTerminal(1, true);   // show the terminal in its completed (cd-run) state
+    // (.flow__cd is display:none on mobile, so the terminal is skipped.)
     paintSky(0);
     return;
   }
+  cdLineHeight();
   window.addEventListener("resize", function () {
     vh = window.innerHeight;
+    cdLineHeight();
     resizeGL();
     cards.forEach(function (c) { c.init = false; });
   });
