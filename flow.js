@@ -79,6 +79,16 @@
   var domDisp = "", domActiveZ = -1, domDirState = 1, domStartG = 0, domEndG = 0, domLastG = null, domDir = 1;
   function domainStr(num) { return num >= 1 ? DOM_PRE + num : ""; }
   function domFwdTarget(z) { return domainStr(clamp(z + 2, 0, N)); }   // a zone's forward / committed value
+  // Direction-aware target for a zone. Boundary zones only "run" a command toward the
+  // INTERIOR of the flow: the FIRST zone types on forward scroll only (empty when you
+  // arrive scrolling back out the top), the LAST zone types on backward scroll only
+  // (empty when you arrive scrolling forward out the bottom); reversing in either
+  // untypes it. Interior zones type their forward value going down, backward value up.
+  function dirTarget(z, dir) {
+    if (z === 0)     return dir >= 0 ? domFwdTarget(0) : "";
+    if (z === N - 1) return dir >= 0 ? "" : domainStr(z);
+    return dir >= 0 ? domFwdTarget(z) : domainStr(clamp(z, 0, N));
+  }
   // Set up a from→target morph as a MINIMAL edit: keep the longest common prefix,
   // untype only the chars that diverge, then type the rest. So `cat doma` → `cat
   // domain 1` just keeps typing `in 1` (no untyping), and `cat domain 3` → `cat
@@ -119,35 +129,28 @@
     var z = clamp(Math.round(gg), 0, N - 1);
     var thr = domDir >= 0 ? z + 0.5 : z - 0.5;          // the threshold ahead in the travel direction
     if (z !== domActiveZ) {
-      if (z === 0 && domDir < 0 && domLines.length) {
-        // First zone, scrolling BACK out toward the pin: don't print another line —
-        // UNTYPE the current bottom line to empty across the zone, so the terminal
-        // clears back down to the `cd highlights` prompt as you leave. The append log
-        // only prints going in; the first zone is where it unwinds on the way out.
-        setSwap(domDisp, "");
-        domStartG = gg; domEndG = thr;
-      } else {
-        // Threshold crossed — PRINT a fresh new line UNDER the last and type the whole
-        // command again from empty toward this zone's value. DIRECTION-AWARE, like the
-        // correction below: forward types the zone's forward value (domFwdTarget, e.g.
-        // zone 2 → `cat domain 3`), backward types its backward value (domainStr(z), so
-        // reversing counts DOWN — zone 3 → `cat domain 2`, not the forward `domain 4`).
-        // Going back appends below just like forward; the stack only ever scrolls up.
-        var ln = makeRow(CD_DIR); ln.zone = z; domLines.push(ln);
-        setSwap("", domDir >= 0 ? domFwdTarget(z) : domainStr(clamp(z, 0, N)));
-        domStartG = gg; domEndG = thr; domDisp = "";
-      }
+      // Threshold crossed — PRINT a fresh new line UNDER the last and type the whole
+      // command from empty toward this zone's DIRECTION-AWARE target (dirTarget): forward
+      // types the forward value (e.g. zone 2 → `cat domain 3`), backward the backward one
+      // (reversing counts DOWN — zone 3 → `cat domain 2`). Boundary zones type toward the
+      // interior only, so the crossing INTO the first zone going back, or INTO the last
+      // zone going forward, prints an EMPTY line (nothing to type — you're leaving).
+      // Going back appends below just like forward; the stack only ever scrolls up.
+      var ln = makeRow(CD_DIR); ln.zone = z; domLines.push(ln);
+      setSwap("", dirTarget(z, domDir));
+      domStartG = gg; domEndG = thr; domDisp = "";
       domActiveZ = z; domDirState = domDir;
     } else if (domDir !== domDirState) {
-      // Same zone, direction reversed: the number changes (forward value → backward
-      // value). setSwap makes it a MINIMAL edit — it keeps whatever's already typed and
-      // only untypes the divergent tail if absolutely necessary, else keeps typing.
-      // Hold the current text until HALFWAY (the zone centre), then play the change out
-      // toward the start point (the threshold where a new line spawns). The span is
-      // capped by how many chars actually change (DOM_PER_CHAR each) so a few letters
-      // type quickly instead of being smeared across the whole second half — only a
-      // large edit uses the full half-zone. Typing fast is fine; typing too slow isn't.
-      setSwap(domDisp, domDir >= 0 ? domFwdTarget(z) : domainStr(clamp(z, 0, N)));
+      // Same zone, direction reversed: retype/untype toward the new direction's target.
+      // In an INTERIOR zone the number changes (forward value ↔ backward value). In a
+      // BOUNDARY zone this is where typing STARTS or UNTYPES: first zone typed forward
+      // then scrolled back → untype to empty; last zone starts empty then types on the
+      // backward scroll (and untypes again if you scroll forward). setSwap makes it a
+      // MINIMAL edit — keep the common prefix, untype only the divergent tail, else keep
+      // typing. Hold until HALFWAY (zone centre), then play the change out toward the
+      // start point; the span is capped by chars changed (DOM_PER_CHAR each) so a few
+      // letters type quickly instead of smearing across the whole second half.
+      setSwap(domDisp, dirTarget(z, domDir));
       var chars = domBack + domFwd;
       var half = Math.abs(thr - z);
       var edit = Math.min(half, chars * DOM_PER_CHAR);
