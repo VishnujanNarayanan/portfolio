@@ -39,7 +39,8 @@
   // line morphs direction-aware + dynamically paced (see the engine below), and
   // reversing back across a threshold un-spawns it and re-activates the previous one.
   var CD_HOME = "~/portfolio-website", CD_DIR = "~/portfolio-website/highlights";
-  var LINE_CD = "cd highlights";
+  var LINE_CD = "cd highlights && cat scraping";   // forward: cd in + cat the domain we're on (domain 1)
+  var LINE_BACK = "cd certificates";               // backward: scrolling up out of flow → back to certs
   var cdStack = flow.querySelector(".flow__cd-stack");
   // The stack is an APPEND-ONLY terminal log, like a real shell: the `cd highlights`
   // row is committed first, then every zone threshold crossed — forward OR backward —
@@ -52,12 +53,19 @@
     if (cdStack) cdStack.appendChild(row);
     return { row: row, cmd: row.querySelector(".flow__cd-cmd") };
   }
-  var cdHead = cdStack ? makeRow(CD_HOME) : null;   // row 0: the `cd highlights` command
-  var domLines = [];                                 // appended `cat domain N` rows, oldest→newest
-  function resetLog() {                              // clear all domain rows (section scrolled out)
-    domLines.forEach(function (l) { if (l.row.parentNode) l.row.parentNode.removeChild(l.row); });
-    domLines = []; domActiveZ = -1;
-    if (cdStack) cdStack.style.transform = "translateY(0px)";
+  var cdHead = cdStack ? makeRow(CD_HOME) : null;   // row 0: the `cd highlights && cat scraping` command
+  var domLines = [];                                 // appended command rows, oldest→newest (append-only log)
+  function renderStack() {                            // newest row = cur, one above = prev, rest = past; scroll up
+    var rows = [cdHead].concat(domLines);
+    for (var r = 0; r < rows.length; r++) {
+      var cls = "flow__cd-row";
+      cls += r === rows.length - 1 ? " flow__cd-row--cur"
+           : r === rows.length - 2 ? " flow__cd-row--prev" : " flow__cd-row--past";
+      if (rows[r].zone >= 2) cls += " flow__cd-row--dark";   // zones 3-4 (light bg) type in black
+      rows[r].row.className = cls;
+    }
+    var lh = cdLineH || cdLineHeight();
+    if (cdStack) cdStack.style.transform = "translateY(" + (-Math.max(0, domLines.length - 1) * lh).toFixed(1) + "px)";
   }
   var cdLineH = 0;
   function cdLineHeight() { return (cdLineH = cdHead ? (cdHead.row.offsetHeight || cdLineH) : 0); }
@@ -92,7 +100,7 @@
   // either untypes. Interior zones type their forward domain (z+2) going down, their
   // backward domain (z) going up — so reversing re-types the correct neighbour.
   function dirTarget(z, dir) {
-    if (z === 0)     return dir >= 0 ? domFwdTarget(0) : "";
+    if (z === 0)     return dir >= 0 ? domFwdTarget(0) : "cd ..";   // back out of highlights on the way up
     if (z === N - 1) return dir >= 0 ? "" : domainStr(z);
     return dir >= 0 ? domFwdTarget(z) : domainStr(clamp(z, 0, N));
   }
@@ -117,17 +125,76 @@
     return k <= domBack ? domFrom.slice(0, domFrom.length - k)
                         : domTarget.slice(0, domBoundary + (k - domBack));
   }
-  // inPlace = section pinned; approachP = `cd highlights` typing (0..1); gg = globalRaw.
+  // The terminal is ONE continuous append-only log. On the FIRST approach the header row
+  // types `cd highlights && cat scraping`; once the section has been pinned (`started`),
+  // scrolling back UP out of the pin appends a fresh `cd certificates` line UNDER the last
+  // one (`cd ..`) and types it — exactly like a zone crossing spawns a new line — with NO
+  // reset/snap and NO header untyping. Scrolling back down just resumes appending below.
+  var apDir = 1, apLastP = null, apStartP = 0, certLine = null, started = false;
+  // The approach line reverses like a flow zone: a LOCAL minimal-edit swap so it never
+  // touches the pinned zone engine's globals. certDir -1 = typing toward `cd certificates`
+  // (scrolling up), +1 = morphing back to the header (reversing forward); certAnchorPP /
+  // certEndPP anchor the current swap to the approach progress pp so it re-scales on a flip.
+  var certFrom = "", certTarget = "", certBoundary = 0, certBack = 0, certFwd = 0;
+  var certDisp = "", certDir = 0, certAnchorPP = 0, certEndPP = 1;
+  function certSet(from, target) {
+    certFrom = from; certTarget = target;
+    var m = Math.min(from.length, target.length), lcp = 0;
+    while (lcp < m && from.charCodeAt(lcp) === target.charCodeAt(lcp)) lcp++;
+    certBoundary = lcp; certBack = from.length - lcp; certFwd = target.length - lcp;
+  }
+  function certText(s) {
+    var total = certBack + certFwd;
+    if (total === 0) return certTarget;
+    var k = Math.round(clamp(s, 0, 1) * total);
+    return k <= certBack ? certFrom.slice(0, certFrom.length - k)
+                         : certTarget.slice(0, certBoundary + (k - certBack));
+  }
+  function commitCert() {                               // freeze the reversal line into the append-only log
+    if (certLine) certLine.cmd.textContent = LINE_CD;   // it STAYS as a real `cd highlights && cat scraping`
+    certLine = null; certDir = 0; certDisp = "";        // prompt; a later up-pass appends a fresh cert line below
+  }
+  // inPlace = section pinned; approachP = header typing progress (0..1); gg = globalRaw.
   function driveTerminal(inPlace, approachP, gg) {
     if (!cdStack || !cdHead) return;
-    if (!inPlace) {                                 // approach: type `cd highlights`, log empty
-      cdHead.cmd.textContent = LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length));
-      cdHead.row.className = "flow__cd-row flow__cd-row--cur";
-      if (domLines.length) resetLog();
-      domDisp = ""; domLastG = null; domDir = 1;
+    if (!inPlace) {                                 // approach region (section not yet pinned)
+      if (apLastP === null) apLastP = approachP;
+      if (approachP > apLastP + 1e-5) apDir = 1;        // scrolling down toward the pin
+      else if (approachP < apLastP - 1e-5) apDir = -1;  // scrolling up toward the certs
+      apLastP = approachP;
+      if (!started) {                                   // FIRST approach: type the header once
+        cdHead.cmd.textContent = LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length));
+        cdHead.row.className = "flow__cd-row flow__cd-row--cur";
+        if (cdStack) cdStack.style.transform = "translateY(0px)";
+      } else {                                          // session running → stay continuous with the log
+        if (!certLine && apDir < 0 && domLines.length) {   // crossing UP out of the pin → spawn the reversal line
+          certLine = makeRow(CD_DIR); certLine.zone = -1; domLines.push(certLine);
+          apStartP = approachP;                            // pin edge = pp 0; fully scrolled up = pp 1
+          certDir = -1; certSet("", LINE_BACK); certAnchorPP = 0; certEndPP = 1; certDisp = "";
+        }
+        if (certLine) {
+          var pp = apStartP > 1e-6 ? clamp((apStartP - approachP) / apStartP, 0, 1) : 1;
+          // Direction flip → re-swap toward that direction's target, anchored at the current
+          // pp: scrolling UP heads to `cd certificates` (pp→1), reversing forward morphs the
+          // shown text back to the header `cd highlights && cat scraping` (pp→0), untyping
+          // only `certificates` past the shared `cd ` prefix before typing the rest.
+          if (apDir < 0 && certDir !== -1) { certDir = -1; certSet(certDisp, LINE_BACK); certAnchorPP = pp; certEndPP = 1; }
+          else if (apDir >= 0 && certDir !== 1) { certDir = 1; certSet(certDisp, LINE_CD); certAnchorPP = pp; certEndPP = 0; }
+          var span = certEndPP - certAnchorPP;
+          var s = Math.abs(span) < 1e-6 ? 1 : (pp - certAnchorPP) / span;
+          certDisp = certText(s);
+          certLine.cmd.textContent = certDisp;
+          if (certDir === 1 && s >= 1) commitCert();        // fully morphed back → freeze it into the log
+        }
+        renderStack();
+      }
+      // Reset the zone engine so re-entering the pin spawns a FRESH line (not editing certLine).
+      domDisp = ""; domLastG = null; domDir = 1; domActiveZ = -1;
       return;
     }
-    cdHead.cmd.textContent = LINE_CD;              // committed
+    cdHead.cmd.textContent = LINE_CD;              // committed header
+    started = true; apLastP = approachP;           // session running; next up-pass spawns a fresh reversal line
+    if (certLine) commitCert();                     // re-entered the pin → freeze the reversal line into the log
     if (domLastG === null) domLastG = gg;
     if (gg > domLastG + 1e-6) domDir = 1;           // keep last direction while paused
     else if (gg < domLastG - 1e-6) domDir = -1;
@@ -145,7 +212,14 @@
       // Going back appends below just like forward; the stack only ever scrolls up.
       var ln = makeRow(CD_DIR); ln.zone = z; domLines.push(ln);
       setSwap("", dirTarget(z, domDir));
-      domStartG = gg; domEndG = thr; domDisp = "";
+      if (z === 0 && domDir < 0) {
+        // Zone 1 scrolling BACK: hold empty until HALFWAY (the zone centre), then type
+        // `cd ..` over the second half (char-capped) — go back up a dir before you leave.
+        var e0 = Math.min(Math.abs(thr - z), (domBack + domFwd) * DOM_PER_CHAR);
+        domStartG = z; domEndG = z + (thr >= z ? e0 : -e0); domDisp = "";
+      } else {
+        domStartG = gg; domEndG = thr; domDisp = "";
+      }
       domActiveZ = z; domDirState = domDir;
     } else if (domDir !== domDirState) {
       // Same zone, direction reversed: retype/untype toward the new direction's target.
@@ -168,24 +242,11 @@
     var span = domEndG - domStartG;
     domDisp = domainText(Math.abs(span) < 1e-6 ? 1 : (gg - domStartG) / span);
 
-    // Render: the bottom (newest) line is live/typing; every earlier line stays frozen
-    // at whatever it printed. Style the newest as --cur, the one above --prev, the rest
-    // --past, and scroll the whole stack up so the newest sits just under the previous.
+    // The bottom (newest) line is live/typing; every earlier line stays frozen at what it
+    // printed. renderStack styles + scrolls the append-only log up (shared with the
+    // approach branch so the pin crossing stays continuous — no reset/snap).
     if (domLines.length) domLines[domLines.length - 1].cmd.textContent = domDisp;
-    var rows = [cdHead].concat(domLines);
-    for (var r = 0; r < rows.length; r++) {
-      var cls = "flow__cd-row";
-      cls += r === rows.length - 1 ? " flow__cd-row--cur"
-           : r === rows.length - 2 ? " flow__cd-row--prev" : " flow__cd-row--past";
-      // Zones 3 & 4 (index ≥ 2) sit on the now-light bg → type in black so it reads;
-      // zones 1-2 keep the light-grey text of the dark early bg. Tagged per line by its
-      // zone, so a zone-3 line is black whether it was printed crossing in from zone 2
-      // (forward) or zone 4 (backward); zone-4 lines are always black.
-      if (rows[r].zone >= 2) cls += " flow__cd-row--dark";
-      rows[r].row.className = cls;
-    }
-    var lh = cdLineH || cdLineHeight();
-    cdStack.style.transform = "translateY(" + (-Math.max(0, domLines.length - 1) * lh).toFixed(1) + "px)";
+    renderStack();
   }
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
