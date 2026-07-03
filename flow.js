@@ -72,14 +72,15 @@
   var domDisp = "", domActiveZ = -1, domDirState = 1, domStartG = 0, domEndG = 0, domLastG = null, domDir = 1;
   function domainStr(num) { return num >= 1 ? DOM_PRE + num : ""; }
   function domFwdTarget(z) { return domainStr(clamp(z + 2, 0, N)); }   // a zone's forward / committed value
-  // Set up a from→target morph: shared prefix backed up to the last common space so
-  // the whole changed word (space + number) untypes and retypes, per the spec.
+  // Set up a from→target morph as a MINIMAL edit: keep the longest common prefix,
+  // untype only the chars that diverge, then type the rest. So `cat doma` → `cat
+  // domain 1` just keeps typing `in 1` (no untyping), and `cat domain 3` → `cat
+  // domain 1` untypes only `3`. Untype happens solely when it's absolutely necessary.
   function setSwap(from, target) {
     domFrom = from; domTarget = target;
     var m = Math.min(from.length, target.length), lcp = 0;
     while (lcp < m && from.charCodeAt(lcp) === target.charCodeAt(lcp)) lcp++;
-    var sp = from.lastIndexOf(" ", lcp - 1);
-    domBoundary = sp >= 0 ? sp : 0;
+    domBoundary = lcp;
     domBack = from.length - domBoundary;            // chars to untype off `from`
     domFwd = target.length - domBoundary;           // chars to type on for `target`
   }
@@ -110,12 +111,25 @@
     domLastG = gg;
 
     var z = clamp(Math.round(gg), 0, N - 1);
-    if (z !== domActiveZ || domDir !== domDirState) {   // new zone or reversed → re-anchor the active line
-      // Fresh forward line starts empty; a line re-entered going back starts from its committed value.
-      var from = (z !== domActiveZ) ? (domActiveZ === -1 || z > domActiveZ ? "" : domFwdTarget(z)) : domDisp;
-      setSwap(from, domDir >= 0 ? domFwdTarget(z) : domainStr(clamp(z, 0, N)));
-      domStartG = gg; domEndG = domDir >= 0 ? z + 0.5 : z - 0.5; domDisp = from;
+    var thr = domDir >= 0 ? z + 0.5 : z - 0.5;          // the threshold ahead in the travel direction
+    if (z !== domActiveZ) {
+      // Threshold crossed — forward OR backward: spawn a FRESH line and type the whole
+      // command again from empty toward this zone's value (e.g. zone 2 → `cat domain 3`).
+      // Going back is the SAME mechanism as forward, NOT a reverse untype. Types across
+      // the zone as you travel to the far threshold.
+      setSwap("", domFwdTarget(z));
+      domStartG = gg; domEndG = thr; domDisp = "";
       domActiveZ = z; domDirState = domDir;
+    } else if (domDir !== domDirState) {
+      // Same zone, direction reversed: the number changes (forward value → backward
+      // value). setSwap makes it a MINIMAL edit — it keeps whatever's already typed and
+      // only untypes the divergent tail if absolutely necessary, else keeps typing.
+      // Hold the current text until HALFWAY (the zone centre), then play the change out
+      // over the second half, down to the start point (the threshold where a new line
+      // spawns) — not spread across the whole scroll.
+      setSwap(domDisp, domDir >= 0 ? domFwdTarget(z) : domainStr(clamp(z, 0, N)));
+      domStartG = z; domEndG = thr;
+      domDirState = domDir;
     }
     var span = domEndG - domStartG;
     domDisp = domainText(Math.abs(span) < 1e-6 ? 1 : (gg - domStartG) / span);
