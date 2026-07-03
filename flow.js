@@ -68,6 +68,7 @@
      threshold forward starts a fresh empty line typing the next command; crossing back
      un-spawns it (the zone ahead is empty) and re-activates the previous, committed line. */
   var DOM_PRE = "cat domain ";
+  var DOM_PER_CHAR = 0.06;   // global-scroll units per char for the reversal correction (min pace)
   var domFrom = "", domTarget = "", domBoundary = 0, domBack = 0, domFwd = 0;
   var domDisp = "", domActiveZ = -1, domDirState = 1, domStartG = 0, domEndG = 0, domLastG = null, domDir = 1;
   function domainStr(num) { return num >= 1 ? DOM_PRE + num : ""; }
@@ -125,10 +126,15 @@
       // value). setSwap makes it a MINIMAL edit — it keeps whatever's already typed and
       // only untypes the divergent tail if absolutely necessary, else keeps typing.
       // Hold the current text until HALFWAY (the zone centre), then play the change out
-      // over the second half, down to the start point (the threshold where a new line
-      // spawns) — not spread across the whole scroll.
+      // toward the start point (the threshold where a new line spawns). The span is
+      // capped by how many chars actually change (DOM_PER_CHAR each) so a few letters
+      // type quickly instead of being smeared across the whole second half — only a
+      // large edit uses the full half-zone. Typing fast is fine; typing too slow isn't.
       setSwap(domDisp, domDir >= 0 ? domFwdTarget(z) : domainStr(clamp(z, 0, N)));
-      domStartG = z; domEndG = thr;
+      var chars = domBack + domFwd;
+      var half = Math.abs(thr - z);
+      var edit = Math.min(half, chars * DOM_PER_CHAR);
+      domStartG = z; domEndG = z + (thr >= z ? edit : -edit);
       domDirState = domDir;
     }
     var span = domEndG - domStartG;
