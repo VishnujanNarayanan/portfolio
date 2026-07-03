@@ -42,6 +42,7 @@
   var CD_CERTS = "~/portfolio-website/certificates";   // cwd the header command is typed from (came from `cd certificates`)
   var LINE_LEAD = "cd certificates";                 // lead-in row: typed from home across the video zoom-out
   var LINE_CD = "cd ../highlights && cat scraping";  // header row: typed from ~/certificates across the flow approach
+  var LINE_REV = "cd highlights && cat scraping";    // reverse morph target (from home): `cd certificates` ↔ this on scroll up/down
   var cdStack = flow.querySelector(".flow__cd-stack");
   // The stack is an APPEND-ONLY terminal log, like a real shell: the `cd highlights`
   // row is committed first, then every zone threshold crossed — forward OR backward —
@@ -163,15 +164,63 @@
   // the video zoom-out; when that finishes the header row appears and types `cd ../highlights &&
   // cat scraping` across the flow approach; then the zone engine appends `cat <domain>` lines.
   var started = false;
+  // Reversal (restored): once the section has been pinned, scrolling back UP out of the pin
+  // appends a fresh `cd certificates` line UNDER the last (`cd ..`) and types it as you go up; if
+  // you reverse DOWN it minimal-edit-morphs `cd certificates` → `cd highlights && cat scraping`
+  // (keeping the shared `cd ` prefix). A LOCAL swap so it never touches the zone engine globals.
+  var apDir = 1, apLastP = null, apStartP = 0, certLine = null;
+  var certFrom = "", certTarget = "", certBoundary = 0, certBack = 0, certFwd = 0;
+  var certDisp = "", certDir = 0, certAnchorPP = 0, certEndPP = 1;
+  function certSet(from, target) {
+    certFrom = from; certTarget = target;
+    var m = Math.min(from.length, target.length), lcp = 0;
+    while (lcp < m && from.charCodeAt(lcp) === target.charCodeAt(lcp)) lcp++;
+    certBoundary = lcp; certBack = from.length - lcp; certFwd = target.length - lcp;
+  }
+  function certText(s) {
+    var total = certBack + certFwd;
+    if (total === 0) return certTarget;
+    var k = Math.round(clamp(s, 0, 1) * total);
+    return k <= certBack ? certFrom.slice(0, certFrom.length - k)
+                         : certTarget.slice(0, certBoundary + (k - certBack));
+  }
+  function commitCert() {                          // freeze the reversal line into the append-only log
+    if (certLine) certLine.cmd.textContent = LINE_REV;
+    certLine = null; certDir = 0; certDisp = "";
+  }
   // inPlace = section pinned; approachP = header typing progress (0..1); gg = globalRaw;
   // heroPB = video zoom-out progress (0..1) driving the lead-in row.
   function driveTerminal(inPlace, approachP, gg, heroPB) {
     if (!cdStack || !cdHead || !leadRow) return;
-    if (!inPlace) {                                 // pre-pin: lead-in + header approach typing
-      leadRow.cmd.textContent = LINE_LEAD.slice(0, Math.round(clamp(heroPB, 0, 1) * LINE_LEAD.length));
-      var headOn = heroPB >= 0.999 || approachP > 0;   // header appears once `cd certificates` is done
-      cdHead.row.style.display = headOn ? "" : "none";
-      cdHead.cmd.textContent = headOn ? LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length)) : "";
+    if (!inPlace) {                                 // pre-pin OR scrolled back up out of the pin
+      if (apLastP === null) apLastP = approachP;
+      if (approachP > apLastP + 1e-5) apDir = 1;        // scrolling down toward the pin
+      else if (approachP < apLastP - 1e-5) apDir = -1;  // scrolling up toward the certs
+      apLastP = approachP;
+      if (!started) {                               // FIRST approach: lead-in + header typing
+        leadRow.cmd.textContent = LINE_LEAD.slice(0, Math.round(clamp(heroPB, 0, 1) * LINE_LEAD.length));
+        var headOn = heroPB >= 0.999 || approachP > 0;   // header appears once `cd certificates` is done
+        cdHead.row.style.display = headOn ? "" : "none";
+        cdHead.cmd.textContent = headOn ? LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length)) : "";
+      } else {                                      // session running → append the `cd certificates` reversal line
+        leadRow.cmd.textContent = LINE_LEAD; cdHead.cmd.textContent = LINE_CD; cdHead.row.style.display = "";
+        if (!certLine && apDir < 0 && domLines.length) {   // crossing UP past the cards threshold → spawn it
+          certLine = makeRow(CD_HOME); certLine.zone = -1; domLines.push(certLine);   // `cd certificates` runs from home (after zone-0's `cd ..`)
+          apStartP = approachP; certDir = -1; certSet("", LINE_LEAD); certAnchorPP = 0; certEndPP = 1; certDisp = "";
+        }
+        if (certLine) {
+          var pp = apStartP > 1e-6 ? clamp((apStartP - approachP) / apStartP, 0, 1) : 1;
+          // Direction flip → re-swap toward that direction's target, anchored at the current pp:
+          // scrolling UP heads to `cd certificates` (pp→1), reversing DOWN morphs back to
+          // `cd highlights && cat scraping` (pp→0), untyping only past the shared `cd ` prefix.
+          if (apDir < 0 && certDir !== -1) { certDir = -1; certSet(certDisp, LINE_LEAD); certAnchorPP = pp; certEndPP = 1; }
+          else if (apDir >= 0 && certDir !== 1) { certDir = 1; certSet(certDisp, LINE_REV); certAnchorPP = pp; certEndPP = 0; }
+          var cspan = certEndPP - certAnchorPP;
+          var cs = Math.abs(cspan) < 1e-6 ? 1 : (pp - certAnchorPP) / cspan;
+          certDisp = certText(cs); certLine.cmd.textContent = certDisp;
+          if (certDir === 1 && cs >= 1) commitCert();   // fully morphed back → freeze into the log
+        }
+      }
       renderStack();
       // Reset the zone engine so re-entering the pin spawns a FRESH line.
       domDisp = ""; domLastG = null; domDir = 1; domActiveZ = -1;
@@ -180,7 +229,8 @@
     leadRow.cmd.textContent = LINE_LEAD;          // committed lead-in
     cdHead.row.style.display = "";
     cdHead.cmd.textContent = LINE_CD;             // committed header
-    started = true;
+    started = true; apLastP = approachP;
+    if (certLine) commitCert();                   // re-entered the pin → freeze the reversal line into the log
     if (domLastG === null) domLastG = gg;
     if (gg > domLastG + 1e-6) domDir = 1;           // keep last direction while paused
     else if (gg < domLastG - 1e-6) domDir = -1;
