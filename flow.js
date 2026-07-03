@@ -73,17 +73,24 @@
      so reversing near a threshold has little scroll left and types faster. Crossing a
      threshold forward starts a fresh empty line typing the next command; crossing back
      un-spawns it (the zone ahead is empty) and re-activates the previous, committed line. */
-  var DOM_PRE = "cat domain ";
+  // The 4 highlight domains are numbered 1..4 and rendered as `cat <word>`. The terminal
+  // is already `cd`'d into scraping (domain 1 = the highlights we're on), so the FORWARD
+  // reveal starts at domain 2 (ai-ml) — see domFwdTarget (z+2). Keeping the NUMBER-based
+  // direction-aware logic from main means each zone knows its forward target (z+2) and
+  // backward target (z), so reversing untypes and retypes the correct neighbour with a
+  // MINIMAL edit — just more untyping than before, since the words share only `cat ` and
+  // then diverge (unlike the old single-digit `cat domain N`).
+  var DOMAIN_WORDS = { 1: "scraping", 2: "ai-ml", 3: "infra", 4: "rest-apis" };
   var DOM_PER_CHAR = 0.06;   // global-scroll units per char for the reversal correction (min pace)
   var domFrom = "", domTarget = "", domBoundary = 0, domBack = 0, domFwd = 0;
   var domDisp = "", domActiveZ = -1, domDirState = 1, domStartG = 0, domEndG = 0, domLastG = null, domDir = 1;
-  function domainStr(num) { return num >= 1 ? DOM_PRE + num : ""; }
+  function domainStr(num) { return num >= 1 ? "cat " + (DOMAIN_WORDS[num] || ("domain " + num)) : ""; }
   function domFwdTarget(z) { return domainStr(clamp(z + 2, 0, N)); }   // a zone's forward / committed value
   // Direction-aware target for a zone. Boundary zones only "run" a command toward the
-  // INTERIOR of the flow: the FIRST zone types on forward scroll only (empty when you
-  // arrive scrolling back out the top), the LAST zone types on backward scroll only
-  // (empty when you arrive scrolling forward out the bottom); reversing in either
-  // untypes it. Interior zones type their forward value going down, backward value up.
+  // INTERIOR: first zone types on forward scroll only (empty arriving back out the top),
+  // last zone on backward only (empty arriving forward out the bottom); reversing in
+  // either untypes. Interior zones type their forward domain (z+2) going down, their
+  // backward domain (z) going up — so reversing re-types the correct neighbour.
   function dirTarget(z, dir) {
     if (z === 0)     return dir >= 0 ? domFwdTarget(0) : "";
     if (z === N - 1) return dir >= 0 ? "" : domainStr(z);
@@ -131,10 +138,10 @@
     if (z !== domActiveZ) {
       // Threshold crossed — PRINT a fresh new line UNDER the last and type the whole
       // command from empty toward this zone's DIRECTION-AWARE target (dirTarget): forward
-      // types the forward value (e.g. zone 2 → `cat domain 3`), backward the backward one
-      // (reversing counts DOWN — zone 3 → `cat domain 2`). Boundary zones type toward the
-      // interior only, so the crossing INTO the first zone going back, or INTO the last
-      // zone going forward, prints an EMPTY line (nothing to type — you're leaving).
+      // types the forward domain (e.g. zone 1 → `cat ai-ml`), backward the backward one
+      // (count DOWN — zone 3 → `cat ai-ml`, zone 2 → `cat scraping`). Boundary zones type
+      // toward the interior only, so the crossing INTO the first zone going back, or INTO
+      // the last zone going forward, prints an EMPTY line (nothing to type — you leave).
       // Going back appends below just like forward; the stack only ever scrolls up.
       var ln = makeRow(CD_DIR); ln.zone = z; domLines.push(ln);
       setSwap("", dirTarget(z, domDir));
@@ -142,8 +149,9 @@
       domActiveZ = z; domDirState = domDir;
     } else if (domDir !== domDirState) {
       // Same zone, direction reversed: retype/untype toward the new direction's target.
-      // In an INTERIOR zone the number changes (forward value ↔ backward value). In a
-      // BOUNDARY zone this is where typing STARTS or UNTYPES: first zone typed forward
+      // In an INTERIOR zone the word changes (forward domain ↔ backward domain) — setSwap
+      // keeps `cat ` and untypes/retypes the rest. In a BOUNDARY zone this is where typing
+      // STARTS or UNTYPES: first zone typed forward
       // then scrolled back → untype to empty; last zone starts empty then types on the
       // backward scroll (and untypes again if you scroll forward). setSwap makes it a
       // MINIMAL edit — keep the common prefix, untype only the divergent tail, else keep
