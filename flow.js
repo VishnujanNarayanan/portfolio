@@ -38,9 +38,9 @@
   // command line vanishes, a fresh prompt appears in the new directory, and
   // zone 1's cards + text reveal.
   var CD_CMD = "cd highlights";
-  var cdCmdEl = flow.querySelector(".flow__cd-cmd");
-  var cdRow1  = flow.querySelector(".flow__cd-row");     // the typed command line
-  var cdRow2  = flow.querySelector(".flow__cd-row--2");  // the new-directory prompt
+  var cdCmdEl  = flow.querySelector(".flow__cd-cmd");
+  var cdCaret1 = flow.querySelector(".flow__cd-caret--1");  // caret on the command line
+  var cdRow2   = flow.querySelector(".flow__cd-row--2");    // the new-directory prompt
   var cdTypedN = -1, cdRan = null;
   function driveTerminal(typeP, run) {
     if (!cdCmdEl) return;
@@ -48,8 +48,10 @@
     if (n !== cdTypedN) { cdTypedN = n; cdCmdEl.textContent = CD_CMD.slice(0, n); }
     if (run !== cdRan) {
       cdRan = run;
-      if (cdRow1) cdRow1.hidden = run;     // old command line vanishes at the threshold
-      if (cdRow2) cdRow2.hidden = !run;    // fresh prompt appears in the new directory
+      // Like pressing Enter: the typed command LINE STAYS; the caret leaves it and a
+      // fresh prompt appears on a new line in the new directory, blinking there.
+      if (cdCaret1) cdCaret1.style.display = run ? "none" : "";
+      if (cdRow2) cdRow2.hidden = !run;
     }
   }
 
