@@ -247,6 +247,12 @@
     <section class="flow" id="process" aria-label="How I work — a four-stage journey">
       <div class="flow__wrapper">
 
+        <!-- Scroll-typed shell prompt, pinned top-left of the flow section. Over
+             the gate at the section's start "cd highlights" types out; as zone 1
+             enters, the cd "runs" — a fresh prompt appears in the new directory.
+             Zone-1 cards/text are held until this moment (flow.js gate). -->
+        <div class="flow__cd" aria-hidden="true"><div class="flow__cd-stack"></div></div>
+
         <!-- Airy light sky; hue cross-fades between stages (driven by JS) -->
         <div class="flow__sky" aria-hidden="true"></div>
         <div class="flow__horizon" aria-hidden="true"></div>

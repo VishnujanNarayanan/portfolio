@@ -1185,3 +1185,23 @@ html.boot-active{overflow:hidden;height:100%}
   .boot-caret{animation:none}
   .boot-bar__fill{transition:none}
 }
+
+/* ---------- flow__cd: rolling scroll-typed terminal, top-left of the flow section
+   Continues the boot loader's shell (flow.js). Line 0 `cd highlights` types as the
+   section scrolls in; then one `cat domain N` per zone. Clipped to ~2 lines: the
+   current + previous show, older lines rise up and fade. Pinned in .flow__wrapper. */
+.flow__cd{position:absolute;top:calc(var(--header-height) + 18px);left:clamp(18px,4vw,48px);z-index:6;margin:0;font-family:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;font-size:clamp(12px,1.3vw,15px);line-height:1.4;color:#d0d0d0;pointer-events:none;height:2.9em;overflow:hidden}
+.flow__cd-stack{transition:transform .4s ease;will-change:transform}
+.flow__cd-row{margin:0;transition:opacity .4s ease}
+.flow__cd-row--pending,.flow__cd-row--past{opacity:0}
+.flow__cd-row--prev,.flow__cd-row--cur{opacity:1}
+.flow__cd-cmd{color:#e6e6e6}
+.flow__cd-caret{display:inline-block;width:.55em;height:1.05em;margin-left:2px;vertical-align:-.15em;background:#d0d0d0;animation:boot-blink 1s steps(1) infinite}
+/* Only the current (typing) line carries the blinking caret. */
+.flow__cd-row:not(.flow__cd-row--cur) .flow__cd-caret{display:none}
+@media (max-width:820px){
+  .flow__cd{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .flow__cd-caret{animation:none}
+}

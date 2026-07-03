@@ -32,6 +32,135 @@
   var hdr = document.querySelector("header");   // top nav flips to black at the bg threshold
   var N = panels.length || 4;
 
+  // Terminal — a rolling shell pinned top-left of the flow section. Row 0 (`cd
+  // highlights`) types as the section scrolls INTO place, then commits when it pins.
+  // Below it sits ONE `cat domain N` line PER ZONE: crossing a threshold rolls the
+  // stack up and the fresh (active) line starts typing toward its target; the active
+  // line morphs direction-aware + dynamically paced (see the engine below), and
+  // reversing back across a threshold un-spawns it and re-activates the previous one.
+  var CD_HOME = "~/portfolio-website", CD_DIR = "~/portfolio-website/highlights";
+  var LINE_CD = "cd highlights";
+  var cdStack = flow.querySelector(".flow__cd-stack");
+  // The stack is an APPEND-ONLY terminal log, like a real shell: the `cd highlights`
+  // row is committed first, then every zone threshold crossed — forward OR backward —
+  // appends a NEW `cat domain N` row UNDER the last one and the whole stack scrolls up.
+  // Scrolling back never rolls the stack back down; it just prints the next line below.
+  function makeRow(path) {
+    var row = document.createElement("p"); row.className = "flow__cd-row flow__cd-row--pending";
+    row.innerHTML = '<span class="b-usr">vishnu@portfolio</span>:<span class="b-path">' + path +
+      '</span>$&nbsp;<span class="flow__cd-cmd"></span><span class="flow__cd-caret"></span>';
+    if (cdStack) cdStack.appendChild(row);
+    return { row: row, cmd: row.querySelector(".flow__cd-cmd") };
+  }
+  var cdHead = cdStack ? makeRow(CD_HOME) : null;   // row 0: the `cd highlights` command
+  var domLines = [];                                 // appended `cat domain N` rows, oldest→newest
+  function resetLog() {                              // clear all domain rows (section scrolled out)
+    domLines.forEach(function (l) { if (l.row.parentNode) l.row.parentNode.removeChild(l.row); });
+    domLines = []; domActiveZ = -1;
+    if (cdStack) cdStack.style.transform = "translateY(0px)";
+  }
+  var cdLineH = 0;
+  function cdLineHeight() { return (cdLineH = cdHead ? (cdHead.row.offsetHeight || cdLineH) : 0); }
+
+  /* ---------- Domain lines — rolling stack, direction-aware, dynamically paced ------
+     The ACTIVE zone z (= round(global)) owns the bottom line; committed zones behind
+     it show their forward value, zones ahead are empty, and the stack rolls up so the
+     active line + the one above stay in view. Each zone has a FORWARD target (its next
+     domain, z+2) and a BACKWARD target (its previous domain, z; zone 0 → nothing).
+     Whenever the active zone or the scroll direction changes, the active line RE-ANCHORS
+     and starts typing toward the matching target, dynamically paced over the scroll
+     REMAINING to the threshold it's heading to (exit when forward, entry when back) —
+     so reversing near a threshold has little scroll left and types faster. Crossing a
+     threshold forward starts a fresh empty line typing the next command; crossing back
+     un-spawns it (the zone ahead is empty) and re-activates the previous, committed line. */
+  var DOM_PRE = "cat domain ";
+  var DOM_PER_CHAR = 0.06;   // global-scroll units per char for the reversal correction (min pace)
+  var domFrom = "", domTarget = "", domBoundary = 0, domBack = 0, domFwd = 0;
+  var domDisp = "", domActiveZ = -1, domDirState = 1, domStartG = 0, domEndG = 0, domLastG = null, domDir = 1;
+  function domainStr(num) { return num >= 1 ? DOM_PRE + num : ""; }
+  function domFwdTarget(z) { return domainStr(clamp(z + 2, 0, N)); }   // a zone's forward / committed value
+  // Set up a from→target morph as a MINIMAL edit: keep the longest common prefix,
+  // untype only the chars that diverge, then type the rest. So `cat doma` → `cat
+  // domain 1` just keeps typing `in 1` (no untyping), and `cat domain 3` → `cat
+  // domain 1` untypes only `3`. Untype happens solely when it's absolutely necessary.
+  function setSwap(from, target) {
+    domFrom = from; domTarget = target;
+    var m = Math.min(from.length, target.length), lcp = 0;
+    while (lcp < m && from.charCodeAt(lcp) === target.charCodeAt(lcp)) lcp++;
+    domBoundary = lcp;
+    domBack = from.length - domBoundary;            // chars to untype off `from`
+    domFwd = target.length - domBoundary;           // chars to type on for `target`
+  }
+  // Text for progress s (0..1): first untype `domBack` chars off `from`, then type
+  // `domFwd` chars of `target` — the shared prefix is common to both, so it's seamless.
+  function domainText(s) {
+    var total = domBack + domFwd;
+    if (total === 0) return domTarget;
+    var k = Math.round(clamp(s, 0, 1) * total);
+    return k <= domBack ? domFrom.slice(0, domFrom.length - k)
+                        : domTarget.slice(0, domBoundary + (k - domBack));
+  }
+  // inPlace = section pinned; approachP = `cd highlights` typing (0..1); gg = globalRaw.
+  function driveTerminal(inPlace, approachP, gg) {
+    if (!cdStack || !cdHead) return;
+    if (!inPlace) {                                 // approach: type `cd highlights`, log empty
+      cdHead.cmd.textContent = LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length));
+      cdHead.row.className = "flow__cd-row flow__cd-row--cur";
+      if (domLines.length) resetLog();
+      domDisp = ""; domLastG = null; domDir = 1;
+      return;
+    }
+    cdHead.cmd.textContent = LINE_CD;              // committed
+    if (domLastG === null) domLastG = gg;
+    if (gg > domLastG + 1e-6) domDir = 1;           // keep last direction while paused
+    else if (gg < domLastG - 1e-6) domDir = -1;
+    domLastG = gg;
+
+    var z = clamp(Math.round(gg), 0, N - 1);
+    var thr = domDir >= 0 ? z + 0.5 : z - 0.5;          // the threshold ahead in the travel direction
+    if (z !== domActiveZ) {
+      // Threshold crossed — forward OR backward: PRINT a fresh new line UNDER the last
+      // and type the whole command again from empty toward this zone's value (e.g. zone
+      // 2 → `cat domain 3`). Going back appends below just like forward — the stack only
+      // ever scrolls up, never rolls back down. Types across the zone as you travel.
+      domLines.push(makeRow(CD_DIR));
+      setSwap("", domFwdTarget(z));
+      domStartG = gg; domEndG = thr; domDisp = "";
+      domActiveZ = z; domDirState = domDir;
+    } else if (domDir !== domDirState) {
+      // Same zone, direction reversed: the number changes (forward value → backward
+      // value). setSwap makes it a MINIMAL edit — it keeps whatever's already typed and
+      // only untypes the divergent tail if absolutely necessary, else keeps typing.
+      // Hold the current text until HALFWAY (the zone centre), then play the change out
+      // toward the start point (the threshold where a new line spawns). The span is
+      // capped by how many chars actually change (DOM_PER_CHAR each) so a few letters
+      // type quickly instead of being smeared across the whole second half — only a
+      // large edit uses the full half-zone. Typing fast is fine; typing too slow isn't.
+      setSwap(domDisp, domDir >= 0 ? domFwdTarget(z) : domainStr(clamp(z, 0, N)));
+      var chars = domBack + domFwd;
+      var half = Math.abs(thr - z);
+      var edit = Math.min(half, chars * DOM_PER_CHAR);
+      domStartG = z; domEndG = z + (thr >= z ? edit : -edit);
+      domDirState = domDir;
+    }
+    var span = domEndG - domStartG;
+    domDisp = domainText(Math.abs(span) < 1e-6 ? 1 : (gg - domStartG) / span);
+
+    // Render: the bottom (newest) line is live/typing; every earlier line stays frozen
+    // at whatever it printed. Style the newest as --cur, the one above --prev, the rest
+    // --past, and scroll the whole stack up so the newest sits just under the previous.
+    if (domLines.length) domLines[domLines.length - 1].cmd.textContent = domDisp;
+    var rows = [cdHead].concat(domLines);
+    for (var r = 0; r < rows.length; r++) {
+      var cls = "flow__cd-row";
+      cls += r === rows.length - 1 ? " flow__cd-row--cur"
+           : r === rows.length - 2 ? " flow__cd-row--prev" : " flow__cd-row--past";
+      rows[r].row.className = cls;
+    }
+    var lh = cdLineH || cdLineHeight();
+    cdStack.style.transform = "translateY(" + (-Math.max(0, domLines.length - 1) * lh).toFixed(1) + "px)";
+  }
+
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function lerp(a, b, t) { return a + (b - a) * t; }
   function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
@@ -335,7 +464,7 @@
     var rect = flow.getBoundingClientRect();
     var top = rect.top + (window.scrollY || window.pageYOffset || 0);
     var total = flow.offsetHeight - window.innerHeight;
-    var y = top + (i / (N - 1)) * total;
+    var y = top + ((i + 0.5) / N) * total;   // land at zone i's centre (global = progress·N − 0.5)
     if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { duration: 1.2 });
     else window.scrollTo({ top: y, behavior: "smooth" });
   }
@@ -492,14 +621,31 @@
     var total = rect.height - vh;
     var scrolled = clamp(-rect.top, 0, total);
     var progress = total > 0 ? scrolled / total : 0;
-    var global = progress * (N - 1);
+    // Even zone spacing: each of the N zones gets an EQUAL 1/N slice of the pinned
+    // scroll, its panel centred in the MIDDLE of that slice (progress (2i+1)/2N).
+    // global = progress·N − 0.5 → centres at 0,1,…,N−1 land at 1/8,3/8,5/8,7/8, so
+    // the first/last zones are no longer squashed against the 0/1 ends (they now get
+    // the same dwell + the same card entry/exit runway as the middle two).
+    var global = progress * N - 0.5;
+    // Terminal: "cd highlights" types out as the section scrolls INTO place — over
+    // the approach, with rect.top travelling from ~0.85·vh down to 0. It finishes
+    // exactly as the section pins (rect.top ≤ 0 = "in place"), the threshold below.
+    var TYPE_START = vh * 0.85;
+    var approachP = clamp((TYPE_START - rect.top) / TYPE_START, 0, 1);
+    var inPlace = rect.top <= 0;
     // Unclamped global for the IMAGE + TITLE edge motion: lets the first zone enter
     // from the right during the lead-in scroll (before the section reaches the top)
     // and the last zone keep exiting left past the section end — so every zone covers
     // the same travel distance and plays the same appear/exit. Clamped to a full zone
     // of overscroll on each side: at -1 the first zone waits off-right (pre-entry),
     // crossing -0.5 fires its appear + image entry; at N the last zone has exited.
-    var globalRaw = total > 0 ? clamp((-rect.top) / total * (N - 1), -1, N) : 0;
+    // Hold every zone parked (globalRaw at its pre-entry edge) until the section is
+    // in place; release at the pin so zone 1 enters at the exact terminal threshold.
+    var globalRaw = !inPlace ? -1 : (total > 0 ? clamp((-rect.top) / total * N - 0.5, -1, N) : 0);
+    // Terminal: `cd highlights` types over the approach; after the pin the
+    // `cat domain N` line morphs its number, direction-aware + scroll-scrubbed
+    // (see driveTerminal / the domain-line engine above).
+    driveTerminal(inPlace, approachP, globalRaw);
     var sceneScrolled = Math.abs(globalRaw - lastGlobalRaw) > 1e-4;  // cards slid this frame
     if (globalRaw > lastGlobalRaw + 1e-4) scrollDir = 1;
     else if (globalRaw < lastGlobalRaw - 1e-4) scrollDir = -1;
@@ -508,7 +654,7 @@
     journey.classList.toggle("is-live", rect.top <= 1 && rect.bottom > vh * 0.6);
 
     var vw = window.innerWidth;
-    var trackX = -progress * (N - 1) * vw;
+    var trackX = -global * vw;
     track.style.transform = "translate3d(" + trackX + "px,0,0)";
     paintSky(global);
     // Progressive lighten: the flow bg is the dark navy world until 1/5 INTO zone 2
@@ -517,7 +663,7 @@
     // lightT (0→1) is shared with main.js (window.__flowLight) which lightens the
     // contour-canvas bg + inverts the lines. Here it also flips the foreground text:
     // title/index bright→deep blue, sub white→grey, readable as the bg turns light.
-    var LIGHT_START = 0.7 / 3;
+    var LIGHT_START = (0.7 + 0.5) / N;   // global 0.7 (1/5 into zone 2) under global = progress·N − 0.5
     var lightT = clamp((progress - LIGHT_START) / (1 - LIGHT_START), 0, 1);
     window.__flowLight = lightT;
     // Top nav (Projects/Skills/Services/Blog) rolls to black in a per-letter reel
@@ -533,7 +679,8 @@
     // Journey wheel/spine darkens with scroll from the HALF of zone 3 (zone 3 spans
     // global 1.5→2.5, half = global 2 → progress 2/3) to the end, so it reads on the
     // light bg: bright blue 77,139,255 → deep blue 35,29,122.
-    var jDark = clamp((progress - 2 / 3) / (1 - 2 / 3), 0, 1);
+    var jStart = (2 + 0.5) / N;   // global 2 (half of zone 3) under global = progress·N − 0.5
+    var jDark = clamp((progress - jStart) / (1 - jStart), 0, 1);
     flow.style.setProperty("--journey-rgb",
       Math.round(lerp(77, 35, jDark)) + "," + Math.round(lerp(139, 29, jDark)) + "," + Math.round(lerp(255, 122, jDark)));
     // Zone 3-4 sub text fades from a slightly-lighter black → a slightly-darker grey
@@ -561,8 +708,11 @@
     // overscroll edge) and the last zone's exit fires a bit EARLIER (while still on
     // screen). Interior crossings stay at the half-integers; only the pre-entry
     // (-1→0) and exit (N-1→N) shift.
-    var ENTER_LATE = 0.25;       // appear fires at globalRaw -0.5 + this (later, = -0.25)
-    var EXIT_EARLY = 0.40;       // exit fires at globalRaw N-0.5 - this (earlier)
+    // Zeroed so the first/last zones are symmetric with the middle two: zone 0
+    // enters at globalRaw -0.5 (= the pin, progress 0) and zone N-1 exits at
+    // globalRaw N-0.5 (= progress 1), giving each zone the full ±0.5 dwell.
+    var ENTER_LATE = 0;          // appear fires at globalRaw -0.5 (at the pin)
+    var EXIT_EARLY = 0;          // exit fires at globalRaw N-0.5 (at the section end)
     var rawSel;
     if (globalRaw < -0.5 + ENTER_LATE) rawSel = -1;             // first zone not yet entered
     else if (globalRaw >= N - 0.5 - EXIT_EARLY) rawSel = N;     // last zone has exited
@@ -744,8 +894,8 @@
     // reverses (un-draws) when you scroll back out the top.
     var drawP = 0, drawnX = 0;
     if (lineEl && fillEl && fillLen) {
-      // Completes at the half-way point of zone 2 (global == 1 → progress 1/3).
-      var DRAW_SPAN = 0.33;                   // fraction of section scroll to fully draw
+      // Completes when zone 2 centres (global == 1 → progress (1+0.5)/N).
+      var DRAW_SPAN = (1 + 0.5) / N;          // fraction of section scroll to fully draw
       var lin = clamp(progress / DRAW_SPAN, 0, 1);
       // Power ease-out: decelerates continuously from the first frame (fast at the
       // start, crawling at the end), so it visibly "eases into" the slow end rather
@@ -824,11 +974,14 @@
   /* ---------- Boot ---------- */
   if (isMobile) {
     // Mobile: CSS stacks the stages and pins cards in normal flow. No GL / no pin.
+    // (.flow__cd is display:none on mobile, so the terminal is skipped.)
     paintSky(0);
     return;
   }
+  cdLineHeight();
   window.addEventListener("resize", function () {
     vh = window.innerHeight;
+    cdLineHeight();
     resizeGL();
     cards.forEach(function (c) { c.init = false; });
   });
