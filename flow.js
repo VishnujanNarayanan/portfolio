@@ -79,6 +79,16 @@
   var domDisp = "", domActiveZ = -1, domDirState = 1, domStartG = 0, domEndG = 0, domLastG = null, domDir = 1;
   function domainStr(num) { return num >= 1 ? DOM_PRE + num : ""; }
   function domFwdTarget(z) { return domainStr(clamp(z + 2, 0, N)); }   // a zone's forward / committed value
+  // Direction-aware target for a zone. Boundary zones only "run" a command toward the
+  // INTERIOR of the flow: the FIRST zone types on forward scroll only (empty when you
+  // arrive scrolling back out the top), the LAST zone types on backward scroll only
+  // (empty when you arrive scrolling forward out the bottom); reversing in either
+  // untypes it. Interior zones type their forward value going down, backward value up.
+  function dirTarget(z, dir) {
+    if (z === 0)     return dir >= 0 ? domFwdTarget(0) : "";
+    if (z === N - 1) return dir >= 0 ? "" : domainStr(z);
+    return dir >= 0 ? domFwdTarget(z) : domainStr(clamp(z, 0, N));
+  }
   // Set up a from→target morph as a MINIMAL edit: keep the longest common prefix,
   // untype only the chars that diverge, then type the rest. So `cat doma` → `cat
   // domain 1` just keeps typing `in 1` (no untyping), and `cat domain 3` → `cat
@@ -119,24 +129,28 @@
     var z = clamp(Math.round(gg), 0, N - 1);
     var thr = domDir >= 0 ? z + 0.5 : z - 0.5;          // the threshold ahead in the travel direction
     if (z !== domActiveZ) {
-      // Threshold crossed — forward OR backward: PRINT a fresh new line UNDER the last
-      // and type the whole command again from empty toward this zone's value (e.g. zone
-      // 2 → `cat domain 3`). Going back appends below just like forward — the stack only
-      // ever scrolls up, never rolls back down. Types across the zone as you travel.
-      domLines.push(makeRow(CD_DIR));
-      setSwap("", domFwdTarget(z));
+      // Threshold crossed — PRINT a fresh new line UNDER the last and type the whole
+      // command from empty toward this zone's DIRECTION-AWARE target (dirTarget): forward
+      // types the forward value (e.g. zone 2 → `cat domain 3`), backward the backward one
+      // (reversing counts DOWN — zone 3 → `cat domain 2`). Boundary zones type toward the
+      // interior only, so the crossing INTO the first zone going back, or INTO the last
+      // zone going forward, prints an EMPTY line (nothing to type — you're leaving).
+      // Going back appends below just like forward; the stack only ever scrolls up.
+      var ln = makeRow(CD_DIR); ln.zone = z; domLines.push(ln);
+      setSwap("", dirTarget(z, domDir));
       domStartG = gg; domEndG = thr; domDisp = "";
       domActiveZ = z; domDirState = domDir;
     } else if (domDir !== domDirState) {
-      // Same zone, direction reversed: the number changes (forward value → backward
-      // value). setSwap makes it a MINIMAL edit — it keeps whatever's already typed and
-      // only untypes the divergent tail if absolutely necessary, else keeps typing.
-      // Hold the current text until HALFWAY (the zone centre), then play the change out
-      // toward the start point (the threshold where a new line spawns). The span is
-      // capped by how many chars actually change (DOM_PER_CHAR each) so a few letters
-      // type quickly instead of being smeared across the whole second half — only a
-      // large edit uses the full half-zone. Typing fast is fine; typing too slow isn't.
-      setSwap(domDisp, domDir >= 0 ? domFwdTarget(z) : domainStr(clamp(z, 0, N)));
+      // Same zone, direction reversed: retype/untype toward the new direction's target.
+      // In an INTERIOR zone the number changes (forward value ↔ backward value). In a
+      // BOUNDARY zone this is where typing STARTS or UNTYPES: first zone typed forward
+      // then scrolled back → untype to empty; last zone starts empty then types on the
+      // backward scroll (and untypes again if you scroll forward). setSwap makes it a
+      // MINIMAL edit — keep the common prefix, untype only the divergent tail, else keep
+      // typing. Hold until HALFWAY (zone centre), then play the change out toward the
+      // start point; the span is capped by chars changed (DOM_PER_CHAR each) so a few
+      // letters type quickly instead of smearing across the whole second half.
+      setSwap(domDisp, dirTarget(z, domDir));
       var chars = domBack + domFwd;
       var half = Math.abs(thr - z);
       var edit = Math.min(half, chars * DOM_PER_CHAR);
@@ -155,6 +169,11 @@
       var cls = "flow__cd-row";
       cls += r === rows.length - 1 ? " flow__cd-row--cur"
            : r === rows.length - 2 ? " flow__cd-row--prev" : " flow__cd-row--past";
+      // Zones 3 & 4 (index ≥ 2) sit on the now-light bg → type in black so it reads;
+      // zones 1-2 keep the light-grey text of the dark early bg. Tagged per line by its
+      // zone, so a zone-3 line is black whether it was printed crossing in from zone 2
+      // (forward) or zone 4 (backward); zone-4 lines are always black.
+      if (rows[r].zone >= 2) cls += " flow__cd-row--dark";
       rows[r].row.className = cls;
     }
     var lh = cdLineH || cdLineHeight();
@@ -657,14 +676,23 @@
     var trackX = -global * vw;
     track.style.transform = "translate3d(" + trackX + "px,0,0)";
     paintSky(global);
-    // Progressive lighten: the flow bg is the dark navy world until 1/5 INTO zone 2
-    // (zone 2 spans global 0.5→1.5, so 1/5 in = global 0.7 → progress 0.7/3), then
-    // lightens to the hero's initial light shade by the END of zone 4 (progress 1).
+    // Colour-fade bracket. EVERY scroll-driven colour transition (bg lighten + contour
+    // lines via __flowLight, journey/scroll wheel, sub-text) used to run over progress
+    // [0.3, 1.0] (≈1/5 into zone 2 → end of zone 4). Re-home them into [0.2, 0.8] =
+    // 4/5 of zone 1 → 1/5 of zone 4 (zone k = index k−1 spans [k−1.5, k−0.5] in global;
+    // progress = (global+0.5)/N, N=4 → 4/5 of zone 1 = progress 0.2, 1/5 of zone 4 =
+    // 0.8). Rather than move each fade's constants, we remap progress into an effective
+    // `colorP` and feed the UNCHANGED fade formulas below: every fade keeps its RELATIVE
+    // position within the transition, so the nav switch, contour flip, wheel darken and
+    // sub-text all land at the SAME percentage — just inside the new, narrower bracket.
+    var CF_OLD0 = 0.3, CF_OLD1 = 1.0, CF_NEW0 = 0.2, CF_NEW1 = 0.8;
+    var colorP = CF_OLD0 + (progress - CF_NEW0) * (CF_OLD1 - CF_OLD0) / (CF_NEW1 - CF_NEW0);
+    // Progressive lighten: dark navy world → the hero's light shade over the bracket.
     // lightT (0→1) is shared with main.js (window.__flowLight) which lightens the
     // contour-canvas bg + inverts the lines. Here it also flips the foreground text:
     // title/index bright→deep blue, sub white→grey, readable as the bg turns light.
-    var LIGHT_START = (0.7 + 0.5) / N;   // global 0.7 (1/5 into zone 2) under global = progress·N − 0.5
-    var lightT = clamp((progress - LIGHT_START) / (1 - LIGHT_START), 0, 1);
+    var LIGHT_START = (0.7 + 0.5) / N;   // old bracket start (colorP space); == CF_OLD0
+    var lightT = clamp((colorP - LIGHT_START) / (1 - LIGHT_START), 0, 1);
     window.__flowLight = lightT;
     // Top nav (Projects/Skills/Services/Blog) rolls to black in a per-letter reel
     // once the bg transition is ~27% underway. Threshold-driven: fired ONCE per
@@ -679,18 +707,18 @@
     // Journey wheel/spine darkens with scroll from the HALF of zone 3 (zone 3 spans
     // global 1.5→2.5, half = global 2 → progress 2/3) to the end, so it reads on the
     // light bg: bright blue 77,139,255 → deep blue 35,29,122.
-    var jStart = (2 + 0.5) / N;   // global 2 (half of zone 3) under global = progress·N − 0.5
-    var jDark = clamp((progress - jStart) / (1 - jStart), 0, 1);
+    var jStart = (2 + 0.5) / N;   // half of zone 3 in colorP space (== old 0.625)
+    var jDark = clamp((colorP - jStart) / (1 - jStart), 0, 1);
     flow.style.setProperty("--journey-rgb",
       Math.round(lerp(77, 35, jDark)) + "," + Math.round(lerp(139, 29, jDark)) + "," + Math.round(lerp(255, 122, jDark)));
     // Zone 3-4 sub text fades from a slightly-lighter black → a slightly-darker grey
     // across zone 3 to the end (zone 3 starts at global 1.5 → progress 0.5).
-    var subT = clamp((progress - 0.5) / 0.5, 0, 1);
+    var subT = clamp((colorP - 0.5) / 0.5, 0, 1);
     var subCol = "rgb(" + Math.round(lerp(40, 105, subT)) + "," + Math.round(lerp(40, 105, subT)) + "," + Math.round(lerp(46, 112, subT)) + ")";
     for (var si = 0; si < darkSubs.length; si++) darkSubs[si].style.color = subCol;
     // Zone 1-2 sub text: the OTHER side of mid grey — slightly-lighter-grey → a
     // slightly-darker-white across zone 1 to the end of zone 2 (progress 0 → 0.5).
-    var subT2 = clamp(progress / 0.5, 0, 1);
+    var subT2 = clamp(colorP / 0.5, 0, 1);
     var subCol2 = "rgb(" + Math.round(lerp(150, 236, subT2)) + "," + Math.round(lerp(150, 236, subT2)) + "," + Math.round(lerp(156, 240, subT2)) + ")";
     for (var sj = 0; sj < lightSubs.length; sj++) lightSubs[sj].style.color = subCol2;
     // NOTE: only the LINES + bg (main.js, via __flowLight) transition with scroll.

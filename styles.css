@@ -1196,6 +1196,8 @@ html.boot-active{overflow:hidden;height:100%}
 .flow__cd-row--pending,.flow__cd-row--past{opacity:0}
 .flow__cd-row--prev,.flow__cd-row--cur{opacity:1}
 .flow__cd-cmd{color:#e6e6e6}
+.flow__cd-row--dark .flow__cd-cmd{color:#111}
+.flow__cd-row--dark .flow__cd-caret{background:#111}
 .flow__cd-caret{display:inline-block;width:.55em;height:1.05em;margin-left:2px;vertical-align:-.15em;background:#d0d0d0;animation:boot-blink 1s steps(1) infinite}
 /* Only the current (typing) line carries the blinking caret. */
 .flow__cd-row:not(.flow__cd-row--cur) .flow__cd-caret{display:none}
