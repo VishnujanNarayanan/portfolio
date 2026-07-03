@@ -131,6 +131,29 @@
   // one (`cd ..`) and types it — exactly like a zone crossing spawns a new line — with NO
   // reset/snap and NO header untyping. Scrolling back down just resumes appending below.
   var apDir = 1, apLastP = null, apStartP = 0, certLine = null, started = false;
+  // The approach line reverses like a flow zone: a LOCAL minimal-edit swap so it never
+  // touches the pinned zone engine's globals. certDir -1 = typing toward `cd certificates`
+  // (scrolling up), +1 = morphing back to the header (reversing forward); certAnchorPP /
+  // certEndPP anchor the current swap to the approach progress pp so it re-scales on a flip.
+  var certFrom = "", certTarget = "", certBoundary = 0, certBack = 0, certFwd = 0;
+  var certDisp = "", certDir = 0, certAnchorPP = 0, certEndPP = 1;
+  function certSet(from, target) {
+    certFrom = from; certTarget = target;
+    var m = Math.min(from.length, target.length), lcp = 0;
+    while (lcp < m && from.charCodeAt(lcp) === target.charCodeAt(lcp)) lcp++;
+    certBoundary = lcp; certBack = from.length - lcp; certFwd = target.length - lcp;
+  }
+  function certText(s) {
+    var total = certBack + certFwd;
+    if (total === 0) return certTarget;
+    var k = Math.round(clamp(s, 0, 1) * total);
+    return k <= certBack ? certFrom.slice(0, certFrom.length - k)
+                         : certTarget.slice(0, certBoundary + (k - certBack));
+  }
+  function commitCert() {                               // freeze the reversal line into the append-only log
+    if (certLine) certLine.cmd.textContent = LINE_CD;   // it STAYS as a real `cd highlights && cat scraping`
+    certLine = null; certDir = 0; certDisp = "";        // prompt; a later up-pass appends a fresh cert line below
+  }
   // inPlace = section pinned; approachP = header typing progress (0..1); gg = globalRaw.
   function driveTerminal(inPlace, approachP, gg) {
     if (!cdStack || !cdHead) return;
@@ -144,12 +167,24 @@
         cdHead.row.className = "flow__cd-row flow__cd-row--cur";
         if (cdStack) cdStack.style.transform = "translateY(0px)";
       } else {                                          // session running → stay continuous with the log
-        if (!certLine && apDir < 0 && domLines.length) {   // crossing UP out of the pin → append `cd certificates`
-          certLine = makeRow(CD_DIR); certLine.zone = -1; domLines.push(certLine); apStartP = approachP;
+        if (!certLine && apDir < 0 && domLines.length) {   // crossing UP out of the pin → spawn the reversal line
+          certLine = makeRow(CD_DIR); certLine.zone = -1; domLines.push(certLine);
+          apStartP = approachP;                            // pin edge = pp 0; fully scrolled up = pp 1
+          certDir = -1; certSet("", LINE_BACK); certAnchorPP = 0; certEndPP = 1; certDisp = "";
         }
-        if (certLine && apDir < 0) {                    // type it as you scroll up (frozen on the way down)
-          var frac = apStartP > 1e-6 ? clamp((apStartP - approachP) / apStartP, 0, 1) : 1;
-          certLine.cmd.textContent = LINE_BACK.slice(0, Math.round(frac * LINE_BACK.length));
+        if (certLine) {
+          var pp = apStartP > 1e-6 ? clamp((apStartP - approachP) / apStartP, 0, 1) : 1;
+          // Direction flip → re-swap toward that direction's target, anchored at the current
+          // pp: scrolling UP heads to `cd certificates` (pp→1), reversing forward morphs the
+          // shown text back to the header `cd highlights && cat scraping` (pp→0), untyping
+          // only `certificates` past the shared `cd ` prefix before typing the rest.
+          if (apDir < 0 && certDir !== -1) { certDir = -1; certSet(certDisp, LINE_BACK); certAnchorPP = pp; certEndPP = 1; }
+          else if (apDir >= 0 && certDir !== 1) { certDir = 1; certSet(certDisp, LINE_CD); certAnchorPP = pp; certEndPP = 0; }
+          var span = certEndPP - certAnchorPP;
+          var s = Math.abs(span) < 1e-6 ? 1 : (pp - certAnchorPP) / span;
+          certDisp = certText(s);
+          certLine.cmd.textContent = certDisp;
+          if (certDir === 1 && s >= 1) commitCert();        // fully morphed back → freeze it into the log
         }
         renderStack();
       }
@@ -158,7 +193,8 @@
       return;
     }
     cdHead.cmd.textContent = LINE_CD;              // committed header
-    started = true; certLine = null; apLastP = approachP;   // session running; next up-pass appends a new cert line
+    started = true; apLastP = approachP;           // session running; next up-pass spawns a fresh reversal line
+    if (certLine) commitCert();                     // re-entered the pin → freeze the reversal line into the log
     if (domLastG === null) domLastG = gg;
     if (gg > domLastG + 1e-6) domDir = 1;           // keep last direction while paused
     else if (gg < domLastG - 1e-6) domDir = -1;
