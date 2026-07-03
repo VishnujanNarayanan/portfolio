@@ -2693,3 +2693,36 @@
   if (feed.complete) render(); else feed.addEventListener("load", render);
   render();
 })();
+
+/* ============================================================
+   cdLineType — the boot loader's shell prompt, pinned top-left of
+   the flow section. "cd highlights" types out character by
+   character as the flow section scrolls into view. Pure function
+   of scroll, so it reverses (untypes) on scroll-up.
+   ============================================================ */
+(function cdLineType() {
+  var sec = document.querySelector(".flow");
+  var cmd = document.querySelector(".flow__cd-cmd");
+  if (!sec || !cmd) return;
+  var CMD = "cd highlights";
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+  if (reduce) { cmd.textContent = CMD; return; }
+  var ticking = false, last = -1;
+
+  function render() {
+    ticking = false;
+    var r = sec.getBoundingClientRect(), vh = window.innerHeight;
+    // The flow wrapper pins once the section top reaches 0; type as the section's
+    // top travels from one viewport below the fold up to the pin line.
+    var p = (vh - r.top) / vh;
+    p = p < 0 ? 0 : p > 1 ? 1 : p;
+    var n = Math.round(p * CMD.length);
+    if (n !== last) { last = n; cmd.textContent = CMD.slice(0, n); }
+  }
+  function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(render); } }
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll, { passive: true });
+  if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
+  render();
+})();
