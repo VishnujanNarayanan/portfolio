@@ -119,13 +119,24 @@
     var z = clamp(Math.round(gg), 0, N - 1);
     var thr = domDir >= 0 ? z + 0.5 : z - 0.5;          // the threshold ahead in the travel direction
     if (z !== domActiveZ) {
-      // Threshold crossed — forward OR backward: PRINT a fresh new line UNDER the last
-      // and type the whole command again from empty toward this zone's value (e.g. zone
-      // 2 → `cat domain 3`). Going back appends below just like forward — the stack only
-      // ever scrolls up, never rolls back down. Types across the zone as you travel.
-      domLines.push(makeRow(CD_DIR));
-      setSwap("", domFwdTarget(z));
-      domStartG = gg; domEndG = thr; domDisp = "";
+      if (z === 0 && domDir < 0 && domLines.length) {
+        // First zone, scrolling BACK out toward the pin: don't print another line —
+        // UNTYPE the current bottom line to empty across the zone, so the terminal
+        // clears back down to the `cd highlights` prompt as you leave. The append log
+        // only prints going in; the first zone is where it unwinds on the way out.
+        setSwap(domDisp, "");
+        domStartG = gg; domEndG = thr;
+      } else {
+        // Threshold crossed — PRINT a fresh new line UNDER the last and type the whole
+        // command again from empty toward this zone's value. DIRECTION-AWARE, like the
+        // correction below: forward types the zone's forward value (domFwdTarget, e.g.
+        // zone 2 → `cat domain 3`), backward types its backward value (domainStr(z), so
+        // reversing counts DOWN — zone 3 → `cat domain 2`, not the forward `domain 4`).
+        // Going back appends below just like forward; the stack only ever scrolls up.
+        var ln = makeRow(CD_DIR); ln.zone = z; domLines.push(ln);
+        setSwap("", domDir >= 0 ? domFwdTarget(z) : domainStr(clamp(z, 0, N)));
+        domStartG = gg; domEndG = thr; domDisp = "";
+      }
       domActiveZ = z; domDirState = domDir;
     } else if (domDir !== domDirState) {
       // Same zone, direction reversed: the number changes (forward value → backward
@@ -155,6 +166,11 @@
       var cls = "flow__cd-row";
       cls += r === rows.length - 1 ? " flow__cd-row--cur"
            : r === rows.length - 2 ? " flow__cd-row--prev" : " flow__cd-row--past";
+      // Zones 3 & 4 (index ≥ 2) sit on the now-light bg → type in black so it reads;
+      // zones 1-2 keep the light-grey text of the dark early bg. Tagged per line by its
+      // zone, so a zone-3 line is black whether it was printed crossing in from zone 2
+      // (forward) or zone 4 (backward); zone-4 lines are always black.
+      if (rows[r].zone >= 2) cls += " flow__cd-row--dark";
       rows[r].row.className = cls;
     }
     var lh = cdLineH || cdLineHeight();
