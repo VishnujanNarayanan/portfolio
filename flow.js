@@ -32,6 +32,27 @@
   var hdr = document.querySelector("header");   // top nav flips to black at the bg threshold
   var N = panels.length || 4;
 
+  // Terminal — the "cd highlights" prompt pinned top-left. It types out as the
+  // section scrolls INTO place (over the approach); typing completes exactly as
+  // the section pins ("in place"), which is the single threshold where the old
+  // command line vanishes, a fresh prompt appears in the new directory, and
+  // zone 1's cards + text reveal.
+  var CD_CMD = "cd highlights";
+  var cdCmdEl = flow.querySelector(".flow__cd-cmd");
+  var cdRow1  = flow.querySelector(".flow__cd-row");     // the typed command line
+  var cdRow2  = flow.querySelector(".flow__cd-row--2");  // the new-directory prompt
+  var cdTypedN = -1, cdRan = null;
+  function driveTerminal(typeP, run) {
+    if (!cdCmdEl) return;
+    var n = Math.round(clamp(typeP, 0, 1) * CD_CMD.length);
+    if (n !== cdTypedN) { cdTypedN = n; cdCmdEl.textContent = CD_CMD.slice(0, n); }
+    if (run !== cdRan) {
+      cdRan = run;
+      if (cdRow1) cdRow1.hidden = run;     // old command line vanishes at the threshold
+      if (cdRow2) cdRow2.hidden = !run;    // fresh prompt appears in the new directory
+    }
+  }
+
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function lerp(a, b, t) { return a + (b - a) * t; }
   function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
@@ -493,13 +514,22 @@
     var scrolled = clamp(-rect.top, 0, total);
     var progress = total > 0 ? scrolled / total : 0;
     var global = progress * (N - 1);
+    // Terminal: "cd highlights" types out as the section scrolls INTO place — over
+    // the approach, with rect.top travelling from ~0.85·vh down to 0. It finishes
+    // exactly as the section pins (rect.top ≤ 0 = "in place"), the threshold below.
+    var TYPE_START = vh * 0.85;
+    var typeP = clamp((TYPE_START - rect.top) / TYPE_START, 0, 1);
+    var inPlace = rect.top <= 0;
+    driveTerminal(typeP, inPlace);
     // Unclamped global for the IMAGE + TITLE edge motion: lets the first zone enter
     // from the right during the lead-in scroll (before the section reaches the top)
     // and the last zone keep exiting left past the section end — so every zone covers
     // the same travel distance and plays the same appear/exit. Clamped to a full zone
     // of overscroll on each side: at -1 the first zone waits off-right (pre-entry),
     // crossing -0.5 fires its appear + image entry; at N the last zone has exited.
-    var globalRaw = total > 0 ? clamp((-rect.top) / total * (N - 1), -1, N) : 0;
+    // Hold every zone parked (globalRaw at its pre-entry edge) until the section is
+    // in place; release at the pin so zone 1 enters at the exact terminal threshold.
+    var globalRaw = !inPlace ? -1 : (total > 0 ? clamp((-rect.top) / total * (N - 1), -1, N) : 0);
     var sceneScrolled = Math.abs(globalRaw - lastGlobalRaw) > 1e-4;  // cards slid this frame
     if (globalRaw > lastGlobalRaw + 1e-4) scrollDir = 1;
     else if (globalRaw < lastGlobalRaw - 1e-4) scrollDir = -1;
@@ -824,6 +854,7 @@
   /* ---------- Boot ---------- */
   if (isMobile) {
     // Mobile: CSS stacks the stages and pins cards in normal flow. No GL / no pin.
+    driveTerminal(1, true);   // show the terminal in its completed (cd-run) state
     paintSky(0);
     return;
   }
