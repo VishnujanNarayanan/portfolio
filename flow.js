@@ -39,8 +39,10 @@
   // line morphs direction-aware + dynamically paced (see the engine below), and
   // reversing back across a threshold un-spawns it and re-activates the previous one.
   var CD_HOME = "~/portfolio-website", CD_DIR = "~/portfolio-website/highlights";
-  var LINE_CD = "cd highlights && cat scraping";   // forward: cd in + cat the domain we're on (domain 1)
-  var LINE_BACK = "cd certificates";               // backward: scrolling up out of flow → back to certs
+  var CD_CERTS = "~/portfolio-website/certificates";   // cwd the header command is typed from (came from `cd certificates`)
+  var LINE_LEAD = "cd certificates";                 // lead-in row: typed from home across the video zoom-out
+  var LINE_CD = "cd ../highlights && cat scraping";  // header row: typed from ~/certificates across the flow approach
+  var LINE_REV = "cd highlights && cat scraping";    // reverse morph target (from home): `cd certificates` ↔ this on scroll up/down
   var cdStack = flow.querySelector(".flow__cd-stack");
   // The stack is an APPEND-ONLY terminal log, like a real shell: the `cd highlights`
   // row is committed first, then every zone threshold crossed — forward OR backward —
@@ -53,10 +55,14 @@
     if (cdStack) cdStack.appendChild(row);
     return { row: row, cmd: row.querySelector(".flow__cd-cmd") };
   }
-  var cdHead = cdStack ? makeRow(CD_HOME) : null;   // row 0: the `cd highlights && cat scraping` command
+  var leadRow = cdStack ? makeRow(CD_HOME) : null;  // row -1: `~$ cd certificates` — the lead-in (types over the zoom-out)
+  var cdHead = cdStack ? makeRow(CD_CERTS) : null;  // row 0: `~/certificates$ cd ../highlights && cat scraping`
+  if (cdHead) cdHead.row.style.display = "none";    // header stays hidden until the lead-in finishes
   var domLines = [];                                 // appended command rows, oldest→newest (append-only log)
   function renderStack() {                            // newest row = cur, one above = prev, rest = past; scroll up
-    var rows = [cdHead].concat(domLines);
+    var rows = [leadRow];
+    if (cdHead && cdHead.row.style.display !== "none") rows.push(cdHead);
+    rows = rows.concat(domLines);
     for (var r = 0; r < rows.length; r++) {
       var cls = "flow__cd-row";
       cls += r === rows.length - 1 ? " flow__cd-row--cur"
@@ -65,10 +71,45 @@
       rows[r].row.className = cls;
     }
     var lh = cdLineH || cdLineHeight();
-    if (cdStack) cdStack.style.transform = "translateY(" + (-Math.max(0, domLines.length - 1) * lh).toFixed(1) + "px)";
+    if (cdStack) cdStack.style.transform = "translateY(" + (-Math.max(0, rows.length - 2) * lh).toFixed(1) + "px)";
   }
   var cdLineH = 0;
   function cdLineHeight() { return (cdLineH = cdHead ? (cdHead.row.offsetHeight || cdLineH) : 0); }
+
+  // The terminal is ONE element. Reparent it to <body> so, when it rides in the video zoom-out
+  // region, it clears the fixed hero video's stacking (z-index). Then position it MANUALLY every
+  // frame across all phases — parked bottom-left → ride up → pinned at rest → scroll away at the
+  // flow end — instead of relying on the sticky wrapper, so the same element covers the whole
+  // journey (no second terminal, no handoff). Desktop only; on mobile the CSS keeps it hidden.
+  var cdEl = flow.querySelector(".flow__cd");
+  if (cdEl && cdEl.parentNode) document.body.appendChild(cdEl);
+  var termREST = 98;                                    // resting screen top = header height + 18px
+  function computeRest() { var h = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-height")); termREST = (h || 80) + 18; }
+  computeRest();
+  window.addEventListener("resize", computeRest);
+  function positionTerminal(rect) {
+    if (!cdEl) return;
+    var vhh = window.innerHeight;
+    if (window.innerWidth <= 820) { cdEl.style.position = ""; cdEl.style.top = ""; cdEl.style.opacity = ""; return; }
+    cdEl.style.position = "fixed";
+    var parkTop = vhh - cdEl.offsetHeight - Math.max(vhh * 0.06, 40);
+    var ye = window.__heroY ? window.__heroY(window.scrollY, vhh) : window.scrollY;
+    // Ride from the park spot up to the resting top-left over the approach window, in
+    // lockstep with the hero video + marquee handover but ARRIVING at the pin: rideP is
+    // 0 at the marquee-lift start (rect.top = vh ⟺ ye = 2vh, so it begins moving with
+    // them — no delay) and 1 at the pin (rect.top = 0). Keyed to rect.top — the SAME
+    // clock as the header typing (approachP) and the card reveal (inPlace) — so the CLI
+    // lands top-left EXACTLY as the header finishes typing and the cards fly in.
+    var rideP = clamp((vhh - rect.top) / vhh, 0, 1);
+    var top;
+    if (rect.top > 0)             top = parkTop - rideP * (parkTop - termREST);      // parked bottom-left → ride up, reaching rest at the pin
+    else if (rect.bottom >= vhh)  top = termREST;                                   // pinned through the flow section
+    else                          top = termREST - (vhh - rect.bottom);             // flow ending → scroll away with it
+    cdEl.style.top = top.toFixed(1) + "px";
+    // Fade in with the zoom-out while parked; solid once it's riding up / into flow.
+    var parked = rideP <= 0 && rect.top > 0;
+    cdEl.style.opacity = parked ? clamp((ye - vhh) / (vhh * 0.4), 0, 1).toFixed(3) : "1";
+  }
 
   /* ---------- Domain lines — rolling stack, direction-aware, dynamically paced ------
      The ACTIVE zone z (= round(global)) owns the bottom line; committed zones behind
@@ -125,16 +166,19 @@
     return k <= domBack ? domFrom.slice(0, domFrom.length - k)
                         : domTarget.slice(0, domBoundary + (k - domBack));
   }
-  // The terminal is ONE continuous append-only log. On the FIRST approach the header row
-  // types `cd highlights && cat scraping`; once the section has been pinned (`started`),
-  // scrolling back UP out of the pin appends a fresh `cd certificates` line UNDER the last
-  // one (`cd ..`) and types it — exactly like a zone crossing spawns a new line — with NO
-  // reset/snap and NO header untyping. Scrolling back down just resumes appending below.
-  var apDir = 1, apLastP = null, apStartP = 0, certLine = null, started = false;
-  // The approach line reverses like a flow zone: a LOCAL minimal-edit swap so it never
-  // touches the pinned zone engine's globals. certDir -1 = typing toward `cd certificates`
-  // (scrolling up), +1 = morphing back to the header (reversing forward); certAnchorPP /
-  // certEndPP anchor the current swap to the approach progress pp so it re-scales on a flip.
+  // ONE append-only stack, ONE element (moved to <body> and positioned manually below), NO
+  // separate hero terminal and NO handoff: the lead row types `cd certificates` from home across
+  // the video zoom-out; when that finishes the header row appears and types `cd ../highlights &&
+  // cat scraping` across the flow approach; then the zone engine appends `cat <domain>` lines.
+  var started = false;
+  // Reversal (restored): once the section has been pinned, scrolling back UP out of the pin
+  // appends a fresh `cd certificates` line UNDER the last (`cd ..`) and types it as you go up; if
+  // you reverse DOWN it minimal-edit-morphs `cd certificates` → `cd highlights && cat scraping`
+  // (keeping the shared `cd ` prefix). A LOCAL swap so it never touches the zone engine globals.
+  var apDir = 1, apLastP = null, apStartP = 0, certLine = null;
+  // Re-lead: a FRESH `cd certificates` line popped when the return trip crosses the line
+  // where the video/marquee/CLI start moving up (heroPB leaving 1) — see driveTerminal.
+  var apPrevHeroPB = null, leadLine = null;
   var certFrom = "", certTarget = "", certBoundary = 0, certBack = 0, certFwd = 0;
   var certDisp = "", certDir = 0, certAnchorPP = 0, certEndPP = 1;
   function certSet(from, target) {
@@ -150,51 +194,88 @@
     return k <= certBack ? certFrom.slice(0, certFrom.length - k)
                          : certTarget.slice(0, certBoundary + (k - certBack));
   }
-  function commitCert() {                               // freeze the reversal line into the append-only log
-    if (certLine) certLine.cmd.textContent = LINE_CD;   // it STAYS as a real `cd highlights && cat scraping`
-    certLine = null; certDir = 0; certDisp = "";        // prompt; a later up-pass appends a fresh cert line below
+  function commitCert() {                          // freeze the reversal line into the append-only log
+    if (certLine) certLine.cmd.textContent = LINE_REV;
+    certLine = null; certDir = 0; certDisp = "";
   }
-  // inPlace = section pinned; approachP = header typing progress (0..1); gg = globalRaw.
-  function driveTerminal(inPlace, approachP, gg) {
-    if (!cdStack || !cdHead) return;
-    if (!inPlace) {                                 // approach region (section not yet pinned)
+  function freezeCert() {                           // freeze the reversal line AS-IS (whatever it currently shows)
+    if (certLine) certLine.cmd.textContent = certDisp || LINE_LEAD;
+    certLine = null; certDir = 0; certDisp = "";
+  }
+  // inPlace = section pinned; approachP = header typing progress (0..1); gg = globalRaw;
+  // heroPB = video zoom-out progress (0..1) driving the lead-in row.
+  function driveTerminal(inPlace, approachP, gg, heroPB) {
+    if (!cdStack || !cdHead || !leadRow) return;
+    if (!inPlace) {                                 // pre-pin OR scrolled back up out of the pin
       if (apLastP === null) apLastP = approachP;
       if (approachP > apLastP + 1e-5) apDir = 1;        // scrolling down toward the pin
       else if (approachP < apLastP - 1e-5) apDir = -1;  // scrolling up toward the certs
       apLastP = approachP;
-      if (!started) {                                   // FIRST approach: type the header once
-        cdHead.cmd.textContent = LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length));
-        cdHead.row.className = "flow__cd-row flow__cd-row--cur";
-        if (cdStack) cdStack.style.transform = "translateY(0px)";
-      } else {                                          // session running → stay continuous with the log
-        if (!certLine && apDir < 0 && domLines.length) {   // crossing UP out of the pin → spawn the reversal line
-          certLine = makeRow(CD_DIR); certLine.zone = -1; domLines.push(certLine);
-          apStartP = approachP;                            // pin edge = pp 0; fully scrolled up = pp 1
-          certDir = -1; certSet("", LINE_BACK); certAnchorPP = 0; certEndPP = 1; certDisp = "";
+      if (!started) {                               // FIRST approach: lead-in + header typing
+        leadRow.cmd.textContent = LINE_LEAD.slice(0, Math.round(clamp(heroPB, 0, 1) * LINE_LEAD.length));
+        var headOn = heroPB >= 0.999 || approachP > 0;   // header appears once `cd certificates` is done
+        cdHead.row.style.display = headOn ? "" : "none";
+        cdHead.cmd.textContent = headOn ? LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length)) : "";
+      } else {                                      // session running → append the `cd certificates` reversal line
+        leadRow.cmd.textContent = LINE_LEAD; cdHead.cmd.textContent = LINE_CD; cdHead.row.style.display = "";
+        // Re-lead POP: crossing the line where the video/marquee/CLI START MOVING UP on the
+        // way BACK (heroPB leaving its clamped 1 ⟺ ye = 2vh ⟺ rect.top = vh) pops a FRESH
+        // `cd certificates` line — the return-trip mirror of the first-run lead-in — instead
+        // of only morphing the existing one. It types `cd certificates` with the video zoom
+        // while up in that region, then hands off to the reversal morph (→ `cd highlights &&
+        // cat scraping`) when you scroll forward back past the line. Movements that DON'T reach
+        // this line never touch it — the reversal morph below is left exactly as it was.
+        if (apPrevHeroPB === null) apPrevHeroPB = heroPB;
+        var crossBackThr = apPrevHeroPB >= 0.999 && heroPB < 0.999;   // crossed the "starts moving up" line going up
+        apPrevHeroPB = heroPB;
+        if (crossBackThr && !leadLine) {
+          freezeCert();                             // freeze the existing reversal line as-is (its typed `cd certificates`)
+          // We've `cd`'d back into certificates → pop a FRESH, EMPTY prompt in that dir. It does
+          // NOT re-type `cd certificates` (that's the frozen line above); it just waits empty.
+          leadLine = makeRow(CD_CERTS); leadLine.zone = -1; domLines.push(leadLine);
+          leadLine.cmd.textContent = "";
+        }
+        if (leadLine) {
+          if (heroPB < 0.999) {
+            // Up in the video region on the return: keep the new prompt EMPTY however far back
+            // you scroll (nothing to untype — the `cd certificates` already happened, above).
+            leadLine.cmd.textContent = "";
+          } else {
+            // Scrolled forward back past the line → type `cd ../highlights && cat scraping`
+            // (LINE_CD) FROM THE START with the approach, exactly like the first-run header;
+            // finishes at the pin. Reversing back up past the line empties it again.
+            leadLine.cmd.textContent = LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length));
+          }
+        }
+        if (!certLine && !leadLine && apDir < 0 && domLines.length) {   // crossing UP past the cards threshold → spawn it
+          certLine = makeRow(CD_HOME); certLine.zone = -1; domLines.push(certLine);   // `cd certificates` runs from home (after zone-0's `cd ..`)
+          apStartP = approachP; certDir = -1; certSet("", LINE_LEAD); certAnchorPP = 0; certEndPP = 1; certDisp = "";
         }
         if (certLine) {
           var pp = apStartP > 1e-6 ? clamp((apStartP - approachP) / apStartP, 0, 1) : 1;
-          // Direction flip → re-swap toward that direction's target, anchored at the current
-          // pp: scrolling UP heads to `cd certificates` (pp→1), reversing forward morphs the
-          // shown text back to the header `cd highlights && cat scraping` (pp→0), untyping
-          // only `certificates` past the shared `cd ` prefix before typing the rest.
-          if (apDir < 0 && certDir !== -1) { certDir = -1; certSet(certDisp, LINE_BACK); certAnchorPP = pp; certEndPP = 1; }
-          else if (apDir >= 0 && certDir !== 1) { certDir = 1; certSet(certDisp, LINE_CD); certAnchorPP = pp; certEndPP = 0; }
-          var span = certEndPP - certAnchorPP;
-          var s = Math.abs(span) < 1e-6 ? 1 : (pp - certAnchorPP) / span;
-          certDisp = certText(s);
-          certLine.cmd.textContent = certDisp;
-          if (certDir === 1 && s >= 1) commitCert();        // fully morphed back → freeze it into the log
+          // Direction flip → re-swap toward that direction's target, anchored at the current pp:
+          // scrolling UP heads to `cd certificates` (pp→1), reversing DOWN morphs back to
+          // `cd highlights && cat scraping` (pp→0), untyping only past the shared `cd ` prefix.
+          if (apDir < 0 && certDir !== -1) { certDir = -1; certSet(certDisp, LINE_LEAD); certAnchorPP = pp; certEndPP = 1; }
+          else if (apDir >= 0 && certDir !== 1) { certDir = 1; certSet(certDisp, LINE_REV); certAnchorPP = pp; certEndPP = 0; }
+          var cspan = certEndPP - certAnchorPP;
+          var cs = Math.abs(cspan) < 1e-6 ? 1 : (pp - certAnchorPP) / cspan;
+          certDisp = certText(cs); certLine.cmd.textContent = certDisp;
+          if (certDir === 1 && cs >= 1) commitCert();   // fully morphed back → freeze into the log
         }
-        renderStack();
       }
-      // Reset the zone engine so re-entering the pin spawns a FRESH line (not editing certLine).
+      renderStack();
+      // Reset the zone engine so re-entering the pin spawns a FRESH line.
       domDisp = ""; domLastG = null; domDir = 1; domActiveZ = -1;
       return;
     }
-    cdHead.cmd.textContent = LINE_CD;              // committed header
-    started = true; apLastP = approachP;           // session running; next up-pass spawns a fresh reversal line
-    if (certLine) commitCert();                     // re-entered the pin → freeze the reversal line into the log
+    leadRow.cmd.textContent = LINE_LEAD;          // committed lead-in
+    cdHead.row.style.display = "";
+    cdHead.cmd.textContent = LINE_CD;             // committed header
+    started = true; apLastP = approachP;
+    leadLine = null;                              // re-lead line (if any) is absorbed into the log at the pin, left as typed
+    apPrevHeroPB = null;                          // re-arm the re-lead threshold for the next exit
+    if (certLine) commitCert();                   // re-entered the pin → freeze the reversal line into the log
     if (domLastG === null) domLastG = gg;
     if (gg > domLastG + 1e-6) domDir = 1;           // keep last direction while paused
     else if (gg < domLastG - 1e-6) domDir = -1;
@@ -730,10 +811,13 @@
     // Hold every zone parked (globalRaw at its pre-entry edge) until the section is
     // in place; release at the pin so zone 1 enters at the exact terminal threshold.
     var globalRaw = !inPlace ? -1 : (total > 0 ? clamp((-rect.top) / total * N - 0.5, -1, N) : 0);
-    // Terminal: `cd highlights` types over the approach; after the pin the
-    // `cat domain N` line morphs its number, direction-aware + scroll-scrubbed
-    // (see driveTerminal / the domain-line engine above).
-    driveTerminal(inPlace, approachP, globalRaw);
+    // Terminal (ONE element/stack): the lead row types `cd certificates` over the video zoom-out
+    // (heroPB), the header types `cd ../highlights && cat scraping` over the approach, then the
+    // zone lines append in the pin. positionTerminal rides the single element park→rest→away.
+    var yeHero = window.__heroY ? window.__heroY(window.scrollY, vh) : window.scrollY;
+    var heroPB = clamp((yeHero - vh) / vh, 0, 1);
+    positionTerminal(rect);
+    driveTerminal(inPlace, approachP, globalRaw, heroPB);
     var sceneScrolled = Math.abs(globalRaw - lastGlobalRaw) > 1e-4;  // cards slid this frame
     if (globalRaw > lastGlobalRaw + 1e-4) scrollDir = 1;
     else if (globalRaw < lastGlobalRaw - 1e-4) scrollDir = -1;
