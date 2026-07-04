@@ -176,6 +176,9 @@
   // you reverse DOWN it minimal-edit-morphs `cd certificates` → `cd highlights && cat scraping`
   // (keeping the shared `cd ` prefix). A LOCAL swap so it never touches the zone engine globals.
   var apDir = 1, apLastP = null, apStartP = 0, certLine = null;
+  // Re-lead: a FRESH `cd certificates` line popped when the return trip crosses the line
+  // where the video/marquee/CLI start moving up (heroPB leaving 1) — see driveTerminal.
+  var apPrevHeroPB = null, leadLine = null;
   var certFrom = "", certTarget = "", certBoundary = 0, certBack = 0, certFwd = 0;
   var certDisp = "", certDir = 0, certAnchorPP = 0, certEndPP = 1;
   function certSet(from, target) {
@@ -195,6 +198,10 @@
     if (certLine) certLine.cmd.textContent = LINE_REV;
     certLine = null; certDir = 0; certDisp = "";
   }
+  function freezeCert() {                           // freeze the reversal line AS-IS (whatever it currently shows)
+    if (certLine) certLine.cmd.textContent = certDisp || LINE_LEAD;
+    certLine = null; certDir = 0; certDisp = "";
+  }
   // inPlace = section pinned; approachP = header typing progress (0..1); gg = globalRaw;
   // heroPB = video zoom-out progress (0..1) driving the lead-in row.
   function driveTerminal(inPlace, approachP, gg, heroPB) {
@@ -211,7 +218,36 @@
         cdHead.cmd.textContent = headOn ? LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length)) : "";
       } else {                                      // session running → append the `cd certificates` reversal line
         leadRow.cmd.textContent = LINE_LEAD; cdHead.cmd.textContent = LINE_CD; cdHead.row.style.display = "";
-        if (!certLine && apDir < 0 && domLines.length) {   // crossing UP past the cards threshold → spawn it
+        // Re-lead POP: crossing the line where the video/marquee/CLI START MOVING UP on the
+        // way BACK (heroPB leaving its clamped 1 ⟺ ye = 2vh ⟺ rect.top = vh) pops a FRESH
+        // `cd certificates` line — the return-trip mirror of the first-run lead-in — instead
+        // of only morphing the existing one. It types `cd certificates` with the video zoom
+        // while up in that region, then hands off to the reversal morph (→ `cd highlights &&
+        // cat scraping`) when you scroll forward back past the line. Movements that DON'T reach
+        // this line never touch it — the reversal morph below is left exactly as it was.
+        if (apPrevHeroPB === null) apPrevHeroPB = heroPB;
+        var crossBackThr = apPrevHeroPB >= 0.999 && heroPB < 0.999;   // crossed the "starts moving up" line going up
+        apPrevHeroPB = heroPB;
+        if (crossBackThr && !leadLine) {
+          freezeCert();                             // freeze the existing reversal line as-is (its typed `cd certificates`)
+          // We've `cd`'d back into certificates → pop a FRESH, EMPTY prompt in that dir. It does
+          // NOT re-type `cd certificates` (that's the frozen line above); it just waits empty.
+          leadLine = makeRow(CD_CERTS); leadLine.zone = -1; domLines.push(leadLine);
+          leadLine.cmd.textContent = "";
+        }
+        if (leadLine) {
+          if (heroPB < 0.999) {
+            // Up in the video region on the return: keep the new prompt EMPTY however far back
+            // you scroll (nothing to untype — the `cd certificates` already happened, above).
+            leadLine.cmd.textContent = "";
+          } else {
+            // Scrolled forward back past the line → type `cd ../highlights && cat scraping`
+            // (LINE_CD) FROM THE START with the approach, exactly like the first-run header;
+            // finishes at the pin. Reversing back up past the line empties it again.
+            leadLine.cmd.textContent = LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length));
+          }
+        }
+        if (!certLine && !leadLine && apDir < 0 && domLines.length) {   // crossing UP past the cards threshold → spawn it
           certLine = makeRow(CD_HOME); certLine.zone = -1; domLines.push(certLine);   // `cd certificates` runs from home (after zone-0's `cd ..`)
           apStartP = approachP; certDir = -1; certSet("", LINE_LEAD); certAnchorPP = 0; certEndPP = 1; certDisp = "";
         }
@@ -237,6 +273,8 @@
     cdHead.row.style.display = "";
     cdHead.cmd.textContent = LINE_CD;             // committed header
     started = true; apLastP = approachP;
+    leadLine = null;                              // re-lead line (if any) is absorbed into the log at the pin, left as typed
+    apPrevHeroPB = null;                          // re-arm the re-lead threshold for the next exit
     if (certLine) commitCert();                   // re-entered the pin → freeze the reversal line into the log
     if (domLastG === null) domLastG = gg;
     if (gg > domLastG + 1e-6) domDir = 1;           // keep last direction while paused
