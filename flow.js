@@ -93,14 +93,21 @@
     if (window.innerWidth <= 820) { cdEl.style.position = ""; cdEl.style.top = ""; cdEl.style.opacity = ""; return; }
     cdEl.style.position = "fixed";
     var parkTop = vhh - cdEl.offsetHeight - Math.max(vhh * 0.06, 40);
+    var ye = window.__heroY ? window.__heroY(window.scrollY, vhh) : window.scrollY;
+    // Ride from the park spot up to the resting top-left over the approach window, in
+    // lockstep with the hero video + marquee handover but ARRIVING at the pin: rideP is
+    // 0 at the marquee-lift start (rect.top = vh ⟺ ye = 2vh, so it begins moving with
+    // them — no delay) and 1 at the pin (rect.top = 0). Keyed to rect.top — the SAME
+    // clock as the header typing (approachP) and the card reveal (inPlace) — so the CLI
+    // lands top-left EXACTLY as the header finishes typing and the cards fly in.
+    var rideP = clamp((vhh - rect.top) / vhh, 0, 1);
     var top;
-    if (rect.top > 0)             top = Math.min(parkTop, rect.top + termREST);   // parked bottom-left → ride up to rest
-    else if (rect.bottom >= vhh)  top = termREST;                                 // pinned through the flow section
-    else                          top = termREST - (vhh - rect.bottom);           // flow ending → scroll away with it
+    if (rect.top > 0)             top = parkTop - rideP * (parkTop - termREST);      // parked bottom-left → ride up, reaching rest at the pin
+    else if (rect.bottom >= vhh)  top = termREST;                                   // pinned through the flow section
+    else                          top = termREST - (vhh - rect.bottom);             // flow ending → scroll away with it
     cdEl.style.top = top.toFixed(1) + "px";
     // Fade in with the zoom-out while parked; solid once it's riding up / into flow.
-    var parked = rect.top > parkTop - termREST;
-    var ye = window.__heroY ? window.__heroY(window.scrollY, vhh) : window.scrollY;
+    var parked = rideP <= 0 && rect.top > 0;
     cdEl.style.opacity = parked ? clamp((ye - vhh) / (vhh * 0.4), 0, 1).toFixed(3) : "1";
   }
 
