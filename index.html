@@ -51,13 +51,13 @@
 <div id="vanta-bg"></div>
 <div class="mobile-nav__overlay"></div>
 <header class="show">
-  <nav class="header__nav-left">
+  <nav class="header__nav-left" aria-label="Primary navigation">
     <a href="#projects">Projects</a>
     <a href="#skills">Skills</a>
     <a href="#services">Services</a>
     <a href="blog/index.html">Blog</a>
   </nav>
-  <nav class="header__nav-right">
+  <nav class="header__nav-right" aria-label="Header actions">
     <div class="header__ctas">
       <a href="/cdn-cgi/l/email-protection#acc2cddecdd5cdc2cdc282dac5dfc4c2d9c6cdc2eccbc1cdc5c082cfc3c193dfd9cec6c9cfd891e4c5dec9899e9ce1c9" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Hire Me</span></a>
       <a href="/cdn-cgi/l/email-protection#117f70637068707f707f3f677862797f647b707f51767c70787d3f727e7c" class="pill-btn pill-btn--dark"><span class="pill-btn-span">Get In Touch</span></a>
@@ -108,7 +108,7 @@
      in main.js — drop the images into images/certificates/ and list them there. -->
 <div class="cert-gallery" aria-hidden="true">
   <div class="cert-gallery__scroll" data-lenis-prevent></div>
-  <button class="cert-gallery__back" type="button" aria-label="Back to home">Back to home ↩</button>
+  <button class="cert-gallery__back" type="button" aria-label="Back to home" tabindex="-1">Back to home ↩</button>
 </div>
 
 <main>
@@ -332,17 +332,17 @@
         <button class="flow-journey__node" type="button" data-i="1" aria-label="Go to Processing & Storage">
           <span class="flow-journey__zone">ZONE 02</span>
           <span class="flow-journey__dot"></span>
-          <span class="flow-journey__name">Processing & Storage</span>
+          <span class="flow-journey__name">Processing &amp; Storage</span>
         </button>
         <button class="flow-journey__node" type="button" data-i="2" aria-label="Go to ML & Analysis">
           <span class="flow-journey__zone">ZONE 03</span>
           <span class="flow-journey__dot"></span>
-          <span class="flow-journey__name">ML & Analysis</span>
+          <span class="flow-journey__name">ML &amp; Analysis</span>
         </button>
         <button class="flow-journey__node" type="button" data-i="3" aria-label="Go to Build & Ship">
           <span class="flow-journey__zone">ZONE 04</span>
           <span class="flow-journey__dot"></span>
-          <span class="flow-journey__name">Build & Ship</span>
+          <span class="flow-journey__name">Build &amp; Ship</span>
         </button>
           </div>
         </div>
@@ -742,7 +742,7 @@
 </main>
 
 <footer class="footer">
-  <nav class="footer-nav">
+  <nav class="footer-nav" aria-label="Footer navigation">
     <a href="#projects" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Projects</span></a>
     <a href="#skills" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Skills</span></a>
     <a href="#services" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Services</span></a>
