@@ -1330,6 +1330,15 @@ html.boot-active{overflow:hidden;height:100%}
 .lfooter__navlink:hover{color:var(--lf-sky-bright);transform:translateX(2px)}
 .lfooter__col--right .lfooter__navlink:hover{transform:translateX(-2px)}
 
+/* portrait cutout — bottom-centre of the box, like the reference's helmet
+   (above the marquee, below the email pill; clipped by the notched mask) */
+.lfooter__me{
+  position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+  width:auto;height:66%;
+  z-index:2;pointer-events:none;user-select:none;
+  filter:brightness(.78) saturate(.92);   /* sink into the dark box like the reference helmet */
+}
+
 /* sky-blue tools marquee (inside the box, near the bottom edge) */
 .lfooter__mq{
   position:absolute;left:0;right:0;bottom:7.5%;
@@ -1383,6 +1392,7 @@ html.boot-active{overflow:hidden;height:100%}
   .lfooter__headline{font-size:clamp(30px,9vw,44px);letter-spacing:-1px}
   .lfooter__cols{flex-direction:row;gap:18px;margin-top:34px;margin-bottom:0}
   .lfooter__navlink{font-size:18px}
+  .lfooter__me{display:none}   /* no room in the stacked mobile layout */
   .lfooter__mq{position:static;margin-top:36px;padding-bottom:30px}
   .lfooter__mq-track i{width:26px;height:26px}
   .lfooter__email{position:static;transform:none;width:max-content;margin:18px auto 0;display:flex}
