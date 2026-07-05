@@ -343,7 +343,7 @@
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function lerp(a, b, t) { return a + (b - a) * t; }
-  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+  function easeOut(t) { return 1 - Math.pow(1 - t, 2); }
   function easeIn(t) { return t * t * t; }
   function smooth(t) { return t * t * (3 - 2 * t); }
   // A panel's grid offset (_coff) as it was delayMs ago, read from a short history
@@ -619,7 +619,7 @@
     if (pp <= e0) { x = ex; y = ey; op = 0; sc = 0.9; }
     else if (pp < e1) { var t = smooth((pp - e0) / (e1 - e0)); x = lerp(ex, 0, t); y = lerp(ey, 0, t); op = t; sc = lerp(0.9, 1, t); }
     else if (pp < x0) { x = 0; y = 0; op = 1; sc = 1; }   // settled rest
-    else if (pp < x1) { var t2 = smooth((pp - x0) / (x1 - x0)); x = lerp(0, qx, t2); y = lerp(0, qy, t2); op = 1 - t2; sc = lerp(1, 0.94, t2); }
+    else if (pp < x1) { var t2 = (pp - x0) / (x1 - x0); x = lerp(0, qx, t2); y = lerp(0, qy, t2); op = 1 - t2; sc = lerp(1, 0.94, t2); }   // exit = constant speed (linear)
     else { x = qx; y = qy; op = 0; sc = 0.94; }
     return { x: x, y: y, op: op, sc: sc };
   }
@@ -831,6 +831,7 @@
   /* ---------- Main loop ---------- */
   var lastSel = -1;
   var lastGlobalRaw = 0, scrollDir = 1;   // scroll direction: +1 forward (down), −1 back (up)
+  var gSpeed = 0, lastGlobalTime = 0;     // smoothed scroll speed in global-units (zones)/ms
   var darkSubs = [];   // zone 3-4 sub paragraphs; colour scroll-driven black→grey
   var lightSubs = [];  // zone 1-2 sub paragraphs; colour scroll-driven grey→white
   var navOn = false;   // top-nav reel state; fired once per threshold crossing
@@ -871,6 +872,10 @@
     var sceneScrolled = Math.abs(globalRaw - lastGlobalRaw) > 1e-4;  // cards slid this frame
     if (globalRaw > lastGlobalRaw + 1e-4) scrollDir = 1;
     else if (globalRaw < lastGlobalRaw - 1e-4) scrollDir = -1;
+    // Smoothed scroll speed (zones/ms) — drives how fast titles enter/exit below.
+    var tNow = Date.now(), dtMs = tNow - (lastGlobalTime || tNow);
+    if (dtMs > 0) { var inst = Math.abs(globalRaw - lastGlobalRaw) / dtMs; gSpeed += (inst - gSpeed) * 0.3; }
+    lastGlobalTime = tNow;
     lastGlobalRaw = globalRaw;
 
     journey.classList.toggle("is-live", rect.top <= 1 && rect.bottom > vh * 0.6);
@@ -982,21 +987,40 @@
     // clears first (kills the subtle overlap). Animations are set up on the active
     // flip below; `from` captures the live pose so a mid-flight reversal doesn't jump.
     var ENTER_DELAY = 90;        // hold the new title hidden briefly after the threshold
-    var ENTER_MS = 420;          // entrance (appear / reverse-exit)
-    var EXIT_MS = 280;           // snappy departure (exit / reverse-appear)
+    var ENTER_MS = 320;          // entrance (appear / reverse-exit) — at slow scroll
+    var EXIT_MS = 200;           // snappy departure (exit / reverse-appear) — at slow scroll
+    var SPEED_FULL = 0.006;      // scroll speed (zones/ms) at which durations hit 2x faster
     if (rawSel !== lastSel) {
-      var fwd = rawSel > lastSel;                        // scroll direction at this crossing
-      var entering = panels[rawSel], leaving = panels[lastSel];
-      if (entering) entering._anim = {
-        // No hold when there's no outgoing title to clear (first zone) — it'd just
-        // add a gap; the delay only matters when an old title needs to exit first.
-        t0: now, delay: leaving ? ENTER_DELAY : 0, dur: ENTER_MS, fade: false,
-        from: poseOf(entering, P, lastSel, rawSel), to: P.REST
-      };
-      if (leaving) leaving._anim = {
-        t0: now, delay: 0, dur: EXIT_MS, fade: true,
-        from: poseOf(leaving, P, lastSel, lastSel), to: fwd ? P.EXIT : P.APPEAR
-      };
+      // The faster the scroll at the crossing, the faster titles enter/exit — up to
+      // 2x (durations halved) for a really quick scroll; 1x (base) for a slow one.
+      var speedK = 1 + clamp(gSpeed / SPEED_FULL, 0, 1);
+      var hadPrev = !!panels[lastSel];   // an outgoing title exists → hold the entrance briefly
+      // Exit target that actually LEAVES the screen: the EXIT/APPEAR pose plus a full
+      // screen-space slide off the side it belongs on (behind = left, ahead = right),
+      // so a departing title travels all the way off instead of lingering at the edge.
+      function flyOff(pi) {
+        var b = pi < rawSel ? P.EXIT : P.APPEAR;
+        return { ex: (pi < rawSel ? -1 : 1) * vw, sx: b.sx, tx: b.tx, ty: b.ty, ry: b.ry, rx: b.rx };
+      }
+      panels.forEach(function (panel, pi) {
+        var a = panel._anim;
+        if (pi === rawSel) {
+          panel._anim = {          // the new active title enters (eased)
+            // No hold when there's no outgoing title to clear (first zone) — it'd just
+            // add a gap; the delay only matters when an old title needs to exit first.
+            t0: now, delay: (hadPrev ? ENTER_DELAY : 0) / speedK, dur: ENTER_MS / speedK, fade: false,
+            from: poseOf(panel, P, lastSel, pi), to: P.REST
+          };
+        } else if ((a && !a.fade) || pi === lastSel) {
+          // A zone we just left OR one still mid-ENTER when the threshold moved on:
+          // abandon its entrance and slide its exit off the side it belongs on. Fixes a
+          // fast scroll leaving a previous zone's appear stuck at the screen edge.
+          panel._anim = {
+            t0: now, delay: 0, dur: EXIT_MS / speedK, fade: true, linear: true,
+            from: poseOf(panel, P, lastSel, pi), to: flyOff(pi)
+          };
+        }
+      });
       // index / sub / pills keep their grouped fade via the active/passed classes.
       panels.forEach(function (panel, pi) {
         panel.classList.toggle("flow-panel--active", pi === rawSel);
@@ -1015,7 +1039,8 @@
           content.style.transform = poseStr(base, a.from);
           content.style.opacity = a.fade ? 1 : 0;        // leaving stays visible; entering hidden
         } else {
-          var t = easeOut(clamp(el / a.dur, 0, 1));
+          var raw = clamp(el / a.dur, 0, 1);
+          var t = a.linear ? raw : easeOut(raw);   // exit = constant speed; entry eases
           content.style.transform = poseStr(base, lerpPose(a.from, a.to, t));
           content.style.opacity = a.fade ? 1 - t : 1;    // entering = no fade-in
           if (el >= a.dur) panel._anim = null;           // settle to steady next frame
