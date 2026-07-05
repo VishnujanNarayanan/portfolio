@@ -735,10 +735,25 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .cert-gallery.is-open{opacity:1;visibility:visible;pointer-events:auto}
 .cert-gallery__scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 /* Back-to-home button, pinned top-right over the slides. */
-.cert-gallery__back{position:absolute;top:24px;right:24px;z-index:2;display:inline-flex;align-items:center;height:var(--btn-height);padding:0 var(--space-md);border-radius:var(--radius-full);background:#0504190d;backdrop-filter:blur(8px);font-family:var(--font-ui);font-size:var(--text-xs);letter-spacing:var(--tracking-wide);text-transform:uppercase;color:var(--color-text);transition:background-color .3s var(--ease-default),color .3s var(--ease-default)}
-@media (pointer:fine){.cert-gallery__back:hover{background:var(--color-highlight);color:var(--color-text-light)}}
-@media (max-width:820px){.cert-gallery__back{top:16px;right:16px}}
-.cert-slide{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#fff}
+.cert-gallery__back{position:absolute;top:24px;right:24px;z-index:2;display:inline-flex;align-items:center;height:var(--btn-height);padding:0 var(--space-lg);border-radius:var(--radius-full);background:rgba(5,4,25,.82);border:1px solid rgba(255,255,255,.16);box-shadow:0 4px 18px rgba(0,0,0,.28);backdrop-filter:blur(8px);font-family:var(--font-ui);font-size:var(--text-xs);font-weight:500;letter-spacing:var(--tracking-wide);text-transform:uppercase;color:var(--color-text-light);transition:background-color .3s var(--ease-default),color .3s var(--ease-default),box-shadow .3s var(--ease-default)}
+@media (pointer:fine){.cert-gallery__back:hover{background:var(--color-highlight);color:var(--color-text-light);box-shadow:0 6px 22px rgba(57,50,220,.38)}}
+/* Per-letter vertical REEL on the back button (same roller the nav pills use): each letter is a
+   clip whose __col rolls up on hover to reveal an identical __c clone rising from below. */
+.cert-gallery__back .pill-char{display:inline-block;position:relative;overflow:hidden;vertical-align:bottom;white-space:pre}
+.cert-gallery__back .pill-char__col{display:block;position:relative;transition:transform .42s var(--ease-default);transition-delay:var(--hd,0s);will-change:transform}
+.cert-gallery__back .pill-char__face{display:block;position:relative}
+.cert-gallery__back .pill-char__c{display:block;position:absolute;left:0;top:100%;color:inherit}
+.cert-gallery__back:hover .pill-char__col,.cert-gallery__back:focus-visible .pill-char__col{transform:translateY(-100%)}
+/* "Scroll to see more" prompt, bottom-right; fades out once you reach the last certificate. */
+.cert-gallery__hint{position:absolute;bottom:24px;right:24px;z-index:2;display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:var(--radius-full);background:rgba(5,4,25,.72);backdrop-filter:blur(8px);font-family:var(--font-ui);font-size:var(--text-xs);letter-spacing:var(--tracking-wide);text-transform:uppercase;color:var(--color-text-light);pointer-events:none;opacity:0;transform:translateY(8px);transition:opacity .4s var(--ease-default),transform .4s var(--ease-default)}
+.cert-gallery.is-open .cert-gallery__hint{opacity:.9;transform:translateY(0)}
+.cert-gallery__hint.is-hidden{opacity:0!important;transform:translateY(8px)!important}
+.cert-gallery__hint-arrow{display:inline-block;animation:certHintBob 1.5s var(--ease-default) infinite}
+@keyframes certHintBob{0%,100%{transform:translateY(-2px)}50%{transform:translateY(3px)}}
+@media (prefers-reduced-motion:reduce){.cert-gallery__hint-arrow{animation:none}}
+@media (max-width:820px){.cert-gallery__back{top:16px;right:16px}.cert-gallery__hint{bottom:16px;right:16px;font-size:11px;padding:6px 12px}}
+.cert-slide{position:sticky;top:0;height:calc(100vh + var(--cert-dwell, 10vh));display:flex;align-items:flex-start;justify-content:center;background:#fff}
+.cert-slide:first-child{--cert-dwell:0vh}
 .cert-slide__fig{position:relative;display:flex;align-items:center;justify-content:center;width:100vw;height:100vh}
 /* Fit the whole certificate to the screen (no card / no navy surround). */
 .cert-slide__img{display:block;width:100%;height:100%;object-fit:contain;background:#fff}
