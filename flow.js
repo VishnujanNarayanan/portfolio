@@ -543,6 +543,42 @@
   window.addEventListener("pointerleave", function () {     // cursor left the window
     hoverX = hoverY = -1; refreshHover();
   }, { passive: true });
+
+  // ---- Per-letter VERTICAL REEL on the zone list text ----------------------
+  // Each .flow-panel__item's letters are wrapped in a reel clip (__a on top, an
+  // identical __c waiting just below). When the item is .is-active — which fires
+  // when the cursor is over the TEXT or its matching CARD (same hit-test as the
+  // hover coupling above) — the column rolls up letter-by-letter (staggered) so
+  // every glyph reels over to its clone. Words stay intact so wrapping is normal.
+  (function buildItemReels() {
+    var REEL_STEP = 0.018;  // per-letter stagger (s), left → right
+    Array.prototype.forEach.call(flow.querySelectorAll(".flow-panel__item"), function (item) {
+      var text = item.textContent;
+      item.setAttribute("aria-label", text);
+      item.textContent = "";
+      var gi = 0;
+      text.split(/(\s+)/).forEach(function (chunk) {           // keep the whitespace chunks
+        if (chunk === "") return;
+        if (/^\s+$/.test(chunk)) { item.appendChild(document.createTextNode(" ")); return; }
+        var word = document.createElement("span");
+        word.className = "reel-word";
+        word.setAttribute("aria-hidden", "true");
+        for (var i = 0; i < chunk.length; i++) {
+          var clip = document.createElement("span"); clip.className = "reel-char";
+          var col  = document.createElement("span"); col.className  = "reel-char__col";
+          col.style.setProperty("--hd", (gi * REEL_STEP).toFixed(3) + "s");
+          var a = document.createElement("span"); a.className = "reel-char__a"; a.textContent = chunk[i];
+          var c = document.createElement("span"); c.className = "reel-char__c"; c.textContent = chunk[i];
+          col.appendChild(a); col.appendChild(c);
+          clip.appendChild(col);
+          word.appendChild(clip);
+          gi++;
+        }
+        item.appendChild(word);
+      });
+    });
+  })();
+
   // Staggered columns + cursor parallax (like the reference nav images, whose two
   // columns sit offset by ±2.25rem and drift with the mouse). Each card carries a
   // per-COLUMN baseY offset (left col up, right col down) so it's not a flat grid, plus
