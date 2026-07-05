@@ -212,8 +212,19 @@
       else if (approachP < apLastP - 1e-5) apDir = -1;  // scrolling up toward the certs
       apLastP = approachP;
       if (!started) {                               // FIRST approach: lead-in + header typing
-        leadRow.cmd.textContent = LINE_LEAD.slice(0, Math.round(clamp(heroPB, 0, 1) * LINE_LEAD.length));
-        var headOn = heroPB >= 0.999 || approachP > 0;   // header appears once `cd certificates` is done
+        // Sync the `cd certificates` typing to the handwritten cert WRITE (main.js __certWrite),
+        // NOT raw scroll: before the threshold it tracks the scroll zoom (heroPB, clamped at the
+        // threshold); once crossed, the TIMED completion (cw.t) carries it the rest of the way, so
+        // the last letter lands the exact moment the handwritten word auto-completes and POPS.
+        var cw = window.__certWrite, leadP, popped;
+        if (cw) {
+          leadP = cw.crossed ? (cw.pBThr + (1 - cw.pBThr) * clamp(cw.t, 0, 1)) : Math.min(clamp(heroPB, 0, 1), cw.pBThr);
+          popped = cw.crossed && cw.t >= 0.999;
+        } else {
+          leadP = clamp(heroPB, 0, 1); popped = heroPB >= 0.999;   // fallback: scroll-driven
+        }
+        leadRow.cmd.textContent = LINE_LEAD.slice(0, Math.round(leadP * LINE_LEAD.length));
+        var headOn = popped || approachP > 0;            // header line spawns the moment the word POPS
         cdHead.row.style.display = headOn ? "" : "none";
         cdHead.cmd.textContent = headOn ? LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length)) : "";
       } else {                                      // session running → append the `cd certificates` reversal line
