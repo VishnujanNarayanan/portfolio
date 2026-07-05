@@ -1221,6 +1221,7 @@
     // independent of the video.
     var GH_START = 0.40, GH_END = 0.65;           // visual height (× viewport): at reveal → at fullscreen
     var GH_EXIT_MIN = 0.35;                        // MUST match the hero's EXIT_MIN_SCALE (video edge zoom-out floor)
+    var GH_FADE_END = 0.5;                         // pB at which the handwriting starts (scrollInk) → card fully faded by here
     function updateGhCard() {
       var y = window.scrollY, vh = window.innerHeight;
       var ye = window.__heroY ? window.__heroY(y, vh) : y;   // dwell-aware effective scroll
@@ -1241,9 +1242,8 @@
         // Phase B: ANCHOR the card TO THE VIDEO. The reveal layer is fixed inset:0 like the video
         // and shares its 50% 50% origin, so scaling/translating the WHOLE layer by the video's own
         // edge-zoom transform makes the card recede INSIDE the shrinking video rectangle instead of
-        // spilling outside it. `prog`/`eB`/scale mirror updateHeroExit exactly (scroll-driven up to
-        // the "thin24" threshold, then the TIMED completion), and the layer fades on that same clock
-        // so it lands fully gone the moment the video finishes receding and the word POPS.
+        // spilling outside it. `prog`/`eB`/scale mirror updateHeroExit exactly, so the SHRINK tracks
+        // the video the whole way down.
         var pB = Math.max(0, Math.min((ye - vh) / vh, 1));
         var cw = window.__certWrite, prog;
         if (cw && cw.crossed) {
@@ -1255,9 +1255,15 @@
         var eB = prog * prog * (3 - 2 * prog);           // same smoothstep the video uses
         var vidScale = 1 - (1 - GH_EXIT_MIN) * eB;       // 1 → EXIT_MIN_SCALE, exactly like the video
         var vTy = -Math.max(0, ye - 2 * vh);             // the video's own phase-B/C translate
+        // OPACITY fades faster than the shrink: the card must be FULLY gone by the time the
+        // handwritten "certificates" strokes begin (scrollInk starts inking at pB = GH_FADE_END),
+        // so it clears the frame before the writing appears. Scale keeps tracking the video past
+        // that, but the card is already invisible.
+        var fp = Math.max(0, Math.min(pB / GH_FADE_END, 1));
+        var fade = fp * fp * (3 - 2 * fp);               // smoothstep → op 1 → 0 over pB [0, GH_FADE_END]
         ghCard.style.transform = "none";                 // card is now carried by the layer transform
         ghReveal.style.transform = "translateY(" + vTy.toFixed(1) + "px) scale(" + vidScale.toFixed(4) + ")";
-        ghReveal.style.opacity = (1 - eB).toFixed(3);
+        ghReveal.style.opacity = (1 - fade).toFixed(3);
         ghReveal.classList.remove("is-live");
       }
     }
