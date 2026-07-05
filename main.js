@@ -1491,7 +1491,7 @@
       // the navy shader shows through unchanged outside/before the flow.
       var lt = window.__flowLight || 0;
       var bgFill = lt > 0
-        ? "rgb(" + Math.round(lerp(27, 208, lt)) + "," + Math.round(lerp(34, 225, lt)) + "," + Math.round(lerp(54, 235, lt)) + ")"
+        ? "rgb(" + Math.round(lerp(15, 208, lt)) + "," + Math.round(lerp(22, 225, lt)) + "," + Math.round(lerp(40, 235, lt)) + ")"
         : null;
       var lineCol = "rgba(" + Math.round(lerp(77, 57, lt)) + "," + Math.round(lerp(139, 50, lt)) +
         "," + Math.round(lerp(255, 220, lt)) + "," + lerp(0.3, 0.5, lt).toFixed(2) + ")";
