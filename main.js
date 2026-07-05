@@ -1448,7 +1448,12 @@
       // at). Previously nav flipped at blogProg 0.60 and CTA at 0.07 — two separate,
       // later points; now they're unified to this single features-hit threshold.
       var fTop = featuresEl ? featuresEl.getBoundingClientRect().top : (H || 1);
-      var wantDark = fTop <= 0;
+      // Snap/lock lands the page at rect.top = 0, but browsers round scrollY to an
+      // integer while layout is sub-pixel — so the section settles a fraction of a px
+      // SHORT (rect.top ≈ +0.4), which a strict `<= 0` reads as "not covered", leaving
+      // the nav light until a manual scroll nudges it negative. A 1px tolerance treats
+      // that sub-pixel landing as covered so the flip fires on the snap itself.
+      var wantDark = fTop <= 1;
       if (wantDark !== navDark) {
         navDark = wantDark;
         if (window.__navLight) window.__navLight(!navDark, true);
@@ -2303,6 +2308,12 @@
       locked = true;
       if (lenis) { lenis.scrollTo(lockY, { immediate: true }); lenis.stop(); }
       else window.scrollTo(0, lockY);
+      // Nav flip: frame() reads getBoundingClientRect() which can land at a sub-pixel
+      // positive value after the immediate scroll commit (float imprecision at exactly 0),
+      // leaving the threshold undetected while the page is locked. Force it here —
+      // engageStick only fires when r.top ≤ 0, so dark is always correct at this point.
+      if (window.__navLight) window.__navLight(false, true);
+      if (window.__headerTheme) window.__headerTheme(1, true);
       // Hand the killed momentum to the cards as a downward coast that eases up.
       momOff = Math.min(MOM_MAX, Math.max(0, Math.abs(vel) * MOM_SCALE));
       if (momRAF) cancelAnimationFrame(momRAF);
