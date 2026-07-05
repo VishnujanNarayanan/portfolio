@@ -2061,7 +2061,11 @@
     // Notched-corner card frame (Lando "helmet-grid" reference): base outline + a
     // brighter overlay outline that fades in on hover. Same viewBox/path as the ref.
     var F_BASE = "M8 .5h390.89a7.5 7.5 0 0 1 7.5 7.5v356.983a7.5 7.5 0 0 1-7.5 7.5H263.329a23.502 23.502 0 0 0-18.375 8.849l-16.499 20.695a22.502 22.502 0 0 1-17.593 8.473H8A7.5 7.5 0 0 1 .5 403V8A7.5 7.5 0 0 1 8 .5Z";
-    var F_OVER = "M8 1h390.89a7 7 0 0 1 7 7v356.983a7 7 0 0 1-7 7H263.329a23.999 23.999 0 0 0-18.766 9.038l-16.499 20.694A21.999 21.999 0 0 1 210.862 410H8a7 7 0 0 1-7-7V8a7 7 0 0 1 7-7Z";
+    // Hover overlay frame — same curved notch (bottom-right), but the three outer
+    // corners (TL/TR/BL) are rounded to r=26 (a touch rounder than the flow cards)
+    // instead of the base r=7. Fades in on hover and is geometry-matched EXACTLY to
+    // the media's hover clip-path shape() so the outline and image edge coincide.
+    var F_OVER = "M27 1 H379.89 A26 26 0 0 1 405.89 27 V364.983 A7 7 0 0 1 398.89 371.983 H263.329 A23.999 23.999 0 0 0 244.563 381.021 L228.064 401.715 A21.999 21.999 0 0 1 210.862 410 H27 A26 26 0 0 1 1 384 V27 A26 26 0 0 1 27 1 Z";
     function frameSvg(cls, d, w) {
       return '<span class="proj-card__frame ' + cls + '"><svg viewBox="0 0 407 411" fill="none" xmlns="http://www.w3.org/2000/svg">' +
         '<path d="' + d + '" stroke="currentColor" stroke-width="' + w + '" vector-effect="non-scaling-stroke"/></svg></span>';
