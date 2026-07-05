@@ -93,7 +93,6 @@
     if (window.innerWidth <= 820) { cdEl.style.position = ""; cdEl.style.top = ""; cdEl.style.opacity = ""; return; }
     cdEl.style.position = "fixed";
     var parkTop = vhh - cdEl.offsetHeight - Math.max(vhh * 0.06, 40);
-    var ye = window.__heroY ? window.__heroY(window.scrollY, vhh) : window.scrollY;
     // Ride from the park spot up to the resting top-left over the approach window, in
     // lockstep with the hero video + marquee handover but ARRIVING at the pin: rideP is
     // 0 at the marquee-lift start (rect.top = vh ⟺ ye = 2vh, so it begins moving with
@@ -106,9 +105,9 @@
     else if (rect.bottom >= vhh)  top = termREST;                                   // pinned through the flow section
     else                          top = termREST - (vhh - rect.bottom);             // flow ending → scroll away with it
     cdEl.style.top = top.toFixed(1) + "px";
-    // Fade in with the zoom-out while parked; solid once it's riding up / into flow.
-    var parked = rideP <= 0 && rect.top > 0;
-    cdEl.style.opacity = parked ? clamp((ye - vhh) / (vhh * 0.4), 0, 1).toFixed(3) : "1";
+    // No fade-in — the CLI is fully visible as soon as it's positioned (it now sits UNDER the
+    // video in z-index, so the video zoom-out reveals it rather than it fading up over the top).
+    cdEl.style.opacity = "1";
   }
 
   /* ---------- Domain lines — rolling stack, direction-aware, dynamically paced ------
@@ -212,8 +211,19 @@
       else if (approachP < apLastP - 1e-5) apDir = -1;  // scrolling up toward the certs
       apLastP = approachP;
       if (!started) {                               // FIRST approach: lead-in + header typing
-        leadRow.cmd.textContent = LINE_LEAD.slice(0, Math.round(clamp(heroPB, 0, 1) * LINE_LEAD.length));
-        var headOn = heroPB >= 0.999 || approachP > 0;   // header appears once `cd certificates` is done
+        // Sync the `cd certificates` typing to the handwritten cert WRITE (main.js __certWrite),
+        // NOT raw scroll: before the threshold it tracks the scroll zoom (heroPB, clamped at the
+        // threshold); once crossed, the TIMED completion (cw.t) carries it the rest of the way, so
+        // the last letter lands the exact moment the handwritten word auto-completes and POPS.
+        var cw = window.__certWrite, leadP, popped;
+        if (cw) {
+          leadP = cw.crossed ? (cw.pBThr + (1 - cw.pBThr) * clamp(cw.t, 0, 1)) : Math.min(clamp(heroPB, 0, 1), cw.pBThr);
+          popped = cw.crossed && cw.t >= 0.999;
+        } else {
+          leadP = clamp(heroPB, 0, 1); popped = heroPB >= 0.999;   // fallback: scroll-driven
+        }
+        leadRow.cmd.textContent = LINE_LEAD.slice(0, Math.round(leadP * LINE_LEAD.length));
+        var headOn = popped || approachP > 0;            // header line spawns the moment the word POPS
         cdHead.row.style.display = headOn ? "" : "none";
         cdHead.cmd.textContent = headOn ? LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length)) : "";
       } else {                                      // session running → append the `cd certificates` reversal line

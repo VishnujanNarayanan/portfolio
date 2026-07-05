@@ -1208,7 +1208,7 @@ html.boot-active{overflow:hidden;height:100%}
 /* ONE terminal element. flow.js reparents it to <body> and drives its fixed top/opacity every
    frame (parked bottom-left in the zoom-out → rides up → pinned → scrolls away). z-index clears
    the hero video (z-index 2). The CSS position/top here is the pre-JS fallback. */
-.flow__cd{position:fixed;top:calc(var(--header-height) + 18px);left:clamp(18px,4vw,48px);z-index:6;margin:0;font-family:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;font-size:clamp(12px,1.3vw,15px);line-height:1.4;color:#d0d0d0;pointer-events:none;height:2.9em;overflow:hidden;will-change:top,opacity}
+.flow__cd{position:fixed;top:calc(var(--header-height) + 18px);left:clamp(18px,4vw,48px);z-index:1;margin:0;font-family:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;font-size:clamp(12px,1.3vw,15px);line-height:1.4;color:#d0d0d0;pointer-events:none;height:2.9em;overflow:hidden;will-change:top,opacity}
 .flow__cd-stack{transition:transform .4s ease;will-change:transform}
 .flow__cd-row{margin:0;transition:opacity .4s ease}
 .flow__cd-row--pending,.flow__cd-row--past{opacity:0}
