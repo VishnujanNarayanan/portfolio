@@ -44,6 +44,7 @@
   var LINE_CD = "cd ../highlights && cat scraping";  // header row: typed from ~/certificates across the flow approach
   var LINE_REV = "cd highlights && cat scraping";    // reverse morph target (from home): `cd certificates` ↔ this on scroll up/down
   var cdStack = flow.querySelector(".flow__cd-stack");
+  var flowCd = flow.querySelector(".flow__cd");   // CLI wrapper — carries the scroll-darkened colour vars
   // The stack is an APPEND-ONLY terminal log, like a real shell: the `cd highlights`
   // row is committed first, then every zone threshold crossed — forward OR backward —
   // appends a NEW `cat domain N` row UNDER the last one and the whole stack scrolls up.
@@ -884,6 +885,20 @@
     var subT2 = clamp(colorP / 0.5, 0, 1);
     var subCol2 = "rgb(" + Math.round(lerp(150, 236, subT2)) + "," + Math.round(lerp(150, 236, subT2)) + "," + Math.round(lerp(156, 240, subT2)) + ")";
     for (var sj = 0; sj < lightSubs.length; sj++) lightSubs[sj].style.color = subCol2;
+    // CLI prompt darkens as the bg lightens, over zone 2's ¾ point → zone 3's ¼ point
+    // (each zone spans 0.25 of progress → zone2¾ = 0.4375, zone3¼ = 0.5625). The typed
+    // command is left alone (it flips to black via .flow__cd-row--dark); here the green
+    // user@host + blue path ease a little darker, and the bare ":"/"$" punctuation fade
+    // from near-white to black so they stay legible on the now-light field.
+    if (flowCd) {
+      var cliT = clamp((progress - 0.4375) / (0.5625 - 0.4375), 0, 1);
+      flowCd.style.setProperty("--cli-usr", "rgb(" +
+        Math.round(lerp(38, 18, cliT)) + "," + Math.round(lerp(162, 112, cliT)) + "," + Math.round(lerp(105, 66, cliT)) + ")");
+      flowCd.style.setProperty("--cli-path", "rgb(" +
+        Math.round(lerp(59, 28, cliT)) + "," + Math.round(lerp(142, 96, cliT)) + "," + Math.round(lerp(234, 180, cliT)) + ")");
+      var pv = Math.round(lerp(208, 17, cliT));
+      flowCd.style.setProperty("--cli-punct", "rgb(" + pv + "," + pv + "," + pv + ")");
+    }
     // NOTE: only the LINES + bg (main.js, via __flowLight) transition with scroll.
     // The TEXT colours are NOT scroll-lerped — they're set once per panel by zone
     // index (see setupZoneText below) so each title POPS UP already in its final
