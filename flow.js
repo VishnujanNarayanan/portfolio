@@ -343,7 +343,7 @@
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function lerp(a, b, t) { return a + (b - a) * t; }
-  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+  function easeOut(t) { return 1 - Math.pow(1 - t, 2); }
   function easeIn(t) { return t * t * t; }
   function smooth(t) { return t * t * (3 - 2 * t); }
   // A panel's grid offset (_coff) as it was delayMs ago, read from a short history
@@ -978,7 +978,7 @@
     // clears first (kills the subtle overlap). Animations are set up on the active
     // flip below; `from` captures the live pose so a mid-flight reversal doesn't jump.
     var ENTER_DELAY = 90;        // hold the new title hidden briefly after the threshold
-    var ENTER_MS = 420;          // entrance (appear / reverse-exit)
+    var ENTER_MS = 320;          // entrance (appear / reverse-exit)
     var EXIT_MS = 280;           // snappy departure (exit / reverse-appear)
     if (rawSel !== lastSel) {
       var fwd = rawSel > lastSel;                        // scroll direction at this crossing
