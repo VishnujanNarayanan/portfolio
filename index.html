@@ -713,61 +713,76 @@
 </main>
 
 <footer class="lfooter" id="contact">
-  <div class="lfooter__panel">
-    <svg class="lfooter__topo" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      <g fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M-50 180 C 180 90, 420 250, 640 170 S 1050 60, 1260 200"/>
-        <path d="M-50 260 C 200 170, 430 330, 660 250 S 1060 150, 1260 290"/>
-        <path d="M-50 360 C 220 270, 460 430, 700 350 S 1080 250, 1260 390"/>
-        <path d="M-50 470 C 240 380, 470 540, 720 460 S 1100 360, 1260 500"/>
-        <path d="M-50 590 C 260 500, 500 660, 760 580 S 1120 480, 1260 620"/>
-        <path d="M-50 700 C 280 620, 520 760, 800 690 S 1140 600, 1260 730"/>
-        <ellipse cx="600" cy="430" rx="150" ry="95"/>
-        <ellipse cx="600" cy="430" rx="250" ry="160"/>
-        <ellipse cx="600" cy="430" rx="360" ry="235"/>
-      </g>
-    </svg>
+  <div class="lfooter__topbar">
+    <span class="lfooter__brand"><span>Vishnujan</span><span>Narayanan</span></span>
+  </div>
 
-    <div class="lfooter__topbar">
-      <span class="lfooter__brand"><span>Vishnujan</span><span>Narayanan</span></span>
-    </div>
+  <div class="lfooter__layout">
+    <!-- Dark notched box (Lando footer mask) with static contour pattern inside -->
+    <div class="lfooter__clip">
+      <img class="lfooter__pattern" src="images/footer-blobs.svg" alt="" aria-hidden="true" loading="lazy">
 
-    <h2 class="lfooter__headline">
-      <span class="lfooter__hl-row">Always Shipping.</span>
-      <span class="lfooter__hl-row">Always <span class="is-hl">Learning.</span></span>
-    </h2>
+      <div class="lfooter__inner">
+        <h2 class="lfooter__headline">
+          <span class="lfooter__hl-row">Always Shipping.</span>
+          <span class="lfooter__hl-row">Always <span class="is-hl">Learning.</span></span>
+        </h2>
 
-    <div class="lfooter__cols">
-      <nav class="lfooter__col lfooter__col--left" aria-label="Pages">
-        <span class="lfooter__col-label">Pages</span>
-        <a href="#top" class="lfooter__navlink">Home</a>
-        <a href="#projects" class="lfooter__navlink">Projects</a>
-        <a href="#skills" class="lfooter__navlink">Skills</a>
-        <a href="blog/index.html" class="lfooter__navlink">Blog</a>
-      </nav>
-      <nav class="lfooter__col lfooter__col--right" aria-label="Social links">
-        <span class="lfooter__col-label">Follow On</span>
-        <a href="https://github.com/VishnujanNarayanan" target="_blank" rel="noopener" class="lfooter__navlink">GitHub</a>
-        <a href="http://www.linkedin.com/in/vishnujan-narayanan" target="_blank" rel="noopener" class="lfooter__navlink">LinkedIn</a>
-        <a href="https://www.instagram.com/___vi5hnu___/" target="_blank" rel="noopener" class="lfooter__navlink">Instagram</a>
-        <a href="https://substack.com/@vishnujannarayanan" target="_blank" rel="noopener" class="lfooter__navlink">Substack</a>
-      </nav>
-    </div>
-
-    <div class="lfooter__strip">
-      <div class="lfooter__logos" aria-hidden="true">
-        <img src="images/logos/Python.svg" alt="" loading="lazy">
-        <img src="images/logos/FastAPI.svg" alt="" loading="lazy">
-        <img src="images/logos/PostgresSQL.svg" alt="" loading="lazy">
-        <img src="images/logos/Docker.svg" alt="" loading="lazy">
-        <img src="images/logos/Apache Airflow.svg" alt="" loading="lazy">
-        <img src="images/logos/Apache Spark.svg" alt="" loading="lazy">
-        <img src="images/logos/AWS.svg" alt="" loading="lazy">
-        <img src="images/logos/Linux.svg" alt="" loading="lazy">
+        <div class="lfooter__cols">
+          <nav class="lfooter__col lfooter__col--left" aria-label="Pages">
+            <span class="lfooter__col-label">Pages</span>
+            <a href="#top" class="lfooter__navlink">Home</a>
+            <a href="#projects" class="lfooter__navlink">Projects</a>
+            <a href="#skills" class="lfooter__navlink">Skills</a>
+            <a href="blog/index.html" class="lfooter__navlink">Blog</a>
+          </nav>
+          <nav class="lfooter__col lfooter__col--right" aria-label="Social links">
+            <span class="lfooter__col-label">Follow On</span>
+            <a href="https://github.com/VishnujanNarayanan" target="_blank" rel="noopener" class="lfooter__navlink">GitHub</a>
+            <a href="http://www.linkedin.com/in/vishnujan-narayanan" target="_blank" rel="noopener" class="lfooter__navlink">LinkedIn</a>
+            <a href="https://www.instagram.com/___vi5hnu___/" target="_blank" rel="noopener" class="lfooter__navlink">Instagram</a>
+            <a href="https://substack.com/@vishnujannarayanan" target="_blank" rel="noopener" class="lfooter__navlink">Substack</a>
+          </nav>
+        </div>
       </div>
-      <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me <span aria-hidden="true">&#8599;</span></a>
+
+      <!-- Sky-blue tools marquee (logos tinted via CSS mask) -->
+      <div class="lfooter__mq" aria-hidden="true">
+        <div class="lfooter__mq-track">
+          <i style="--logo:url('images/logos/Python.svg')"></i>
+          <i style="--logo:url('images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('images/logos/Docker.svg')"></i>
+          <i style="--logo:url('images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('images/logos/AWS.svg')"></i>
+          <i style="--logo:url('images/logos/Linux.svg')"></i>
+          <i style="--logo:url('images/logos/Git.svg')"></i>
+          <i style="--logo:url('images/logos/Bash.svg')"></i>
+          <i style="--logo:url('images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('images/logos/Vim.svg')"></i>
+        </div>
+        <div class="lfooter__mq-track">
+          <i style="--logo:url('images/logos/Python.svg')"></i>
+          <i style="--logo:url('images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('images/logos/Docker.svg')"></i>
+          <i style="--logo:url('images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('images/logos/AWS.svg')"></i>
+          <i style="--logo:url('images/logos/Linux.svg')"></i>
+          <i style="--logo:url('images/logos/Git.svg')"></i>
+          <i style="--logo:url('images/logos/Bash.svg')"></i>
+          <i style="--logo:url('images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('images/logos/Vim.svg')"></i>
+        </div>
+      </div>
     </div>
 
+    <!-- Pill in the bottom-centre tab of the notched box -->
+    <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me <span aria-hidden="true">&#8599;</span></a>
+
+    <!-- Legal row sits in the gradient shelves either side of the bottom tab -->
     <div class="lfooter__bottom">
       <span class="lfooter__copy">© 2026 Vishnujan Narayanan. All rights reserved</span>
       <div class="lfooter__legal">
