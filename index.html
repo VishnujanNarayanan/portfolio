@@ -54,7 +54,7 @@
   <nav class="header__nav-left" aria-label="Primary navigation">
     <a href="#projects">Projects</a>
     <a href="#skills">Skills</a>
-    <a href="#services">Services</a>
+    <a href="#contact">Contact</a>
     <a href="blog/index.html">Blog</a>
   </nav>
   <nav class="header__nav-right" aria-label="Header actions">
@@ -82,7 +82,7 @@
       <ul class="mobile-nav__list">
         <li class="mobile-nav__item"><a href="#projects">Projects</a></li>
         <li class="mobile-nav__item"><a href="#skills">Skills</a></li>
-        <li class="mobile-nav__item"><a href="#services">Services</a></li>
+        <li class="mobile-nav__item"><a href="#contact">Contact</a></li>
         <li class="mobile-nav__item"><a href="blog/index.html">Blog</a></li>
       </ul>
       <div class="mobile-nav__ctas">
@@ -709,52 +709,89 @@
       </div>
     </section>
 
-    <section class="faq" id="services">
-      <div class="faq__container">
-        <div class="faq__left"><h2 class="faq__title">What I Offer</h2></div>
-        <div class="faq_split_bar"></div>
-        <div class="faq__right">
-          <div class="faq-item faq-item--open">
-            <button class="faq-item__header" type="button" aria-expanded="true"><span class="faq-item__question">Data Pipeline Engineering</span><span class="faq-item__icon"><svg viewBox="0 0 16 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1l7 7 7-7" stroke="#fcfcfc" stroke-width="2"/></svg></span></button>
-            <div class="faq-item__content"><p class="faq-item__answer">Placeholder — incremental, resumable ETL pipelines that fetch only new records, dedup safely, and repair on rerun instead of corrupting history.</p></div>
-          </div>
-          <div class="faq-item">
-            <button class="faq-item__header" type="button" aria-expanded="false"><span class="faq-item__question">Web Scraping &amp; Data Acquisition</span><span class="faq-item__icon"><svg viewBox="0 0 16 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1l7 7 7-7" stroke="#fcfcfc" stroke-width="2"/></svg></span></button>
-            <div class="faq-item__content"><p class="faq-item__answer">Placeholder — resilient scrapers (Playwright, Scrapy) with anti-bot handling, rate-limit backoff, and validation before data lands.</p></div>
-          </div>
-          <div class="faq-item">
-            <button class="faq-item__header" type="button" aria-expanded="false"><span class="faq-item__question">Backend API Development</span><span class="faq-item__icon"><svg viewBox="0 0 16 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1l7 7 7-7" stroke="#fcfcfc" stroke-width="2"/></svg></span></button>
-            <div class="faq-item__content"><p class="faq-item__answer">Placeholder — REST and real-time APIs in Node.js/NestJS and Python/FastAPI over PostgreSQL, with auth, queues, and caching.</p></div>
-          </div>
-          <div class="faq-item">
-            <button class="faq-item__header" type="button" aria-expanded="false"><span class="faq-item__question">ML &amp; Quantitative Analysis</span><span class="faq-item__icon"><svg viewBox="0 0 16 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1l7 7 7-7" stroke="#fcfcfc" stroke-width="2"/></svg></span></button>
-            <div class="faq-item__content"><p class="faq-item__answer">Placeholder — feature engineering, modelling, and statistically validated signals with honest, leak-free evaluation.</p></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="cta-section">
-      <h2 class="cta-section__title reveal"><span>Let's build something</span><span>together.</span></h2>
-      <div class="flx"><a href="/cdn-cgi/l/email-protection#325c5340534b535c535c1c445b415a5c4758535c72555f535b5e1c515d5f" class="pill-btn pill-btn--light"><span class="pill-btn-span">Get In Touch</span></a></div>
-    </section>
-
   </div>
 </main>
 
-<footer class="footer">
-  <nav class="footer-nav" aria-label="Footer navigation">
-    <a href="#projects" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Projects</span></a>
-    <a href="#skills" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Skills</span></a>
-    <a href="#services" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Services</span></a>
-    <a href="blog/index.html" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Blog</span></a>
-  </nav>
-  <div class="footer__bottom">
-    <span class="logo-text footer__logo">VJ</span>
-    <div class="footer__meta">
-      <p class="footer__copyright">© 2026 Vishnujan Narayanan</p>
-      <a href="https://github.com/VishnujanNarayanan" class="footer__privacy" target="_blank" rel="noopener">GitHub</a>
-      <a href="http://www.linkedin.com/in/vishnujan-narayanan" class="footer__privacy" target="_blank" rel="noopener">LinkedIn</a>
+<footer class="lfooter" id="contact">
+  <div class="lfooter__topbar">
+    <span class="lfooter__brand"><span>Vishnujan</span><span>Narayanan</span></span>
+  </div>
+
+  <div class="lfooter__layout">
+    <!-- Dark notched box (Lando footer mask) with static contour pattern inside -->
+    <div class="lfooter__clip">
+      <img class="lfooter__pattern" src="images/footer-blobs.svg" alt="" aria-hidden="true" loading="lazy">
+
+      <div class="lfooter__inner">
+        <h2 class="lfooter__headline">
+          <span class="lfooter__hl-row">Always Shipping.</span>
+          <span class="lfooter__hl-row">Always <span class="is-hl">Learning.</span></span>
+        </h2>
+
+        <div class="lfooter__cols">
+          <nav class="lfooter__col lfooter__col--left" aria-label="Pages">
+            <span class="lfooter__col-label">Pages</span>
+            <a href="#top" class="lfooter__navlink">Home</a>
+            <a href="#projects" class="lfooter__navlink">Projects</a>
+            <a href="#skills" class="lfooter__navlink">Skills</a>
+            <a href="blog/index.html" class="lfooter__navlink">Blog</a>
+          </nav>
+          <nav class="lfooter__col lfooter__col--right" aria-label="Social links">
+            <span class="lfooter__col-label">Follow On</span>
+            <a href="https://github.com/VishnujanNarayanan" target="_blank" rel="noopener" class="lfooter__navlink">GitHub</a>
+            <a href="http://www.linkedin.com/in/vishnujan-narayanan" target="_blank" rel="noopener" class="lfooter__navlink">LinkedIn</a>
+            <a href="https://www.instagram.com/___vi5hnu___/" target="_blank" rel="noopener" class="lfooter__navlink">Instagram</a>
+            <a href="https://substack.com/@vishnujannarayanan" target="_blank" rel="noopener" class="lfooter__navlink">Substack</a>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Sky-blue tools marquee (logos tinted via CSS mask) -->
+      <div class="lfooter__mq" aria-hidden="true">
+        <div class="lfooter__mq-track">
+          <i style="--logo:url('images/logos/Python.svg')"></i>
+          <i style="--logo:url('images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('images/logos/Docker.svg')"></i>
+          <i style="--logo:url('images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('images/logos/AWS.svg')"></i>
+          <i style="--logo:url('images/logos/Linux.svg')"></i>
+          <i style="--logo:url('images/logos/Git.svg')"></i>
+          <i style="--logo:url('images/logos/Bash.svg')"></i>
+          <i style="--logo:url('images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('images/logos/Vim.svg')"></i>
+        </div>
+        <div class="lfooter__mq-track">
+          <i style="--logo:url('images/logos/Python.svg')"></i>
+          <i style="--logo:url('images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('images/logos/Docker.svg')"></i>
+          <i style="--logo:url('images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('images/logos/AWS.svg')"></i>
+          <i style="--logo:url('images/logos/Linux.svg')"></i>
+          <i style="--logo:url('images/logos/Git.svg')"></i>
+          <i style="--logo:url('images/logos/Bash.svg')"></i>
+          <i style="--logo:url('images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('images/logos/Vim.svg')"></i>
+        </div>
+      </div>
+
+      <!-- Portrait cutout rising from the bottom (where the reference's helmet sits) -->
+      <img class="lfooter__me" src="images/footer-me.png" alt="Vishnujan Narayanan" loading="lazy">
+    </div>
+
+    <!-- Pill in the bottom-centre tab of the notched box -->
+    <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me <span aria-hidden="true">&#8599;</span></a>
+
+    <!-- Legal row sits in the gradient shelves either side of the bottom tab -->
+    <div class="lfooter__bottom">
+      <span class="lfooter__copy">© 2026 Vishnujan Narayanan. All rights reserved</span>
+      <div class="lfooter__legal">
+        <a href="https://github.com/VishnujanNarayanan" target="_blank" rel="noopener">GitHub</a>
+        <a href="http://www.linkedin.com/in/vishnujan-narayanan" target="_blank" rel="noopener">LinkedIn</a>
+      </div>
     </div>
   </div>
 </footer>
