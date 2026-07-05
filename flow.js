@@ -885,18 +885,22 @@
     var subT2 = clamp(colorP / 0.5, 0, 1);
     var subCol2 = "rgb(" + Math.round(lerp(150, 236, subT2)) + "," + Math.round(lerp(150, 236, subT2)) + "," + Math.round(lerp(156, 240, subT2)) + ")";
     for (var sj = 0; sj < lightSubs.length; sj++) lightSubs[sj].style.color = subCol2;
-    // CLI prompt darkens as the bg lightens, over zone 2's ¾ point → zone 3's ¼ point
-    // (each zone spans 0.25 of progress → zone2¾ = 0.4375, zone3¼ = 0.5625). The typed
-    // command is left alone (it flips to black via .flow__cd-row--dark); here the green
-    // user@host + blue path ease a little darker, and the bare ":"/"$" punctuation fade
-    // from near-white to black so they stay legible on the now-light field.
+    // CLI prompt darkens as the bg lightens. The green user@host and the blue path now
+    // fade on SEPARATE brackets (each zone spans 0.25 of progress; zone k = [(k-1)/4, k/4]):
+    //   • blue path  → HALF of zone 2 → 1/5 into zone 3: progress [0.375, 0.5+0.25/5 = 0.55].
+    //   • green user → 5/6 of zone 2 → 1/3 into zone 3: progress [0.25+0.25·5/6 ≈ 0.4583,
+    //     0.5+0.25/3 ≈ 0.5833] (a 0.125-wide bracket).
+    // The typed command is left alone (it flips to black via .flow__cd-row--dark); the bare
+    // ":"/"$" punctuation keeps the original zone2¾→zone3¼ crossfade so it stays legible.
     if (flowCd) {
-      var cliT = clamp((progress - 0.4375) / (0.5625 - 0.4375), 0, 1);
+      var usrT = clamp((progress - (0.25 + 0.25 * 5 / 6)) / 0.125, 0, 1);
       flowCd.style.setProperty("--cli-usr", "rgb(" +
-        Math.round(lerp(38, 18, cliT)) + "," + Math.round(lerp(162, 112, cliT)) + "," + Math.round(lerp(105, 66, cliT)) + ")");
+        Math.round(lerp(38, 18, usrT)) + "," + Math.round(lerp(162, 112, usrT)) + "," + Math.round(lerp(105, 66, usrT)) + ")");
+      var pathT = clamp((progress - 0.375) / 0.175, 0, 1);
       flowCd.style.setProperty("--cli-path", "rgb(" +
-        Math.round(lerp(59, 28, cliT)) + "," + Math.round(lerp(142, 96, cliT)) + "," + Math.round(lerp(234, 180, cliT)) + ")");
-      var pv = Math.round(lerp(208, 17, cliT));
+        Math.round(lerp(59, 28, pathT)) + "," + Math.round(lerp(142, 96, pathT)) + "," + Math.round(lerp(234, 180, pathT)) + ")");
+      var punctT = clamp((progress - 0.4375) / (0.5625 - 0.4375), 0, 1);
+      var pv = Math.round(lerp(208, 17, punctT));
       flowCd.style.setProperty("--cli-punct", "rgb(" + pv + "," + pv + "," + pv + ")");
     }
     // NOTE: only the LINES + bg (main.js, via __flowLight) transition with scroll.
