@@ -647,6 +647,7 @@
       buildGallery();
       if (gallery) { gallery.classList.add("is-open"); gallery.setAttribute("aria-hidden", "false"); }
       if (galleryScroll) galleryScroll.scrollTop = 0;
+      if (typeof updateHint === "function") updateHint();   // reset the "scroll to see more" prompt for the fresh scroll
       // Keep the end-slide loop running (free-running, no currentTime reset → a different frame each
       // visit) so the close — which continues from it — looks dynamically different every time.
       if (loopVid) { var lp = loopVid.play(); if (lp && lp.catch) lp.catch(function () {}); }
@@ -881,12 +882,35 @@
 
     // ---- Close triggers: back button, Esc, and reaching the end of the gallery scroll. ----
     var backBtn = gallery && gallery.querySelector(".cert-gallery__back");
+    // Give the back button the nav-pill REEL: wrap each letter in a clip whose __col rolls up on
+    // hover to reveal an identical __c clone rising from below (staggered left→right via --hd).
+    if (backBtn) {
+      var backTxt = backBtn.textContent;
+      backBtn.setAttribute("aria-label", "Back to home");
+      backBtn.textContent = "";
+      for (var bi = 0; bi < backTxt.length; bi++) {
+        var bclip = document.createElement("span"); bclip.className = "pill-char"; bclip.setAttribute("aria-hidden", "true");
+        bclip.style.setProperty("--hd", (bi * 0.022).toFixed(3) + "s");
+        var bcol = document.createElement("span"); bcol.className = "pill-char__col";
+        var bface = document.createElement("span"); bface.className = "pill-char__face"; bface.textContent = backTxt[bi];
+        var bc = document.createElement("span"); bc.className = "pill-char__c"; bc.textContent = backTxt[bi];
+        bcol.appendChild(bface); bcol.appendChild(bc); bclip.appendChild(bcol); backBtn.appendChild(bclip);
+      }
+    }
     if (backBtn) backBtn.addEventListener("click", closeCertGallery);
+    // "Scroll to see more" hint: hide it once the last certificate is reached (nothing more below).
+    var hintEl = gallery && gallery.querySelector(".cert-gallery__hint");
+    function updateHint() {
+      if (!hintEl || !galleryScroll) return;
+      var atEnd = galleryScroll.scrollTop + galleryScroll.clientHeight >= galleryScroll.scrollHeight - 4;
+      hintEl.classList.toggle("is-hidden", atEnd);
+    }
     document.addEventListener("keydown", function (e) {
       if ((e.key === "Escape" || e.key === "Esc") && pullDone && !closing) closeCertGallery();
     });
     if (galleryScroll) {
       function atBottom() { return galleryScroll.scrollTop + galleryScroll.clientHeight >= galleryScroll.scrollHeight - 2; }
+      galleryScroll.addEventListener("scroll", updateHint, { passive: true });
       // No resistance at the end. The final slide loops the collapse video; once it's fully up (at
       // the bottom of the scroll), a scroll-DOWN (or an upward swipe past the end) collapses the
       // gallery immediately. The close continues that video from its current frame (closeCertGallery).
