@@ -1222,6 +1222,7 @@
     var GH_START = 0.40, GH_END = 0.65;           // visual height (× viewport): at reveal → at fullscreen
     var GH_EXIT_MIN = 0.35;                        // MUST match the hero's EXIT_MIN_SCALE (video edge zoom-out floor)
     var GH_FADE_END = 0.5;                         // pB at which the handwriting starts (scrollInk) → card fully faded by here
+    var GH_CARD_SHRINK = 0.4;                      // extra shrink OF THE CARD within the rectangle as it fades (1 → 0.6)
     function updateGhCard() {
       var y = window.scrollY, vh = window.innerHeight;
       var ye = window.__heroY ? window.__heroY(y, vh) : y;   // dwell-aware effective scroll
@@ -1236,6 +1237,7 @@
         var sc = frac / GH_END;                          // 0.615 → 1 (card's base height is GH_END)
         ghReveal.style.opacity = "1";
         ghReveal.style.transform = "none";
+        ghCard.style.transformOrigin = "50% 100%";       // grow up from the bottom on the way in
         ghCard.style.transform = "translateY(" + ty.toFixed(1) + "px) scale(" + sc.toFixed(3) + ")";
         ghReveal.classList.toggle("is-live", ye >= 0.6 * vh && ye <= vh * 1.02);
       } else {
@@ -1261,7 +1263,12 @@
         // that, but the card is already invisible.
         var fp = Math.max(0, Math.min(pB / GH_FADE_END, 1));
         var fade = fp * fp * (3 - 2 * fp);               // smoothstep → op 1 → 0 over pB [0, GH_FADE_END]
-        ghCard.style.transform = "none";                 // card is now carried by the layer transform
+        // The layer scale locks the card to the video rectangle's PROPORTION. On top of that the
+        // card ALSO shrinks RELATIVE to the rectangle (into it, from its bottom-centre origin) as it
+        // fades — so it reads as receding into the rectangle rather than just dimming at full size.
+        var cardShrink = 1 - GH_CARD_SHRINK * fade;      // 1 → (1 − GH_CARD_SHRINK) over the fade window
+        ghCard.style.transformOrigin = "50% 50%";        // fade-out: shrink toward the CENTRE, not the bottom
+        ghCard.style.transform = "scale(" + cardShrink.toFixed(3) + ")";
         ghReveal.style.transform = "translateY(" + vTy.toFixed(1) + "px) scale(" + vidScale.toFixed(4) + ")";
         ghReveal.style.opacity = (1 - fade).toFixed(3);
         ghReveal.classList.remove("is-live");
