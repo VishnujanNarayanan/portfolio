@@ -987,21 +987,36 @@
     var EXIT_MS = 200;           // snappy departure (exit / reverse-appear) — at slow scroll
     var SPEED_FULL = 0.006;      // scroll speed (zones/ms) at which durations hit 2x faster
     if (rawSel !== lastSel) {
-      var fwd = rawSel > lastSel;                        // scroll direction at this crossing
       // The faster the scroll at the crossing, the faster titles enter/exit — up to
       // 2x (durations halved) for a really quick scroll; 1x (base) for a slow one.
       var speedK = 1 + clamp(gSpeed / SPEED_FULL, 0, 1);
-      var entering = panels[rawSel], leaving = panels[lastSel];
-      if (entering) entering._anim = {
-        // No hold when there's no outgoing title to clear (first zone) — it'd just
-        // add a gap; the delay only matters when an old title needs to exit first.
-        t0: now, delay: (leaving ? ENTER_DELAY : 0) / speedK, dur: ENTER_MS / speedK, fade: false,
-        from: poseOf(entering, P, lastSel, rawSel), to: P.REST
-      };
-      if (leaving) leaving._anim = {
-        t0: now, delay: 0, dur: EXIT_MS / speedK, fade: true, linear: true,
-        from: poseOf(leaving, P, lastSel, lastSel), to: fwd ? P.EXIT : P.APPEAR
-      };
+      var hadPrev = !!panels[lastSel];   // an outgoing title exists → hold the entrance briefly
+      // Exit target that actually LEAVES the screen: the EXIT/APPEAR pose plus a full
+      // screen-space slide off the side it belongs on (behind = left, ahead = right),
+      // so a departing title travels all the way off instead of lingering at the edge.
+      function flyOff(pi) {
+        var b = pi < rawSel ? P.EXIT : P.APPEAR;
+        return { ex: (pi < rawSel ? -1 : 1) * vw, sx: b.sx, tx: b.tx, ty: b.ty, ry: b.ry, rx: b.rx };
+      }
+      panels.forEach(function (panel, pi) {
+        var a = panel._anim;
+        if (pi === rawSel) {
+          panel._anim = {          // the new active title enters (eased)
+            // No hold when there's no outgoing title to clear (first zone) — it'd just
+            // add a gap; the delay only matters when an old title needs to exit first.
+            t0: now, delay: (hadPrev ? ENTER_DELAY : 0) / speedK, dur: ENTER_MS / speedK, fade: false,
+            from: poseOf(panel, P, lastSel, pi), to: P.REST
+          };
+        } else if ((a && !a.fade) || pi === lastSel) {
+          // A zone we just left OR one still mid-ENTER when the threshold moved on:
+          // abandon its entrance and slide its exit off the side it belongs on. Fixes a
+          // fast scroll leaving a previous zone's appear stuck at the screen edge.
+          panel._anim = {
+            t0: now, delay: 0, dur: EXIT_MS / speedK, fade: true, linear: true,
+            from: poseOf(panel, P, lastSel, pi), to: flyOff(pi)
+          };
+        }
+      });
       // index / sub / pills keep their grouped fade via the active/passed classes.
       panels.forEach(function (panel, pi) {
         panel.classList.toggle("flow-panel--active", pi === rawSel);
