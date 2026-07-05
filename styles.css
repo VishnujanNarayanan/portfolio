@@ -739,6 +739,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 @media (pointer:fine){.cert-gallery__back:hover{background:var(--color-highlight);color:var(--color-text-light)}}
 @media (max-width:820px){.cert-gallery__back{top:16px;right:16px}}
 .cert-slide{position:sticky;top:0;height:calc(100vh + var(--cert-dwell, 10vh));display:flex;align-items:flex-start;justify-content:center;background:#fff}
+.cert-slide:first-child{--cert-dwell:0vh}
 .cert-slide__fig{position:relative;display:flex;align-items:center;justify-content:center;width:100vw;height:100vh}
 /* Fit the whole certificate to the screen (no card / no navy surround). */
 .cert-slide__img{display:block;width:100%;height:100%;object-fit:contain;background:#fff}
