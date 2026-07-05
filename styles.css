@@ -1247,18 +1247,24 @@ html.boot-active{overflow:hidden;height:100%}
   --lf-ink:#0f1a2e;          /* dark text on the gradient */
   --lf-box:#0f1628;          /* the dark box (matches the projects navy) */
   --lf-dim:rgba(190,210,235,.55);  /* muted labels on the dark box */
-  background-color:rgb(208,225,235);
-  /* bright sky band at the top + Lando's bottom radial glow */
-  background-image:
-    linear-gradient(to bottom,#8fc4ff 0,rgba(143,196,255,0) 24%),
-    radial-gradient(circle farthest-corner at 50% -190%,rgba(143,196,255,0) 68%,#8fc4ff 83%);
+  --lf-sky-vivid:#6db4f8;          /* the saturated sky the lead-in ramps into */
+  --lf-lead:clamp(160px,32vh,400px);   /* airy gradient runway above the box (reference) */
+  background-color:rgb(208,225,235);   /* section colour at the top of the runway */
   position:relative;
   z-index:2;   /* above the fixed #bg-contours canvas so its moving lines don't show here */
   padding:14px clamp(14px,1.8vw,30px) 0;
 }
+/* Lando's exact gradient: a radial whose centre sits ~2 heights ABOVE the footer, so the
+   transparent→vivid boundary is a downward-bowing ARC — the sky blue climbs higher at the
+   sides and dips around the box's top bump (.footer-bg-gradient in the reference) */
+.lfooter::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(circle farthest-corner at 50% -190%,rgba(109,180,248,0) 68%,var(--lf-sky-vivid) 83%);
+  pointer-events:none;
+}
 
 /* top bar (on the gradient, above the box) */
-.lfooter__topbar{display:flex;align-items:flex-start;justify-content:space-between;padding:8px 6px 12px}
+.lfooter__topbar{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;padding:8px 6px 12px}
 .lfooter__brand{
   display:flex;flex-direction:column;line-height:.92;
   font-weight:700;letter-spacing:-.5px;text-transform:uppercase;
@@ -1267,7 +1273,7 @@ html.boot-active{overflow:hidden;height:100%}
 .lfooter__brand span:last-child{color:var(--lf-sky)}
 
 /* the notched dark box */
-.lfooter__layout{position:relative;padding-bottom:8px}
+.lfooter__layout{position:relative;padding-bottom:8px;margin-top:var(--lf-lead)}
 .lfooter__clip{
   position:relative;
   aspect-ratio:1688/896;               /* must match the mask viewBox so it maps 1:1 */
@@ -1371,7 +1377,7 @@ html.boot-active{overflow:hidden;height:100%}
 }
 
 @media (max-width:820px){
-  .lfooter{padding:12px 12px 0}
+  .lfooter{padding:12px 12px 0;--lf-lead:clamp(90px,18vh,180px)}
   .lfooter__clip{aspect-ratio:auto;-webkit-mask-image:none;mask-image:none;border-radius:22px}
   .lfooter__inner{position:static;padding:36px 22px 0}
   .lfooter__headline{font-size:clamp(30px,9vw,44px);letter-spacing:-1px}
