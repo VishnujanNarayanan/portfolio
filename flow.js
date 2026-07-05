@@ -551,10 +551,11 @@
   // hover coupling above) — the column rolls up letter-by-letter (staggered) so
   // every glyph reels over to its clone. Words stay intact so wrapping is normal.
   (function buildItemReels() {
-    var REEL_STEP = 0.012;  // per-letter stagger (s), left → right
+    var REEL_STEP = 0.012;  // per-letter stagger (s)
     Array.prototype.forEach.call(flow.querySelectorAll(".flow-panel__item"), function (item) {
       var text = item.textContent;
       item.setAttribute("aria-label", text);
+      var last = text.replace(/\s+/g, "").length - 1;         // index of the final letter
       item.textContent = "";
       var gi = 0;
       text.split(/(\s+)/).forEach(function (chunk) {           // keep the whitespace chunks
@@ -566,7 +567,9 @@
         for (var i = 0; i < chunk.length; i++) {
           var clip = document.createElement("span"); clip.className = "reel-char";
           var col  = document.createElement("span"); col.className  = "reel-char__col";
+          // Forward (hover-in): left → right. Reverse (unhover): last letter back first.
           col.style.setProperty("--hd", (gi * REEL_STEP).toFixed(3) + "s");
+          col.style.setProperty("--hd-rev", ((last - gi) * REEL_STEP).toFixed(3) + "s");
           var a = document.createElement("span"); a.className = "reel-char__a"; a.textContent = chunk[i];
           var c = document.createElement("span"); c.className = "reel-char__c"; c.textContent = chunk[i];
           col.appendChild(a); col.appendChild(c);

@@ -1233,8 +1233,8 @@ html.boot-active{overflow:hidden;height:100%}
 @media (prefers-reduced-motion:reduce){.term-projects .proj-card__media,.term-projects .proj-card__frame.is-base{transition:none}}
 .reel-word{display:inline-block;white-space:nowrap}
 .reel-char{display:inline-block;position:relative;overflow:hidden;vertical-align:top}
-.reel-char__col{display:block;position:relative;transition:transform .2s var(--ease-default);transition-delay:var(--hd,0s);will-change:transform}
+.reel-char__col{display:block;position:relative;transition:transform .2s var(--ease-default);transition-delay:var(--hd-rev,0s);will-change:transform}
 .reel-char__a{display:block;color:inherit}
 .reel-char__c{display:block;position:absolute;left:0;top:100%;width:100%;color:#4d8bff}
-.flow-panel__item.is-active .reel-char__col,.flow-panel__item:hover .reel-char__col,.flow-panel__item:focus-visible .reel-char__col{transform:translateY(-100%)}
+.flow-panel__item.is-active .reel-char__col,.flow-panel__item:hover .reel-char__col,.flow-panel__item:focus-visible .reel-char__col{transform:translateY(-100%);transition-delay:var(--hd,0s)}
 @media (prefers-reduced-motion:reduce){.reel-char__col{transition:none}}
