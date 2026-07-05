@@ -1144,7 +1144,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .flow-panel__list{list-style:none;margin:30px 0 0;padding:0;display:flex;flex-direction:column;gap:2px;max-width:480px;color:#fff}
 .flow-panel__list li{margin:0}
 .flow-panel__item{display:inline-block;padding:7px 0;font-size:clamp(18px,1.7vw,25px);font-weight:600;line-height:1.18;letter-spacing:-.01em;color:inherit;text-decoration:none;cursor:pointer;transition:color .25s var(--ease-default),transform .25s var(--ease-default)}
-.flow-panel__item:hover,.flow-panel__item.is-active{color:#4d8bff;transform:translateX(8px)}
+.flow-panel__item:hover,.flow-panel__item.is-active{transform:translateX(8px)}
 /* grouped reveal in step with the index/title (mirrors the old sub/pills fade) */
 .flow-panel__content .flow-panel__list{opacity:0;transform:translateY(26px);transition:opacity .5s var(--ease-default),transform .5s var(--ease-default)}
 .flow-panel--passed .flow-panel__content .flow-panel__list{transform:translateY(-26px)}
@@ -1233,8 +1233,8 @@ html.boot-active{overflow:hidden;height:100%}
 @media (prefers-reduced-motion:reduce){.term-projects .proj-card__media,.term-projects .proj-card__frame.is-base{transition:none}}
 .reel-word{display:inline-block;white-space:nowrap}
 .reel-char{display:inline-block;position:relative;overflow:hidden;vertical-align:top}
-.reel-char__col{display:block;position:relative;transition:transform .28s var(--ease-default);transition-delay:var(--hd,0s);will-change:transform}
-.reel-char__a{display:block}
-.reel-char__c{display:block;position:absolute;left:0;top:100%;width:100%}
+.reel-char__col{display:block;position:relative;transition:transform .2s var(--ease-default);transition-delay:var(--hd,0s);will-change:transform}
+.reel-char__a{display:block;color:inherit}
+.reel-char__c{display:block;position:absolute;left:0;top:100%;width:100%;color:#4d8bff}
 .flow-panel__item.is-active .reel-char__col,.flow-panel__item:hover .reel-char__col,.flow-panel__item:focus-visible .reel-char__col{transform:translateY(-100%)}
 @media (prefers-reduced-motion:reduce){.reel-char__col{transition:none}}

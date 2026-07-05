@@ -551,7 +551,7 @@
   // hover coupling above) — the column rolls up letter-by-letter (staggered) so
   // every glyph reels over to its clone. Words stay intact so wrapping is normal.
   (function buildItemReels() {
-    var REEL_STEP = 0.018;  // per-letter stagger (s), left → right
+    var REEL_STEP = 0.012;  // per-letter stagger (s), left → right
     Array.prototype.forEach.call(flow.querySelectorAll(".flow-panel__item"), function (item) {
       var text = item.textContent;
       item.setAttribute("aria-label", text);
