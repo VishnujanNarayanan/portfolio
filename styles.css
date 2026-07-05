@@ -804,7 +804,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    bottom-left corner — visually 40vh at the reveal point, growing to its full 75vh as
    the video reaches fullscreen — then shrinks/fades back out as the edge zoom-out
    begins so it never floats over the sections below. */
-.gh-reveal{position:fixed;inset:0;z-index:3;display:flex;align-items:flex-end;justify-content:flex-start;padding:clamp(20px,3.5vh,56px) clamp(12px,2.2vw,40px);pointer-events:none;opacity:0;overflow:hidden;will-change:opacity}
+.gh-reveal{position:fixed;inset:0;z-index:3;display:flex;align-items:flex-end;justify-content:flex-start;padding:clamp(20px,3.5vh,56px) clamp(12px,2.2vw,40px);pointer-events:none;opacity:0;overflow:hidden;transform-origin:50% 50%;will-change:opacity,transform}
 .gh-card{display:flex;flex-direction:column;width:min(440px,86vw);height:65vh;border-radius:14px;background:#010409;border:1px solid #30363d;box-shadow:0 24px 70px rgba(0,0,0,.5);color:#e6edf3;font-family:var(--font-ui,Inter,system-ui,sans-serif);text-decoration:none;overflow:hidden;transform-origin:50% 100%;will-change:transform}
 .gh-card__head{display:flex;flex-direction:column;gap:10px;padding:22px 26px 16px;background:#010409}
 .gh-card__body{display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0;padding:16px 26px 22px;background:#0d1117}

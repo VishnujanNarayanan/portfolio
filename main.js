@@ -1220,27 +1220,59 @@
     // GH_START → GH_END as the video reaches fullscreen. No fade, no rotation, no slide
     // independent of the video.
     var GH_START = 0.40, GH_END = 0.65;           // visual height (× viewport): at reveal → at fullscreen
+    var GH_EXIT_MIN = 0.35;                        // MUST match the hero's EXIT_MIN_SCALE (video edge zoom-out floor)
+    var GH_FADE_END = 0.5;                         // pB at which the handwriting starts (scrollInk) → card fully faded by here
+    var GH_CARD_SHRINK = 0.4;                      // extra shrink OF THE CARD within the rectangle as it fades (1 → 0.6)
     function updateGhCard() {
       var y = window.scrollY, vh = window.innerHeight;
       var ye = window.__heroY ? window.__heroY(y, vh) : y;   // dwell-aware effective scroll
-      var sc, op, ty;
       if (ye <= vh) {
         // Phase A: ride up WITH the video (ty = vh − ye, the video's own translate), so the
         // card emerges from the video's bottom and settles as the video fills the screen.
-        // Through the fullscreen checkpoint dwell ye == vh, so it stays settled.
-        ty = vh - ye;
+        // Through the fullscreen checkpoint dwell ye == vh, so it stays settled. The reveal
+        // LAYER is untransformed here; only the card rides up + grows.
+        var ty = vh - ye;
         var g = smooth(Math.max(0, Math.min(ye / vh, 1)));
-        var frac = GH_START + (GH_END - GH_START) * g;   // 0.40 → 0.75 of the viewport
-        sc = frac / GH_END;                              // 0.533 → 1 (card's base height is GH_END)
-        op = 1;                                          // off-screen below at the top, so no fade needed
+        var frac = GH_START + (GH_END - GH_START) * g;   // 0.40 → 0.65 of the viewport
+        var sc = frac / GH_END;                          // 0.615 → 1 (card's base height is GH_END)
+        ghReveal.style.opacity = "1";
+        ghReveal.style.transform = "none";
+        ghCard.style.transformOrigin = "50% 100%";       // grow up from the bottom on the way in
+        ghCard.style.transform = "translateY(" + ty.toFixed(1) + "px) scale(" + sc.toFixed(3) + ")";
+        ghReveal.classList.toggle("is-live", ye >= 0.6 * vh && ye <= vh * 1.02);
       } else {
-        // Phase B: shrink + fade back out so the fixed card never covers the sections below.
-        var x = smooth(Math.max(0, Math.min((ye - vh) / (0.35 * vh), 1)));
-        ty = 0; sc = 1 - 0.5 * x; op = 1 - x;
+        // Phase B: ANCHOR the card TO THE VIDEO. The reveal layer is fixed inset:0 like the video
+        // and shares its 50% 50% origin, so scaling/translating the WHOLE layer by the video's own
+        // edge-zoom transform makes the card recede INSIDE the shrinking video rectangle instead of
+        // spilling outside it. `prog`/`eB`/scale mirror updateHeroExit exactly, so the SHRINK tracks
+        // the video the whole way down.
+        var pB = Math.max(0, Math.min((ye - vh) / vh, 1));
+        var cw = window.__certWrite, prog;
+        if (cw && cw.crossed) {
+          var ct = cw.t * cw.t * (3 - 2 * cw.t);
+          prog = cw.pBThr + (1 - cw.pBThr) * ct;
+        } else {
+          prog = pB;
+        }
+        var eB = prog * prog * (3 - 2 * prog);           // same smoothstep the video uses
+        var vidScale = 1 - (1 - GH_EXIT_MIN) * eB;       // 1 → EXIT_MIN_SCALE, exactly like the video
+        var vTy = -Math.max(0, ye - 2 * vh);             // the video's own phase-B/C translate
+        // OPACITY fades faster than the shrink: the card must be FULLY gone by the time the
+        // handwritten "certificates" strokes begin (scrollInk starts inking at pB = GH_FADE_END),
+        // so it clears the frame before the writing appears. Scale keeps tracking the video past
+        // that, but the card is already invisible.
+        var fp = Math.max(0, Math.min(pB / GH_FADE_END, 1));
+        var fade = fp * fp * (3 - 2 * fp);               // smoothstep → op 1 → 0 over pB [0, GH_FADE_END]
+        // The layer scale locks the card to the video rectangle's PROPORTION. On top of that the
+        // card ALSO shrinks RELATIVE to the rectangle (into it, from its bottom-centre origin) as it
+        // fades — so it reads as receding into the rectangle rather than just dimming at full size.
+        var cardShrink = 1 - GH_CARD_SHRINK * fade;      // 1 → (1 − GH_CARD_SHRINK) over the fade window
+        ghCard.style.transformOrigin = "50% 50%";        // fade-out: shrink toward the CENTRE, not the bottom
+        ghCard.style.transform = "scale(" + cardShrink.toFixed(3) + ")";
+        ghReveal.style.transform = "translateY(" + vTy.toFixed(1) + "px) scale(" + vidScale.toFixed(4) + ")";
+        ghReveal.style.opacity = (1 - fade).toFixed(3);
+        ghReveal.classList.remove("is-live");
       }
-      ghReveal.style.opacity = op.toFixed(3);
-      ghCard.style.transform = "translateY(" + ty.toFixed(1) + "px) scale(" + sc.toFixed(3) + ")";
-      ghReveal.classList.toggle("is-live", op > 0.6 && ye >= 0.6 * vh && ye <= vh * 1.02);
     }
     window.addEventListener("scroll", updateGhCard, { passive: true });
     window.addEventListener("resize", updateGhCard, { passive: true });
