@@ -1510,12 +1510,7 @@
         if (cw && ch) {
           var scg = sideCv.getContext("2d"), srect = sideCv.getBoundingClientRect();
           scg.clearRect(0, 0, cw, ch);
-          scg.fillStyle = "rgb(15,22,40)"; scg.fillRect(0, 0, cw, ch);
-          scg.save(); scg.translate(-srect.left, -srect.top);
-          scg.lineCap = "round"; scg.lineJoin = "round";
-          scg.strokeStyle = "rgba(77,139,255,0.45)"; scg.lineWidth = 0.45;
-          strokeIso(scg);
-          scg.restore();
+          scg.fillStyle = "rgb(27,34,54)"; scg.fillRect(0, 0, cw, ch);
         }
       }
       if (!reduce) requestAnimationFrame(frame);
