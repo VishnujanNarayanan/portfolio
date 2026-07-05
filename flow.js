@@ -619,7 +619,7 @@
     if (pp <= e0) { x = ex; y = ey; op = 0; sc = 0.9; }
     else if (pp < e1) { var t = smooth((pp - e0) / (e1 - e0)); x = lerp(ex, 0, t); y = lerp(ey, 0, t); op = t; sc = lerp(0.9, 1, t); }
     else if (pp < x0) { x = 0; y = 0; op = 1; sc = 1; }   // settled rest
-    else if (pp < x1) { var t2 = smooth((pp - x0) / (x1 - x0)); x = lerp(0, qx, t2); y = lerp(0, qy, t2); op = 1 - t2; sc = lerp(1, 0.94, t2); }
+    else if (pp < x1) { var t2 = (pp - x0) / (x1 - x0); x = lerp(0, qx, t2); y = lerp(0, qy, t2); op = 1 - t2; sc = lerp(1, 0.94, t2); }   // exit = constant speed (linear)
     else { x = qx; y = qy; op = 0; sc = 0.94; }
     return { x: x, y: y, op: op, sc: sc };
   }
@@ -979,7 +979,7 @@
     // flip below; `from` captures the live pose so a mid-flight reversal doesn't jump.
     var ENTER_DELAY = 90;        // hold the new title hidden briefly after the threshold
     var ENTER_MS = 320;          // entrance (appear / reverse-exit)
-    var EXIT_MS = 280;           // snappy departure (exit / reverse-appear)
+    var EXIT_MS = 200;           // snappy departure (exit / reverse-appear)
     if (rawSel !== lastSel) {
       var fwd = rawSel > lastSel;                        // scroll direction at this crossing
       var entering = panels[rawSel], leaving = panels[lastSel];
@@ -990,7 +990,7 @@
         from: poseOf(entering, P, lastSel, rawSel), to: P.REST
       };
       if (leaving) leaving._anim = {
-        t0: now, delay: 0, dur: EXIT_MS, fade: true,
+        t0: now, delay: 0, dur: EXIT_MS, fade: true, linear: true,
         from: poseOf(leaving, P, lastSel, lastSel), to: fwd ? P.EXIT : P.APPEAR
       };
       // index / sub / pills keep their grouped fade via the active/passed classes.
@@ -1011,7 +1011,8 @@
           content.style.transform = poseStr(base, a.from);
           content.style.opacity = a.fade ? 1 : 0;        // leaving stays visible; entering hidden
         } else {
-          var t = easeOut(clamp(el / a.dur, 0, 1));
+          var raw = clamp(el / a.dur, 0, 1);
+          var t = a.linear ? raw : easeOut(raw);   // exit = constant speed; entry eases
           content.style.transform = poseStr(base, lerpPose(a.from, a.to, t));
           content.style.opacity = a.fade ? 1 - t : 1;    // entering = no fade-in
           if (el >= a.dur) panel._anim = null;           // settle to steady next frame
