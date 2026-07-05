@@ -93,7 +93,6 @@
     if (window.innerWidth <= 820) { cdEl.style.position = ""; cdEl.style.top = ""; cdEl.style.opacity = ""; return; }
     cdEl.style.position = "fixed";
     var parkTop = vhh - cdEl.offsetHeight - Math.max(vhh * 0.06, 40);
-    var ye = window.__heroY ? window.__heroY(window.scrollY, vhh) : window.scrollY;
     // Ride from the park spot up to the resting top-left over the approach window, in
     // lockstep with the hero video + marquee handover but ARRIVING at the pin: rideP is
     // 0 at the marquee-lift start (rect.top = vh ⟺ ye = 2vh, so it begins moving with
@@ -106,9 +105,9 @@
     else if (rect.bottom >= vhh)  top = termREST;                                   // pinned through the flow section
     else                          top = termREST - (vhh - rect.bottom);             // flow ending → scroll away with it
     cdEl.style.top = top.toFixed(1) + "px";
-    // Fade in with the zoom-out while parked; solid once it's riding up / into flow.
-    var parked = rideP <= 0 && rect.top > 0;
-    cdEl.style.opacity = parked ? clamp((ye - vhh) / (vhh * 0.4), 0, 1).toFixed(3) : "1";
+    // No fade-in — the CLI is fully visible as soon as it's positioned (it now sits UNDER the
+    // video in z-index, so the video zoom-out reveals it rather than it fading up over the top).
+    cdEl.style.opacity = "1";
   }
 
   /* ---------- Domain lines — rolling stack, direction-aware, dynamically paced ------
