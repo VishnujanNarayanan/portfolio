@@ -1491,7 +1491,7 @@
     // Levels reach deep into the interior (plateau = 1.0) so big shapes carry CONCENTRIC
     // inner loops (blobs inside blobs), not just edge echoes; the bottom level is nudged
     // up so faint isolated fringes drop out.
-    var LEVELS = [0.36, 0.52, 0.66, 0.80, 0.92];
+    var LEVELS = [0.34, 0.50, 0.66, 0.82, 0.94];
     function lerp(a, b, t) { return a + (b - a) * t; }
     // marching squares over the shared field → closed, non-overlapping contours.
     // Pulled out so the section canvases (which fill their own full height) can reuse the
@@ -1582,7 +1582,7 @@
             // core + a WIDE, WEAK halo (2.5x radius, quarter strength): loops near a
             // passing blob lean subtly toward/away from it before the core arrives.
             sum += bw2[i] * (Math.exp(-d2 / (2 * rr * rr)) +
-                             0.25 * Math.exp(-d2 / (12.5 * rr * rr)));
+                             0.20 * Math.exp(-d2 / (12.5 * rr * rr)));
           }
           field[r][c] = sum;
         }
