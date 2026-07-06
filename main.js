@@ -1485,8 +1485,8 @@
       document.addEventListener("mouseleave", function () { mAmtT = 0; }, { passive: true });
     }
     var REPEL_R = 320;             // radius of influence (px) — recomputed on resize below
-    var REPEL_K = 0.13;            // push strength (dimensionless); peak shift ≈ 0.6·R·K px
-    function repelRadius() { REPEL_R = Math.max(240, Math.min(W, H) * 0.30); }
+    var REPEL_K = 0.3;             // push strength (dimensionless); peak shift ≈ 0.6·R·K px
+    function repelRadius() { REPEL_R = Math.max(240, Math.min(W, H) * 0.33); }
     repelRadius(); window.addEventListener("resize", repelRadius, { passive: true });
     // Levels reach deep into the interior (plateau = 1.0) so big shapes carry CONCENTRIC
     // inner loops (blobs inside blobs), not just edge echoes; the bottom level is nudged
