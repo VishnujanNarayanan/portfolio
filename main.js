@@ -1279,12 +1279,12 @@
     updateGhCard();
   }
 
-  /* ---------- Global background: animated topographic blue contours ----------
+  /* ---------- Global background: Lando's hand-drawn topographic contours ----------
      One fixed full-viewport plane shared by the hero zoom-out reveal AND the flow
-     section (so they read as the same continuous background). The contours are
-     iso-lines (marching squares) of a moving scalar field built from drifting,
-     pulsing metaballs — so they are CLOSED loops, never overlap (iso-lines of one
-     field can't cross), and grow / shrink / vanish as the blobs pulse and move. */
+     section (so they read as the same continuous background). The contours are the
+     reference site's hand-drawn blob sheet (images/footer-blobs.svg — 11 smooth
+     closed loops), scaled to cover the viewport and gently warped each frame by a
+     drifting noise field + cursor repulsion so they stay subtly alive. */
   (function () {
     var cv = document.createElement("canvas");          // global plane (blue, dark bg)
     cv.id = "bg-contours";
@@ -1335,7 +1335,7 @@
         line: isSkills ? "rgba(57,50,220,0.5)" : "rgba(77,139,255,0.45)"
       });
     });
-    var W = 0, H = 0, DPR = 1, CELL = 26, cols = 0, rows = 0, field = [];
+    var W = 0, H = 0, DPR = 1, CELL = 12, cols = 0, rows = 0, field = [];
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
     // tiny value noise (for domain-warping the field → breaks perfect circles/ovals)
     function vh(i, j) { var n = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return n - Math.floor(n); }
@@ -1345,21 +1345,111 @@
       var a = vh(ix, iy), b = vh(ix + 1, iy), c2 = vh(ix, iy + 1), d = vh(ix + 1, iy + 1);
       return (a * (1 - ux) + b * ux) * (1 - uy) + (c2 * (1 - ux) + d * ux) * uy;
     }
-    // Metaballs (round, closed iso-loops) on a JITTERED GRID that EXTENDS BEYOND the
-    // viewport (span -0.2..1.2) so blobs also live off-screen — contours then run off the
-    // edges and merge/split at the borders too, not just in the centre (no big containing
-    // outer loop). Larger orbits + heavy jitter → more random merging/splitting everywhere.
+    // Lando blob sheet: the reference site's contour "pattern" is a HAND-DRAWN SVG of
+    // 11 smooth closed loops (blobs_footer_1.svg — already local as images/footer-blobs.svg,
+    // viewBox 1688x1056), not a procedural field. Instead of stroking it verbatim (static),
+    // the sheet is rasterized into a smooth BASE SCALAR FIELD (fill + blur at grid res) and
+    // the contours are marching-squares iso-lines of base + drifting metaball perturbation —
+    // so the lines keep Lando's shapes/spacing but still MERGE, SPLIT, appear and vanish
+    // organically like the old metaball field did.
+    var SHEET_W = 1688, SHEET_H = 1056, PATHS = [];
+    fetch("images/footer-blobs.svg").then(function (r) { return r.text(); }).then(function (txt) {
+      var doc = new DOMParser().parseFromString(txt, "image/svg+xml");
+      doc.querySelectorAll("path[d]").forEach(function (p) {
+        PATHS.push(new Path2D(p.getAttribute("d")));
+      });
+      buildBase();
+      if (reduce) requestAnimationFrame(frame);   // static path: draw once now the sheet exists
+    }).catch(function () {});
+    // Rasterize the sheet → base field on a FINE grid (BCELL px): fill the loops white,
+    // then blur WIDE — the blur is what makes the level-sets round and silky (a steep
+    // ramp makes the iso-lines hug the hard rasterized edge and pick up every pixel
+    // kink; a wide one gives gentle analytic-feeling gradients like the old metaballs).
+    // It also sets how far apart the nested iso-levels sit. Alpha is read back and the
+    // plateau normalized to 1.0; the perturbation blobs (±~0.3) push regions across the
+    // iso levels (merge/split) — the top level (0.86) sits close enough to the plateau
+    // that they also birth/kill the innermost loops.
+    var baseCv = document.createElement("canvas"), baseCtx = baseCv.getContext("2d", { willReadFrequently: true });
+    var B = null, bw = 0, bh = 0, BCELL = 10;
+    function buildBase() {
+      if (!PATHS.length || !W) return;
+      bw = Math.ceil(W / BCELL) + 2; bh = Math.ceil(H / BCELL) + 2;
+      baseCv.width = bw; baseCv.height = bh;
+      var g = baseCtx;
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, bw, bh);
+      var sc = Math.max(W / SHEET_W, H / SHEET_H) * 1.12 / BCELL;  // sheet units → base cells, over-scanned
+      g.setTransform(sc, 0, 0, sc, (bw - SHEET_W * sc) / 2, (bh - SHEET_H * sc) / 2);
+      g.filter = "blur(15px)";                                     // ≈ 150px smoothing on screen → chunky-round shapes
+      g.fillStyle = "#fff";
+      for (var i = 0; i < PATHS.length; i++) g.fill(PATHS[i]);
+      g.filter = "none";
+      var data = g.getImageData(0, 0, bw, bh).data, n = bw * bh, p;
+      B = new Float32Array(n);
+      for (p = 0; p < n; p++) B[p] = data[p * 4 + 3] / 255;
+      // Float box-blur to melt the 8-bit quantization terraces from the alpha readback —
+      // wherever the field is nearly flat those 1/255 steps otherwise fizz into jagged,
+      // angular marching-squares lines (THE source of the rough look).
+      var T = new Float32Array(n);
+      blurPass(B, T, 1, 0); blurPass(T, B, 0, 1);
+      blurPass(B, T, 1, 0); blurPass(T, B, 0, 1);
+      blurPass(B, T, 1, 0); blurPass(T, B, 0, 1);
+      var max = 0;
+      for (p = 0; p < n; p++) if (B[p] > max) max = B[p];
+      if (max > 0) { var k = 1 / max; for (p = 0; p < n; p++) B[p] *= k; }
+    }
+    function blurPass(src, dst, dx, dy) {
+      for (var y = 0; y < bh; y++) for (var x = 0; x < bw; x++) {
+        var acc = 0;
+        for (var k = -2; k <= 2; k++) {
+          var xx = x + dx * k, yy = y + dy * k;
+          if (xx < 0) xx = 0; else if (xx >= bw) xx = bw - 1;
+          if (yy < 0) yy = 0; else if (yy >= bh) yy = bh - 1;
+          acc += src[yy * bw + xx];
+        }
+        dst[y * bw + x] = acc / 5;
+      }
+    }
+    // BICUBIC (Catmull-Rom) sample of the base field at (fractional) grid coords.
+    // Bilinear sampling kinks the iso-line direction at every grid-cell edge (piecewise-
+    // linear surface → C0 gradient) which reads as rough, polygonal lines; Catmull-Rom is
+    // C1-smooth so the level-sets curve continuously, like the old analytic metaball field.
+    function crom(p0, p1, p2, p3, f) {
+      return p1 + 0.5 * f * (p2 - p0 + f * (2 * p0 - 5 * p1 + 4 * p2 - p3 + f * (3 * (p1 - p2) + p3 - p0)));
+    }
+    function sampleBase(gx, gy) {
+      if (!B) return 0;
+      var x = gx < 1 ? 1 : gx > bw - 2.001 ? bw - 2.001 : gx;
+      var y = gy < 1 ? 1 : gy > bh - 2.001 ? bh - 2.001 : gy;
+      var ix = x | 0, iy = y | 0, fx = x - ix, fy = y - iy;
+      var i1 = iy * bw + ix, i0 = i1 - bw, i2 = i1 + bw, i3 = i2 + bw;
+      return crom(
+        crom(B[i0 - 1], B[i0], B[i0 + 1], B[i0 + 2], fx),
+        crom(B[i1 - 1], B[i1], B[i1 + 1], B[i1 + 2], fx),
+        crom(B[i2 - 1], B[i2], B[i2 + 1], B[i2 + 2], fx),
+        crom(B[i3 - 1], B[i3], B[i3 + 1], B[i3 + 2], fx), fy);
+    }
+    // Perturbation metaballs (the old drift, kept): SIGNED weights — positive blobs bulge
+    // and MERGE neighbouring loops, negative ones carve and SPLIT them; the pulse swings
+    // each blob's strength so features also appear/fade. Small radii/amplitudes so the
+    // Lando geometry stays recognisable underneath.
     var BLOBS = [];
     function seedBlobs() {
-      BLOBS = []; var gx = 5, gy = 4, i, j, SPAN = 1.4, OFF = -0.2;
-      for (j = 0; j < gy; j++) for (i = 0; i < gx; i++) {
+      BLOBS = [];
+      for (var i = 0; i < 10; i++) {
+        // capped below LEVELS[0] so a POSITIVE blob alone in empty space can't cross the
+        // level and spawn tiny debris loops — it only merges/splits where the base is
+        // near. Negative blobs (carve/split) don't have that failure mode, so they run
+        // a bit stronger for livelier splitting.
+        var mag = 0.16 + Math.random() * 0.11;
         BLOBS.push({
-          bx: OFF + (i + 0.5) / gx * SPAN + (Math.random() - 0.5) * 0.22,
-          by: OFF + (j + 0.5) / gy * SPAN + (Math.random() - 0.5) * 0.22,
-          ox: 0.07 + Math.random() * 0.13, oy: 0.07 + Math.random() * 0.13,  // larger orbit → real merging/splitting
-          sx: 0.04 + Math.random() * 0.14, sy: 0.04 + Math.random() * 0.14,
+          bx: 0.05 + Math.random() * 0.9,
+          by: 0.05 + Math.random() * 0.9,
+          ox: 0.14 + Math.random() * 0.18, oy: 0.14 + Math.random() * 0.18,
+          sx: 0.08 + Math.random() * 0.14, sy: 0.08 + Math.random() * 0.14,
           px: Math.random() * 6.28, py: Math.random() * 6.28,
-          r: 0.12 + Math.random() * 0.1,
+          r: 0.11 + Math.random() * 0.10,
+          w: i % 2 ? -(mag * 1.35) : mag,
           pulse: 0.35 + Math.random() * 0.9,
           pph: Math.random() * 6.28
         });
@@ -1375,6 +1465,7 @@
       W = window.innerWidth; H = window.innerHeight;
       sizeCanvas(cv, ctx); if (hcv) sizeCanvas(hcv, hctx); if (wcv) sizeCanvas(wcv, wctx);
       cols = Math.ceil(W / CELL) + 1; rows = Math.ceil(H / CELL) + 1;
+      buildBase();
     }
     seedBlobs(); resize();
     window.addEventListener("resize", resize, { passive: true });
@@ -1397,7 +1488,10 @@
     var REPEL_K = 0.13;            // push strength (dimensionless); peak shift ≈ 0.6·R·K px
     function repelRadius() { REPEL_R = Math.max(240, Math.min(W, H) * 0.30); }
     repelRadius(); window.addEventListener("resize", repelRadius, { passive: true });
-    var LEVELS = [0.22, 0.36, 0.52, 0.7];              // fewer, rounded nested loops
+    // Levels reach deep into the interior (plateau = 1.0) so big shapes carry CONCENTRIC
+    // inner loops (blobs inside blobs), not just edge echoes; the bottom level is nudged
+    // up so faint isolated fringes drop out.
+    var LEVELS = [0.36, 0.52, 0.66, 0.80, 0.92];
     function lerp(a, b, t) { return a + (b - a) * t; }
     // marching squares over the shared field → closed, non-overlapping contours.
     // Pulled out so the section canvases (which fill their own full height) can reuse the
@@ -1440,7 +1534,7 @@
       // #bg-contours plane → the contour field reads as ONE continuous background across sections.
       g.save(); if (oy) g.translate(0, oy);
       g.lineCap = "round"; g.lineJoin = "round";
-      g.strokeStyle = stroke; g.lineWidth = 0.45;
+      g.strokeStyle = stroke; g.lineWidth = 1.1;
       strokeIso(g);
       g.restore();
     }
@@ -1454,21 +1548,24 @@
       mAmt += (mAmtT - mAmt) * (mAmtT > mAmt ? 0.04 : 0.010);
       var repel = mAmt > 0.002 && mxE >= 0;              // skip the per-cell work when idle
       var rInv = 1 / (2 * REPEL_R * REPEL_R), rKick = REPEL_K * mAmt;
-      var md = Math.min(W, H), wf = 2.6 / md, warp = md * 0.08; // gentle warp → rounded, not perfect circles
-      var bx = [], by = [], br = [], bw = [], i, c, r;
+      // Warp kept SMALL and BROAD: big amplitude/short wavelength made the lines wobble
+      // lumpily — Lando's curves are dead smooth, so this is just a slow large-scale sway.
+      var md = Math.min(W, H), wf = 1.5 / md, warp = md * 0.02;
+      var bx = [], by = [], br = [], bw2 = [], i, c, r;
       for (i = 0; i < BLOBS.length; i++) {
         var b = BLOBS[i];
         bx[i] = (b.bx + Math.cos(t * b.sx * 6.28 + b.px) * b.ox) * W;
         by[i] = (b.by + Math.sin(t * b.sy * 6.28 + b.py) * b.oy) * H;
         br[i] = b.r * md;
-        bw[i] = 0.6 + 0.4 * Math.sin(t * b.pulse + b.pph);
+        // pulse swings the SIGNED strength (never flips sign) → features grow/fade
+        bw2[i] = b.w * (0.65 + 0.35 * Math.sin(t * b.pulse + b.pph));
       }
       for (r = 0; r <= rows; r++) {
         field[r] = field[r] || [];
         for (c = 0; c <= cols; c++) {
           var px = c * CELL, py = r * CELL;
-          var wx = px + (noise2(px * wf + t * 0.1, py * wf) - 0.5) * 2 * warp;
-          var wy = py + (noise2(px * wf + 5.2, py * wf - t * 0.1) - 0.5) * 2 * warp;
+          var wx = px + (noise2(px * wf + t * 0.3, py * wf) - 0.5) * 2 * warp;
+          var wy = py + (noise2(px * wf + 5.2, py * wf - t * 0.3) - 0.5) * 2 * warp;
           if (repel) {
             // Sample TOWARD the cursor (fall peaks at ~R) so the pattern renders pushed
             // AWAY from it — the lines bow out of a soft bubble. Zero at the exact centre
@@ -1477,10 +1574,15 @@
             var fall = Math.exp(-(tox * tox + toy * toy) * rInv) * rKick;
             wx += tox * fall; wy += toy * fall;
           }
-          var sum = 0;
+          // Lando base shape at the warped coords + the signed drifting perturbation:
+          // positive blobs bulge/merge the loops, negative ones pinch/split them.
+          var sum = sampleBase(wx / BCELL, wy / BCELL);
           for (i = 0; i < BLOBS.length; i++) {
-            var dx = wx - bx[i], dy = wy - by[i], rr = br[i];
-            sum += bw[i] * Math.exp(-(dx * dx + dy * dy) / (2 * rr * rr));
+            var dx = wx - bx[i], dy = wy - by[i], rr = br[i], d2 = dx * dx + dy * dy;
+            // core + a WIDE, WEAK halo (2.5x radius, quarter strength): loops near a
+            // passing blob lean subtly toward/away from it before the core arrives.
+            sum += bw2[i] * (Math.exp(-d2 / (2 * rr * rr)) +
+                             0.25 * Math.exp(-d2 / (12.5 * rr * rr)));
           }
           field[r][c] = sum;
         }
@@ -1552,7 +1654,7 @@
           ft = ft < 0 ? 0 : ft > 1 ? 1 : ft;
           lineStyle = "rgba(57,50,220," + (sec.lineBaseA * (1 - ft)).toFixed(3) + ")";
         }
-        sg.strokeStyle = lineStyle; sg.lineWidth = 0.45;
+        sg.strokeStyle = lineStyle; sg.lineWidth = 1.1;
         strokeIso(sg);
         sg.restore();
       }
