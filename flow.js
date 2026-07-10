@@ -1111,20 +1111,28 @@
     // centre — 30% less leftward travel. OFF_L/OFF_R = off-screen park (passed/upcoming).
     var R_END = 8, L_END = 2.4, OFF_L = -22, OFF_R = 22;
     var F = vh / 16.658;                             // 1 world unit in px (2·(17−1)·tan(55°/2))
+    // STEP 1 (flow-columns-stationary): the card grid no longer parallax-scrolls
+    // horizontally. Every panel's grid is pinned at a fixed REST_X spot (no R_END→OFF
+    // slide); the active panel shows, the rest are opacity-gated out. _coff is held at
+    // REST_X so the vertical hover parallax + column stagger below still compose on top,
+    // and the diagonal/lag machinery (which keys off off-band _coff) stays inert.
+    // REST_X (world units, +right of centre) is the whole-grid rest position — bump it
+    // to slide the columns further right. Kept inside (L_END, R_END) so g stays 0.
+    var REST_X = 6;
     panels.forEach(function (panel, pi) {
       var cardsEl = panel.querySelector(".flow-panel__cards");
       if (!cardsEl) return;
-      var target = (pi === csel) ? (L_END + (R_END - L_END) * (0.5 - clocal)) : (pi < csel ? OFF_L : OFF_R);
-      panel._coff = (panel._coff === undefined) ? target : panel._coff + (target - panel._coff) * 0.08;
+      var isActive = (pi === csel);
+      panel._coff = REST_X;                                   // stationary — no horizontal slide
       var hist = panel._coffHist || (panel._coffHist = []);   // short history for the delayed column
       hist.push({ t: now, v: panel._coff });
       while (hist.length > 1 && hist[1].t < now - 250) hist.shift();
-      if (pi === csel) { if (!panel._wasActive) panel._arriveT0 = now; panel._wasActive = true; }
+      if (isActive) { if (!panel._wasActive) panel._arriveT0 = now; panel._wasActive = true; }
       else panel._wasActive = false;                          // stamp the moment a panel becomes active
       var pinX = -(pi * vw + trackX);
       setSt(cardsEl, "transform", "translate(calc(-50% + " + (panel._coff * F + pinX).toFixed(1) + "px),-50%)");
-      setSt(cardsEl, "opacity", "1");
-      setSt(cardsEl, "pointerEvents", (pi === csel && Math.abs(clocal) < 0.4) ? "auto" : "none");
+      setSt(cardsEl, "opacity", isActive ? "1" : "0");
+      setSt(cardsEl, "pointerEvents", (isActive && Math.abs(clocal) < 0.4) ? "auto" : "none");
     });
 
     // Opposite-direction column parallax — VERTICAL ONLY (horizontal is the scroll-slide
