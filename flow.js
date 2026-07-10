@@ -608,6 +608,7 @@
     });
   });
   var mTY = 0, mCY = 0;       // cursor Y target / current (smoothed), normalised −0.5..0.5
+  var mSplay = 0, splayVel = 0;   // scroll-momentum column splay: held offset (rem) + its velocity
   if (!reduce) window.addEventListener("pointermove", function (e) {
     mTY = e.clientY / window.innerHeight - 0.5;
   }, { passive: true });
@@ -913,6 +914,7 @@
     var heroPB = clamp((yeHero - vh) / vh, 0, 1);
     positionTerminal(rect);
     driveTerminal(inPlace, approachP, globalRaw, heroPB);
+    var dGlobal = globalRaw - lastGlobalRaw;                         // signed scroll delta this frame (zones)
     var sceneScrolled = Math.abs(globalRaw - lastGlobalRaw) > 1e-4;  // cards slid this frame
     if (globalRaw > lastGlobalRaw + 1e-4) scrollDir = 1;
     else if (globalRaw < lastGlobalRaw - 1e-4) scrollDir = -1;
@@ -1141,6 +1143,18 @@
     // smoothed (clientY/vh − 0.5); the 0.05 lerp stands in for GSAP's duration-2 ease.
     mCY += (mTY - mCY) * 0.05;
     var p = mCY * 2 * 6;            // rem
+    // Scroll-momentum column splay — the two columns part vertically (left up / right
+    // down via o.dir) as a function of scroll, with a BLEED, not an ease-back: scroll
+    // feeds VELOCITY into a held offset (mSplay) that keeps drifting the same way while
+    // you scroll; when the scroll stops friction bleeds the velocity so it coasts to a
+    // slow stop and HOLDS there (never snaps back to neutral); reverse the scroll and it
+    // travels back the way it came. dGlobal = signed scroll delta this frame.
+    var SPLAY_IMPULSE = 1.0;       // velocity gained per unit (zone) of scroll
+    var SPLAY_FRICTION = 0.9;      // per-frame velocity bleed once the scroll stops
+    var SPLAY_MAX = 8;             // rem clamp on the held offset
+    splayVel = splayVel * SPLAY_FRICTION + dGlobal * SPLAY_IMPULSE;
+    mSplay = clamp(mSplay + splayVel, -SPLAY_MAX, SPLAY_MAX);
+    var pScroll = mSplay;          // rem (held; composes with the hover p above)
     // Per-ROW diagonal — ONLY on the SET-CHANGE swap, NOT the within-zone scroll-slide.
     // The active set scrubs horizontally inside the rest band [L_END, R_END] (that
     // right→left slide stays purely horizontal, unchanged). A set only travels OUTSIDE
@@ -1188,7 +1202,7 @@
       var settle = ((o.dir < 0) === leftLeads) ? SETTLE_FAST : SETTLE_SLOW;  // lag col eases slower
       if (o.diagCur === undefined) o.diagCur = diagTarget;
       o.diagCur += (diagTarget - o.diagCur) * settle;
-      setSt(o.el, "transform", "translate(" + dx.toFixed(1) + "px," + o.diagCur.toFixed(1) + "px) translateY(" + (o.dir * p).toFixed(3) + "rem)");
+      setSt(o.el, "transform", "translate(" + dx.toFixed(1) + "px," + o.diagCur.toFixed(1) + "px) translateY(" + (o.dir * (p + pScroll)).toFixed(3) + "rem)");
     }
 
     // On desktop the GL image planes replace the DOM card floats (hidden via
