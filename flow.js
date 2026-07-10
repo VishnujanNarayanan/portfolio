@@ -88,24 +88,30 @@
   function computeRest() { var h = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-height")); termREST = (h || 80) + 18; }
   computeRest();
   window.addEventListener("resize", computeRest);
+  var lastCdTop = null;
   function positionTerminal(rect) {
     if (!cdEl) return;
     var vhh = window.innerHeight;
-    if (window.innerWidth <= 820) { cdEl.style.position = ""; cdEl.style.top = ""; cdEl.style.opacity = ""; return; }
+    if (window.innerWidth <= 820) { cdEl.style.position = ""; cdEl.style.top = ""; cdEl.style.opacity = ""; lastCdTop = null; return; }
     cdEl.style.position = "fixed";
-    var parkTop = vhh - cdEl.offsetHeight - Math.max(vhh * 0.06, 40);
-    // Ride from the park spot up to the resting top-left over the approach window, in
-    // lockstep with the hero video + marquee handover but ARRIVING at the pin: rideP is
-    // 0 at the marquee-lift start (rect.top = vh ⟺ ye = 2vh, so it begins moving with
-    // them — no delay) and 1 at the pin (rect.top = 0). Keyed to rect.top — the SAME
-    // clock as the header typing (approachP) and the card reveal (inPlace) — so the CLI
-    // lands top-left EXACTLY as the header finishes typing and the cards fly in.
-    var rideP = clamp((vhh - rect.top) / vhh, 0, 1);
     var top;
-    if (rect.top > 0)             top = parkTop - rideP * (parkTop - termREST);      // parked bottom-left → ride up, reaching rest at the pin
+    if (rect.top > 0) {
+      // Ride from the park spot up to the resting top-left over the approach window, in
+      // lockstep with the hero video + marquee handover but ARRIVING at the pin: rideP is
+      // 0 at the marquee-lift start (rect.top = vh ⟺ ye = 2vh, so it begins moving with
+      // them — no delay) and 1 at the pin (rect.top = 0). Keyed to rect.top — the SAME
+      // clock as the header typing (approachP) and the card reveal (inPlace) — so the CLI
+      // lands top-left EXACTLY as the header finishes typing and the cards fly in.
+      // offsetHeight is read ONLY in this phase (the stack is still growing as rows type
+      // in); during the pin top is a constant, so the forced layout read is skipped there.
+      var parkTop = vhh - cdEl.offsetHeight - Math.max(vhh * 0.06, 40);
+      var rideP = clamp((vhh - rect.top) / vhh, 0, 1);
+      top = parkTop - rideP * (parkTop - termREST);      // parked bottom-left → ride up, reaching rest at the pin
+    }
     else if (rect.bottom >= vhh)  top = termREST;                                   // pinned through the flow section
     else                          top = termREST - (vhh - rect.bottom);             // flow ending → scroll away with it
-    cdEl.style.top = top.toFixed(1) + "px";
+    var ts = top.toFixed(1) + "px";
+    if (ts !== lastCdTop) { lastCdTop = ts; cdEl.style.top = ts; }
     // No fade-in — the CLI is fully visible as soon as it's positioned (it now sits UNDER the
     // video in z-index, so the video zoom-out reveals it rather than it fading up over the top).
     cdEl.style.opacity = "1";
@@ -419,11 +425,15 @@
     return "rgb(" + Math.round(lerp(c1[0], c2[0], t)) + "," +
       Math.round(lerp(c1[1], c2[1], t)) + "," + Math.round(lerp(c1[2], c2[2], t)) + ")";
   }
+  var lastSky = "";
   function paintSky(g) {
     var i0 = clamp(Math.floor(g), 0, N - 1), i1 = clamp(i0 + 1, 0, N - 1), t = g - i0;
-    sky.style.background = "linear-gradient(180deg," +
+    var s = "linear-gradient(180deg," +
       rgb(TOP[i0], TOP[i1], t) + " 0%," + rgb(MID[i0], MID[i1], t) + " 55%," +
       rgb(BOT[i0], BOT[i1], t) + " 100%)";
+    // Only touch the style when the rounded stops actually changed — a same-string
+    // write still forces a full-viewport repaint of the sky layer every frame.
+    if (s !== lastSky) { lastSky = s; sky.style.background = s; }
   }
 
   /* ---------- Floating cards: fly-in / rest / fly-out ---------- */
@@ -779,8 +789,17 @@
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
+  var glCleared = false;
   function renderGL(progress, globalRaw) {
     if (!renderer) return;
+    // Image planes are disabled (createImageObject commented out) and the geometric
+    // forms are gone, so the scene draws nothing visible — rendering it every frame
+    // is a full-viewport GL pass for a transparent output. Clear once so the canvas
+    // is blank, then skip; re-enables itself automatically if planes come back.
+    if (!images.length && !focal.length) {
+      if (!glCleared) { glCleared = true; renderer.render(scene, camera); }
+      return;
+    }
     var global = progress * (N - 1);
     if (globalRaw === undefined) globalRaw = global;
     var gx = progress * (N - 1) * GAP;
@@ -836,8 +855,33 @@
   var lightSubs = [];  // zone 1-2 sub paragraphs; colour scroll-driven grey→white
   var navOn = false;   // top-nav reel state; fired once per threshold crossing
   var vh = window.innerHeight;
+  var lastHitT = 0;    // loop-side hover hit-test throttle stamp
+  // Change-gate caches: a style/custom-prop write with an UNCHANGED value still
+  // invalidates paint on its subtree, so each scroll-lerped colour remembers its
+  // last written string and only touches the DOM when the rounded value moves.
+  var lastJRgb = "", lastSubCol = "", lastSubCol2 = "", lastUsr = "", lastPath = "", lastPunct = "";
+  // Per-element transform/opacity setter with the same skip-if-unchanged guard
+  // (panel titles / card grids settle to constant strings once their easing lands —
+  // without the guard they'd re-write identical transforms every idle frame).
+  function setSt(el, prop, val) {
+    var c = el._ps || (el._ps = {});
+    if (c[prop] !== val) { c[prop] = val; el.style[prop] = val; }
+  }
   function loop() {
     var rect = flow.getBoundingClientRect();
+    // Off-screen early-outs — skip the whole per-frame body when the section can't
+    // be seen. Below the viewport (approaching): the fixed CLI terminal is still on
+    // stage during the hero video zoom-out, so keep just it alive (approachP is 0 and
+    // globalRaw is parked at -1 in this phase, matching what the full body computes).
+    // Above the viewport (scrolled past): everything incl. the terminal is gone.
+    if (rect.top >= vh) {
+      var yeH = window.__heroY ? window.__heroY(window.scrollY, vh) : window.scrollY;
+      positionTerminal(rect);
+      driveTerminal(false, 0, -1, clamp((yeH - vh) / vh, 0, 1));
+      requestAnimationFrame(loop);
+      return;
+    }
+    if (rect.bottom <= 0) { requestAnimationFrame(loop); return; }
     var total = rect.height - vh;
     var scrolled = clamp(-rect.top, 0, total);
     var progress = total > 0 ? scrolled / total : 0;
@@ -882,7 +926,7 @@
 
     var vw = window.innerWidth;
     var trackX = -global * vw;
-    track.style.transform = "translate3d(" + trackX + "px,0,0)";
+    setSt(track, "transform", "translate3d(" + trackX + "px,0,0)");
     paintSky(global);
     // Colour-fade bracket. EVERY scroll-driven colour transition (bg lighten + contour
     // lines via __flowLight, journey/scroll wheel, sub-text) used to run over progress
@@ -917,18 +961,18 @@
     // light bg: bright blue 77,139,255 → deep blue 35,29,122.
     var jStart = (2 + 0.5) / N;   // half of zone 3 in colorP space (== old 0.625)
     var jDark = clamp((colorP - jStart) / (1 - jStart), 0, 1);
-    flow.style.setProperty("--journey-rgb",
-      Math.round(lerp(77, 35, jDark)) + "," + Math.round(lerp(139, 29, jDark)) + "," + Math.round(lerp(255, 122, jDark)));
+    var jRgb = Math.round(lerp(77, 35, jDark)) + "," + Math.round(lerp(139, 29, jDark)) + "," + Math.round(lerp(255, 122, jDark));
+    if (jRgb !== lastJRgb) { lastJRgb = jRgb; flow.style.setProperty("--journey-rgb", jRgb); }
     // Zone 3-4 sub text fades from a slightly-lighter black → a slightly-darker grey
     // across zone 3 to the end (zone 3 starts at global 1.5 → progress 0.5).
     var subT = clamp((colorP - 0.5) / 0.5, 0, 1);
     var subCol = "rgb(" + Math.round(lerp(40, 105, subT)) + "," + Math.round(lerp(40, 105, subT)) + "," + Math.round(lerp(46, 112, subT)) + ")";
-    for (var si = 0; si < darkSubs.length; si++) darkSubs[si].style.color = subCol;
+    if (subCol !== lastSubCol) { lastSubCol = subCol; for (var si = 0; si < darkSubs.length; si++) darkSubs[si].style.color = subCol; }
     // Zone 1-2 sub text: the OTHER side of mid grey — slightly-lighter-grey → a
     // slightly-darker-white across zone 1 to the end of zone 2 (progress 0 → 0.5).
     var subT2 = clamp(colorP / 0.5, 0, 1);
     var subCol2 = "rgb(" + Math.round(lerp(150, 236, subT2)) + "," + Math.round(lerp(150, 236, subT2)) + "," + Math.round(lerp(156, 240, subT2)) + ")";
-    for (var sj = 0; sj < lightSubs.length; sj++) lightSubs[sj].style.color = subCol2;
+    if (subCol2 !== lastSubCol2) { lastSubCol2 = subCol2; for (var sj = 0; sj < lightSubs.length; sj++) lightSubs[sj].style.color = subCol2; }
     // CLI prompt darkens as the bg lightens. The green user@host and the blue path now
     // fade on SEPARATE brackets (each zone spans 0.25 of progress; zone k = [(k-1)/4, k/4]):
     //   • blue path  → HALF of zone 2 → 1/5 into zone 3: progress [0.375, 0.5+0.25/5 = 0.55].
@@ -938,14 +982,15 @@
     // ":"/"$" punctuation keeps the original zone2¾→zone3¼ crossfade so it stays legible.
     if (flowCd) {
       var usrT = clamp((progress - (0.25 + 0.25 * 5 / 6)) / 0.125, 0, 1);
-      flowCd.style.setProperty("--cli-usr", "rgb(" +
-        Math.round(lerp(38, 18, usrT)) + "," + Math.round(lerp(162, 112, usrT)) + "," + Math.round(lerp(105, 66, usrT)) + ")");
+      var usrC = "rgb(" + Math.round(lerp(38, 18, usrT)) + "," + Math.round(lerp(162, 112, usrT)) + "," + Math.round(lerp(105, 66, usrT)) + ")";
+      if (usrC !== lastUsr) { lastUsr = usrC; flowCd.style.setProperty("--cli-usr", usrC); }
       var pathT = clamp((progress - 0.375) / 0.175, 0, 1);
-      flowCd.style.setProperty("--cli-path", "rgb(" +
-        Math.round(lerp(59, 28, pathT)) + "," + Math.round(lerp(142, 96, pathT)) + "," + Math.round(lerp(234, 180, pathT)) + ")");
+      var pathC = "rgb(" + Math.round(lerp(59, 28, pathT)) + "," + Math.round(lerp(142, 96, pathT)) + "," + Math.round(lerp(234, 180, pathT)) + ")";
+      if (pathC !== lastPath) { lastPath = pathC; flowCd.style.setProperty("--cli-path", pathC); }
       var punctT = clamp((progress - 0.4375) / (0.5625 - 0.4375), 0, 1);
       var pv = Math.round(lerp(208, 17, punctT));
-      flowCd.style.setProperty("--cli-punct", "rgb(" + pv + "," + pv + "," + pv + ")");
+      var punctC = "rgb(" + pv + "," + pv + "," + pv + ")";
+      if (punctC !== lastPunct) { lastPunct = punctC; flowCd.style.setProperty("--cli-punct", punctC); }
     }
     // NOTE: only the LINES + bg (main.js, via __flowLight) transition with scroll.
     // The TEXT colours are NOT scroll-lerped — they're set once per panel by zone
@@ -1036,19 +1081,19 @@
       if (a) {
         var el = now - a.t0 - a.delay;
         if (el < 0) {                                    // delay window — hold at the `from` pose
-          content.style.transform = poseStr(base, a.from);
-          content.style.opacity = a.fade ? 1 : 0;        // leaving stays visible; entering hidden
+          setSt(content, "transform", poseStr(base, a.from));
+          setSt(content, "opacity", a.fade ? "1" : "0"); // leaving stays visible; entering hidden
         } else {
           var raw = clamp(el / a.dur, 0, 1);
           var t = a.linear ? raw : easeOut(raw);   // exit = constant speed; entry eases
-          content.style.transform = poseStr(base, lerpPose(a.from, a.to, t));
-          content.style.opacity = a.fade ? 1 - t : 1;    // entering = no fade-in
+          setSt(content, "transform", poseStr(base, lerpPose(a.from, a.to, t)));
+          setSt(content, "opacity", a.fade ? String(1 - t) : "1"); // entering = no fade-in
           if (el >= a.dur) panel._anim = null;           // settle to steady next frame
         }
       } else {                                           // steady state by side of `rawSel`
         var sp = pi === rawSel ? P.REST : (pi < rawSel ? P.EXIT : P.APPEAR);
-        content.style.transform = poseStr(base, sp);
-        content.style.opacity = pi === rawSel ? 1 : 0;
+        setSt(content, "transform", poseStr(base, sp));
+        setSt(content, "opacity", pi === rawSel ? "1" : "0");
       }
     });
 
@@ -1077,9 +1122,9 @@
       if (pi === csel) { if (!panel._wasActive) panel._arriveT0 = now; panel._wasActive = true; }
       else panel._wasActive = false;                          // stamp the moment a panel becomes active
       var pinX = -(pi * vw + trackX);
-      cardsEl.style.transform = "translate(calc(-50% + " + (panel._coff * F + pinX).toFixed(1) + "px),-50%)";
-      cardsEl.style.opacity = 1;
-      cardsEl.style.pointerEvents = (pi === csel && Math.abs(clocal) < 0.4) ? "auto" : "none";
+      setSt(cardsEl, "transform", "translate(calc(-50% + " + (panel._coff * F + pinX).toFixed(1) + "px),-50%)");
+      setSt(cardsEl, "opacity", "1");
+      setSt(cardsEl, "pointerEvents", (pi === csel && Math.abs(clocal) < 0.4) ? "auto" : "none");
     });
 
     // Opposite-direction column parallax — VERTICAL ONLY (horizontal is the scroll-slide
@@ -1135,7 +1180,7 @@
       var settle = ((o.dir < 0) === leftLeads) ? SETTLE_FAST : SETTLE_SLOW;  // lag col eases slower
       if (o.diagCur === undefined) o.diagCur = diagTarget;
       o.diagCur += (diagTarget - o.diagCur) * settle;
-      o.el.style.transform = "translate(" + dx.toFixed(1) + "px," + o.diagCur.toFixed(1) + "px) translateY(" + (o.dir * p).toFixed(3) + "rem)";
+      setSt(o.el, "transform", "translate(" + dx.toFixed(1) + "px," + o.diagCur.toFixed(1) + "px) translateY(" + (o.dir * p).toFixed(3) + "rem)");
     }
 
     // On desktop the GL image planes replace the DOM card floats (hidden via
@@ -1178,8 +1223,8 @@
       var EASE = 2.5;
       drawP = 1 - Math.pow(1 - lin, EASE);
       var off = (fillLen * (1 - drawP)).toFixed(1);
-      lineEl.style.strokeDashoffset = off;
-      fillEl.style.strokeDashoffset = off;
+      setSt(lineEl, "strokeDashoffset", off);
+      setSt(fillEl, "strokeDashoffset", off);
       // viewBox x of the drawing frontier — nodes left of it have been "created".
       drawnX = curveXY.length ? curveXY[clamp(Math.round(drawP * (curveXY.length - 1)), 0, curveXY.length - 1)].x : 0;
     }
@@ -1189,8 +1234,8 @@
       var SPACING = VBW * 0.42;               // viewBox gap between adjacent nodes
       nodeEls.forEach(function (n, i) {
         var vbX = VBW / 2 + (i - global) * SPACING;
-        n.style.left = (vbX / VBW * jw).toFixed(1) + "px";
-        n.style.top = yAtX(vbX).toFixed(1) + "px";
+        setSt(n, "left", (vbX / VBW * jw).toFixed(1) + "px");
+        setSt(n, "top", yAtX(vbX).toFixed(1) + "px");
         // Pop in one-by-one as the drawing frontier sweeps past each node (so the
         // first node appears, then the second…); once fully drawn all are present.
         n.classList.toggle("flow-journey__node--in", drawP >= 1 || vbX <= drawnX + 6);
@@ -1206,8 +1251,12 @@
     // the scroll-slide (sceneScrolled) or the cursor parallax still easing (mTY≠mCY) —
     // so is-active follows the moving card even when the pointer itself is still.
     // (Deliberate cursor moves are already handled by the pointermove listener.) Gated
-    // to skip the layout flush when nothing under the cursor is moving.
-    if (hoverX >= 0 && (sceneScrolled || Math.abs(mTY - mCY) > 1e-4)) refreshHover();
+    // to skip the layout flush when nothing under the cursor is moving, and throttled —
+    // elementFromPoint forces a style/layout flush, so at most ~11 hit-tests/s from the
+    // loop (pointermove stays immediate); cards drift slowly enough that this tracks.
+    if (hoverX >= 0 && (sceneScrolled || Math.abs(mTY - mCY) > 1e-4) && now - lastHitT > 90) {
+      lastHitT = now; refreshHover();
+    }
 
     requestAnimationFrame(loop);
   }

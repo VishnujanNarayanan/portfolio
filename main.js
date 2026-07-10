@@ -1539,6 +1539,13 @@
       g.restore();
     }
     var t = 0, last = 0, navDark = false, ctaDark = false;   // nav reel + CTA pills now flip TOGETHER at the features-hit threshold
+    // Perf: the field resample (rows×cols cells, noise+exp each) dominates frame cost.
+    // The field is time-driven only (scroll alignment happens at draw time via translate),
+    // and it drifts slowly — so when the cursor repel is idle it's resampled every OTHER
+    // frame. Repel active → full rate so the bubble tracks the pointer. A rows/cols change
+    // (resize) forces a resample so strokeIso never reads a stale-sized grid.
+    var frameNo = 0, fieldRows = -1, fieldCols = -1;
+    var sideCvEl = null;                                 // cached ".term-side-contours" lookup
     function frame(now) {
       var dt = last ? Math.min((now - last) / 1000, 0.05) : 0; last = now;
       t += dt * 0.5;                                     // drift speed
@@ -1551,6 +1558,10 @@
       // Warp kept SMALL and BROAD: big amplitude/short wavelength made the lines wobble
       // lumpily — Lando's curves are dead smooth, so this is just a slow large-scale sway.
       var md = Math.min(W, H), wf = 1.5 / md, warp = md * 0.02;
+      frameNo++;
+      var needField = repel || (frameNo & 1) === 0 || fieldRows !== rows || fieldCols !== cols;
+      if (needField) {
+      fieldRows = rows; fieldCols = cols;
       var bx = [], by = [], br = [], bw2 = [], i, c, r;
       for (i = 0; i < BLOBS.length; i++) {
         var b = BLOBS[i];
@@ -1587,6 +1598,7 @@
           field[r][c] = sum;
         }
       }
+      }                                                  // end needField
       // Flow lightening (shared from flow.js): lt 0 = dark navy world (lines stay
       // blue), lt 1 = light bg by end of zone 4 (canvas filled light, lines INVERT
       // to the darker site blue so they read on the light bg). lt 0 → no fill, so
@@ -1598,7 +1610,10 @@
       var lineCol = "rgba(" + Math.round(lerp(77, 57, lt)) + "," + Math.round(lerp(139, 50, lt)) +
         "," + Math.round(lerp(255, 220, lt)) + "," + lerp(0.3, 0.5, lt).toFixed(2) + ")";
       drawContours(ctx, lineCol, bgFill);                // global: blue → inverted dark-blue on light
-      if (hctx) drawContours(hctx, "#969ba8");           // hero: same blue-grey as end bg → lines vanish at full zoom
+      if (hctx) {                                        // hero: same blue-grey as end bg — skip once scrolled past
+        var hr = hcv.getBoundingClientRect();
+        if (hr.bottom > 0 && hr.top < H) drawContours(hctx, "#969ba8");
+      }
       // Header world flip, handed off from the (light) blog to the (dark) features
       // section: BOTH the nav reel AND the CTA pills switch together the MOMENT the
       // features section hits its threshold — rect.top ≤ 0, i.e. when its dark navy
@@ -1622,8 +1637,9 @@
       }
       // Blog canvas: solid light blue (end-of-zone-4) + dark indigo lines (no gradient).
       if (wctx && writingPin) {
-        var wtop = writingPin.getBoundingClientRect().top;
-        drawContours(wctx, "rgba(57,50,220,0.5)", "rgb(208,225,235)", -wtop);
+        var wr = writingPin.getBoundingClientRect();
+        if (wr.bottom > 0 && wr.top < H)                 // skip while the blog pin is off-screen
+          drawContours(wctx, "rgba(57,50,220,0.5)", "rgb(208,225,235)", -wr.top);
       }
       // Dark content sections (Selected work / Skills / Services): solid dark navy + light-blue lines.
       for (var ds = 0; ds < darkSecs.length; ds++) {
@@ -1661,7 +1677,8 @@
       // "Filter by" sidebar ONLY: same navy + contour lines (the rest of the projects
       // section stays a flat solid fill). The canvas lives inside .term-side; translating
       // by its on-screen rect keeps the lines aligned with the shared viewport field.
-      var sideCv = document.querySelector(".term-side-contours");
+      if (!sideCvEl || !sideCvEl.isConnected) sideCvEl = document.querySelector(".term-side-contours");
+      var sideCv = sideCvEl;
       if (sideCv && sideCv.parentNode) {
         var side = sideCv.parentNode, cw = side.clientWidth, ch = side.scrollHeight;
         if (cw && ch && (sideCv._w !== cw || sideCv._h !== ch)) {
