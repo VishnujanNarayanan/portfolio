@@ -1178,16 +1178,18 @@
     mCY += (mTY - mCY) * 0.05;
     var p = mCY * 2 * 6;            // rem
     // Scroll-momentum column splay — the two columns part vertically (left up / right
-    // down via o.dir) as a function of scroll, with a BLEED, not an ease-back: scroll
-    // feeds VELOCITY into a held offset (mSplay) that keeps drifting the same way while
-    // you scroll; when the scroll stops friction bleeds the velocity so it coasts to a
-    // slow stop and HOLDS there (never snaps back to neutral); reverse the scroll and it
-    // travels back the way it came. dGlobal = signed scroll delta this frame.
-    var SPLAY_IMPULSE = 1.0;       // velocity gained per unit (zone) of scroll
-    var SPLAY_FRICTION = 0.9;      // per-frame velocity bleed once the scroll stops
+    // down via o.dir) as a function of scroll, with a BLEED, not an ease-back. Two
+    // terms: scroll moves the held offset (mSplay) DIRECTLY (SPLAY_GAIN — instant
+    // reaction, no filter lag), while a small velocity tail (splayVel) charges up and
+    // bleeds out through friction when the scroll stops, so it coasts to a slow stop
+    // and HOLDS there (never snaps back to neutral); reverse the scroll and it travels
+    // back the way it came. dGlobal = signed scroll delta this frame.
+    var SPLAY_GAIN = 8;            // rem per zone of scroll, applied immediately
+    var SPLAY_IMPULSE = 3;         // steady-state coast velocity per unit scroll rate (the bleed)
+    var SPLAY_FRICTION = 0.92;     // per-frame bleed of the coast velocity after the scroll stops
     var SPLAY_MAX = 8;             // rem clamp on the held offset
-    splayVel = splayVel * SPLAY_FRICTION + dGlobal * SPLAY_IMPULSE;
-    mSplay = clamp(mSplay + splayVel, -SPLAY_MAX, SPLAY_MAX);
+    splayVel = splayVel * SPLAY_FRICTION + dGlobal * SPLAY_IMPULSE * (1 - SPLAY_FRICTION);
+    mSplay = clamp(mSplay + dGlobal * SPLAY_GAIN + splayVel, -SPLAY_MAX, SPLAY_MAX);
     var pScroll = mSplay;          // rem (held; composes with the hover p above)
     // Per-ROW diagonal — ONLY on the SET-CHANGE swap, NOT the within-zone scroll-slide.
     // The active set scrubs horizontally inside the rest band [L_END, R_END] (that
