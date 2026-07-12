@@ -1184,10 +1184,10 @@
     // bleeds out through friction when the scroll stops, so it coasts to a slow stop
     // and HOLDS there (never snaps back to neutral); reverse the scroll and it travels
     // back the way it came. dGlobal = signed scroll delta this frame.
-    var SPLAY_GAIN = 8;            // rem per zone of scroll, applied immediately
-    var SPLAY_IMPULSE = 3;         // steady-state coast velocity per unit scroll rate (the bleed)
+    var SPLAY_GAIN = 4;            // rem per zone of scroll, applied immediately
+    var SPLAY_IMPULSE = 1.5;       // steady-state coast velocity per unit scroll rate (the bleed)
     var SPLAY_FRICTION = 0.92;     // per-frame bleed of the coast velocity after the scroll stops
-    var SPLAY_MAX = 8;             // rem clamp on the held offset
+    var SPLAY_MAX = 4;             // rem clamp on the held offset
     splayVel = splayVel * SPLAY_FRICTION + dGlobal * SPLAY_IMPULSE * (1 - SPLAY_FRICTION);
     mSplay = clamp(mSplay + dGlobal * SPLAY_GAIN + splayVel, -SPLAY_MAX, SPLAY_MAX);
     var pScroll = mSplay;          // rem (held; composes with the hover p above)

@@ -1151,7 +1151,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .flow-panel--active .flow-panel__content .flow-panel__list{opacity:1;transform:none;transition-delay:.2s}
 
 /* The card grid that replaced the GL image. flow.js pins + fades it. */
-.flow-panel__cards{position:absolute;z-index:4;top:50%;left:50%;width:min(50vw,660px);display:grid;grid-template-columns:1fr 1fr;align-items:start;gap:20px;opacity:0;will-change:transform,opacity}
+.flow-panel__cards{position:absolute;z-index:4;top:50%;left:50%;width:min(44vw,581px);display:grid;grid-template-columns:1fr 1fr;align-items:start;gap:17.6px;opacity:0;will-change:transform,opacity}
 /* Plain SQUARE cards (not the notched .proj-card shape): drop the corner notch and
    the notched SVG frame; use a square inset border that lights up on activation. */
 .flow-panel__cards .proj-card{aspect-ratio:1/1;width:100%;overflow:hidden;border-radius:0;box-shadow:inset 0 0 0 1.5px rgba(124,208,255,.28);transition:box-shadow .35s ease,border-radius .45s cubic-bezier(.19,1,.22,1)}
