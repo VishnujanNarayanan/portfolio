@@ -2227,7 +2227,6 @@
     // image base, notched frame, hover-reveal wipe (clip-path ellipse), blue accent.
     function projectsHtml() {
       var rows = PROJECTS.map(function (p, n) {
-        var tags = p.t.map(function (x) { return '<span class="proj-tag">' + escapeHtml(x) + "</span>"; }).join("");
         // Media links to the subpage if one exists, otherwise straight to GitHub.
         var primary = p.h || p.code || "";
         var ext = !p.h && !!p.code; // github → new tab
@@ -2235,8 +2234,6 @@
           ? '<a class="proj-card__media" href="' + primary + '"' + (ext ? ' target="_blank" rel="noopener"' : "") + ">"
           : '<span class="proj-card__media">';
         var closeA = primary ? "</a>" : "</span>";
-        var cta = p.h ? "View project &rarr;" : "View code &#8599;";
-        var id = (n + 1 < 10 ? "0" : "") + (n + 1);
         // data-tools / data-dom (lowercased, |-joined) let the side-panel filter match.
         var dataF = ' data-tools="|' + p.tools.map(slug).join("|") + '|" data-dom="|' + p.dom.map(slug).join("|") + '|"';
         return '<div class="proj-card"' + dataF + ">" +
@@ -2244,13 +2241,10 @@
             '<img class="proj-card__img" src="' + p.img + '" alt="" loading="lazy">' +
             '<span class="proj-card__reveal">' +
               '<span class="proj-card__desc">' + escapeHtml(p.d) + "</span>" +
-              '<span class="proj-tags">' + tags + "</span>" +
-              '<span class="proj-card__cta">' + cta + "</span>" +
             "</span>" +
           closeA +
           frameSvg("is-base", F_BASE, 2) + frameSvg("is-overlay", F_OVER, 2) +
           '<span class="proj-card__label">' +
-            '<span class="proj-card__id">' + id + "</span>" +
             '<span class="proj-card__title">' + escapeHtml(p.n) + "</span>" +
           "</span>" +
           (p.code ? '<a class="proj-card__code" href="' + p.code + '" target="_blank" rel="noopener">View code <span aria-hidden="true">&#8599;</span></a>' : "") +
