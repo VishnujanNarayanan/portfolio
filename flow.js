@@ -1397,11 +1397,12 @@
         if (list) lightSubs.push(list);                  // ul colour cascades to the items (color:inherit)
         return;
       }
+      panel.classList.add("flow-panel--light");          // light-bg zones: darker CLI green on the reel hover
       var ttl = panel.querySelector(".flow-panel__title");
       var idx = panel.querySelector(".flow-panel__index");
       if (ttl) ttl.style.color = "#231d7a";              // deep blue (darker than #3932DC)
       if (idx) idx.style.color = "#231d7a";
-      if (list) list.style.color = "#231d7a";            // deep blue, readable on the light bg
+      if (list) list.style.color = "#3a3a42";            // dark grey (distinct from the navy heading)
     });
   })();
   paintSky(0);
