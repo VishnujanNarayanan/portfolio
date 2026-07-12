@@ -494,9 +494,7 @@
     ]
   ];
   function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-  function cardHtml(c, i, idStr) {
-    var tags = c.t.map(function (x) { return '<span class="proj-tag">' + esc(x) + "</span>"; }).join("");
-    var cta = c.k === "b" ? "Read →" : (c.href ? (c.ext ? "View code ↗" : "View project →") : "Project");
+  function cardHtml(c, i) {
     var face = c.k === "b"
       ? '<span class="proj-card__shot" aria-hidden="true"></span>'
       : '<img class="proj-card__img" src="' + c.img + '" alt="" loading="lazy">';
@@ -504,11 +502,9 @@
     var closeA = c.href ? "</a>" : "</span>";
     return '<div class="proj-card flow-pcard' + (c.k === "b" ? " proj-card--blog" : "") + '" data-card="' + i + '">' +
       openA + face +
-        '<span class="proj-card__reveal"><span class="proj-card__desc">' + esc(c.d) + "</span>" +
-          '<span class="proj-tags">' + tags + "</span>" +
-          '<span class="proj-card__cta">' + cta + "</span></span>" +
+        '<span class="proj-card__reveal"><span class="proj-card__desc">' + esc(c.d) + "</span></span>" +
       closeA +
-      '<span class="proj-card__label"><span class="proj-card__id">' + idStr + "</span>" +
+      '<span class="proj-card__label">' +
         '<span class="proj-card__title">' + esc(c.n) + "</span></span>" +
     "</div>";
   }
@@ -516,7 +512,7 @@
     var pi = parseInt(grid.getAttribute("data-panel"), 10) || 0;
     var data = CARD_DATA[pi] || [];
     grid.innerHTML = data.map(function (c, i) {
-      return cardHtml(c, i, ("0" + (pi + 1)) + "." + (i + 1));
+      return cardHtml(c, i);
     }).join("");
   });
   // Hover coupling — hovering a card OR its matching text item activates BOTH (the
