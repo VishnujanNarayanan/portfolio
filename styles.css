@@ -679,10 +679,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    animation closes it on hover/active to expose the full-colour photo. */
 .proj-card__reveal{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;padding:22px;background:linear-gradient(160deg,rgba(28,31,42,.72),rgba(56,61,80,.92));clip-path:polygon(0% -14%,12.5% -7.9%,25% -3.5%,37.5% -0.9%,50% 0%,62.5% -0.9%,75% -3.5%,87.5% -7.9%,100% -14%,100% 100%,0% 100%);transition:clip-path .32s cubic-bezier(.4,0,.2,1)}
 .proj-card:hover .proj-card__reveal,.proj-card:focus-within .proj-card__reveal{clip-path:polygon(0% 100%,12.5% 100%,25% 100%,37.5% 100%,50% 100%,62.5% 100%,75% 100%,87.5% 100%,100% 100%,100% 100%,0% 100%);transition:clip-path .65s cubic-bezier(.19,1,.22,1)}
-.proj-card__desc{font-size:13.5px;line-height:1.55;color:#eaf0ff}
-.proj-card__reveal .proj-tags{display:flex;flex-wrap:wrap;gap:6px}
-.proj-card__reveal .proj-tag{font-size:11px;padding:2px 9px;border:1px solid rgba(159,198,239,.4);border-radius:999px;color:#cfe0ff}
-.proj-card__cta{font-size:12px;font-weight:600;letter-spacing:.4px;color:#7fd0ff;text-transform:uppercase}
+.proj-card__desc{font-size:13.5px;line-height:1.55;color:#fff}
 /* notched frame (two layers; overlay lights up on hover) */
 .proj-card__frame{position:absolute;inset:0;pointer-events:none;z-index:10}
 .proj-card__frame svg{width:100%;height:100%;display:block}
@@ -692,9 +689,9 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 /* label pinned bottom (title left, index accent right), above the image, below reveal-text */
 /* Title block sits on the taller LEFT portion of the notched frame (the bottom
    step drops only the left side), leaving the raised right shelf for the button. */
-.proj-card__label{position:absolute;left:18px;right:40%;bottom:16px;z-index:5;display:flex;flex-direction:column;align-items:flex-start;gap:2px;pointer-events:none}
-.proj-card__title{font-size:15px;font-weight:600;line-height:1.25;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.5)}
-.proj-card__id{font-size:13px;font-weight:700;letter-spacing:.6px;color:#7fd0ff}
+.proj-card__label{position:absolute;left:18px;right:40%;top:16px;z-index:5;display:flex;flex-direction:column;align-items:flex-start;gap:2px;pointer-events:none}
+.proj-card__title{font-size:15px;font-weight:600;line-height:1.25;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.5);transition:color .3s ease}
+.proj-card:hover .proj-card__title,.proj-card:focus-within .proj-card__title,.proj-card.is-active .proj-card__title{color:#3ddc84}
 /* "View code" button sits IN the bottom-right notch (the cut space the image used to
    spill into) — anchored to that corner and sized to fit the notch band (~9.5% tall). */
 .proj-card__code{position:absolute;right:-1%;bottom:-0.75%;z-index:11;display:inline-flex;align-items:center;gap:4px;padding:4px 11px;font-family:var(--font-ui);font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#bfe0ff;background:rgba(13,22,40,.7);border:1px solid rgba(124,208,255,.4);border-radius:999px;text-decoration:none;pointer-events:auto;transition:color .3s,background .3s,border-color .3s}
@@ -1235,7 +1232,7 @@ html.boot-active{overflow:hidden;height:100%}
 .reel-char{display:inline-block;position:relative;overflow:hidden;vertical-align:top}
 .reel-char__col{display:block;position:relative;transition:transform .2s var(--ease-default);transition-delay:var(--hd-rev,0s);will-change:transform}
 .reel-char__a{display:block;color:inherit}
-.reel-char__c{display:block;position:absolute;left:0;top:100%;width:100%;color:#4d8bff}
+.reel-char__c{display:block;position:absolute;left:0;top:100%;width:100%;color:#3ddc84}
 .flow-panel__item.is-active .reel-char__col,.flow-panel__item:hover .reel-char__col,.flow-panel__item:focus-visible .reel-char__col{transform:translateY(-100%);transition-delay:var(--hd,0s)}
 @media (prefers-reduced-motion:reduce){.reel-char__col{transition:none}}
 
