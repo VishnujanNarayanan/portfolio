@@ -40,11 +40,16 @@
   // reversing back across a threshold un-spawns it and re-activates the previous one.
   var CD_HOME = "~/portfolio-website", CD_DIR = "~/portfolio-website/highlights";
   var CD_CERTS = "~/portfolio-website/certificates";   // cwd the header command is typed from (came from `cd certificates`)
-  var LINE_LEAD = "cd certificates";                 // lead-in row: typed from home across the video zoom-out
-  var LINE_CD = "cd ../highlights && cat scraping";  // header row: typed from ~/certificates across the flow approach
-  var LINE_REV = "cd highlights && cat scraping";    // reverse morph target (from home): `cd certificates` ↔ this on scroll up/down
+  var CD_BLOGS  = "~/portfolio-website/blogs";              // landing prompt dir after the blog handover
+  var LINE_LEAD  = "cd certificates";                   // lead-in row: typed from home across the video zoom-out
+  var LINE_CD    = "cd ../highlights && cat scraping";  // header row: typed from ~/certificates across the flow approach
+  var LINE_REV   = "cd highlights && cat scraping";     // reverse morph target (from home): `cd certificates` ↔ this on scroll up/down
+  var LINE_UP    = "cd ..";                             // last zone types this (done as the zone-4 cards fly out)
+  var LINE_BLOG  = "cd blogs";                          // flow→blog: enter the blog dir (spawned when the cards fly out)
+  var LINE_BLOG_BACK = "cd ../highlights && cat rest-apis"; // reverse of `cd blogs`: back into highlights, cat the last domain
   var cdStack = flow.querySelector(".flow__cd-stack");
   var flowCd = flow.querySelector(".flow__cd");   // CLI wrapper — carries the scroll-darkened colour vars
+  var writingEl = document.getElementById("blog"); // the writing/blog section — drives the exit approach
   // The stack is an APPEND-ONLY terminal log, like a real shell: the `cd highlights`
   // row is committed first, then every zone threshold crossed — forward OR backward —
   // appends a NEW `cat domain N` row UNDER the last one and the whole stack scrolls up.
@@ -63,7 +68,7 @@
   function renderStack() {                            // newest row = cur, one above = prev, rest = past; scroll up
     var rows = [leadRow];
     if (cdHead && cdHead.row.style.display !== "none") rows.push(cdHead);
-    rows = rows.concat(domLines);
+    for (var d = 0; d < domLines.length; d++) if (domLines[d].row.style.display !== "none") rows.push(domLines[d]);
     for (var r = 0; r < rows.length; r++) {
       var cls = "flow__cd-row";
       cls += r === rows.length - 1 ? " flow__cd-row--cur"
@@ -109,7 +114,11 @@
       top = parkTop - rideP * (parkTop - termREST);      // parked bottom-left → ride up, reaching rest at the pin
     }
     else if (rect.bottom >= vhh)  top = termREST;                                   // pinned through the flow section
-    else                          top = termREST - (vhh - rect.bottom);             // flow ending → scroll away with it
+    else {
+      // flow ending — stay sticky as long as the writing/blog section is still visible
+      var wr0 = writingEl ? writingEl.getBoundingClientRect() : null;
+      top = (wr0 && wr0.bottom > 0) ? termREST : termREST - (vhh - rect.bottom);
+    }
     var ts = top.toFixed(1) + "px";
     if (ts !== lastCdTop) { lastCdTop = ts; cdEl.style.top = ts; }
     // No fade-in — the CLI is fully visible as soon as it's positioned (it now sits UNDER the
@@ -148,7 +157,10 @@
   // backward domain (z) going up — so reversing re-types the correct neighbour.
   function dirTarget(z, dir) {
     if (z === 0)     return dir >= 0 ? domFwdTarget(0) : "cd ..";   // back out of highlights on the way up
-    if (z === N - 1) return dir >= 0 ? "" : domainStr(z);
+    // Last zone: types `cd ..` (leave highlights) as its cards fly out — done right at the
+    // pin end. The blog handover then SPAWNS a separate `cd blogs` line; this row is never
+    // edited by it. Both directions target `cd ..` so an in-zone reversal leaves it stable.
+    if (z === N - 1) return LINE_UP;
     return dir >= 0 ? domFwdTarget(z) : domainStr(clamp(z, 0, N));
   }
   // Set up a from→target morph as a MINIMAL edit: keep the longest common prefix,
@@ -208,6 +220,7 @@
     if (certLine) certLine.cmd.textContent = certDisp || LINE_LEAD;
     certLine = null; certDir = 0; certDisp = "";
   }
+
   // inPlace = section pinned; approachP = header typing progress (0..1); gg = globalRaw;
   // heroPB = video zoom-out progress (0..1) driving the lead-in row.
   function driveTerminal(inPlace, approachP, gg, heroPB) {
@@ -344,6 +357,74 @@
     // printed. renderStack styles + scrolls the append-only log up (shared with the
     // approach branch so the pin crossing stays continuous — no reset/snap).
     if (domLines.length) domLines[domLines.length - 1].cmd.textContent = domDisp;
+    renderStack();
+  }
+
+  /* ---------- Flow → blog handover (the mirror of the hero → flow lead-in) ----------
+     `cd ..` is typed by the ZONE ENGINE on the last-zone line (dirTarget(N-1) = LINE_UP),
+     finishing as the pin ends and the zone-4 cards fly out — the handover NEVER touches
+     that line. The moment the pin ends (its bottom edge rising through the viewport = the
+     cards flying out) the handover SPAWNS one NEW line and types `cd blogs`, finishing
+     precisely as the blog panels fly in (writing rect.top ≤ 0.5vh ⟺ flow rect.bottom ≤
+     0.5vh, since .writing sits directly under .flow); then a fresh blogs$ prompt lands.
+     The `cd blogs` line is a DIRECTION-AWARE MORPH (the exact mirror of the hero-side cert
+     reversal): scroll back up and it untypes `cd blogs` and re-types `cd ../highlights &&
+     cat rest-apis` — anchored at wherever you reverse, so it's continuous either way. */
+  var HP_BLOG_END = 0.5;   // `cd blogs` finishes AS the blog panels fly in (ap = 1)
+  var blogHO = null;       // { blogRow, promptRow } while the handover is live
+  var lastHp = -1;         // last hp — for the change-gate + the scroll direction
+  // Minimal-edit morph for the `cd blogs` ↔ `cd ../highlights && cat rest-apis` swap (its
+  // own state so it never collides with the zone engine's domFrom/… or the cert reversal's).
+  var blogFrom = "", blogTarget = "", blogBnd = 0, blogBk = 0, blogFw = 0;
+  var blogDisp = "", blogDir = 1, blogAnchor = 0, blogEnd = 1;
+  function blogSwap(from, target) {
+    blogFrom = from; blogTarget = target;
+    var m = Math.min(from.length, target.length), l = 0;
+    while (l < m && from.charCodeAt(l) === target.charCodeAt(l)) l++;
+    blogBnd = l; blogBk = from.length - l; blogFw = target.length - l;
+  }
+  function blogTextAt(s) {
+    var total = blogBk + blogFw;
+    if (total === 0) return blogTarget;
+    var k = Math.round(clamp(s, 0, 1) * total);
+    return k <= blogBk ? blogFrom.slice(0, blogFrom.length - k)
+                       : blogTarget.slice(0, blogBnd + (k - blogBk));
+  }
+  function teardownHandover() {
+    if (!blogHO) return;
+    [blogHO.blogRow, blogHO.promptRow].forEach(function (r) {
+      var i = domLines.indexOf(r); if (i >= 0) domLines.splice(i, 1);
+      if (r && r.row.parentNode) r.row.parentNode.removeChild(r.row);
+    });
+    blogHO = null; blogDisp = ""; blogDir = 1; lastHp = -1; renderStack();   // reset so a fresh entry spawns forward; `cd ..` line handed back untouched
+  }
+  function driveBlogHandover(flowBottom) {
+    if (!cdStack || window.innerWidth <= 820) return;
+    var vhh = window.innerHeight;
+    var hp = clamp((vhh - flowBottom) / vhh, 0, 1);   // 0 at the pin end (cards flying out) → 1 once flow has fully left
+    if (hp <= 1e-4) { teardownHandover(); return; }   // back inside the pin → the zone engine owns the stack (resets lastHp)
+    if (blogHO && Math.abs(hp - lastHp) < 1e-4) return;            // nothing moved → skip the DOM writes
+    var dir = lastHp < 0 ? 1 : (hp > lastHp + 1e-5 ? 1 : (hp < lastHp - 1e-5 ? -1 : blogDir));
+    lastHp = hp;
+    if (!blogHO) {                                     // cards fly out → SPAWN the new line (never edits an existing one)
+      var blogRow = makeRow(CD_HOME);                  // `~/portfolio-website$ cd blogs`
+      var promptRow = makeRow(CD_BLOGS);               // `~/portfolio-website/blogs$` — the landing prompt
+      blogRow.zone = promptRow.zone = 99;              // ≥2 → typed dark over the light blog bg
+      domLines.push(blogRow); domLines.push(promptRow);
+      blogHO = { blogRow: blogRow, promptRow: promptRow };
+      blogDisp = ""; blogDir = 1; blogSwap("", LINE_BLOG); blogAnchor = 0; blogEnd = 1;
+    }
+    var ap = clamp(hp / HP_BLOG_END, 0, 1);            // 0 at cards-fly-out → 1 at panels-fly-in
+    // Direction flip → re-swap toward that direction's target, anchored at the current ap:
+    // reversing UP heads to `cd ../highlights && cat rest-apis` (ap→0), forward to `cd blogs`
+    // (ap→1); the shared `cd ` prefix is kept so only the divergent tail un/retypes.
+    if (dir < 0 && blogDir !== -1) { blogDir = -1; blogSwap(blogDisp, LINE_BLOG_BACK); blogAnchor = ap; blogEnd = 0; }
+    else if (dir >= 0 && blogDir !== 1) { blogDir = 1; blogSwap(blogDisp, LINE_BLOG); blogAnchor = ap; blogEnd = 1; }
+    var span = blogEnd - blogAnchor;
+    var s = Math.abs(span) < 1e-6 ? 1 : (ap - blogAnchor) / span;
+    blogDisp = blogTextAt(s);
+    blogHO.blogRow.cmd.textContent = blogDisp;
+    blogHO.promptRow.row.style.display = (blogDir === 1 && ap >= 1) ? "" : "none";   // blogs$ shows once `cd blogs` lands
     renderStack();
   }
 
@@ -879,7 +960,15 @@
       requestAnimationFrame(loop);
       return;
     }
-    if (rect.bottom <= 0) { requestAnimationFrame(loop); return; }
+    if (rect.bottom <= 0) {
+      // Flow is completely past — the blog handover is at its landed state (cd .. + cd blogs
+      // done, blogs$ prompt showing; hp clamps to 1). Keep it driven so scrolling back up
+      // untypes it, and keep the terminal sticky while the blog is on screen (positionTerminal
+      // decides sticky-vs-scroll-away via the writing rect; it leaves once writing scrolls past).
+      positionTerminal(rect);
+      driveBlogHandover(rect.bottom);
+      requestAnimationFrame(loop); return;
+    }
     var total = rect.height - vh;
     var scrolled = clamp(-rect.top, 0, total);
     var progress = total > 0 ? scrolled / total : 0;
@@ -910,7 +999,10 @@
     var yeHero = window.__heroY ? window.__heroY(window.scrollY, vh) : window.scrollY;
     var heroPB = clamp((yeHero - vh) / vh, 0, 1);
     positionTerminal(rect);
-    driveTerminal(inPlace, approachP, globalRaw, heroPB);
+    // Past the pin (bottom edge rising, zone-4 cards flying out) the blog handover owns the
+    // stack — it types `cd ..` → `cd blogs` → blogs$; at/before the pin the zone engine does.
+    if (inPlace && rect.bottom < vh) { driveBlogHandover(rect.bottom); }
+    else { teardownHandover(); driveTerminal(inPlace, approachP, globalRaw, heroPB); }
     var dGlobal = globalRaw - lastGlobalRaw;                         // signed scroll delta this frame (zones)
     var sceneScrolled = Math.abs(globalRaw - lastGlobalRaw) > 1e-4;  // cards slid this frame
     if (globalRaw > lastGlobalRaw + 1e-4) scrollDir = 1;
