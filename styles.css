@@ -758,7 +758,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .cert-slide__loop{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
 /* "Open ↗" caption — opens the original PDF in a new tab (the image is the render). */
 .cert-slide__open{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);white-space:nowrap;padding:8px 16px;border-radius:var(--radius-full);background:#0504190d;backdrop-filter:blur(6px);font-family:var(--font-ui);font-size:var(--text-xs);letter-spacing:var(--tracking-wide);text-transform:uppercase;color:var(--color-text);opacity:.85;transition:opacity .3s var(--ease-default),color .3s var(--ease-default)}
-@media (pointer:fine){.cert-slide__open:hover{opacity:1;color:#4d8bff}}
+@media (pointer:fine){.cert-slide__open:hover{opacity:1;color:#3ddc84}}
 .cert-cta__svg{display:block;width:100%;height:auto;overflow:visible;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
 /* The cursive letters are a FILLED path, revealed by a mask built from the traced
    centre-line PEN PATH (.cert-cta__seg, ordered by writing order). main.js sequences the
