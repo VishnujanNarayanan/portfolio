@@ -40,11 +40,19 @@
   // reversing back across a threshold un-spawns it and re-activates the previous one.
   var CD_HOME = "~/portfolio-website", CD_DIR = "~/portfolio-website/highlights";
   var CD_CERTS = "~/portfolio-website/certificates";   // cwd the header command is typed from (came from `cd certificates`)
-  var LINE_LEAD = "cd certificates";                 // lead-in row: typed from home across the video zoom-out
-  var LINE_CD = "cd ../highlights && cat scraping";  // header row: typed from ~/certificates across the flow approach
-  var LINE_REV = "cd highlights && cat scraping";    // reverse morph target (from home): `cd certificates` ↔ this on scroll up/down
+  var CD_BLOGS  = "~/portfolio-website/blogs";              // landing prompt dir after the blog handover
+  var LINE_LEAD  = "cd certificates";                   // lead-in row: typed from home across the video zoom-out
+  var LINE_CD    = "cd ../highlights && cat scraping";  // header row: typed from ~/certificates across the flow approach
+  var LINE_REV   = "cd highlights && cat scraping";     // reverse morph target (from home): `cd certificates` ↔ this on scroll up/down
+  var LINE_UP    = "cd ..";                             // last zone types this (done as the zone-4 cards fly out)
+  var LINE_BLOG  = "cd blogs";                          // flow→blog: enter the blog dir (spawned when the cards fly out)
+  // Two back-strings — the `../` differs by the line's prompt/cwd, exactly like the hero side
+  // (LINE_REV `cd highlights…` from home vs LINE_CD `cd ../highlights…` from ~/certificates):
+  var LINE_BLOG_BACK_PRE  = "cd highlights && cat rest-apis";    // PRE-commit morph of `cd blogs` (its prompt is ~/portfolio-website$ → no `../`)
+  var LINE_BLOG_BACK_POST = "cd ../highlights && cat rest-apis"; // POST-commit reverse, typed INTO the blogs$ line (~/…/blogs$ → needs `../`)
   var cdStack = flow.querySelector(".flow__cd-stack");
   var flowCd = flow.querySelector(".flow__cd");   // CLI wrapper — carries the scroll-darkened colour vars
+  var writingEl = document.getElementById("blog"); // the writing/blog section — drives the exit approach
   // The stack is an APPEND-ONLY terminal log, like a real shell: the `cd highlights`
   // row is committed first, then every zone threshold crossed — forward OR backward —
   // appends a NEW `cat domain N` row UNDER the last one and the whole stack scrolls up.
@@ -63,7 +71,7 @@
   function renderStack() {                            // newest row = cur, one above = prev, rest = past; scroll up
     var rows = [leadRow];
     if (cdHead && cdHead.row.style.display !== "none") rows.push(cdHead);
-    rows = rows.concat(domLines);
+    for (var d = 0; d < domLines.length; d++) if (domLines[d].row.style.display !== "none") rows.push(domLines[d]);
     for (var r = 0; r < rows.length; r++) {
       var cls = "flow__cd-row";
       cls += r === rows.length - 1 ? " flow__cd-row--cur"
@@ -109,7 +117,11 @@
       top = parkTop - rideP * (parkTop - termREST);      // parked bottom-left → ride up, reaching rest at the pin
     }
     else if (rect.bottom >= vhh)  top = termREST;                                   // pinned through the flow section
-    else                          top = termREST - (vhh - rect.bottom);             // flow ending → scroll away with it
+    else {
+      // flow ending — stay sticky as long as the writing/blog section is still visible
+      var wr0 = writingEl ? writingEl.getBoundingClientRect() : null;
+      top = (wr0 && wr0.bottom > 0) ? termREST : termREST - (vhh - rect.bottom);
+    }
     var ts = top.toFixed(1) + "px";
     if (ts !== lastCdTop) { lastCdTop = ts; cdEl.style.top = ts; }
     // No fade-in — the CLI is fully visible as soon as it's positioned (it now sits UNDER the
@@ -148,7 +160,10 @@
   // backward domain (z) going up — so reversing re-types the correct neighbour.
   function dirTarget(z, dir) {
     if (z === 0)     return dir >= 0 ? domFwdTarget(0) : "cd ..";   // back out of highlights on the way up
-    if (z === N - 1) return dir >= 0 ? "" : domainStr(z);
+    // Last zone (mirror of zone 0): forward types `cd ..` (leave highlights) held until the
+    // zone centre then over the second half; backward re-types its own domain (`cat infra`),
+    // so scrolling back up through it counts the domains down like every interior zone.
+    if (z === N - 1) return dir >= 0 ? LINE_UP : domainStr(z);
     return dir >= 0 ? domFwdTarget(z) : domainStr(clamp(z, 0, N));
   }
   // Set up a from→target morph as a MINIMAL edit: keep the longest common prefix,
@@ -208,6 +223,7 @@
     if (certLine) certLine.cmd.textContent = certDisp || LINE_LEAD;
     certLine = null; certDir = 0; certDisp = "";
   }
+
   // inPlace = section pinned; approachP = header typing progress (0..1); gg = globalRaw;
   // heroPB = video zoom-out progress (0..1) driving the lead-in row.
   function driveTerminal(inPlace, approachP, gg, heroPB) {
@@ -304,17 +320,18 @@
       // Threshold crossed — PRINT a fresh new line UNDER the last and type the whole
       // command from empty toward this zone's DIRECTION-AWARE target (dirTarget): forward
       // types the forward domain (e.g. zone 1 → `cat ai-ml`), backward the backward one
-      // (count DOWN — zone 3 → `cat ai-ml`, zone 2 → `cat scraping`). Boundary zones type
-      // toward the interior only, so the crossing INTO the first zone going back, or INTO
-      // the last zone going forward, prints an EMPTY line (nothing to type — you leave).
+      // (count DOWN — zone 3 → `cat ai-ml`, zone 2 → `cat scraping`). The two boundary zones
+      // type `cd ..` toward the OUTSIDE (zone 1 back, last zone forward) — held empty until
+      // the zone centre, then typed over the second half (see below).
       // Going back appends below just like forward; the stack only ever scrolls up.
       var ln = makeRow(CD_DIR); ln.zone = z; domLines.push(ln);
       setSwap("", dirTarget(z, domDir));
-      if (z === 0 && domDir < 0) {
-        // Zone 1 scrolling BACK: hold empty until HALFWAY (the zone centre), then type
-        // `cd ..` over the second half (char-capped) — go back up a dir before you leave.
-        var e0 = Math.min(Math.abs(thr - z), (domBack + domFwd) * DOM_PER_CHAR);
-        domStartG = z; domEndG = z + (thr >= z ? e0 : -e0); domDisp = "";
+      if ((z === 0 && domDir < 0) || (z === N - 1 && domDir >= 0)) {
+        // Boundary zone LEAVING (zone 1 back → `cd ..` up; last zone forward → `cd ..` down):
+        // hold empty until HALFWAY (the zone centre), then type `cd ..` over the second half
+        // (char-capped) — the exit command lands just before you leave the dir.
+        var eB = Math.min(Math.abs(thr - z), (domBack + domFwd) * DOM_PER_CHAR);
+        domStartG = z; domEndG = z + (thr >= z ? eB : -eB); domDisp = "";
       } else {
         domStartG = gg; domEndG = thr; domDisp = "";
       }
@@ -344,6 +361,90 @@
     // printed. renderStack styles + scrolls the append-only log up (shared with the
     // approach branch so the pin crossing stays continuous — no reset/snap).
     if (domLines.length) domLines[domLines.length - 1].cmd.textContent = domDisp;
+    renderStack();
+  }
+
+  /* ---------- Flow → blog handover (the mirror of the hero → flow lead-in) ----------
+     `cd ..` is typed by the ZONE ENGINE on the last-zone line (dirTarget(N-1) = LINE_UP),
+     finishing as the pin ends and the zone-4 cards fly out — the handover NEVER touches it.
+     The moment the pin ends the handover SPAWNS one NEW line and types `cd blogs`, finishing
+     precisely as the blog panels fly in (writing rect.top ≤ 0.5vh ⟺ flow rect.bottom ≤
+     0.5vh, since .writing sits directly under .flow); then a fresh blogs$ prompt lands.
+
+     Commit-then-spawn, exactly like the hero-side cert reversal (see driveTerminal):
+      • PRE-COMMIT (threshold NOT yet reached): the `cd blogs` line is still live, so
+        reversing MORPHS IT IN PLACE → `cd highlights && cat rest-apis` (no `../` — it sits
+        at the ~/portfolio-website$ prompt).
+      • COMMIT (threshold reached forward): `cd blogs` freezes, the blogs$ prompt spawns.
+      • POST-COMMIT: the committed `cd blogs` is never edited — reversing types the back
+        command `cd ../highlights && cat rest-apis` INTO that same blogs$ line (no extra
+        line), and re-forwarding untypes it. */
+  var HP_BLOG_END = 0.5;   // `cd blogs` finishes AS the blog panels fly in (bp = 1)
+  var blogHO = null;       // { blogRow, promptRow, committed } while the handover is live
+  var lastHp = -1;         // last hp — for the change-gate + the scroll direction
+  // Minimal-edit morph for the PRE-COMMIT `cd blogs` ↔ `cd ../highlights && cat rest-apis`
+  // swap (its own state so it never collides with the zone engine or the cert reversal).
+  var blogFrom = "", blogTarget = "", blogBnd = 0, blogBk = 0, blogFw = 0;
+  var blogDisp = "", blogDir = 1, blogAnchor = 0, blogEnd = 1;
+  function blogSwap(from, target) {
+    blogFrom = from; blogTarget = target;
+    var m = Math.min(from.length, target.length), l = 0;
+    while (l < m && from.charCodeAt(l) === target.charCodeAt(l)) l++;
+    blogBnd = l; blogBk = from.length - l; blogFw = target.length - l;
+  }
+  function blogTextAt(s) {
+    var total = blogBk + blogFw;
+    if (total === 0) return blogTarget;
+    var k = Math.round(clamp(s, 0, 1) * total);
+    return k <= blogBk ? blogFrom.slice(0, blogFrom.length - k)
+                       : blogTarget.slice(0, blogBnd + (k - blogBk));
+  }
+  // Commit the handover as-is (freeze every line into the append-only log — NOTHING is
+  // removed) and re-arm so re-entering the flow pin spawns a FRESH zone line and a future
+  // forward trip spawns a fresh `cd blogs`. Mirrors line-299 + commitCert on the hero side.
+  function commitHandover() {
+    if (!blogHO) return;
+    blogHO = null; blogDisp = ""; blogDir = 1; lastHp = -1;
+    // Re-entering the flow pin from the blog is always UPWARD → seed the zone engine backward
+    // so it spawns the last zone's `cat infra` line (not a `cd ..` flash) and re-spawns fresh.
+    domActiveZ = -1; domDisp = ""; domLastG = null; domDir = -1;
+    renderStack();
+  }
+  function driveBlogHandover(flowBottom) {
+    if (!cdStack || window.innerWidth <= 820) return;
+    var vhh = window.innerHeight;
+    var hp = clamp((vhh - flowBottom) / vhh, 0, 1);   // 0 at the pin end (cards flying out) → 1 once flow has fully left
+    if (hp <= 1e-4) { commitHandover(); return; }     // back inside the pin → the zone engine owns the stack
+    if (blogHO && Math.abs(hp - lastHp) < 1e-4) return;   // nothing moved → skip the DOM writes
+    var dir = lastHp < 0 ? 1 : (hp > lastHp + 1e-5 ? 1 : (hp < lastHp - 1e-5 ? -1 : blogDir));
+    var bp = clamp(hp / HP_BLOG_END, 0, 1);           // 0 at cards-fly-out → 1 at panels-fly-in
+    lastHp = hp;
+    domActiveZ = -1; domDisp = ""; domLastG = null;   // keep the zone engine parked while the handover owns the stack
+    if (!blogHO) {                                     // cards fly out → SPAWN the new `cd blogs` line
+      var blogRow = makeRow(CD_HOME); blogRow.zone = 99;   // `~/portfolio-website$ cd blogs`
+      domLines.push(blogRow);
+      blogHO = { blogRow: blogRow, promptRow: null, committed: false };
+      blogDisp = ""; blogDir = 1; blogSwap("", LINE_BLOG); blogAnchor = 0; blogEnd = 1;
+    }
+    if (!blogHO.committed) {
+      // PRE-COMMIT — the cd blogs line morphs in place (cd blogs ↔ cd highlights && cat rest-apis).
+      if (dir < 0 && blogDir !== -1) { blogDir = -1; blogSwap(blogDisp, LINE_BLOG_BACK_PRE); blogAnchor = bp; blogEnd = 0; }
+      else if (dir >= 0 && blogDir !== 1) { blogDir = 1; blogSwap(blogDisp, LINE_BLOG); blogAnchor = bp; blogEnd = 1; }
+      var span = blogEnd - blogAnchor;
+      blogDisp = blogTextAt(Math.abs(span) < 1e-6 ? 1 : (bp - blogAnchor) / span);
+      blogHO.blogRow.cmd.textContent = blogDisp;
+      if (blogDir === 1 && bp >= 1) {                 // threshold reached forward → COMMIT (freeze + land the prompt)
+        blogHO.blogRow.cmd.textContent = LINE_BLOG;
+        blogHO.promptRow = makeRow(CD_BLOGS); blogHO.promptRow.zone = 99;   // `~/portfolio-website/blogs$` — the ONE new line
+        domLines.push(blogHO.promptRow);
+        blogHO.committed = true;
+      }
+    } else {
+      // POST-COMMIT — `cd blogs` is frozen and never edited. Reversing types the back command
+      // INTO the blogs$ line spawned at the threshold (no extra line); re-forwarding untypes it.
+      var up = clamp(1 - bp, 0, 1);                   // 0 at the landing → 1 back at the pin
+      blogHO.promptRow.cmd.textContent = LINE_BLOG_BACK_POST.slice(0, Math.round(up * LINE_BLOG_BACK_POST.length));
+    }
     renderStack();
   }
 
@@ -879,7 +980,15 @@
       requestAnimationFrame(loop);
       return;
     }
-    if (rect.bottom <= 0) { requestAnimationFrame(loop); return; }
+    if (rect.bottom <= 0) {
+      // Flow is completely past — the blog handover is at its landed state (cd .. + cd blogs
+      // done, blogs$ prompt showing; hp clamps to 1). Keep it driven so scrolling back up
+      // untypes it, and keep the terminal sticky while the blog is on screen (positionTerminal
+      // decides sticky-vs-scroll-away via the writing rect; it leaves once writing scrolls past).
+      positionTerminal(rect);
+      driveBlogHandover(rect.bottom);
+      requestAnimationFrame(loop); return;
+    }
     var total = rect.height - vh;
     var scrolled = clamp(-rect.top, 0, total);
     var progress = total > 0 ? scrolled / total : 0;
@@ -910,7 +1019,10 @@
     var yeHero = window.__heroY ? window.__heroY(window.scrollY, vh) : window.scrollY;
     var heroPB = clamp((yeHero - vh) / vh, 0, 1);
     positionTerminal(rect);
-    driveTerminal(inPlace, approachP, globalRaw, heroPB);
+    // Past the pin (bottom edge rising, zone-4 cards flying out) the blog handover owns the
+    // stack — it types `cd ..` → `cd blogs` → blogs$; at/before the pin the zone engine does.
+    if (inPlace && rect.bottom < vh) { driveBlogHandover(rect.bottom); }
+    else { commitHandover(); driveTerminal(inPlace, approachP, globalRaw, heroPB); }
     var dGlobal = globalRaw - lastGlobalRaw;                         // signed scroll delta this frame (zones)
     var sceneScrolled = Math.abs(globalRaw - lastGlobalRaw) > 1e-4;  // cards slid this frame
     if (globalRaw > lastGlobalRaw + 1e-4) scrollDir = 1;
