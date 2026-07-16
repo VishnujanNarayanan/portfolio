@@ -2,6 +2,15 @@
 <html lang="en-US" class="lenis no-js">
 <head>
 <meta charset="UTF-8">
+<script>
+  // Always load/refresh at the top (home), never restore a previous scroll or jump to
+  // a #hash left in the URL (e.g. after clicking a nav anchor then refreshing).
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  if (window.location.hash) {
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+  }
+  window.scrollTo(0, 0);
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="format-detection" content="telephone=no">
 <title>Vishnujan Narayanan | Data &amp; Backend Engineer</title>
@@ -55,7 +64,7 @@
     <a href="#projects">Projects</a>
     <a href="#skills">Skills</a>
     <a href="#contact">Contact</a>
-    <a href="blog/index.html">Blog</a>
+    <a href="#blog">Blog</a>
   </nav>
   <nav class="header__nav-right" aria-label="Header actions">
     <div class="header__ctas">
@@ -83,7 +92,7 @@
         <li class="mobile-nav__item"><a href="#projects">Projects</a></li>
         <li class="mobile-nav__item"><a href="#skills">Skills</a></li>
         <li class="mobile-nav__item"><a href="#contact">Contact</a></li>
-        <li class="mobile-nav__item"><a href="blog/index.html">Blog</a></li>
+        <li class="mobile-nav__item"><a href="#blog">Blog</a></li>
       </ul>
       <div class="mobile-nav__ctas">
         <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Hire Me</span></a></div>
@@ -359,8 +368,14 @@
     <section class="writing" id="blog" aria-label="Writing">
       <!-- Pinned stage: panels fly in from the right, scroll-driven (main.js) -->
       <div class="writing__pin">
-      <!-- Left side intentionally empty for now -->
-      <div class="writing__pad" aria-hidden="true"></div>
+      <!-- Left side: section intro (title + description) filling the previously empty pad -->
+      <div class="writing__pad">
+        <div class="writing__intro">
+          <span class="writing__eyebrow">Writing</span>
+          <h2 class="writing__title">Blogs</h2>
+          <p class="writing__desc">Notes from the build — deep dives on data pipelines, applied ML, and the engineering behind shipping systems that hold up in production.</p>
+        </div>
+      </div>
 
       <div class="wstack">
 
