@@ -2,6 +2,15 @@
 <html lang="en-US" class="lenis no-js">
 <head>
 <meta charset="UTF-8">
+<script>
+  // Always load/refresh at the top (home), never restore a previous scroll or jump to
+  // a #hash left in the URL (e.g. after clicking a nav anchor then refreshing).
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  if (window.location.hash) {
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+  }
+  window.scrollTo(0, 0);
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="format-detection" content="telephone=no">
 <title>Vishnujan Narayanan | Data &amp; Backend Engineer</title>
