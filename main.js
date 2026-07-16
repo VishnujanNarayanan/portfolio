@@ -508,9 +508,9 @@
     // VIDEO colour: always a QUICK-SNAP to true colour on hover, and ONLY at the pop (cT≥1 /
     // "100% or more"); below that, hovering doesn't touch the video.
     var hoverAmt = 0, colorRAF = 0, colorLast = 0, HOVER_DUR = 360;   // ms text-blue hover ease (while animating)
-    function mixFill(t) {     // #fff → #4d8bff by t
-      var r = Math.round(255 + (77 - 255) * t), g = Math.round(255 + (139 - 255) * t);
-      return "rgb(" + r + "," + g + ",255)";
+    function mixFill(t) {     // #fff → #3ddc84 (green) by t
+      var r = Math.round(255 + (61 - 255) * t), g = Math.round(255 + (220 - 255) * t), b = Math.round(255 + (132 - 255) * t);
+      return "rgb(" + r + "," + g + "," + b + ")";
     }
     function applyColor() {
       var anim = !reduce && cT < 0.999;                          // still writing → ease; popped → snap
