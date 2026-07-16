@@ -97,11 +97,16 @@
   computeRest();
   window.addEventListener("resize", computeRest);
   var lastCdTop = null;
+  var termH = 0;   // last measured CLI height (read in the ride phase, reused for the exit slide)
+  var lastCdZ = null;
   function positionTerminal(rect) {
     if (!cdEl) return;
     var vhh = window.innerHeight;
     if (window.innerWidth <= 820) { cdEl.style.position = ""; cdEl.style.top = ""; cdEl.style.opacity = ""; lastCdTop = null; return; }
     cdEl.style.position = "fixed";
+    // z-index stays LOW (1) through hero/ride/pin so the CLI sits UNDER the hero video (hidden
+    // until the zoom-out reveals it); it's only lifted above the blog panel during the exit slide.
+    var wantZ = "1";
     var top;
     if (rect.top > 0) {
       // Ride from the park spot up to the resting top-left over the approach window, in
@@ -112,18 +117,33 @@
       // lands top-left EXACTLY as the header finishes typing and the cards fly in.
       // offsetHeight is read ONLY in this phase (the stack is still growing as rows type
       // in); during the pin top is a constant, so the forced layout read is skipped there.
-      var parkTop = vhh - cdEl.offsetHeight - Math.max(vhh * 0.06, 40);
+      var parkTop = vhh - (termH = cdEl.offsetHeight) - Math.max(vhh * 0.06, 40);
       var rideP = clamp((vhh - rect.top) / vhh, 0, 1);
       top = parkTop - rideP * (parkTop - termREST);      // parked bottom-left → ride up, reaching rest at the pin
     }
     else if (rect.bottom >= vhh)  top = termREST;                                   // pinned through the flow section
     else {
-      // flow ending — stay sticky as long as the writing/blog section is still visible
+      // Flow ending — the blog/writing section rises to cover the page. Hold the CLI pinned
+      // at rest until the blog covers 79% of the viewport (its top passes 21% down), then
+      // move it up 1:1 WITH the blog's rise — the same speed as the section itself — so it
+      // reads as attached to the blog, sliding away as it takes the full page. It's never
+      // covered (its z-index sits above the blog panel while sliding).
       var wr0 = writingEl ? writingEl.getBoundingClientRect() : null;
-      top = (wr0 && wr0.bottom > 0) ? termREST : termREST - (vhh - rect.bottom);
+      if (wr0) {
+        var slideStart = vhh * 0.21;                       // blog top at 21% down ⟺ blog covers 79%
+        if (wr0.top < slideStart) {
+          top = termREST - (slideStart - wr0.top);         // 1:1 with the blog's rise → same speed
+          wantZ = "4";                                     // lift above the blog panel while sliding out
+        } else {
+          top = termREST;
+        }
+      } else {
+        top = termREST - (vhh - rect.bottom);
+      }
     }
     var ts = top.toFixed(1) + "px";
     if (ts !== lastCdTop) { lastCdTop = ts; cdEl.style.top = ts; }
+    if (wantZ !== lastCdZ) { lastCdZ = wantZ; cdEl.style.zIndex = wantZ; }
     // No fade-in — the CLI is fully visible as soon as it's positioned (it now sits UNDER the
     // video in z-index, so the video zoom-out reveals it rather than it fading up over the top).
     cdEl.style.opacity = "1";
