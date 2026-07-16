@@ -160,10 +160,10 @@
   // backward domain (z) going up — so reversing re-types the correct neighbour.
   function dirTarget(z, dir) {
     if (z === 0)     return dir >= 0 ? domFwdTarget(0) : "cd ..";   // back out of highlights on the way up
-    // Last zone: types `cd ..` (leave highlights) as its cards fly out — done right at the
-    // pin end. The blog handover then SPAWNS a separate `cd blogs` line; this row is never
-    // edited by it. Both directions target `cd ..` so an in-zone reversal leaves it stable.
-    if (z === N - 1) return LINE_UP;
+    // Last zone (mirror of zone 0): forward types `cd ..` (leave highlights) held until the
+    // zone centre then over the second half; backward re-types its own domain (`cat infra`),
+    // so scrolling back up through it counts the domains down like every interior zone.
+    if (z === N - 1) return dir >= 0 ? LINE_UP : domainStr(z);
     return dir >= 0 ? domFwdTarget(z) : domainStr(clamp(z, 0, N));
   }
   // Set up a from→target morph as a MINIMAL edit: keep the longest common prefix,
@@ -320,17 +320,18 @@
       // Threshold crossed — PRINT a fresh new line UNDER the last and type the whole
       // command from empty toward this zone's DIRECTION-AWARE target (dirTarget): forward
       // types the forward domain (e.g. zone 1 → `cat ai-ml`), backward the backward one
-      // (count DOWN — zone 3 → `cat ai-ml`, zone 2 → `cat scraping`). Boundary zones type
-      // toward the interior only, so the crossing INTO the first zone going back, or INTO
-      // the last zone going forward, prints an EMPTY line (nothing to type — you leave).
+      // (count DOWN — zone 3 → `cat ai-ml`, zone 2 → `cat scraping`). The two boundary zones
+      // type `cd ..` toward the OUTSIDE (zone 1 back, last zone forward) — held empty until
+      // the zone centre, then typed over the second half (see below).
       // Going back appends below just like forward; the stack only ever scrolls up.
       var ln = makeRow(CD_DIR); ln.zone = z; domLines.push(ln);
       setSwap("", dirTarget(z, domDir));
-      if (z === 0 && domDir < 0) {
-        // Zone 1 scrolling BACK: hold empty until HALFWAY (the zone centre), then type
-        // `cd ..` over the second half (char-capped) — go back up a dir before you leave.
-        var e0 = Math.min(Math.abs(thr - z), (domBack + domFwd) * DOM_PER_CHAR);
-        domStartG = z; domEndG = z + (thr >= z ? e0 : -e0); domDisp = "";
+      if ((z === 0 && domDir < 0) || (z === N - 1 && domDir >= 0)) {
+        // Boundary zone LEAVING (zone 1 back → `cd ..` up; last zone forward → `cd ..` down):
+        // hold empty until HALFWAY (the zone centre), then type `cd ..` over the second half
+        // (char-capped) — the exit command lands just before you leave the dir.
+        var eB = Math.min(Math.abs(thr - z), (domBack + domFwd) * DOM_PER_CHAR);
+        domStartG = z; domEndG = z + (thr >= z ? eB : -eB); domDisp = "";
       } else {
         domStartG = gg; domEndG = thr; domDisp = "";
       }
@@ -404,7 +405,9 @@
   function commitHandover() {
     if (!blogHO) return;
     blogHO = null; blogDisp = ""; blogDir = 1; lastHp = -1;
-    domActiveZ = -1; domDisp = ""; domLastG = null;   // zone engine re-spawns on handback (never edits the log)
+    // Re-entering the flow pin from the blog is always UPWARD → seed the zone engine backward
+    // so it spawns the last zone's `cat infra` line (not a `cd ..` flash) and re-spawns fresh.
+    domActiveZ = -1; domDisp = ""; domLastG = null; domDir = -1;
     renderStack();
   }
   function driveBlogHandover(flowBottom) {
