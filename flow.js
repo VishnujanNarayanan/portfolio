@@ -46,7 +46,10 @@
   var LINE_REV   = "cd highlights && cat scraping";     // reverse morph target (from home): `cd certificates` ↔ this on scroll up/down
   var LINE_UP    = "cd ..";                             // last zone types this (done as the zone-4 cards fly out)
   var LINE_BLOG  = "cd blogs";                          // flow→blog: enter the blog dir (spawned when the cards fly out)
-  var LINE_BLOG_BACK = "cd ../highlights && cat rest-apis"; // reverse of `cd blogs`: back into highlights, cat the last domain
+  // Two back-strings — the `../` differs by the line's prompt/cwd, exactly like the hero side
+  // (LINE_REV `cd highlights…` from home vs LINE_CD `cd ../highlights…` from ~/certificates):
+  var LINE_BLOG_BACK_PRE  = "cd highlights && cat rest-apis";    // PRE-commit morph of `cd blogs` (its prompt is ~/portfolio-website$ → no `../`)
+  var LINE_BLOG_BACK_POST = "cd ../highlights && cat rest-apis"; // POST-commit reverse, typed INTO the blogs$ line (~/…/blogs$ → needs `../`)
   var cdStack = flow.querySelector(".flow__cd-stack");
   var flowCd = flow.querySelector(".flow__cd");   // CLI wrapper — carries the scroll-darkened colour vars
   var writingEl = document.getElementById("blog"); // the writing/blog section — drives the exit approach
@@ -362,19 +365,24 @@
 
   /* ---------- Flow → blog handover (the mirror of the hero → flow lead-in) ----------
      `cd ..` is typed by the ZONE ENGINE on the last-zone line (dirTarget(N-1) = LINE_UP),
-     finishing as the pin ends and the zone-4 cards fly out — the handover NEVER touches
-     that line. The moment the pin ends (its bottom edge rising through the viewport = the
-     cards flying out) the handover SPAWNS one NEW line and types `cd blogs`, finishing
+     finishing as the pin ends and the zone-4 cards fly out — the handover NEVER touches it.
+     The moment the pin ends the handover SPAWNS one NEW line and types `cd blogs`, finishing
      precisely as the blog panels fly in (writing rect.top ≤ 0.5vh ⟺ flow rect.bottom ≤
      0.5vh, since .writing sits directly under .flow); then a fresh blogs$ prompt lands.
-     The `cd blogs` line is a DIRECTION-AWARE MORPH (the exact mirror of the hero-side cert
-     reversal): scroll back up and it untypes `cd blogs` and re-types `cd ../highlights &&
-     cat rest-apis` — anchored at wherever you reverse, so it's continuous either way. */
-  var HP_BLOG_END = 0.5;   // `cd blogs` finishes AS the blog panels fly in (ap = 1)
-  var blogHO = null;       // { blogRow, promptRow } while the handover is live
+
+     Commit-then-spawn, exactly like the hero-side cert reversal (see driveTerminal):
+      • PRE-COMMIT (threshold NOT yet reached): the `cd blogs` line is still live, so
+        reversing MORPHS IT IN PLACE → `cd highlights && cat rest-apis` (no `../` — it sits
+        at the ~/portfolio-website$ prompt).
+      • COMMIT (threshold reached forward): `cd blogs` freezes, the blogs$ prompt spawns.
+      • POST-COMMIT: the committed `cd blogs` is never edited — reversing types the back
+        command `cd ../highlights && cat rest-apis` INTO that same blogs$ line (no extra
+        line), and re-forwarding untypes it. */
+  var HP_BLOG_END = 0.5;   // `cd blogs` finishes AS the blog panels fly in (bp = 1)
+  var blogHO = null;       // { blogRow, promptRow, committed } while the handover is live
   var lastHp = -1;         // last hp — for the change-gate + the scroll direction
-  // Minimal-edit morph for the `cd blogs` ↔ `cd ../highlights && cat rest-apis` swap (its
-  // own state so it never collides with the zone engine's domFrom/… or the cert reversal's).
+  // Minimal-edit morph for the PRE-COMMIT `cd blogs` ↔ `cd ../highlights && cat rest-apis`
+  // swap (its own state so it never collides with the zone engine or the cert reversal).
   var blogFrom = "", blogTarget = "", blogBnd = 0, blogBk = 0, blogFw = 0;
   var blogDisp = "", blogDir = 1, blogAnchor = 0, blogEnd = 1;
   function blogSwap(from, target) {
@@ -390,41 +398,50 @@
     return k <= blogBk ? blogFrom.slice(0, blogFrom.length - k)
                        : blogTarget.slice(0, blogBnd + (k - blogBk));
   }
-  function teardownHandover() {
+  // Commit the handover as-is (freeze every line into the append-only log — NOTHING is
+  // removed) and re-arm so re-entering the flow pin spawns a FRESH zone line and a future
+  // forward trip spawns a fresh `cd blogs`. Mirrors line-299 + commitCert on the hero side.
+  function commitHandover() {
     if (!blogHO) return;
-    [blogHO.blogRow, blogHO.promptRow].forEach(function (r) {
-      var i = domLines.indexOf(r); if (i >= 0) domLines.splice(i, 1);
-      if (r && r.row.parentNode) r.row.parentNode.removeChild(r.row);
-    });
-    blogHO = null; blogDisp = ""; blogDir = 1; lastHp = -1; renderStack();   // reset so a fresh entry spawns forward; `cd ..` line handed back untouched
+    blogHO = null; blogDisp = ""; blogDir = 1; lastHp = -1;
+    domActiveZ = -1; domDisp = ""; domLastG = null;   // zone engine re-spawns on handback (never edits the log)
+    renderStack();
   }
   function driveBlogHandover(flowBottom) {
     if (!cdStack || window.innerWidth <= 820) return;
     var vhh = window.innerHeight;
     var hp = clamp((vhh - flowBottom) / vhh, 0, 1);   // 0 at the pin end (cards flying out) → 1 once flow has fully left
-    if (hp <= 1e-4) { teardownHandover(); return; }   // back inside the pin → the zone engine owns the stack (resets lastHp)
-    if (blogHO && Math.abs(hp - lastHp) < 1e-4) return;            // nothing moved → skip the DOM writes
+    if (hp <= 1e-4) { commitHandover(); return; }     // back inside the pin → the zone engine owns the stack
+    if (blogHO && Math.abs(hp - lastHp) < 1e-4) return;   // nothing moved → skip the DOM writes
     var dir = lastHp < 0 ? 1 : (hp > lastHp + 1e-5 ? 1 : (hp < lastHp - 1e-5 ? -1 : blogDir));
+    var bp = clamp(hp / HP_BLOG_END, 0, 1);           // 0 at cards-fly-out → 1 at panels-fly-in
     lastHp = hp;
-    if (!blogHO) {                                     // cards fly out → SPAWN the new line (never edits an existing one)
-      var blogRow = makeRow(CD_HOME);                  // `~/portfolio-website$ cd blogs`
-      var promptRow = makeRow(CD_BLOGS);               // `~/portfolio-website/blogs$` — the landing prompt
-      blogRow.zone = promptRow.zone = 99;              // ≥2 → typed dark over the light blog bg
-      domLines.push(blogRow); domLines.push(promptRow);
-      blogHO = { blogRow: blogRow, promptRow: promptRow };
+    domActiveZ = -1; domDisp = ""; domLastG = null;   // keep the zone engine parked while the handover owns the stack
+    if (!blogHO) {                                     // cards fly out → SPAWN the new `cd blogs` line
+      var blogRow = makeRow(CD_HOME); blogRow.zone = 99;   // `~/portfolio-website$ cd blogs`
+      domLines.push(blogRow);
+      blogHO = { blogRow: blogRow, promptRow: null, committed: false };
       blogDisp = ""; blogDir = 1; blogSwap("", LINE_BLOG); blogAnchor = 0; blogEnd = 1;
     }
-    var ap = clamp(hp / HP_BLOG_END, 0, 1);            // 0 at cards-fly-out → 1 at panels-fly-in
-    // Direction flip → re-swap toward that direction's target, anchored at the current ap:
-    // reversing UP heads to `cd ../highlights && cat rest-apis` (ap→0), forward to `cd blogs`
-    // (ap→1); the shared `cd ` prefix is kept so only the divergent tail un/retypes.
-    if (dir < 0 && blogDir !== -1) { blogDir = -1; blogSwap(blogDisp, LINE_BLOG_BACK); blogAnchor = ap; blogEnd = 0; }
-    else if (dir >= 0 && blogDir !== 1) { blogDir = 1; blogSwap(blogDisp, LINE_BLOG); blogAnchor = ap; blogEnd = 1; }
-    var span = blogEnd - blogAnchor;
-    var s = Math.abs(span) < 1e-6 ? 1 : (ap - blogAnchor) / span;
-    blogDisp = blogTextAt(s);
-    blogHO.blogRow.cmd.textContent = blogDisp;
-    blogHO.promptRow.row.style.display = (blogDir === 1 && ap >= 1) ? "" : "none";   // blogs$ shows once `cd blogs` lands
+    if (!blogHO.committed) {
+      // PRE-COMMIT — the cd blogs line morphs in place (cd blogs ↔ cd highlights && cat rest-apis).
+      if (dir < 0 && blogDir !== -1) { blogDir = -1; blogSwap(blogDisp, LINE_BLOG_BACK_PRE); blogAnchor = bp; blogEnd = 0; }
+      else if (dir >= 0 && blogDir !== 1) { blogDir = 1; blogSwap(blogDisp, LINE_BLOG); blogAnchor = bp; blogEnd = 1; }
+      var span = blogEnd - blogAnchor;
+      blogDisp = blogTextAt(Math.abs(span) < 1e-6 ? 1 : (bp - blogAnchor) / span);
+      blogHO.blogRow.cmd.textContent = blogDisp;
+      if (blogDir === 1 && bp >= 1) {                 // threshold reached forward → COMMIT (freeze + land the prompt)
+        blogHO.blogRow.cmd.textContent = LINE_BLOG;
+        blogHO.promptRow = makeRow(CD_BLOGS); blogHO.promptRow.zone = 99;   // `~/portfolio-website/blogs$` — the ONE new line
+        domLines.push(blogHO.promptRow);
+        blogHO.committed = true;
+      }
+    } else {
+      // POST-COMMIT — `cd blogs` is frozen and never edited. Reversing types the back command
+      // INTO the blogs$ line spawned at the threshold (no extra line); re-forwarding untypes it.
+      var up = clamp(1 - bp, 0, 1);                   // 0 at the landing → 1 back at the pin
+      blogHO.promptRow.cmd.textContent = LINE_BLOG_BACK_POST.slice(0, Math.round(up * LINE_BLOG_BACK_POST.length));
+    }
     renderStack();
   }
 
@@ -1002,7 +1019,7 @@
     // Past the pin (bottom edge rising, zone-4 cards flying out) the blog handover owns the
     // stack — it types `cd ..` → `cd blogs` → blogs$; at/before the pin the zone engine does.
     if (inPlace && rect.bottom < vh) { driveBlogHandover(rect.bottom); }
-    else { teardownHandover(); driveTerminal(inPlace, approachP, globalRaw, heroPB); }
+    else { commitHandover(); driveTerminal(inPlace, approachP, globalRaw, heroPB); }
     var dGlobal = globalRaw - lastGlobalRaw;                         // signed scroll delta this frame (zones)
     var sceneScrolled = Math.abs(globalRaw - lastGlobalRaw) > 1e-4;  // cards slid this frame
     if (globalRaw > lastGlobalRaw + 1e-4) scrollDir = 1;
