@@ -124,16 +124,19 @@
     else if (rect.bottom >= vhh)  top = termREST;                                   // pinned through the flow section
     else {
       // Flow ending — the blog/writing section rises to cover the page. Hold the CLI pinned
-      // at rest until the blog covers 85% of the viewport (its top passes 15% down), then
-      // SLIDE it straight up off the top edge over that last 15% so it exits CONTINUOUSLY —
-      // it's never covered (its z-index now sits above the blog panel), it slides away as the
-      // blog takes the full page.
+      // at rest until the blog covers 79% of the viewport (its top passes 21% down), then
+      // move it up 1:1 WITH the blog's rise — the same speed as the section itself — so it
+      // reads as attached to the blog, sliding away as it takes the full page. It's never
+      // covered (its z-index sits above the blog panel while sliding).
       var wr0 = writingEl ? writingEl.getBoundingClientRect() : null;
       if (wr0) {
-        var slideStart = vhh * 0.15;                       // blog top at 15% down ⟺ blog covers 85%
-        var sp = clamp((slideStart - wr0.top) / slideStart, 0, 1);
-        top = termREST - sp * (termREST + (termH || cdEl.offsetHeight)); // rest → fully above the top edge
-        if (sp > 0) wantZ = "4";                            // lift above the blog panel while sliding out
+        var slideStart = vhh * 0.21;                       // blog top at 21% down ⟺ blog covers 79%
+        if (wr0.top < slideStart) {
+          top = termREST - (slideStart - wr0.top);         // 1:1 with the blog's rise → same speed
+          wantZ = "4";                                     // lift above the blog panel while sliding out
+        } else {
+          top = termREST;
+        }
       } else {
         top = termREST - (vhh - rect.bottom);
       }
