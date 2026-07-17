@@ -48,10 +48,10 @@
       ["pandas",       "images/flow/processing-storage.jpg"],
       ["scikit-learn", "images/flow/ml-analysis.jpg"],
       ["matplotlib",   "images/flow/build-ship.jpg"],
-      ["fastapi",      "images/heading_area.png"],
-      ["uvicorn",      "images/messages_part.png"],
-      ["pydantic",     "images/product_image.png"],
-      ["httpx",        "images/bottom_part.png"]
+      ["fastapi",      "images/heading_area.webp"],
+      ["uvicorn",      "images/messages_part.webp"],
+      ["pydantic",     "images/product_image.webp"],
+      ["httpx",        "images/bottom_part.webp"]
     ];
 
     function loadImage(src) {
@@ -82,8 +82,28 @@
     tasks.push(["opencv-python", loadVideo("videos/interview_office.mp4")]);
     IMG.forEach(function (p) { tasks.push([p[0], loadImage(p[1])]); });
 
-    var total = tasks.length, resolved = 0;
-    var assetsReady = Promise.all(tasks.map(function (t) { return t[1]; }));
+    // Warm EVERY image the page references — not just the curated first-view set — so
+    // nothing decodes on-scroll later (the usual source of mid-scroll jank on the socials/
+    // skills/section art, all loading="lazy"). Collected from the live DOM (main.js is
+    // deferred, so the markup is fully parsed) plus images/footer-blobs.svg, which the
+    // contour canvas fetches at runtime. Same 8s/asset cap as loadImage + the 14s hard cap
+    // below keep a slow or cross-origin asset from stalling the reveal.
+    function collectWarmUrls() {
+      var seen = {}, urls = [];
+      function add(u) { if (u && !seen[u]) { seen[u] = 1; urls.push(u); } }
+      Array.prototype.forEach.call(document.querySelectorAll("img[src]"),   function (im) { add(im.getAttribute("src")); });
+      Array.prototype.forEach.call(document.querySelectorAll("[data-src]"), function (el) { add(el.getAttribute("data-src")); });
+      add("images/footer-blobs.svg"); // fetched by the contour canvas at runtime
+      add("images/footer-mask.svg");  // CSS background-image (not an <img>, so add explicitly)
+      return urls;
+    }
+    var warmTasks = collectWarmUrls().map(function (u) { return loadImage(u); });
+
+    // One readiness pool: the typed critical tasks + every other page image. The bar and
+    // the reveal gate both track it, so the loader stays up until the whole page is warm.
+    var gate = tasks.map(function (t) { return t[1]; }).concat(warmTasks);
+    var total = gate.length, resolved = 0;
+    var assetsReady = Promise.all(gate);
 
     function setPct(f) {
       var p = Math.max(0, Math.min(100, Math.round(f * 100)));
@@ -107,7 +127,7 @@
     // Progress bar = overall readiness: the SLOWER of "time toward the minimum"
     // and "critical assets loaded", so it only reaches 100% right as we reveal
     // (not the instant the fast/cached assets resolve).
-    tasks.forEach(function (t) { t[1].then(function () { resolved++; }); });
+    gate.forEach(function (p) { p.then(function () { resolved++; }); });
     var barTimer = setInterval(function () {
       var tp = Math.min(1, (now() - start) / MIN_MS);
       var ap = resolved / total;
@@ -133,7 +153,7 @@
       { cwd: DIR, cmd: "pip install -r requirements.txt", out:
         collecting.concat([
           "Building wheels for collected packages: numpy, pandas, scikit-learn ... done",
-          "Successfully installed " + total + " packages" ]) }
+          "Successfully installed " + tasks.length + " packages" ]) }
     ];
 
     var OUT  = reduce ? 0 : 16;   // ms between output lines
@@ -211,12 +231,12 @@
     window.__bootReady.then(function () {
       var idle = window.requestIdleCallback || function (cb) { return setTimeout(cb, 1); };
       idle(function () {
-        ["images/certificates/dsa-python.png",
-         "images/certificates/google-advanced-data-scientist.png",
-         "images/certificates/google-capstone.png",
-         "images/certificates/ibm-generative-ai.png",
-         "images/certificates/intro-database-systems.png",
-         "images/certificates/modern-cpp.png"].forEach(function (s) { var im = new Image(); im.src = s; });
+        ["images/certificates/dsa-python.webp",
+         "images/certificates/google-advanced-data-scientist.webp",
+         "images/certificates/google-capstone.webp",
+         "images/certificates/ibm-generative-ai.webp",
+         "images/certificates/intro-database-systems.webp",
+         "images/certificates/modern-cpp.webp"].forEach(function (s) { var im = new Image(); im.src = s; });
         ["videos/pullout_animation.mp4", "videos/recieve_animation.mp4"].forEach(function (s) {
           var v = document.querySelector('video[src="' + s + '"]');
           if (v) { v.preload = "auto"; try { v.load(); } catch (e) {} }
@@ -612,12 +632,12 @@
     // The certificates are shown as PNGs (rendered from the PDFs, page 1) so they display full
     // size cleanly; each keeps an "Open ↗" link to the original PDF. ----
     var CERT_DOCS = [
-      { img: "images/certificates/google-advanced-data-scientist.png", pdf: "images/certificates/GOOGLE ADVANCED DATA SCIENTIST N8G3041EJ7M6.pdf",    title: "Google Advanced Data Scientist" },
-      { img: "images/certificates/google-capstone.png",             pdf: "images/certificates/Google_capstone.pdf",                                  title: "Google Capstone" },
-      { img: "images/certificates/ibm-generative-ai.png",           pdf: "images/certificates/IBM Generative AI Engineering Coursera 8R9Q0WU9IB5G.pdf", title: "IBM Generative AI Engineering" },
-      { img: "images/certificates/dsa-python.png",                  pdf: "images/certificates/Data Structures and Algorithms Using Python.pdf",       title: "Data Structures & Algorithms (Python)" },
-      { img: "images/certificates/intro-database-systems.png",      pdf: "images/certificates/Introduction to Database systems.pdf",                  title: "Introduction to Database Systems" },
-      { img: "images/certificates/modern-cpp.png",                  pdf: "images/certificates/Programming in modern C++.pdf",                         title: "Programming in Modern C++" }
+      { img: "images/certificates/google-advanced-data-scientist.webp", pdf: "images/certificates/GOOGLE ADVANCED DATA SCIENTIST N8G3041EJ7M6.pdf",    title: "Google Advanced Data Scientist" },
+      { img: "images/certificates/google-capstone.webp",             pdf: "images/certificates/Google_capstone.pdf",                                  title: "Google Capstone" },
+      { img: "images/certificates/ibm-generative-ai.webp",           pdf: "images/certificates/IBM Generative AI Engineering Coursera 8R9Q0WU9IB5G.pdf", title: "IBM Generative AI Engineering" },
+      { img: "images/certificates/dsa-python.webp",                  pdf: "images/certificates/Data Structures and Algorithms Using Python.pdf",       title: "Data Structures & Algorithms (Python)" },
+      { img: "images/certificates/intro-database-systems.webp",      pdf: "images/certificates/Introduction to Database systems.pdf",                  title: "Introduction to Database Systems" },
+      { img: "images/certificates/modern-cpp.webp",                  pdf: "images/certificates/Programming in modern C++.pdf",                         title: "Programming in Modern C++" }
     ];
     var gallery = document.querySelector(".cert-gallery");
     var galleryScroll = gallery && gallery.querySelector(".cert-gallery__scroll");
@@ -1693,9 +1713,31 @@
           scg.fillStyle = "rgb(27,34,54)"; scg.fillRect(0, 0, cw, ch);
         }
       }
-      if (!reduce) requestAnimationFrame(frame);
+      if (!reduce && ioVisible.size > 0 && !document.hidden) requestAnimationFrame(frame);
+      else running = false;
     }
-    requestAnimationFrame(frame);
+
+    // Suspend the loop FULLY when none of the contour host sections are on screen (deep in
+    // socials/footer) or the tab is hidden — instead of spinning a full field resample +
+    // multi-canvas redraw every frame across the whole page. An IntersectionObserver tracks
+    // the hosts (the shared plane behind hero+flow, the blog, and the dark content sections);
+    // the loop re-arms the moment any re-enters (200px early) or the tab becomes visible.
+    var running = false, ioVisible = new Set();
+    function kick() { if (!running && !reduce && !document.hidden) { running = true; last = 0; requestAnimationFrame(frame); } }
+    var hosts = [heroBg, document.querySelector(".flow"), writingPin]
+      .concat(darkSecs.map(function (d) { return d.el; }))
+      .filter(Boolean);
+    if ("IntersectionObserver" in window && hosts.length) {
+      var cio = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { if (e.isIntersecting) ioVisible.add(e.target); else ioVisible.delete(e.target); });
+        if (ioVisible.size > 0) kick();
+      }, { rootMargin: "200px 0px 200px 0px" });
+      hosts.forEach(function (el) { cio.observe(el); });
+    } else {
+      hosts.forEach(function (el) { ioVisible.add(el); });   // no IO support → always-on fallback
+    }
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) kick(); });
+    kick();
   })();
 
   /* ---------- IntersectionObserver reveals ---------- */
