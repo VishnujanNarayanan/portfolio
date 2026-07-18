@@ -627,12 +627,12 @@
     // The certificates are shown as PNGs (rendered from the PDFs, page 1) so they display full
     // size cleanly; each keeps an "Open ↗" link to the original PDF. ----
     var CERT_DOCS = [
-      { img: "images/certificates/google-advanced-data-scientist.webp", pdf: "images/certificates/GOOGLE ADVANCED DATA SCIENTIST N8G3041EJ7M6.pdf",    title: "Google Advanced Data Scientist" },
-      { img: "images/certificates/google-capstone.webp",             pdf: "images/certificates/Google_capstone.pdf",                                  title: "Google Capstone" },
-      { img: "images/certificates/ibm-generative-ai.webp",           pdf: "images/certificates/IBM Generative AI Engineering Coursera 8R9Q0WU9IB5G.pdf", title: "IBM Generative AI Engineering" },
       { img: "images/certificates/dsa-python.webp",                  pdf: "images/certificates/Data Structures and Algorithms Using Python.pdf",       title: "Data Structures & Algorithms (Python)" },
+      { img: "images/certificates/ibm-generative-ai.webp",           pdf: "images/certificates/IBM Generative AI Engineering Coursera 8R9Q0WU9IB5G.pdf", title: "IBM Generative AI Engineering" },
       { img: "images/certificates/intro-database-systems.webp",      pdf: "images/certificates/Introduction to Database systems.pdf",                  title: "Introduction to Database Systems" },
-      { img: "images/certificates/modern-cpp.webp",                  pdf: "images/certificates/Programming in modern C++.pdf",                         title: "Programming in Modern C++" }
+      { img: "images/certificates/google-advanced-data-scientist.webp", pdf: "images/certificates/GOOGLE ADVANCED DATA SCIENTIST N8G3041EJ7M6.pdf",    title: "Google Advanced Data Scientist" },
+      { img: "images/certificates/modern-cpp.webp",                  pdf: "images/certificates/Programming in modern C++.pdf",                         title: "Programming in Modern C++" },
+      { img: "images/certificates/google-capstone.webp",             pdf: "images/certificates/Google_capstone.pdf",                                  title: "Google Capstone" }
     ];
     var gallery = document.querySelector(".cert-gallery");
     var galleryScroll = gallery && gallery.querySelector(".cert-gallery__scroll");
