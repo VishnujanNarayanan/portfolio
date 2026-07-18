@@ -986,7 +986,15 @@
     var c = el._ps || (el._ps = {});
     if (c[prop] !== val) { c[prop] = val; el.style[prop] = val; }
   }
+  // rAF scheduler — the loop suspends fully when nothing it drives is on screen
+  // (deep in socials/footer, or the tab is hidden) and re-arms on scroll/resize/
+  // visibility. Every phase the loop drives (hero-zoom terminal park, the pin, the
+  // blog handover) is a pure function of scroll, so nothing eases while dormant —
+  // waking on the next scroll event reproduces the exact same pose.
+  var flowRaf = 0;
+  function schedule() { if (!flowRaf && !document.hidden) flowRaf = requestAnimationFrame(loop); }
   function loop() {
+    flowRaf = 0;
     var rect = flow.getBoundingClientRect();
     // Off-screen early-outs — skip the whole per-frame body when the section can't
     // be seen. Below the viewport (approaching): the fixed CLI terminal is still on
@@ -994,10 +1002,11 @@
     // globalRaw is parked at -1 in this phase, matching what the full body computes).
     // Above the viewport (scrolled past): everything incl. the terminal is gone.
     if (rect.top >= vh) {
+      // Flow below the viewport (hero-zoom region): park/drive the fixed CLI once. All pure
+      // scroll functions → go dormant; the next scroll event re-arms and re-poses it.
       var yeH = window.__heroY ? window.__heroY(window.scrollY, vh) : window.scrollY;
       positionTerminal(rect);
       driveTerminal(false, 0, -1, clamp((yeH - vh) / vh, 0, 1));
-      requestAnimationFrame(loop);
       return;
     }
     if (rect.bottom <= 0) {
@@ -1007,7 +1016,11 @@
       // decides sticky-vs-scroll-away via the writing rect; it leaves once writing scrolls past).
       positionTerminal(rect);
       driveBlogHandover(rect.bottom);
-      requestAnimationFrame(loop); return;
+      // Keep looping only while the blog is still on screen (the terminal is sliding away over
+      // it); once the blog has scrolled fully past, nothing flow-related is visible → dormant.
+      var wr = writingEl ? writingEl.getBoundingClientRect() : null;
+      if (wr && wr.bottom > 0) schedule();
+      return;
     }
     var total = rect.height - vh;
     var scrolled = clamp(-rect.top, 0, total);
@@ -1460,7 +1473,7 @@
       lastHitT = now; refreshHover();
     }
 
-    requestAnimationFrame(loop);
+    schedule();
   }
 
   /* ---------- Debug overlay (?debug) ---------- */
@@ -1538,5 +1551,11 @@
     });
   })();
   paintSky(0);
-  requestAnimationFrame(loop);
+  // Wake the (dormant-when-off-screen) loop on scroll/resize/tab-visible. Lenis drives a
+  // smooth glide that keeps firing scroll events through the animation, so each tick re-arms.
+  window.addEventListener("scroll", schedule, { passive: true });
+  window.addEventListener("resize", schedule, { passive: true });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) schedule(); });
+  if (window.__lenis && window.__lenis.on) window.__lenis.on("scroll", schedule);
+  schedule();
 })();
