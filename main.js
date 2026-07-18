@@ -82,28 +82,12 @@
     tasks.push(["opencv-python", loadVideo("videos/interview_office.mp4")]);
     IMG.forEach(function (p) { tasks.push([p[0], loadImage(p[1])]); });
 
-    // Warm EVERY image the page references — not just the curated first-view set — so
-    // nothing decodes on-scroll later (the usual source of mid-scroll jank on the socials/
-    // skills/section art, all loading="lazy"). Collected from the live DOM (main.js is
-    // deferred, so the markup is fully parsed) plus images/footer-blobs.svg, which the
-    // contour canvas fetches at runtime. Same 8s/asset cap as loadImage + the 14s hard cap
-    // below keep a slow or cross-origin asset from stalling the reveal.
-    function collectWarmUrls() {
-      var seen = {}, urls = [];
-      function add(u) { if (u && !seen[u]) { seen[u] = 1; urls.push(u); } }
-      Array.prototype.forEach.call(document.querySelectorAll("img[src]"),   function (im) { add(im.getAttribute("src")); });
-      Array.prototype.forEach.call(document.querySelectorAll("[data-src]"), function (el) { add(el.getAttribute("data-src")); });
-      add("images/footer-blobs.svg"); // fetched by the contour canvas at runtime
-      add("images/footer-mask.svg");  // CSS background-image (not an <img>, so add explicitly)
-      return urls;
-    }
-    var warmTasks = collectWarmUrls().map(function (u) { return loadImage(u); });
-
-    // One readiness pool: the typed critical tasks + every other page image. The bar and
-    // the reveal gate both track it, so the loader stays up until the whole page is warm.
-    var gate = tasks.map(function (t) { return t[1]; }).concat(warmTasks);
-    var total = gate.length, resolved = 0;
-    var assetsReady = Promise.all(gate);
+    // The reveal is gated ONLY on the curated first-view set above (fonts + hero video +
+    // the hero product art). Every OTHER page image is warmed AFTER the reveal, staggered
+    // during idle (see warmRest below) — decoding them all here at boot floods the main
+    // thread exactly when the hero video needs to start, stuttering its first play.
+    var total = tasks.length, resolved = 0;
+    var assetsReady = Promise.all(tasks.map(function (t) { return t[1]; }));
 
     function setPct(f) {
       var p = Math.max(0, Math.min(100, Math.round(f * 100)));
@@ -127,7 +111,7 @@
     // Progress bar = overall readiness: the SLOWER of "time toward the minimum"
     // and "critical assets loaded", so it only reaches 100% right as we reveal
     // (not the instant the fast/cached assets resolve).
-    gate.forEach(function (p) { p.then(function () { resolved++; }); });
+    tasks.forEach(function (t) { t[1].then(function () { resolved++; }); });
     var barTimer = setInterval(function () {
       var tp = Math.min(1, (now() - start) / MIN_MS);
       var ap = resolved / total;
@@ -227,20 +211,31 @@
     assetsReady.then(function () { assetsDone = true; tryFinish(); });
     setTimeout(function () { linesDone = true; assetsDone = true; tryFinish(); }, 14000); // hard cap
 
-    // Non-gating background warm-up AFTER the reveal: certificates + transition videos.
+    // Non-gating background warm-up AFTER the reveal: every OTHER page image (socials/skills/
+    // section art + certs) plus the runtime-fetched SVGs and the transition videos. Warmed
+    // ONE AT A TIME on idle callbacks — each image loads + decodes, then schedules the next —
+    // so at most one decode is ever in flight. That spreads the work across idle frames
+    // instead of a burst that would stutter the hero video's first play or the first scroll,
+    // while still getting the lower sections decoded before the user reaches them.
     window.__bootReady.then(function () {
       var idle = window.requestIdleCallback || function (cb) { return setTimeout(cb, 1); };
-      idle(function () {
-        ["images/certificates/dsa-python.webp",
-         "images/certificates/google-advanced-data-scientist.webp",
-         "images/certificates/google-capstone.webp",
-         "images/certificates/ibm-generative-ai.webp",
-         "images/certificates/intro-database-systems.webp",
-         "images/certificates/modern-cpp.webp"].forEach(function (s) { var im = new Image(); im.src = s; });
-        ["videos/pullout_animation.mp4", "videos/recieve_animation.mp4"].forEach(function (s) {
-          var v = document.querySelector('video[src="' + s + '"]');
-          if (v) { v.preload = "auto"; try { v.load(); } catch (e) {} }
-        });
+      var seen = {}, urls = [];
+      function add(u) { if (u && !seen[u]) { seen[u] = 1; urls.push(u); } }
+      Array.prototype.forEach.call(document.querySelectorAll("img[src]"),   function (im) { add(im.getAttribute("src")); });
+      Array.prototype.forEach.call(document.querySelectorAll("[data-src]"), function (el) { add(el.getAttribute("data-src")); });
+      add("images/footer-blobs.svg"); // fetched by the contour canvas at runtime
+      add("images/footer-mask.svg");  // CSS background-image (not an <img>)
+      var i = 0;
+      (function warmNext() {
+        if (i >= urls.length) return;
+        var im = new Image(), go = function () { i++; idle(warmNext); };
+        im.onload  = function () { if (im.decode) im.decode().then(go, go); else go(); };
+        im.onerror = go;
+        im.src = urls[i];
+      })();
+      ["videos/pullout_animation.mp4", "videos/recieve_animation.mp4"].forEach(function (s) {
+        var v = document.querySelector('video[src="' + s + '"]');
+        if (v) { v.preload = "auto"; try { v.load(); } catch (e) {} }
       });
     });
   })();
