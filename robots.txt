@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://vishnujannarayanan.github.io/portfolio/sitemap.xml
+Sitemap: https://vishnujan-narayanan.vercel.app/sitemap.xml
