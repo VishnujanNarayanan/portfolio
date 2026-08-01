@@ -1798,7 +1798,7 @@
     }
 
     // Resolved geometry (clamps → px), cached; recomputed on resize.
-    var G = { W: 0, H: 0, openBasis: 0, per: 0, stripW: 0, openW: 0, ph: [] };
+    var G = { W: 0, H: 0, openBasis: 0, per: 0, stripW: 0, ph: [] };
     function geom() {
       var wr = wstack.getBoundingClientRect();
       G.W = wr.width; G.H = wr.height;
@@ -1810,7 +1810,6 @@
       G.openBasis = strip + cw;                          // the open panel's extra basis (main accordion)
       G.per = G.W / N;                                   // equal width (Part-1 end)
       G.stripW = (G.W - G.openBasis) / N;                // a closed strip's final width (accordion)
-      G.openW = G.openBasis + G.stripW;                  // the open (first) panel's final width
       G.ph = panels.map(function (p) {
         var v = parseFloat(getComputedStyle(p).getPropertyValue("--ph"));       // taper %, e.g. 91
         return isNaN(v) ? 100 : v;
@@ -1835,16 +1834,39 @@
     var OPEN_DUR = 0.5;                                          // seconds the open takes, played across the settle/bounce
     var openArmed = false, openU = 0, openProg = 0;             // armed once the spring peaks; openU eases 0↔1 (reversible)
     function easeIO(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+
+    // Per-panel OPENNESS WEIGHT (0..1, summing to 1 across the row). While the fan is in flight
+    // transitions are off (we drive flex-basis per frame), so a hard `i === hovered` test made the
+    // widths JUMP the frame the cursor crossed a panel edge — the snap you see when moving the mouse
+    // over the panels as they animate in. Instead each panel's openness EASES toward its target and
+    // the vector is normalized every frame, so the open state CROSSFADES between panels: the one you
+    // left narrows as the one you entered widens, and the widths still total exactly G.W throughout.
+    // Once settled the CSS `transition:flex-basis .95s` owns this again and the weights go unused.
+    var OPEN_TAU = 0.13;                                        // seconds — openness follow time (matches the settled feel)
+    var wOpen = panels.map(function (_, i) { return i === 0 ? 1 : 0; });
+    function stepOpenWeights(dt) {
+      var oi = openTargetIdx();
+      var k = 1 - Math.exp(-dt / OPEN_TAU);                     // frame-rate independent ease
+      var sum = 0, i;
+      for (i = 0; i < N; i++) { wOpen[i] += ((i === oi ? 1 : 0) - wOpen[i]) * k; sum += wOpen[i]; }
+      if (sum > 0) for (i = 0; i < N; i++) wOpen[i] /= sum;     // renormalize → widths always fill G.W exactly
+    }
     function applyFanLayout() {
       var op = openProg;                                        // 0 → 1 open progress (driven in render, peak-triggered)
       var oi = openTargetIdx();                                 // open the HOVERED panel (or 0) as the fan widens
       panels.forEach(function (p, i) {
         p.style.transition = "none";
         p.style.flexGrow = "0"; p.style.flexShrink = "0";
-        var basis = (i === oi) ? lerp(G.per, G.openW, op) : lerp(G.per, G.stripW, op);   // widths always sum to G.W
+        // Weighted basis: every panel gets a strip, and the openBasis is SHARED out by weight.
+        // Σ basis = N·stripW + openBasis·Σw = G.W (since Σw = 1) at op=1, and G.W at op=0 — so the
+        // row stays exactly full at every point of both the fan-out and a mid-flight hover swap.
+        var basis = lerp(G.per, G.stripW + wOpen[i] * G.openBasis, op);
         p.style.flexBasis = basis.toFixed(2) + "px";
         p.style.height = G.H + "px";
         p.style.transformOrigin = "50% 100%";
+        // Content/divider reveal still keys off the TARGET panel — those fade via their own CSS
+        // transitions (on .wpanel__content / .wpanel::after, unaffected by the inline transition:none
+        // above), so swapping mid-fan crossfades the text instead of popping it.
         p.classList.toggle("is-open", i === oi && op > 0);       // closed until op>0, then reveals as it widens
       });
     }
@@ -1986,6 +2008,7 @@
       }
       openU = clamp(openU + (openArmed ? 1 : -1) * dt / OPEN_DUR, 0, 1);
       openProg = easeIO(openU);
+      stepOpenWeights(dt);                                       // ease the openness toward the hovered panel (no width jump)
 
       if (atRest) { pCur = 1; pVel = 0; setSettled(true); return; }  // landed → live accordion
       setSettled(false);
@@ -1993,7 +2016,10 @@
       fanPaint(pCur);
     }
 
-    function resize() { geom(); settled = null; openArmed = false; openU = 0; openProg = 0; }   // force a clean re-apply after a resize
+    function resize() {                                                    // force a clean re-apply after a resize
+      geom(); settled = null; openArmed = false; openU = 0; openProg = 0;
+      wOpen = panels.map(function (_, i) { return i === 0 ? 1 : 0; });     // openness back to "panel 0", no stale crossfade
+    }
     geom();
     function frame(now) { render(now || performance.now()); requestAnimationFrame(frame); }
     requestAnimationFrame(frame);
