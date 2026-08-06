@@ -726,6 +726,7 @@
   });
   var mTY = 0, mCY = 0;       // cursor Y target / current (smoothed), normalised −0.5..0.5
   var mSplay = 0, splayVel = 0;   // scroll-momentum column splay: held offset (rem) + its velocity
+  var SPLAY_MAX = 4;              // rem clamp on the held offset (also sets the off-screen fly distance)
   var lastCsel;                   // previous active card stage — detects the zone-swap threshold
   if (!reduce) window.addEventListener("pointermove", function (e) {
     mTY = e.clientY / window.innerHeight - 0.5;
@@ -969,6 +970,7 @@
   /* ---------- Main loop ---------- */
   var lastSel = -1;
   var lastGlobalRaw = 0, scrollDir = 1;   // scroll direction: +1 forward (down), −1 back (up)
+  var lastInPlace;                        // previous frame's pin state — detects the parked-globalRaw jump
   var gSpeed = 0, lastGlobalTime = 0;     // smoothed scroll speed in global-units (zones)/ms
   var darkSubs = [];   // zone 3-4 sub paragraphs; colour scroll-driven black→grey
   var lightSubs = [];  // zone 1-2 sub paragraphs; colour scroll-driven grey→white
@@ -1057,6 +1059,13 @@
     if (inPlace && rect.bottom < vh) { driveBlogHandover(rect.bottom); }
     else { commitHandover(); driveTerminal(inPlace, approachP, globalRaw, heroPB); }
     var dGlobal = globalRaw - lastGlobalRaw;                         // signed scroll delta this frame (zones)
+    // globalRaw is PARKED at −1 while the section isn't in place, so the frame the pin
+    // engages (or releases) it jumps discontinuously (−1 ↔ ~−0.5) with no scroll behind
+    // it. That fake delta kicked the column splay by ~2rem, so the cards visibly SNAPPED
+    // to a new position at the hero/zone-1 threshold when scrolling back up and returning.
+    // Swallow the delta on the toggle frame; real scrolling resumes from the next one.
+    if (lastInPlace === undefined) lastInPlace = inPlace;
+    if (inPlace !== lastInPlace) { dGlobal = 0; lastInPlace = inPlace; }
     var sceneScrolled = Math.abs(globalRaw - lastGlobalRaw) > 1e-4;  // cards slid this frame
     if (globalRaw > lastGlobalRaw + 1e-4) scrollDir = 1;
     else if (globalRaw < lastGlobalRaw - 1e-4) scrollDir = -1;
@@ -1248,7 +1257,16 @@
     // grid is centred (offset 0 = screen centre) so the cards rest right-of-centre and
     // park fully off-screen exactly like the image. pinX cancels the track slide so the
     // motion is scroll-driven; globalRaw (−1..N) gives the first/last their lead travel.
-    var csel = Math.round(globalRaw);
+    var cselRaw = Math.round(globalRaw);
+    // EDGE ZONES: once the cards have arrived they STAY on the page — they only ever
+    // swap BETWEEN zones. globalRaw runs −1..N, so the raw index leaves the [0,N−1] band
+    // at both ends (scrolling back up to the hero, or on past zone 4), which used to read
+    // as a threshold crossing and fire an exit with nothing coming in behind it. Clamping
+    // the index into the band means those ends cross no threshold: no exit, and the edge
+    // zone's grid stays visible/active. The FIRST arrival is exempt — while lastCsel is
+    // still undefined/out of band the raw −1 is kept, so zone 1 plays its entry at the pin.
+    var csel = (lastCsel !== undefined && lastCsel >= 0 && lastCsel < N)
+      ? clamp(cselRaw, 0, N - 1) : cselRaw;
     var clocal = globalRaw - csel;                   // [−0.5, 0.5] within the active stage
     // Active stage slides from R_END (right, entry) to L_END (leftmost). R_END=8 is the
     // original right entry (unchanged). L_END raised 0→2.4 so the card stops short of
@@ -1268,29 +1286,51 @@
     // direction), while the INCOMING zone's cards start at ZERO offset (like zone 1 at
     // the pin) and react to scroll fresh. Works both directions; the splay momentum is
     // reset at every crossing so each zone begins neutral.
-    var CARD_EXIT_MS = 600, CARD_ENTER_MS = 700;
+    var CARD_EXIT_MS = 480, CARD_ENTER_MS = 700;   // exit 600→480ms: 25% faster fly-off
     if (lastCsel === undefined) lastCsel = csel;
     if (csel !== lastCsel) {
       var swapDir = csel > lastCsel ? 1 : -1;
-      if (lastCsel >= 0 && lastCsel < N) {
-        var outPanel = panels[lastCsel];
-        outPanel._exitT0 = now;             // fly-off starts now
-        outPanel._exitDir = swapDir;        // forward: left up / right down; back: mirrored
-        outPanel._exitFrom = mSplay;        // continue from the live splay, no jump
-        outPanel._enterT0 = undefined;      // exit overrides a still-running enter
-      }
-      if (csel >= 0 && csel < N) {
-        var inPanel = panels[csel];
-        inPanel._exitT0 = undefined;        // returning zone: cancel any old exit
-        inPanel._enterT0 = now;             // fly IN from the opposite side of the exit
-        inPanel._enterDir = swapDir;
-      }
+      var FLY = vh / 16 + SPLAY_MAX;        // rem: full off-screen fly distance
+      var splayWas = mSplay;                // splay the outgoing zone was sitting at
       // Seed the new zone's splay OPPOSITE to the travel direction (forward: left col
       // starts shifted DOWN, right col UP) so the columns have a full runway to drift
       // across the zone without hitting the viewport edge before the next threshold.
       // Zone 1 gets the same seed via its own entry swap (csel −1 → 0 at the pin).
+      // Seeded FIRST so the entry offset below can be measured against the new baseline.
       var SPLAY_RUNWAY = 6;                 // rem head-start against the scroll direction
       mSplay = -swapDir * SPLAY_RUNWAY; splayVel = 0;
+      if (lastCsel >= 0 && lastCsel < N) {
+        var outPanel = panels[lastCsel];
+        // The exit fires the INSTANT the threshold is hit, from wherever the columns
+        // are right now — including mid-entry: fold the unfinished entry offset into
+        // _exitFrom so the fly-off picks up at the current position instead of snapping
+        // back to the splay first.
+        var outBias = 0;
+        if (outPanel._enterT0 !== undefined) {
+          var ont = clamp((now - outPanel._enterT0) / CARD_ENTER_MS, 0, 1);
+          var oef = (outPanel._enterFrom === undefined) ? -FLY * outPanel._enterDir : outPanel._enterFrom;
+          outBias = oef * (1 - ont) * (1 - ont);
+        }
+        outPanel._exitT0 = now;             // fly-off starts now
+        outPanel._exitDir = swapDir;        // forward: left up / right down; back: mirrored
+        outPanel._exitFrom = splayWas + outBias;   // live splay + unfinished entry, no jump
+        outPanel._exitTo = splayWas + FLY * swapDir;   // fixed off-screen target, so it always clears
+        outPanel._enterT0 = undefined;      // exit overrides a still-running enter
+      }
+      if (csel >= 0 && csel < N) {
+        var inPanel = panels[csel];
+        // Entry eases into position from the far side (or, if this zone was still
+        // flying OUT, from its live exit offset — so a reversal picks it up in place).
+        var inFrom = -FLY * swapDir;
+        if (inPanel._exitT0 !== undefined) {
+          var iet = clamp((now - inPanel._exitT0) / CARD_EXIT_MS, 0, 1);
+          inFrom = lerp(inPanel._exitFrom, inPanel._exitTo, iet) - mSplay;
+        }
+        inPanel._exitT0 = undefined;        // returning zone: cancel any old exit
+        inPanel._enterT0 = now;             // fly IN from the opposite side of the exit
+        inPanel._enterDir = swapDir;
+        inPanel._enterFrom = inFrom;        // rem offset (vs the seeded splay) to ease away
+      }
       lastCsel = csel;
     }
     panels.forEach(function (panel, pi) {
@@ -1328,7 +1368,6 @@
     var SPLAY_GAIN = 4;            // rem per zone of scroll, applied immediately
     var SPLAY_IMPULSE = 1.5;       // steady-state coast velocity per unit scroll rate (the bleed)
     var SPLAY_FRICTION = 0.92;     // per-frame bleed of the coast velocity after the scroll stops
-    var SPLAY_MAX = 4;             // rem clamp on the held offset
     splayVel = splayVel * SPLAY_FRICTION + dGlobal * SPLAY_IMPULSE * (1 - SPLAY_FRICTION);
     mSplay = clamp(mSplay + dGlobal * SPLAY_GAIN + splayVel, -SPLAY_MAX, SPLAY_MAX);
     var pScroll = mSplay;          // rem (held; composes with the hover p above)
@@ -1380,20 +1419,22 @@
       if (o.diagCur === undefined) o.diagCur = diagTarget;
       o.diagCur += (diagTarget - o.diagCur) * settle;
       // Column Y: hover parallax + the held scroll splay — or, if this card's panel is
-      // mid-EXIT (zone swap), a ramp from its captured splay off past the viewport edge
-      // (ease-in: starts at scroll pace, accelerates away). o.dir sends the left column
-      // up / the right down for a forward swap; _exitDir mirrors it going backward.
-      // The INCOMING zone's columns fly in from the OPPOSITE side of the exit (forward:
-      // left col rises from the bottom, right col drops from the top), decelerating
-      // (ease-out) into the neutral pose, then scroll takes over.
+      // mid-EXIT (zone swap), a ramp from its captured pose (_exitFrom already includes
+      // any unfinished entry) off past the viewport edge at CONSTANT SPEED — linear, no
+      // acceleration, and it starts the frame the threshold is crossed. o.dir sends the
+      // left column up / the right down for a forward swap; _exitDir mirrors it backward.
+      // The INCOMING zone's columns come in from the OPPOSITE side of the exit (forward:
+      // left col rises from the bottom, right col drops from the top) and EASE OUT into
+      // the neutral pose, then scroll takes over.
+      var FLY_REM = vh / 16 + SPLAY_MAX;
       var yRem = p + pScroll;
       if (o.panel._exitT0 !== undefined) {
         var et = clamp((now - o.panel._exitT0) / CARD_EXIT_MS, 0, 1);
-        yRem = p + o.panel._exitFrom + (et * et) * (vh / 16 + SPLAY_MAX) * o.panel._exitDir;
+        yRem = p + lerp(o.panel._exitFrom, o.panel._exitTo, et);
       } else if (o.panel._enterT0 !== undefined) {
         var nt = clamp((now - o.panel._enterT0) / CARD_ENTER_MS, 0, 1);
-        var rem = (1 - nt) * (1 - nt);   // ease-out: fast off the edge, settles gently
-        yRem = p + pScroll - rem * (vh / 16 + SPLAY_MAX) * o.panel._enterDir;
+        var ef = (o.panel._enterFrom === undefined) ? -FLY_REM * o.panel._enterDir : o.panel._enterFrom;
+        yRem = p + pScroll + ef * (1 - nt) * (1 - nt);   // ease-out: decelerates into place
       }
       setSt(o.el, "transform", "translate(" + dx.toFixed(1) + "px," + o.diagCur.toFixed(1) + "px) translateY(" + (o.dir * yRem).toFixed(3) + "rem)");
     }
