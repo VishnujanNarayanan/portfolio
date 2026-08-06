@@ -615,7 +615,11 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    SELECT line / panel above. */
 .term-cards-view{flex:1 1 auto;min-width:0;overflow:hidden}
 /* Inner layer that actually pans up on scroll so all cards scroll through the terminal. */
-.term-cards-pan{will-change:transform}
+/* overflow-anchor:none — filtering hides cards, which shrinks the grid; scroll
+   anchoring would compensate by shifting scrollY, dragging the section off the
+   cover threshold so the reappearing set pans up behind the viewport's top clip. */
+.term-cards-pan{will-change:transform;overflow-anchor:none}
+.term-projects{overflow-anchor:none}
 @media (max-width:820px){.terminal{height:auto;min-height:100vh}.terminal__body{overflow:visible;display:block}.term-cards-view{overflow:visible}.term-cards-pan{transform:none!important}}
 /* Title bar stays VISIBLE and FIXED at the terminal's top — it does not swipe away
    or shift when the terminal covers the top of the screen. */
