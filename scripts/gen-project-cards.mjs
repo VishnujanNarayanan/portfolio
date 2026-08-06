@@ -58,48 +58,38 @@ const shim = `
 const fn = new Function(`${shim}\n${block}\n return { html: projectsHtml(), count: PROJECTS.length };`);
 const { html, count } = fn();
 
-// ---- 3. Break into lines at whitespace-SAFE boundaries only ----------------------
-// Deliberately NOT a general pretty-printer. Indenting every tag would inject
-// whitespace text nodes inside inline elements (.proj-card__title, .filter__label,
-// the frame spans), and that changes rendering. The card markup must stay visually
-// identical to what main.js used to produce at runtime.
+// ---- 3. Emit on ONE line — do NOT reformat ---------------------------------------
+// The markup ships exactly as projectsHtml() produced it: no added newlines, no
+// indentation. That is ugly in the source and it is the only correct option.
 //
-// So the element interiors are left byte-for-byte as generated, and newlines are
-// inserted ONLY before tags whose parent is a grid/flex/block container — contexts
-// where the CSS spec discards inter-element whitespace:
-//   .proj-card   → child of .term-projects   (display:grid)
-//   <li>         → child of .filter__items   (ul, block-level children)
-//   the structural divs/aside → children of flex or block containers
-function breakUp(src, indent) {
-  const SAFE = [
-    ['<div class="term-pgrid">', 0],
-    ['<aside class="term-side"', 1],
-    ['<div class="term-cards-view">', 1],
-    ['<div class="term-cards-pan">', 2],
-    ['<div class="term-projects">', 3],
-    ['<div class="term-result__meta">', 3],
-    ['<div class="proj-card"', 4],
-    ["<li>", 4]
-  ];
-  let out = src;
-  for (const [tag, depth] of SAFE) {
-    out = out.split(tag).join("\n" + "  ".repeat(indent + depth) + tag);
-  }
-  return out.replace(/^\n/, "").split("\n").map((l) => (l.trim() ? l : "")).filter(Boolean).join("\n");
-}
+// The terminal body renders with `white-space: pre` — it is a terminal, the typed
+// output depends on it. Under `pre` whitespace is NOT collapsible, so every newline
+// between tags becomes a rendered line break and every indent becomes literal spaces.
+// The familiar "inter-element whitespace is discarded in block/grid/flex containers"
+// rule does not save you here: that rule is about COLLAPSIBLE white space.
+//
+// Measured cost of getting this wrong: breaking the line before each <li> in the
+// filter list turned a 30px facet row into a 78px stride — 48px of blank line per
+// facet. The same hazard applies to the .proj-card grid and every inline span.
+//
+// If you need to read this block, pipe it through a formatter in your terminal
+// rather than changing what ships.
 
-const generated = [
-  BEGIN,
-  "<!-- Do not edit by hand: regenerate with `node scripts/gen-project-cards.mjs`.",
-  "     Source of truth is the PROJECTS array + projectsHtml() in main.js.",
-  "     main.js reuses this markup at runtime and only animates it. -->",
-  '<div class="term-pre"></div>',
-  '<div class="term-sel"></div>',
-  '<div class="term-result">',
-  breakUp(html, 1),
-  "</div>",
-  END
-].join("\n");
+// Everything below is concatenated with NO separators. Newlines between these pieces
+// would be text nodes inside the `white-space: pre` terminal body and would render as
+// blank lines. Newlines INSIDE an HTML comment are safe — comments produce no text
+// node — which is why the note below can stay multi-line.
+const NOTE =
+  "<!-- Do not edit by hand: regenerate with `node scripts/gen-project-cards.mjs`.\n" +
+  "     Source of truth is the PROJECTS array + projectsHtml() in main.js; main.js\n" +
+  "     reuses this markup at runtime and only animates it. Kept on one line on\n" +
+  "     purpose: #term-body is `white-space: pre`, so any newline here renders. -->";
+
+const generated =
+  BEGIN + NOTE +
+  '<div class="term-pre"></div><div class="term-sel"></div><div class="term-result">' +
+  html +
+  "</div>" + END;
 
 // ---- 4. Splice into index.html ---------------------------------------------------
 let indexSrc = readFileSync(INDEX, "utf8");
@@ -107,14 +97,21 @@ const bi = indexSrc.indexOf(BEGIN);
 const ei = indexSrc.indexOf(END);
 
 if (bi !== -1 && ei !== -1) {
-  indexSrc = indexSrc.slice(0, bi) + generated + indexSrc.slice(ei + END.length);
+  // Swallow any whitespace that already surrounds the block — an earlier revision
+  // wrote the markers on their own lines, and those newlines render inside `pre`.
+  let start = bi;
+  while (start > 0 && /\s/.test(indexSrc[start - 1])) start--;
+  let end = ei + END.length;
+  while (end < indexSrc.length && /\s/.test(indexSrc[end])) end++;
+  indexSrc = indexSrc.slice(0, start) + generated + indexSrc.slice(end);
 } else {
   const anchor = '<div class="terminal__body" id="term-body">';
   const ai = indexSrc.indexOf(anchor);
   if (ai === -1) throw new Error('could not find <div class="terminal__body" id="term-body"> in index.html');
   const close = indexSrc.indexOf("</div>", ai + anchor.length);
   if (close === -1) throw new Error("could not find the closing tag for #term-body");
-  indexSrc = indexSrc.slice(0, ai + anchor.length) + "\n" + generated + "\n" + indexSrc.slice(close);
+  // No newlines added: the block must butt directly against the open/close tags.
+  indexSrc = indexSrc.slice(0, ai + anchor.length) + generated + indexSrc.slice(close);
 }
 
 writeFileSync(INDEX, indexSrc);
