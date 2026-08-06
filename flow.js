@@ -1381,18 +1381,18 @@
       o.diagCur += (diagTarget - o.diagCur) * settle;
       // Column Y: hover parallax + the held scroll splay — or, if this card's panel is
       // mid-EXIT (zone swap), a ramp from its captured splay off past the viewport edge
-      // (ease-in: starts at scroll pace, accelerates away). o.dir sends the left column
+      // at CONSTANT SPEED (linear — no acceleration). o.dir sends the left column
       // up / the right down for a forward swap; _exitDir mirrors it going backward.
       // The INCOMING zone's columns fly in from the OPPOSITE side of the exit (forward:
-      // left col rises from the bottom, right col drops from the top), decelerating
-      // (ease-out) into the neutral pose, then scroll takes over.
+      // left col rises from the bottom, right col drops from the top), also at constant
+      // speed into the neutral pose, then scroll takes over.
       var yRem = p + pScroll;
       if (o.panel._exitT0 !== undefined) {
         var et = clamp((now - o.panel._exitT0) / CARD_EXIT_MS, 0, 1);
-        yRem = p + o.panel._exitFrom + (et * et) * (vh / 16 + SPLAY_MAX) * o.panel._exitDir;
+        yRem = p + o.panel._exitFrom + et * (vh / 16 + SPLAY_MAX) * o.panel._exitDir;
       } else if (o.panel._enterT0 !== undefined) {
         var nt = clamp((now - o.panel._enterT0) / CARD_ENTER_MS, 0, 1);
-        var rem = (1 - nt) * (1 - nt);   // ease-out: fast off the edge, settles gently
+        var rem = 1 - nt;   // linear: same speed the whole way in, no ease-out settle
         yRem = p + pScroll - rem * (vh / 16 + SPLAY_MAX) * o.panel._enterDir;
       }
       setSt(o.el, "transform", "translate(" + dx.toFixed(1) + "px," + o.diagCur.toFixed(1) + "px) translateY(" + (o.dir * yRem).toFixed(3) + "rem)");
