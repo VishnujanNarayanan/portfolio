@@ -599,6 +599,16 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .term-mysql{color:#7fd0ff;font-weight:600}
 .term-cursor{display:inline-block;width:8px;height:1.05em;margin-left:1px;vertical-align:-2px;background:#dfe4f2}
 .term-cursor.is-blink{animation:termblink 1.05s steps(1) infinite}
+/* Caret sitting INSIDE the line (mid-string edits on the SELECT query): the block would
+   otherwise push the rest of the line right by its own width, opening a gap that moves
+   with it. Negative margin cancels width + margin-left so it takes NO space and overlays
+   the character it's on — a real block cursor; the char shows through on the blink. */
+.term-cursor.is-over{margin-right:-9px;position:relative;z-index:1}
+/* SQL colouring for the `mysql>` lines (typed script + the live facet-driven query). */
+.sql-kw{color:#6cb0ff;font-weight:600}     /* SELECT FROM WHERE AND IN */
+.sql-id{color:#e8b866}                     /* table + column identifiers */
+.sql-str{color:#6ee59a}                    /* quoted values */
+.sql-op{color:#8f98b5}                     /* * = , ( ) ; */
 @keyframes termblink{50%{opacity:0}}
 /* SELECT * FROM projects → result rendered as Lando "helmet-grid"-style cards:
    image base + notched-corner frame + hover image/overlay reveal + blue accent. */

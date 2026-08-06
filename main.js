@@ -2523,6 +2523,7 @@
       function apply() {
         var any = Object.keys(sel.tools).length + Object.keys(sel.dom).length > 0;
         if (clearBtn) clearBtn.hidden = !any;              // update the clear pill immediately
+        sqlMorph(queryFor(sel));                           // rewrite the SELECT line to match
         vanishAll(showFiltered);                           // vanish ALL → reappear the filtered set
       }
       panel.addEventListener("change", function (e) {
@@ -2545,8 +2546,51 @@
       });
     })();
 
-    function lineHtml(pfx, text, cursor) {
-      return '<div class="terminal__line">' + pfx + escapeHtml(text) + (cursor || "") + "</div>";
+    // ---- SQL syntax colouring (the `mysql>` lines, typed or edited) ----
+    // Tokenised on every paint, and a token only takes its colour once it is FINISHED:
+    // a word stays plain until a delimiter follows it (so `WHER`, and even `WHERE` with
+    // nothing after it yet, is still being typed and reads as plain text — it turns blue
+    // the moment the next character lands), and a quoted value stays plain until its
+    // CLOSING quote is typed. Ranges are kept so the caret can be dropped INSIDE a token
+    // without breaking its span.
+    var SQL_KW = { select: 1, from: 1, where: 1, and: 1, or: 1, in: 1, use: 1, not: 1, like: 1, order: 1, by: 1, limit: 1 };
+    var WORD = /[A-Za-z0-9_.]/;
+    function sqlTokens(t) {
+      var out = [], i = 0, n = t.length, j;
+      while (i < n) {
+        var c = t.charAt(i);
+        if (c === '"' || c === "'") {                       // string literal
+          j = i + 1; while (j < n && t.charAt(j) !== c) j++;
+          var closed = j < n; if (closed) j++;              // no closing quote yet → still typing
+          out.push([i, j, closed ? "sql-str" : ""]); i = j;
+        } else if (WORD.test(c)) {                          // keyword or identifier
+          j = i; while (j < n && WORD.test(t.charAt(j))) j++;
+          out.push([i, j, j >= n ? ""                       // runs to the end → still being typed
+            : SQL_KW[t.slice(i, j).toLowerCase()] ? "sql-kw" : "sql-id"]); i = j;
+        } else if (c === " ") {
+          j = i; while (j < n && t.charAt(j) === " ") j++;
+          out.push([i, j, ""]); i = j;
+        } else { out.push([i, i + 1, "sql-op"]); i++; }      // * = , ( ) ;
+      }
+      return out;
+    }
+    function sqlWrap(cls, s) { return cls ? '<span class="' + cls + '">' + escapeHtml(s) + "</span>" : escapeHtml(s); }
+    // Colour `text`, dropping `caret` (an HTML string) at index `cur` — inside a token if
+    // that's where it sits, so the span it splits keeps its colour on both sides.
+    function sqlHtml(text, cur, caret) {
+      var toks = sqlTokens(text), h = "", k;
+      if (cur == null) cur = -1;
+      for (k = 0; k < toks.length; k++) {
+        var a = toks[k][0], b = toks[k][1], cls = toks[k][2];
+        if (cur > a && cur < b) h += sqlWrap(cls, text.slice(a, cur)) + caret + sqlWrap(cls, text.slice(cur, b));
+        else { if (cur === a) h += caret; h += sqlWrap(cls, text.slice(a, b)); }
+      }
+      if (cur >= text.length) h += caret;
+      return h;
+    }
+    function lineHtml(pfx, text, cursor, sql) {
+      return '<div class="terminal__line">' + pfx +
+        (sql ? sqlHtml(text, -1, "") : escapeHtml(text)) + (cursor || "") + "</div>";
     }
     // Build the typed text at `reveal` chars into preEl (pre-SELECT) + selEl (SELECT).
     function renderText(reveal) {
@@ -2556,13 +2600,13 @@
         if (used + len <= reveal) {                       // whole line shown
           var cur = "";
           if (used + len + 1 > reveal && !done) cur = '<span class="term-cursor"></span>'; // in the newline gap
-          into = lineHtml(pfx, s.x, k === selIdx ? '<span class="term-cursor is-blink"></span>' : cur);
+          into = lineHtml(pfx, s.x, k === selIdx ? '<span class="term-cursor is-blink"></span>' : cur, s.t === "sql");
           if (k === selIdx) sel += into; else pre += into;
           used += len + 1;
           if (cur) break;
         } else {                                          // partially typed (live) line
           var part = s.x.slice(0, Math.max(0, reveal - used));
-          into = lineHtml(pfx, part, '<span class="term-cursor"></span>');
+          into = lineHtml(pfx, part, '<span class="term-cursor"></span>', s.t === "sql");
           if (k === selIdx) sel += into; else pre += into;
           break;
         }
@@ -2571,9 +2615,115 @@
       selEl.innerHTML = sel;
     }
 
+    /* ---- Live SQL: the SELECT line rewrites itself as the facets are toggled ----
+       Clicking a tool/domain doesn't just filter the cards — the query above them is
+       edited to match, so the line always reads as the SQL that produced the result
+       set below it. The edit is a MINIMAL IN-PLACE one, an extension of the flow
+       section's CLI morph (flow.js setSwap/domainText): that one keeps the common
+       PREFIX and retypes the tail; this one keeps the common prefix AND the common
+       SUFFIX, so the cursor walks back INTO the line, deletes only the characters that
+       actually changed and types the replacement there. It then STAYS at that spot
+       (blinking) rather than returning to the end — the next edit starts its walk from
+       wherever it was left, which is usually already near the next thing to change.
+       Unticking "NumPy" out of `tool IN ("Python", "NumPy", "pandas")` therefore deletes
+       exactly `NumPy` — "pandas" and any AND-ed domain clause after it are never touched.
+       Clauses are ordered by WHICH FACET WAS TICKED FIRST, and values within a clause by
+       click order, so a new tick is always an insertion at the end of its own clause
+       rather than a rewrite of the line.
+       Within a facet the filter matches ANY selected value (see matches() below), so
+       multiple values render as `IN ("a", "b")` — the SQL that actually means that —
+       while facets are joined with AND, mirroring the AND across groups. */
+    var SQL_BASE = "SELECT * FROM projects";
+    var COLS = { tools: "tool", dom: "domain" };
+    var LABELS = { tools: {}, dom: {} };   // slug → the human label shown in the panel
+    ["tools", "dom"].forEach(function (k) {
+      facetCounts(k).forEach(function (it) { LABELS[k][slug(it.label)] = it.label; });
+    });
+    // A lone value reads as `tool = "Python"`. The moment a second joins it becomes
+    // `tool IN (…)`, and the clause STAYS in the IN form until the facet empties out —
+    // otherwise dropping back to one value would collapse `IN ("Python", "pandas")` to
+    // `= "Python"`, which means deleting and retyping "Python" for no reason. Sticky IN
+    // makes that untick delete exactly `, "pandas"`. Both forms are the same query.
+    var usedIn = { tools: false, dom: false };
+    function clauseFor(key, vals) {
+      if (!vals.length) { usedIn[key] = false; return ""; }
+      if (vals.length > 1) usedIn[key] = true;
+      var names = vals.map(function (v) { return '"' + (LABELS[key][v] || v) + '"'; });
+      return (names.length === 1 && !usedIn[key]) ? COLS[key] + " = " + names[0]
+                                                  : COLS[key] + " IN (" + names.join(", ") + ")";
+    }
+    // Clause order = the order the facets were first ticked (a facet that empties out
+    // drops off and re-joins at the end). So ticking a domain first then a tool appends
+    // ` AND tool = …` after the domain clause instead of re-ordering — nothing already
+    // typed has to move. Values inside a clause keep their click order for the same reason.
+    var facetOrder = [];
+    function queryFor(state) {
+      var parts = [];
+      ["tools", "dom"].forEach(function (k) {
+        var on = Object.keys(state[k]).length > 0, at = facetOrder.indexOf(k);
+        if (on && at < 0) facetOrder.push(k);
+        else if (!on) { if (at >= 0) facetOrder.splice(at, 1); usedIn[k] = false; }
+      });
+      facetOrder.forEach(function (k) { parts.push(clauseFor(k, Object.keys(state[k]))); });
+      return SQL_BASE + (parts.length ? " WHERE " + parts.join(" AND ") : "") + ";";
+    }
+    var MOVE_MS = 14, UNTYPE_MS = 22, TYPE_MS = 36;   // per char: cursor travel / delete / type (20% slower than the first pass)
+    var sqlShown = SQL_BASE + ";";         // what the SELECT line currently reads
+    var sqlCur = sqlShown.length;          // where the caret sits inside it
+    var sqlRaf = 0, sqlT0 = 0, sqlOwned = false;   // sqlOwned: past the reveal, we own selEl
+    var sqlEd = null;                      // the running edit plan (see sqlMorph)
+    function renderSel(text, cur, blink) {
+      if (!sqlOwned) return;               // pre-reveal the scroll typing still owns the line
+      var cls = "term-cursor" + (blink ? " is-blink" : "") + (cur < text.length ? " is-over" : "");
+      selEl.innerHTML = '<div class="terminal__line">' + MYSQL +
+        sqlHtml(text, cur, '<span class="' + cls + '"></span>') + "</div>";
+    }
+    function sqlStep(now) {
+      if (!sqlT0) sqlT0 = now;
+      var el = now - sqlT0, e = sqlEd;
+      if (el < e.t1) {                                   // 1 — walk the caret to the edit point
+        sqlShown = e.from;
+        sqlCur = e.startCur + e.moveDir * Math.min(e.moveN, Math.floor(el / MOVE_MS));
+      } else if (el < e.t2) {                            // 2 — backspace ONLY the changed span
+        var d = Math.min(e.del, Math.floor((el - e.t1) / UNTYPE_MS));
+        sqlCur = e.editEnd - d; sqlShown = e.from.slice(0, sqlCur) + e.tail;
+      } else if (el < e.t3) {                            // 3 — type the replacement in place
+        var i = Math.min(e.ins, Math.floor((el - e.t2) / TYPE_MS));
+        sqlCur = e.p + i; sqlShown = e.target.slice(0, sqlCur) + e.tail;
+      } else {                                           // done — the caret STAYS where the
+        sqlShown = e.target; sqlCur = e.p + e.ins;       // last character was typed/deleted
+        sqlRaf = 0; sqlEd = null; renderSel(sqlShown, sqlCur, true); return;
+      }
+      renderSel(sqlShown, sqlCur, false);
+      sqlRaf = requestAnimationFrame(sqlStep);
+    }
+    // Morph the line to `target` with the smallest possible edit. Retargeting mid-edit is
+    // fine: the new plan starts from the text AND caret position on screen RIGHT NOW, so
+    // rapid clicking never jumps or replays.
+    function sqlMorph(target) {
+      if (target === sqlShown && !sqlRaf) return;
+      if (reduce) {
+        sqlRaf = 0; sqlEd = null; sqlShown = target; sqlCur = target.length;
+        renderSel(target, sqlCur, true); return;
+      }
+      var from = sqlShown, m = Math.min(from.length, target.length), p = 0;
+      while (p < m && from.charCodeAt(p) === target.charCodeAt(p)) p++;   // common prefix
+      var s = 0, sm = m - p;                                              // common suffix
+      while (s < sm && from.charCodeAt(from.length - 1 - s) === target.charCodeAt(target.length - 1 - s)) s++;
+      var del = from.length - s - p, ins = target.length - s - p;         // the changed span only
+      var editEnd = p + del, startCur = Math.min(Math.max(sqlCur, 0), from.length);
+      var moveN = Math.abs(editEnd - startCur);          // caret walks either way to get there
+      var t1 = moveN * MOVE_MS, t2 = t1 + del * UNTYPE_MS, t3 = t2 + ins * TYPE_MS;
+      sqlEd = { from: from, target: target, tail: from.slice(from.length - s), p: p, del: del, ins: ins,
+                editEnd: editEnd, startCur: startCur, moveN: moveN, moveDir: editEnd >= startCur ? 1 : -1,
+                t1: t1, t2: t2, t3: t3 };
+      sqlT0 = 0;                                          // re-seed the clock on the next frame
+      if (!sqlRaf) sqlRaf = requestAnimationFrame(sqlStep);
+    }
+
     var term = body.closest(".terminal");
 
-    if (reduce) { renderText(total); term.classList.add("is-revealing"); term.classList.add("is-covered"); return; }
+    if (reduce) { renderText(total); sqlOwned = true; term.classList.add("is-revealing"); term.classList.add("is-covered"); return; }
 
     // Scroll model. The section slides UP from the bottom: rect.top travels from
     // +vh (appearing) → 0 (reaches the top / fully covers) → −(height−vh) (past).
@@ -2760,6 +2910,8 @@
       if (r.top <= 0) {                                   // threshold reached → fire the reveal once
         atTop = true; term.classList.add("is-revealing");
         renderText(total); lastR = total; engageStick();
+        // The scroll typing is done with the line — from here the facet clicks own it.
+        sqlOwned = true; renderSel(sqlShown, sqlCur, true);
         // The pin length was sized at init while .term-pre was still expanded, so the
         // cards' viewport was shorter and the overflow (thus the pan) came out too big.
         // Re-size once the pre-text collapse finishes so the revealed geometry drives the
