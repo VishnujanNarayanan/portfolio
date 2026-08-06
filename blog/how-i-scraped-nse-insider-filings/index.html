@@ -16,15 +16,15 @@
 <meta property="og:site_name" content="Vishnujan Narayanan">
 <meta property="og:locale" content="en_US">
 <meta property="og:url" content="https://vishnujan-narayanan.vercel.app/blog/how-i-scraped-nse-insider-filings/">
-<meta property="og:image" content="https://vishnujan-narayanan.vercel.app/og.jpg">
-<meta property="og:image:width" content="708">
-<meta property="og:image:height" content="708">
+<meta property="og:image" content="https://vishnujan-narayanan.vercel.app/og-cover.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:alt" content="Vishnujan Narayanan">
-<meta name="twitter:card" content="summary">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="How I Scraped 20 Years of NSE Insider Filings">
 <meta name="twitter:description" content="Chunked date windows, composite-key dedup, and source reconciliation to backfill two decades of insider-trade data.">
-<meta name="twitter:image" content="https://vishnujan-narayanan.vercel.app/og.jpg">
+<meta name="twitter:image" content="https://vishnujan-narayanan.vercel.app/og-cover.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
@@ -37,13 +37,13 @@
 <div class="mobile-nav__overlay"></div>
 <header class="show">
   <nav class="header__nav-left">
-    <a href="../../index.html#projects">Projects</a>
-    <a href="../../index.html#skills">Skills</a>
-    <a href="../../index.html#services">Services</a>
-    <a href="../../blog/index.html">Blog</a>
+    <a href="/#projects">Projects</a>
+    <a href="/#skills">Skills</a>
+    <a href="/#services">Services</a>
+    <a href="/blog/">Blog</a>
   </nav>
   <div class="header__logo">
-    <a href="../../index.html" class="header__logo_link" aria-label="Vishnujan Narayanan — Home"><span class="logo-text">VJ</span></a>
+    <a href="/" class="header__logo_link" aria-label="Vishnujan Narayanan — Home"><span class="logo-text">VJ</span></a>
   </div>
   <nav class="header__nav-right">
     <div class="header__ctas">
@@ -62,16 +62,16 @@
     <div class="mobile-nav__panel-bg"></div>
     <div class="mobile-nav__panel">
       <div class="mobile-nav__header">
-        <a href="../../index.html" class="mobile-nav__logo"><span class="logo-text">VJ</span></a>
+        <a href="/" class="mobile-nav__logo"><span class="logo-text">VJ</span></a>
         <button class="mobile-nav__close" type="button" aria-label="Close menu">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="#050419"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="#050419"></rect></svg>
         </button>
       </div>
       <ul class="mobile-nav__list">
-        <li class="mobile-nav__item"><a href="../../index.html#projects">Projects</a></li>
-        <li class="mobile-nav__item"><a href="../../index.html#skills">Skills</a></li>
-        <li class="mobile-nav__item"><a href="../../index.html#services">Services</a></li>
-        <li class="mobile-nav__item"><a href="../../blog/index.html">Blog</a></li>
+        <li class="mobile-nav__item"><a href="/#projects">Projects</a></li>
+        <li class="mobile-nav__item"><a href="/#skills">Skills</a></li>
+        <li class="mobile-nav__item"><a href="/#services">Services</a></li>
+        <li class="mobile-nav__item"><a href="/blog/">Blog</a></li>
       </ul>
       <div class="mobile-nav__ctas">
         <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Hire Me</span></a></div>
@@ -81,12 +81,12 @@
   </nav>
 </header>
 <main>
-<nav class="breadcrumb"><a href="../../index.html">Home</a><span>›</span><a href="../../blog/index.html">Blog</a><span>›</span>How I Scraped 20 Years of NSE Insider Filings</nav>
+<nav class="breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>How I Scraped 20 Years of NSE Insider Filings</nav>
 <article class="article">
   <h1>How I Scraped 20 Years of NSE Insider Filings</h1>
   <div class="meta"><span>Data engineering</span><span>9 min read</span><span>Published May 2025</span></div>
 
-  <p>Insider-trade filings are one of the richest signals you can feed a quant research team, and one of the most annoying to collect. India's National Stock Exchange publishes them through its PIT (Prohibition of Insider Trading) disclosure API, but "publishes" is doing a lot of work in that sentence. The endpoint is happy to hand you a few weeks of data and distinctly unhappy if you ask for twenty years in one request. This post walks through how I backfilled roughly two decades of NSE insider-trade filings into a clean, deduplicated dataset that reruns safely — part of the wider <a href="../../projects/market-data-pipeline/index.html">market-data platform</a> I built and own.</p>
+  <p>Insider-trade filings are one of the richest signals you can feed a quant research team, and one of the most annoying to collect. India's National Stock Exchange publishes them through its PIT (Prohibition of Insider Trading) disclosure API, but "publishes" is doing a lot of work in that sentence. The endpoint is happy to hand you a few weeks of data and distinctly unhappy if you ask for twenty years in one request. This post walks through how I backfilled roughly two decades of NSE insider-trade filings into a clean, deduplicated dataset that reruns safely — part of the wider <a href="/projects/market-data-pipeline/">market-data platform</a> I built and own.</p>
 
   <h2>The problem with "just download everything"</h2>
   <p>The naive approach — request a date range spanning 2005 to today — fails in several ways at once. The API times out on wide ranges, silently truncates results, and applies rate limits that you only discover when your rows quietly stop arriving. A twenty-year backfill is not a single download; it is thousands of small downloads that have to be orchestrated, paced, and stitched back together without gaps or duplicates.</p>
@@ -105,24 +105,24 @@
 
   <h2>What made it reliable</h2>
   <p>None of these pieces are exotic on their own. The reliability came from combining them: chunked windows so requests always succeed, a mode switch so daily runs stay cheap, normalized composite-key dedup so reruns repair instead of corrupt, and source reconciliation so the data is timely. The result is a pipeline I can leave alone — it fetches only what is new, heals gaps on rerun, and keeps two decades of insider activity current across ~1,665 listed companies.</p>
-  <p>If you want the broader picture of how this fits into a 28-pipeline ingestion layer, the <a href="../../projects/market-data-pipeline/index.html">Market Data Platform project</a> covers the prices, options, news, and corporate-action pipelines that sit alongside this one. And the companion post on <a href="../../blog/building-resumable-etl-pipelines/index.html">resumable ETL pipelines</a> goes deeper on the incremental-load and backoff patterns that keep all of them running unattended.</p>
+  <p>If you want the broader picture of how this fits into a 28-pipeline ingestion layer, the <a href="/projects/market-data-pipeline/">Market Data Platform project</a> covers the prices, options, news, and corporate-action pipelines that sit alongside this one. And the companion post on <a href="/blog/building-resumable-etl-pipelines/">resumable ETL pipelines</a> goes deeper on the incremental-load and backoff patterns that keep all of them running unattended.</p>
 
-  <a class="back" href="../../blog/index.html">← Back to writing</a>
+  <a class="back" href="/blog/">← Back to writing</a>
 </article>
 </main>
 <footer class="footer">
   <nav class="footer-nav">
-    <a href="../../index.html#projects" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Projects</span></a>
-    <a href="../../index.html#skills" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Skills</span></a>
-    <a href="../../index.html#services" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Services</span></a>
-    <a href="../../blog/index.html" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Blog</span></a>
+    <a href="/#projects" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Projects</span></a>
+    <a href="/#skills" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Skills</span></a>
+    <a href="/#services" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Services</span></a>
+    <a href="/blog/" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Blog</span></a>
   </nav>
   <div class="footer__bottom">
     <span class="logo-text footer__logo">VJ</span>
     <div class="footer__meta">
       <p class="footer__copyright">© 2026 Vishnujan Narayanan</p>
-      <a href="https://github.com/VishnujanNarayanan" class="footer__privacy" target="_blank" rel="noopener">GitHub</a>
-      <a href="http://www.linkedin.com/in/vishnujan-narayanan" class="footer__privacy" target="_blank" rel="noopener">LinkedIn</a>
+      <a href="https://github.com/VishnujanNarayanan" class="footer__privacy" target="_blank" rel="me noopener">GitHub</a>
+      <a href="https://www.linkedin.com/in/vishnujan-narayanan" class="footer__privacy" target="_blank" rel="me noopener">LinkedIn</a>
     </div>
   </div>
 </footer>
