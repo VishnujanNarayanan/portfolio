@@ -2575,10 +2575,28 @@
       return out;
     }
     function sqlWrap(cls, s) { return cls ? '<span class="' + cls + '">' + escapeHtml(s) + "</span>" : escapeHtml(s); }
+    // Mid-edit the line is HEAD (the part being typed/deleted) + TAIL (the settled suffix
+    // that was never touched). Tokenising the whole thing left-to-right would let a
+    // half-typed opening quote in the head PAIR with a quote sitting in the tail — while
+    // typing `… IN ("Data", ") AND tool = "Python";` the run `") AND tool = "` would go
+    // green as if it were a value. So the tail is coloured from the TARGET's own tokens
+    // and only the head is tokenised live: an opened quote stays white until ITS OWN
+    // closing quote is typed, and nothing behind it changes colour in the meantime.
+    function sqlTokensFor(text, ed) {
+      if (!ed || !ed.tail.length) return sqlTokens(text);
+      var headLen = text.length - ed.tail.length;
+      if (headLen < 0) return sqlTokens(text);
+      var toks = sqlTokens(text.slice(0, headLen)), tstart = ed.target.length - ed.tail.length;
+      sqlTokens(ed.target).forEach(function (tk) {
+        if (tk[1] <= tstart) return;                       // wholly inside the head — skip
+        toks.push([Math.max(tk[0], tstart) - tstart + headLen, tk[1] - tstart + headLen, tk[2]]);
+      });
+      return toks;
+    }
     // Colour `text`, dropping `caret` (an HTML string) at index `cur` — inside a token if
     // that's where it sits, so the span it splits keeps its colour on both sides.
-    function sqlHtml(text, cur, caret) {
-      var toks = sqlTokens(text), h = "", k;
+    function sqlHtml(text, cur, caret, ed) {
+      var toks = sqlTokensFor(text, ed), h = "", k;
       if (cur == null) cur = -1;
       for (k = 0; k < toks.length; k++) {
         var a = toks[k][0], b = toks[k][1], cls = toks[k][2];
@@ -2672,11 +2690,11 @@
     var sqlCur = sqlShown.length;          // where the caret sits inside it
     var sqlRaf = 0, sqlT0 = 0, sqlOwned = false;   // sqlOwned: past the reveal, we own selEl
     var sqlEd = null;                      // the running edit plan (see sqlMorph)
-    function renderSel(text, cur, blink) {
+    function renderSel(text, cur, blink, ed) {
       if (!sqlOwned) return;               // pre-reveal the scroll typing still owns the line
       var cls = "term-cursor" + (blink ? " is-blink" : "") + (cur < text.length ? " is-over" : "");
       selEl.innerHTML = '<div class="terminal__line">' + MYSQL +
-        sqlHtml(text, cur, '<span class="' + cls + '"></span>') + "</div>";
+        sqlHtml(text, cur, '<span class="' + cls + '"></span>', ed) + "</div>";
     }
     function sqlStep(now) {
       if (!sqlT0) sqlT0 = now;
@@ -2687,9 +2705,11 @@
       } else if (el < e.t2) {                            // 2 — backspace ONLY the changed span
         var d = Math.min(e.del, Math.floor((el - e.t1) / UNTYPE_MS));
         sqlCur = e.editEnd - d; sqlShown = e.from.slice(0, sqlCur) + e.tail;
+        renderSel(sqlShown, sqlCur, false, e); sqlRaf = requestAnimationFrame(sqlStep); return;
       } else if (el < e.t3) {                            // 3 — type the replacement in place
         var i = Math.min(e.ins, Math.floor((el - e.t2) / TYPE_MS));
         sqlCur = e.p + i; sqlShown = e.target.slice(0, sqlCur) + e.tail;
+        renderSel(sqlShown, sqlCur, false, e); sqlRaf = requestAnimationFrame(sqlStep); return;
       } else {                                           // done — the caret STAYS where the
         sqlShown = e.target; sqlCur = e.p + e.ins;       // last character was typed/deleted
         sqlRaf = 0; sqlEd = null; renderSel(sqlShown, sqlCur, true); return;
