@@ -2367,6 +2367,17 @@
     // a per-card --cd transition-delay; the meta line follows after the last wave.
     var gridEl = projEl.querySelector(".term-projects");
     var cardEls = [].slice.call(projEl.querySelectorAll(".proj-card"));
+    // How far PAST the cover line the filter's realign parks the page, and the matching
+    // dead-zone the pan absorbs so that overshoot never clips the first row. Declared
+    // up here because layoutCardStagger() → panCards() runs during setup.
+    var ALIGN_EPS = 2;
+    // Column-stagger constants + the seam element it closes against — declared here for
+    // the same reason: sizeSection() → cardOverflow() → staggerCardH() runs during setup,
+    // and a `var` read before its assignment line would be undefined (→ NaN height).
+    var COL_OFFSET_FRAC = 0.5;   // offset at the cover threshold, in card heights
+    var COL_OFFSET_MAX = 2.5;    // cap when scrolling back up, in card heights
+    var COL_MIN_CARDS = 8;       // below this the grid reads as plain rows — no stagger
+    var brandEl = document.querySelector(".brand-teaser");
     var CARD_STEP = 0.09;   // seconds between successive anti-diagonals (Lando-style flowing rise)
     var RISE_DUR = 0.9;     // seconds — matches the CSS .9s card rise transition
     // The cards wait until the threshold animation (the .term-pre collapse, ~0.6s)
@@ -2391,6 +2402,7 @@
       });
       projEl.style.setProperty("--meta-d", (BASE_DELAY + maxDiag * CARD_STEP + RISE_DUR) + "s");
       sizeSection();                                   // pin length tracks the card overflow
+      panCards();                                      // re-seat the pan + the column stagger
     }
     layoutCardStagger();
     window.addEventListener("resize", layoutCardStagger, { passive: true });
@@ -2432,6 +2444,28 @@
         });
         clearTimeout(applyT); applyT = setTimeout(done, FADE);
       }
+      // Park the page exactly at the cover threshold. Landing a hair PAST it
+      // (rect.top ≈ −2px, not exactly 0) keeps the nav reel — which flips dark on
+      // featuresEl.top ≤ 0 — dark instead of jittering to light on the boundary; 2px
+      // is negligible for the pan.
+      // This MUST actually move the page: the caller then re-derives the pan from the
+      // real scroll position, and if the two disagree the reappearing set is drawn at
+      // pan 0 while the section is still deep in its pin — so the next scroll frame
+      // snaps the pan to match and the top rows vanish behind the viewport's clip.
+      // `force` because Lenis ignores scrollTo while stopped (the reveal's stick lock)
+      // or locked; the native scrollTo covers Lenis being absent; and writing Lenis's
+      // internal scroll state stops its own rAF from restoring the previous position
+      // on the very next frame.
+      function alignToThreshold() {
+        var target = window.scrollY + sec.getBoundingClientRect().top + ALIGN_EPS;
+        var L = window.__lenis;
+        if (L && L.scrollTo) L.scrollTo(target, { immediate: true, force: true });
+        window.scrollTo(0, target);
+        if (L) {
+          if ("animatedScroll" in L) L.animatedScroll = target;
+          if ("targetScroll" in L) L.targetScroll = target;
+        }
+      }
       // Phase 2 — drop the non-matching cards, then replay the threshold appear (rise +
       // fade, anti-diagonal stagger recomputed over the filtered grid) on the new set.
       function showFiltered() {
@@ -2450,9 +2484,7 @@
         // Land a hair PAST the cover line (rect.top ≈ −2px, not exactly 0) so the nav
         // reel — which flips dark on featuresEl.top ≤ 0 — stays dark instead of jittering
         // to light when we realign right onto the boundary. 2px is negligible for the pan.
-        var top = window.scrollY + sec.getBoundingClientRect().top + 2; // just past rect.top = 0
-        if (window.__lenis) window.__lenis.scrollTo(top, { immediate: true });
-        else window.scrollTo(0, top);
+        alignToThreshold();
         matching.forEach(function (c) {                    // reset to the appear "from" state, no transition
           c.style.transition = "none"; c.style.opacity = "0"; c.style.transform = "translateY(64px)";
         });
@@ -2463,6 +2495,22 @@
           c.style.transition = "opacity " + FADE + "ms ease " + d + ",transform " + FADE + "ms " + EASE + " " + d;
           c.style.opacity = "1"; c.style.transform = "none";
         });
+        // Derive the pan + column stagger from the REAL scroll position rather than
+        // assuming the realign landed. window.scrollTo above is synchronous, so the
+        // rect here is already current — and if the align was clamped (e.g. near the
+        // document end) the pan still agrees with where the page actually is, instead
+        // of sitting at 0 and snapping on the next scroll frame.
+        panCards();
+        // Re-assert on the next two frames: Chrome's SCROLL ANCHORING reacts to the
+        // grid shrinking (cards going display:none) by shifting scrollY to preserve the
+        // visual position, which drags the section back off the threshold. Only ever
+        // pulls back TO the threshold, and only for those two frames.
+        var reassert = function () {
+          if (window.innerWidth <= 820) return;
+          alignToThreshold();
+          panCards();
+        };
+        requestAnimationFrame(function () { reassert(); requestAnimationFrame(reassert); });
         var any = Object.keys(sel.tools).length + Object.keys(sel.dom).length > 0;
         if (metaEl) metaEl.textContent = matching.length + " row" + (matching.length === 1 ? "" : "s") + " in set" + (any ? " (filtered)" : " (0.001 sec)");
       }
@@ -2587,7 +2635,12 @@
     // height and the pan, so the two stay in lock-step.
     var PAN_PAD = 24;
     function cardOverflow() {
-      var ov = panEl.scrollHeight - viewEl.clientHeight;
+      // + the column stagger's depth: the offset columns hang up to half a card below
+      // the grid's layout box, and `translate` doesn't affect scrollHeight — without
+      // this the pin is that much too short and their last row can never scroll fully
+      // into view. Uses the MAX (threshold) offset so the pin length stays constant
+      // rather than shifting under the mapping as the offset closes.
+      var ov = panEl.scrollHeight - viewEl.clientHeight + staggerCardH() * COL_OFFSET_FRAC;
       return ov > 0 ? ov + PAN_PAD : 0;                 // 0 when the cards already fit
     }
     // Size the section so the PINNED scroll length == the card overflow: more projects
@@ -2598,16 +2651,97 @@
       if (window.innerWidth <= 820) { sec.style.height = ""; return; } // mobile: natural flow
       sec.style.height = (window.innerHeight + cardOverflow()) + "px";
     }
+    // ---- Column stagger ----
+    // The EVEN columns (2 and 4, i.e. zero-based index 1 and 3) sit half a card lower
+    // than columns 1 and 3, and close that gap as the section scrolls: they pan UP
+    // faster than the odd columns until all four land flush on the grid line exactly
+    // as the pin hands off to Skills (the bulge). Reversible — scroll back up and they
+    // drop away again.
+    //
+    // This is a property of the COLUMN, not of a card and not of the reveal: it's
+    // re-derived from each visible card's live column index, so a filtered set (which
+    // reflows cards into different columns) keeps the same rhythm without being tied
+    // to the vanish/reappear animation. It's written to the independent CSS `translate`
+    // property, NOT `transform` — `transform` carries the .9s reveal/filter transition,
+    // so folding this into it would re-trigger that easing on every scroll frame and
+    // smear. `translate` has no transition, so per-frame writes land instantly and the
+    // two compose (translate is applied before transform).
+    // The offset closes on a scroll span that ENDS at the bulge's midpoint, not at the
+    // pin handoff. The bulge (.skills-curve, the projects→skills seam) is driven by
+    // `.brand-teaser`: p_bulge = (vh − top) / (0.6·vh), so it is exactly half-drawn when
+    // its top sits at 0.7·vh. Reading the same element keeps the two in lock-step
+    // regardless of the pin length (which changes with every filter), so this also
+    // covers a filtered 1–2 card result that has no pinned scroll at all.
+    var BULGE_RANGE = 0.6, BULGE_MID = 0.5;              // mirror the seam's own constants
+    function colOffsetProgress() {
+      var top = sec.getBoundingClientRect().top;
+      if (!brandEl) return Math.min(1, Math.max(0, -top / Math.max(1, sec.offsetHeight - window.innerHeight)));
+      var vh = window.innerHeight;
+      // Layout distance from the terminal's top to the seam — constant, so measuring it
+      // live each frame costs nothing and survives resizes/filters.
+      var gap = brandEl.getBoundingClientRect().top - top;
+      var span = gap - vh * (1 - BULGE_RANGE * BULGE_MID);  // threshold → bulge half-drawn
+      if (span <= 0) return 1;
+      // NOT clamped below 0: scrolling back up past the threshold (toward the blog)
+      // carries p negative, so the columns keep parting further instead of resting at
+      // half a card. Clamped above at 1 — once the bulge is half-drawn they stay flush.
+      return Math.min(1, -top / span);
+    }
+    // Card height when the stagger is live, else 0. A small (filtered) result set sits
+    // in normal, flush rows: the stagger only earns its keep once the grid is deep
+    // enough for the column rhythm to read. Counted on the VISIBLE cards, so it
+    // switches on/off with the filter.
+    function staggerCardH() {
+      if (reduce || window.innerWidth <= 820) return 0;
+      var shown = 0, first = null;
+      for (var i = 0; i < cardEls.length; i++) {
+        if (cardEls[i].classList.contains("is-filtered-out")) continue;
+        if (!first) first = cardEls[i];
+        shown++;
+      }
+      return shown >= COL_MIN_CARDS && first ? first.offsetHeight : 0;
+    }
+    function applyColumnOffset(p) {
+      if (!staggerCardH()) { clearColumnOffset(); return; }
+      var tpl = getComputedStyle(gridEl).gridTemplateColumns;
+      var cols = tpl ? tpl.split(" ").filter(Boolean).length : 4;
+      if (cols < 1) cols = 1;
+      // Scrolling up keeps opening the gap; cap it so it can't run away on a long
+      // scroll back through the blog (the cards stay latched-visible up there).
+      var frac = Math.min(COL_OFFSET_MAX, (1 - p) * COL_OFFSET_FRAC);
+      var off = null, vi = 0;
+      for (var i = 0; i < cardEls.length; i++) {
+        var el = cardEls[i];
+        if (el.classList.contains("is-filtered-out")) { el.style.translate = ""; continue; }
+        if (off === null) off = frac * el.offsetHeight;  // one read: the cards are uniform
+        el.style.translate = (vi % cols) % 2 ? "0 " + off.toFixed(1) + "px" : "0 0px";
+        vi++;
+      }
+    }
+    function clearColumnOffset() {
+      cardEls.forEach(function (el) { el.style.translate = ""; });
+    }
     // Map the pinned scroll to a vertical PAN of the cards layer inside its clipped
     // viewport. Because sizeSection() made the pin length == the overflow, the last card
     // lands exactly as the pin releases to Skills. The side panel doesn't move.
     function panCards() {
-      if (window.innerWidth <= 820) { panEl.style.transform = ""; return; }
+      if (window.innerWidth <= 820) { panEl.style.transform = ""; clearColumnOffset(); return; }
       var pinScroll = sec.offsetHeight - window.innerHeight; // == cardOverflow()
-      if (pinScroll <= 0) { panEl.style.transform = "translateY(" + momOff.toFixed(1) + "px)"; return; }
-      var past = Math.min(1, Math.max(0, -sec.getBoundingClientRect().top / pinScroll));
+      applyColumnOffset(colOffsetProgress());
       // momOff (≥0) coasts the cards DOWN then eases to 0 — the reveal's momentum carry.
-      panEl.style.transform = "translateY(" + (-(past * pinScroll) + momOff).toFixed(1) + "px)";
+      // `|| 0`: layoutCardStagger() calls this during setup, before momOff is assigned.
+      var mom = momOff || 0;
+      if (pinScroll <= 0) { panEl.style.transform = "translateY(" + mom.toFixed(1) + "px)"; return; }
+      // The pan's zero point is ALIGN_EPS past the cover line, not on it. The filter's
+      // realign deliberately parks the page 2px past that line (so the nav reel, which
+      // flips dark on featuresEl.top ≤ 0, doesn't jitter to light on the boundary) — and
+      // because the pan maps scroll 1:1, those 2px became 2px of pan and sliced the top
+      // border off the first row of the non-offset columns. Absorbing the same epsilon
+      // here keeps the first row flush; over a several-hundred-px pin it's invisible.
+      var travel = -sec.getBoundingClientRect().top - ALIGN_EPS;
+      var range = Math.max(1, pinScroll - ALIGN_EPS);
+      var past = Math.min(1, Math.max(0, travel / range));
+      panEl.style.transform = "translateY(" + (-(past * range) + mom).toFixed(1) + "px)";
     }
     function update() {
       raf = 0;
