@@ -162,12 +162,12 @@
      un-spawns it (the zone ahead is empty) and re-activates the previous, committed line. */
   // The 4 highlight domains are numbered 1..4 and rendered as `cat <word>`. The terminal
   // is already `cd`'d into scraping (domain 1 = the highlights we're on), so the FORWARD
-  // reveal starts at domain 2 (ai-ml) — see domFwdTarget (z+2). Keeping the NUMBER-based
+  // reveal starts at domain 2 (etl-ml) — see domFwdTarget (z+2). Keeping the NUMBER-based
   // direction-aware logic from main means each zone knows its forward target (z+2) and
   // backward target (z), so reversing untypes and retypes the correct neighbour with a
   // MINIMAL edit — just more untyping than before, since the words share only `cat ` and
   // then diverge (unlike the old single-digit `cat domain N`).
-  var DOMAIN_WORDS = { 1: "scraping", 2: "ai-ml", 3: "infra", 4: "rest-apis" };
+  var DOMAIN_WORDS = { 1: "scraping", 2: "etl-ml", 3: "infra-ops", 4: "rest-apis" };
   var DOM_PER_CHAR = 0.06;   // global-scroll units per char for the reversal correction (min pace)
   var domFrom = "", domTarget = "", domBoundary = 0, domBack = 0, domFwd = 0;
   var domDisp = "", domActiveZ = -1, domDirState = 1, domStartG = 0, domEndG = 0, domLastG = null, domDir = 1;
@@ -339,8 +339,8 @@
     if (z !== domActiveZ) {
       // Threshold crossed — PRINT a fresh new line UNDER the last and type the whole
       // command from empty toward this zone's DIRECTION-AWARE target (dirTarget): forward
-      // types the forward domain (e.g. zone 1 → `cat ai-ml`), backward the backward one
-      // (count DOWN — zone 3 → `cat ai-ml`, zone 2 → `cat scraping`). The two boundary zones
+      // types the forward domain (e.g. zone 1 → `cat etl-ml`), backward the backward one
+      // (count DOWN — zone 3 → `cat etl-ml`, zone 2 → `cat scraping`). The two boundary zones
       // type `cd ..` toward the OUTSIDE (zone 1 back, last zone forward) — held empty until
       // the zone centre, then typed over the second half (see below).
       // Going back appends below just like forward; the stack only ever scrolls up.
@@ -589,25 +589,25 @@
     ml: "images/flow/ml-analysis.jpg", bs: "images/flow/build-ship.jpg"
   };
   var CARD_DATA = [
-    [ // 01 Browser Automation
+    [ // 01 Anti-Bot Scraping
       { k: "p", n: "Market Data Platform", img: IMG.dc, d: "28-pipeline NSE ingestion layer feeding 12+ datasets.", t: ["Python", "Playwright", "ETL"], href: "/projects/market-data-pipeline/" },
       { k: "p", n: "Job Application Bot", img: IMG.dc, d: "Scrapes Indeed, Glassdoor & LinkedIn; tailors a resume per match.", t: ["Python", "Playwright", "FastAPI"] },
       { k: "p", n: "Product Explorer", img: IMG.ps, d: "Crawlee/Playwright scraper streaming a catalog over WebSockets.", t: ["Crawlee", "Playwright", "NestJS"], href: "/projects/product-explorer/" },
       { k: "b", n: "Scraping 20 Years of NSE Filings", d: "Beating bot defenses to backfill two decades of insider filings.", t: ["Scraping", "Playwright"], href: "/blog/how-i-scraped-nse-insider-filings/" }
     ],
-    [ // 02 Applied ML
+    [ // 02 Resilient ETL & ML
       { k: "p", n: "Fraud Detection", img: IMG.ml, d: "95% of fraud caught at 0.995 ROC-AUC on 6.4M transactions.", t: ["scikit-learn", "pandas"], href: "/projects/fraud-detection/" },
       { k: "p", n: "Minute-Level Stock Prediction", img: IMG.bs, d: "Next-minute price direction over 9.4M NSE ticks.", t: ["scikit-learn", "Backtesting"], href: "/projects/nse-stock-prediction/" },
       { k: "p", n: "Trader Sentiment Analysis", img: IMG.dc, d: "Fear & Greed sentiment vs trader PnL across 211K crypto trades.", t: ["pandas", "SciPy"], href: "https://github.com/VishnujanNarayanan/Trader_sentiment_analysis", ext: true },
-      { k: "b", n: "Next-Minute Price Direction", d: "Features, leakage traps, and honest backtests on 9.4M ticks.", t: ["Quant", "ML"], href: "/blog/minute-level-stock-prediction/" }
+      { k: "b", n: "Resumable ETL Pipelines", d: "Incremental loads, adaptive backoff, and reruns that repair gaps.", t: ["ETL", "Python"], href: "/blog/building-resumable-etl-pipelines/" }
     ],
-    [ // 03 Cloud & DevOps
+    [ // 03 Deploys & Uptime
       { k: "p", n: "DekhLaw Platform", img: IMG.bs, d: "Production legal-tech on Railway/Vercel — Docker, self-healing schema.", t: ["Railway", "Docker", "PostgreSQL"] },
       { k: "p", n: "Job Application Bot", img: IMG.dc, d: "Dockerized pipeline on AWS & GCP, Postgres on Neon.", t: ["Docker", "AWS", "GCP"] },
       { k: "b", n: "Zero-Downtime Deploys", d: "Rolling restarts for background workers without dropping jobs.", t: ["DevOps", "Deploy"], href: "/blog/" },
       { k: "b", n: "Rate Limiting with Redis", d: "Tiered limits that curb abuse without hurting real users.", t: ["Redis", "Backend"], href: "/blog/" }
     ],
-    [ // 04 Web & API Endpoints
+    [ // 04 APIs & Apps
       { k: "p", n: "DekhLaw API", img: IMG.bs, d: "~30 Express endpoints, JWT auth, and Twilio voice orchestration.", t: ["Express", "Twilio", "JWT"] },
       { k: "p", n: "Law Firm Website", img: IMG.ps, d: "Next.js 14 site — 14 routes, Resend lead capture, full SEO.", t: ["Next.js", "TypeScript", "Resend"] },
       { k: "p", n: "Professional Directory App", img: IMG.ps, d: "React Native across 12 screens over a FastAPI REST service.", t: ["React Native", "FastAPI"], href: "https://github.com/VishnujanNarayanan/professional-directory-app", ext: true },
