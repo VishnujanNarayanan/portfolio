@@ -970,6 +970,7 @@
   /* ---------- Main loop ---------- */
   var lastSel = -1;
   var lastGlobalRaw = 0, scrollDir = 1;   // scroll direction: +1 forward (down), −1 back (up)
+  var lastInPlace;                        // previous frame's pin state — detects the parked-globalRaw jump
   var gSpeed = 0, lastGlobalTime = 0;     // smoothed scroll speed in global-units (zones)/ms
   var darkSubs = [];   // zone 3-4 sub paragraphs; colour scroll-driven black→grey
   var lightSubs = [];  // zone 1-2 sub paragraphs; colour scroll-driven grey→white
@@ -1058,6 +1059,13 @@
     if (inPlace && rect.bottom < vh) { driveBlogHandover(rect.bottom); }
     else { commitHandover(); driveTerminal(inPlace, approachP, globalRaw, heroPB); }
     var dGlobal = globalRaw - lastGlobalRaw;                         // signed scroll delta this frame (zones)
+    // globalRaw is PARKED at −1 while the section isn't in place, so the frame the pin
+    // engages (or releases) it jumps discontinuously (−1 ↔ ~−0.5) with no scroll behind
+    // it. That fake delta kicked the column splay by ~2rem, so the cards visibly SNAPPED
+    // to a new position at the hero/zone-1 threshold when scrolling back up and returning.
+    // Swallow the delta on the toggle frame; real scrolling resumes from the next one.
+    if (lastInPlace === undefined) lastInPlace = inPlace;
+    if (inPlace !== lastInPlace) { dGlobal = 0; lastInPlace = inPlace; }
     var sceneScrolled = Math.abs(globalRaw - lastGlobalRaw) > 1e-4;  // cards slid this frame
     if (globalRaw > lastGlobalRaw + 1e-4) scrollDir = 1;
     else if (globalRaw < lastGlobalRaw - 1e-4) scrollDir = -1;
