@@ -184,7 +184,6 @@ body.nav-open{overflow:hidden}
 .flow-panel--active .flow-panel__content .flow-panel__pills{opacity:1;transform:none;transition-delay:.24s}
 
 /* Side vertical labels (top-right) */
-.flow-panel__side{position:absolute;z-index:2;top:calc(var(--header-height) + 8px);right:clamp(14px,2.4vw,40px);display:flex;flex-direction:column;align-items:flex-end;gap:14px;writing-mode:vertical-rl;font-family:var(--font-ui);font-size:11px;letter-spacing:.34em;color:var(--color-text-subtle);text-transform:uppercase}
 
 /* Floating data cards */
 .flow-card{position:absolute;width:230px;background:rgba(255,255,255,.92);border:1px solid rgba(5,4,25,.08);border-radius:14px;padding:16px 18px;box-shadow:0 18px 40px -16px rgba(5,4,25,.28)}
@@ -230,7 +229,6 @@ body.nav-open{overflow:hidden}
   .flow-panel__title{font-size:clamp(40px,11vw,60px)}
   /* No JS-driven active state on mobile — force the content + its parts visible */
   .flow-panel__content .flow-panel__index,.flow-panel__content .flow-panel__sub,.flow-panel__content .flow-panel__pills{opacity:1!important;transform:none!important}
-  .flow-panel__side{display:none}
   .flow-panel__floats{position:relative;inset:auto;display:flex;flex-direction:column;gap:14px;margin-top:32px;pointer-events:auto}
   .flow-card{position:relative!important;left:auto!important;top:auto!important;width:100%!important;transform:none!important;opacity:1!important;backdrop-filter:none;background:#fff}
   .flow-card--focal{width:100%!important}
@@ -295,8 +293,6 @@ header .header__nav-left a{color:#050419;font-size:16px}
 /* Hero contour canvas (darker shade, same field as #bg-contours) */
 .hero .hero__bg #hero-contours{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 
-/* Remove floating zone side labels (Z01 / 1,665 …) from every zone */
-.flow .flow-panel__side{display:none}
 
 /* ============================================================
    WRITING — hover-driven horizontal accordion (per reference)
