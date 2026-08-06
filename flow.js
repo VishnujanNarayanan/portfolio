@@ -1249,7 +1249,16 @@
     // grid is centred (offset 0 = screen centre) so the cards rest right-of-centre and
     // park fully off-screen exactly like the image. pinX cancels the track slide so the
     // motion is scroll-driven; globalRaw (−1..N) gives the first/last their lead travel.
-    var csel = Math.round(globalRaw);
+    var cselRaw = Math.round(globalRaw);
+    // EDGE ZONES: once the cards have arrived they STAY on the page — they only ever
+    // swap BETWEEN zones. globalRaw runs −1..N, so the raw index leaves the [0,N−1] band
+    // at both ends (scrolling back up to the hero, or on past zone 4), which used to read
+    // as a threshold crossing and fire an exit with nothing coming in behind it. Clamping
+    // the index into the band means those ends cross no threshold: no exit, and the edge
+    // zone's grid stays visible/active. The FIRST arrival is exempt — while lastCsel is
+    // still undefined/out of band the raw −1 is kept, so zone 1 plays its entry at the pin.
+    var csel = (lastCsel !== undefined && lastCsel >= 0 && lastCsel < N)
+      ? clamp(cselRaw, 0, N - 1) : cselRaw;
     var clocal = globalRaw - csel;                   // [−0.5, 0.5] within the active stage
     // Active stage slides from R_END (right, entry) to L_END (leftmost). R_END=8 is the
     // original right entry (unchanged). L_END raised 0→2.4 so the card stops short of
