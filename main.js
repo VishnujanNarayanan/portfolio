@@ -1759,6 +1759,7 @@
     var section = document.querySelector(".writing");
     var wstack = section && section.querySelector(".wstack");
     var pin = section && section.querySelector(".writing__pin");
+    var pad = section && section.querySelector(".writing__pad");   // left intro (Writing / Blogs / desc)
     if (!section || !wstack) return;
     var panels = Array.prototype.slice.call(wstack.querySelectorAll(".wpanel"));
     if (!panels.length) return;
@@ -1943,16 +1944,21 @@
     var VANISH = 0.8;                                   // fold-back threshold as a fraction of vh into the cover
     function updatePinDwell(rect, vh) {
       if (!pin) return;
-      if (rect.top > 0) { pin.style.transform = ""; return; }
+      if (rect.top > 0) { pin.style.transform = ""; if (pad) pad.style.transform = ""; return; }
       var s = -rect.top;
       var driftStart = 0.15 * vh;                       // halfway through the 0.3vh dwell
       var drift = (!reduceMo && s > driftStart) ? (s - driftStart) * DRIFT : 0;
       pin.style.transform = drift ? "translateY(" + (-drift).toFixed(1) + "px)" : "";
+      // The left intro (Writing / Blogs / description) STAYS PUT once the panels start
+      // drifting up: the drift moves the whole pin (panels + contour plane), so the pad
+      // gets the exact inverse and holds at its rest position instead of riding along.
+      if (pad) pad.style.transform = drift ? "translateY(" + drift.toFixed(1) + "px)" : "";
     }
 
     function render(now) {
       if (window.innerWidth <= 820) {
         if (pin) pin.style.transform = "";
+        if (pad) pad.style.transform = "";
         if (settled !== null) { panels.forEach(function (p, i) {
           ["transition", "transform", "transformOrigin", "clipPath", "flexBasis", "flexGrow", "flexShrink", "height", "boxShadow", "opacity"].forEach(function (k) { p.style[k] = ""; });
           if (TXT[i].vert) { TXT[i].vert.style.top = ""; TXT[i].vert.style.opacity = ""; }
