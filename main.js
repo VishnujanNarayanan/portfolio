@@ -2222,13 +2222,13 @@
     // tools = full tech stack (from master_profile.yaml, fuller than the visible tags)
     // and dom = domain(s) — both drive the side-panel "Filter by" facets.
     var PROJECTS = [
-      { n: "Market Data Platform", d: "28-pipeline NSE market-data ingestion layer feeding 12+ datasets into a partitioned store.", t: ["Python", "pandas", "ETL", "SQL"], tools: ["Python", "pandas", "NumPy", "SQL", "ETL"], dom: ["Data", "Finance"], h: "projects/market-data-pipeline/index.html", img: "images/flow/data-collection.jpg" },
-      { n: "Product Explorer", d: "Full-stack TypeScript app scraping a book catalog into PostgreSQL, served via Next.js with real-time WebSocket scraping.", t: ["TypeScript", "NestJS", "PostgreSQL", "Redis"], tools: ["TypeScript", "NestJS", "Next.js", "PostgreSQL", "Redis", "WebSockets"], dom: ["Scraping", "Backend", "Full-Stack", "Data"], h: "projects/product-explorer/index.html", img: "images/flow/processing-storage.jpg" },
+      { n: "Market Data Platform", d: "28-pipeline NSE market-data ingestion layer feeding 12+ datasets into a partitioned store.", t: ["Python", "pandas", "ETL", "SQL"], tools: ["Python", "pandas", "NumPy", "SQL", "ETL"], dom: ["Data", "Finance"], h: "/projects/market-data-pipeline/", img: "images/flow/data-collection.jpg" },
+      { n: "Product Explorer", d: "Full-stack TypeScript app scraping a book catalog into PostgreSQL, served via Next.js with real-time WebSocket scraping.", t: ["TypeScript", "NestJS", "PostgreSQL", "Redis"], tools: ["TypeScript", "NestJS", "Next.js", "PostgreSQL", "Redis", "WebSockets"], dom: ["Scraping", "Backend", "Full-Stack", "Data"], h: "/projects/product-explorer/", img: "images/flow/processing-storage.jpg" },
       { n: "DekhLaw Legal-Emergency Platform", d: "Solo-built production legal-emergency platform — ~30 Express endpoints over PostgreSQL with JWT auth, a real-time Twilio call-dispatch engine, and Haversine lawyer matching, deployed on Railway and Vercel.", t: ["Node.js", "Express", "PostgreSQL", "Twilio"], tools: ["Node.js", "Express", "PostgreSQL", "SQLite", "Twilio", "JWT", "Cloudinary", "Railway", "Vercel"], dom: ["Full-Stack", "Backend", "DevOps"], img: "images/flow/build-ship.jpg" },
       { n: "Law Firm Website", d: "Production law-firm marketing site in Next.js 14 + TypeScript — 14 routes, Resend-backed lead capture, Zod-validated forms, and full SEO/JSON-LD, designed and shipped solo.", t: ["Next.js", "TypeScript", "Tailwind", "Framer Motion"], tools: ["Next.js", "React", "TypeScript", "Tailwind", "Framer Motion", "Resend", "Zod", "Vercel"], dom: ["Full-Stack", "Frontend"], img: "images/flow/processing-storage.jpg" },
       { n: "Job Application Bot", d: "Autonomous job-search bot — scrapes Indeed, Glassdoor, and LinkedIn listings, scores them against a master profile, and builds a tailored resume per match with an LLM, rendered on demand via FastAPI.", t: ["Python", "FastAPI", "Playwright", "LLM"], tools: ["Python", "FastAPI", "Playwright", "PostgreSQL", "spaCy", "Gemini", "Docker", "AWS", "GCP"], dom: ["Backend", "Scraping", "ML", "NLP", "DevOps"], img: "images/flow/data-collection.jpg" },
-      { n: "Fraud Transaction Detection", d: "Fraud-detection model on 6.4M transactions — 95% caught at 0.995 ROC-AUC despite a 0.13% fraud rate.", t: ["Python", "scikit-learn", "pandas"], tools: ["Python", "scikit-learn", "pandas", "NumPy", "SciPy"], dom: ["ML", "Data", "Finance"], h: "projects/fraud-detection/index.html", code: "https://github.com/VishnujanNarayanan/Fraud_Transaction_Detection", img: "images/flow/ml-analysis.jpg" },
-      { n: "Minute-Level Stock Prediction", d: "Intraday price-direction system over 9.4M NSE ticks, raising next-minute precision from 0.51 to 0.61.", t: ["Python", "scikit-learn", "Backtesting"], tools: ["Python", "scikit-learn", "pandas", "Backtesting"], dom: ["ML", "Quant", "Finance", "Data"], h: "projects/nse-stock-prediction/index.html", code: "https://github.com/VishnujanNarayanan/minute-level-stock-prediction", img: "images/flow/build-ship.jpg" },
+      { n: "Fraud Transaction Detection", d: "Fraud-detection model on 6.4M transactions — 95% caught at 0.995 ROC-AUC despite a 0.13% fraud rate.", t: ["Python", "scikit-learn", "pandas"], tools: ["Python", "scikit-learn", "pandas", "NumPy", "SciPy"], dom: ["ML", "Data", "Finance"], h: "/projects/fraud-detection/", code: "https://github.com/VishnujanNarayanan/Fraud_Transaction_Detection", img: "images/flow/ml-analysis.jpg" },
+      { n: "Minute-Level Stock Prediction", d: "Intraday price-direction system over 9.4M NSE ticks, raising next-minute precision from 0.51 to 0.61.", t: ["Python", "scikit-learn", "Backtesting"], tools: ["Python", "scikit-learn", "pandas", "Backtesting"], dom: ["ML", "Quant", "Finance", "Data"], h: "/projects/nse-stock-prediction/", code: "https://github.com/VishnujanNarayanan/minute-level-stock-prediction", img: "images/flow/build-ship.jpg" },
       { n: "Trader Sentiment Analysis", d: "Quantified how Bitcoin Fear & Greed sentiment drives trader PnL across 211K crypto trades, with a contrarian sentiment-gated signal.", t: ["Python", "pandas", "SciPy", "Statistics"], tools: ["Python", "pandas", "SciPy", "Matplotlib"], dom: ["Finance", "Quant", "Data"], code: "https://github.com/VishnujanNarayanan/Trader_sentiment_analysis", img: "images/flow/data-collection.jpg" },
       { n: "Nexora Semantic Vibe Matcher", d: "Semantic product-search engine that embeds descriptions and ranks by cosine similarity — finds matches with no shared keywords.", t: ["Python", "sentence-transformers", "NLP"], tools: ["Python", "sentence-transformers", "PyTorch"], dom: ["ML", "NLP"], code: "https://github.com/VishnujanNarayanan/nexora_submission", img: "images/flow/processing-storage.jpg" },
       { n: "Support Ticket Classifier", d: "End-to-end NLP system classifying support tickets by issue type and urgency and extracting entities, served via a Gradio app.", t: ["Python", "scikit-learn", "NLTK", "Gradio"], tools: ["Python", "scikit-learn", "NLTK", "Gradio"], dom: ["ML", "NLP"], code: "https://github.com/VishnujanNarayanan/ticket-classifier-nlp", img: "images/flow/ml-analysis.jpg" },
@@ -2301,7 +2301,7 @@
         var dataF = ' data-tools="|' + p.tools.map(slug).join("|") + '|" data-dom="|' + p.dom.map(slug).join("|") + '|"';
         return '<div class="proj-card"' + dataF + ">" +
           openA +
-            '<img class="proj-card__img" src="' + p.img + '" alt="" loading="lazy">' +
+            '<img class="proj-card__img" src="' + p.img + '" alt="" loading="lazy" decoding="async">' +
             '<span class="proj-card__reveal">' +
               '<span class="proj-card__desc">' + escapeHtml(p.d) + "</span>" +
             "</span>" +
@@ -2335,14 +2335,29 @@
     // Body layout: preEl (install + monitor lines) → selEl (the SELECT line) →
     // projEl (project cards, built ONCE so images don't reload/flicker). Phase 2
     // collapses+fades preEl, easing selEl to the top, and expands+fades in projEl.
-    var preEl = document.createElement("div"); preEl.className = "term-pre";
-    var selEl = document.createElement("div"); selEl.className = "term-sel";
-    var projEl = document.createElement("div"); projEl.className = "term-result"; projEl.innerHTML = projectsHtml();
-    // preEl (collapses on reveal) + selEl (the `mysql> SELECT …` line) stay pinned at
-    // the top; the side panel stays put too. Only .term-cards-pan (inside the clipped,
-    // top-faded .term-cards-view) pans UP on scroll, so all 14 cards scroll through the
-    // pinned 100vh terminal while the SELECT line + panel hold, fading out at the top.
-    body.appendChild(preEl); body.appendChild(selEl); body.appendChild(projEl);
+    //
+    // The three wrappers — and the whole project-card result set — are now rendered
+    // STATICALLY into index.html (see the generated block in #term-body, produced by
+    // `node scripts/gen-project-cards.mjs` from the PROJECTS array + projectsHtml()
+    // below). The cards are the densest keyword content on the site and used to exist
+    // only after this script ran, so crawlers that don't execute JS never saw them.
+    // This IIFE now ADOPTS that markup and only animates it. projectsHtml() is kept as
+    // the single source of truth — the generator calls it, and the fallback below still
+    // builds the DOM at runtime if the static block is missing (so the section survives
+    // an un-regenerated index.html).
+    var preEl = body.querySelector(".term-pre");
+    var selEl = body.querySelector(".term-sel");
+    var projEl = body.querySelector(".term-result");
+    if (!preEl || !selEl || !projEl) {
+      preEl = document.createElement("div"); preEl.className = "term-pre";
+      selEl = document.createElement("div"); selEl.className = "term-sel";
+      projEl = document.createElement("div"); projEl.className = "term-result"; projEl.innerHTML = projectsHtml();
+      // preEl (collapses on reveal) + selEl (the `mysql> SELECT …` line) stay pinned at
+      // the top; the side panel stays put too. Only .term-cards-pan (inside the clipped,
+      // top-faded .term-cards-view) pans UP on scroll, so all 14 cards scroll through the
+      // pinned 100vh terminal while the SELECT line + panel hold, fading out at the top.
+      body.appendChild(preEl); body.appendChild(selEl); body.appendChild(projEl);
+    }
     var panEl = projEl.querySelector(".term-cards-pan");
     var viewEl = projEl.querySelector(".term-cards-view");
 
