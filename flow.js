@@ -48,8 +48,8 @@
   var LINE_BLOG  = "cd blogs";                          // flow→blog: enter the blog dir (spawned when the cards fly out)
   // Two back-strings — the `../` differs by the line's prompt/cwd, exactly like the hero side
   // (LINE_REV `cd highlights…` from home vs LINE_CD `cd ../highlights…` from ~/certificates):
-  var LINE_BLOG_BACK_PRE  = "cd highlights && cat apis";    // PRE-commit morph of `cd blogs` (its prompt is ~/portfolio-website$ → no `../`)
-  var LINE_BLOG_BACK_POST = "cd ../highlights && cat apis"; // POST-commit reverse, typed INTO the blogs$ line (~/…/blogs$ → needs `../`)
+  var LINE_BLOG_BACK_PRE  = "cd highlights && cat rest-apis";    // PRE-commit morph of `cd blogs` (its prompt is ~/portfolio-website$ → no `../`)
+  var LINE_BLOG_BACK_POST = "cd ../highlights && cat rest-apis"; // POST-commit reverse, typed INTO the blogs$ line (~/…/blogs$ → needs `../`)
   var cdStack = flow.querySelector(".flow__cd-stack");
   var flowCd = flow.querySelector(".flow__cd");   // CLI wrapper — carries the scroll-darkened colour vars
   var writingEl = document.getElementById("blog"); // the writing/blog section — drives the exit approach
@@ -162,12 +162,12 @@
      un-spawns it (the zone ahead is empty) and re-activates the previous, committed line. */
   // The 4 highlight domains are numbered 1..4 and rendered as `cat <word>`. The terminal
   // is already `cd`'d into scraping (domain 1 = the highlights we're on), so the FORWARD
-  // reveal starts at domain 2 (pipelines) — see domFwdTarget (z+2). Keeping the NUMBER-based
+  // reveal starts at domain 2 (etl-ml) — see domFwdTarget (z+2). Keeping the NUMBER-based
   // direction-aware logic from main means each zone knows its forward target (z+2) and
   // backward target (z), so reversing untypes and retypes the correct neighbour with a
   // MINIMAL edit — just more untyping than before, since the words share only `cat ` and
   // then diverge (unlike the old single-digit `cat domain N`).
-  var DOMAIN_WORDS = { 1: "scraping", 2: "pipelines", 3: "deploys", 4: "apis" };
+  var DOMAIN_WORDS = { 1: "scraping", 2: "etl-ml", 3: "infra-ops", 4: "rest-apis" };
   var DOM_PER_CHAR = 0.06;   // global-scroll units per char for the reversal correction (min pace)
   var domFrom = "", domTarget = "", domBoundary = 0, domBack = 0, domFwd = 0;
   var domDisp = "", domActiveZ = -1, domDirState = 1, domStartG = 0, domEndG = 0, domLastG = null, domDir = 1;
@@ -339,8 +339,8 @@
     if (z !== domActiveZ) {
       // Threshold crossed — PRINT a fresh new line UNDER the last and type the whole
       // command from empty toward this zone's DIRECTION-AWARE target (dirTarget): forward
-      // types the forward domain (e.g. zone 1 → `cat pipelines`), backward the backward one
-      // (count DOWN — zone 3 → `cat pipelines`, zone 2 → `cat scraping`). The two boundary zones
+      // types the forward domain (e.g. zone 1 → `cat etl-ml`), backward the backward one
+      // (count DOWN — zone 3 → `cat etl-ml`, zone 2 → `cat scraping`). The two boundary zones
       // type `cd ..` toward the OUTSIDE (zone 1 back, last zone forward) — held empty until
       // the zone centre, then typed over the second half (see below).
       // Going back appends below just like forward; the stack only ever scrolls up.
@@ -393,16 +393,16 @@
 
      Commit-then-spawn, exactly like the hero-side cert reversal (see driveTerminal):
       • PRE-COMMIT (threshold NOT yet reached): the `cd blogs` line is still live, so
-        reversing MORPHS IT IN PLACE → `cd highlights && cat apis` (no `../` — it sits
+        reversing MORPHS IT IN PLACE → `cd highlights && cat rest-apis` (no `../` — it sits
         at the ~/portfolio-website$ prompt).
       • COMMIT (threshold reached forward): `cd blogs` freezes, the blogs$ prompt spawns.
       • POST-COMMIT: the committed `cd blogs` is never edited — reversing types the back
-        command `cd ../highlights && cat apis` INTO that same blogs$ line (no extra
+        command `cd ../highlights && cat rest-apis` INTO that same blogs$ line (no extra
         line), and re-forwarding untypes it. */
   var HP_BLOG_END = 0.5;   // `cd blogs` finishes AS the blog panels fly in (bp = 1)
   var blogHO = null;       // { blogRow, promptRow, committed } while the handover is live
   var lastHp = -1;         // last hp — for the change-gate + the scroll direction
-  // Minimal-edit morph for the PRE-COMMIT `cd blogs` ↔ `cd ../highlights && cat apis`
+  // Minimal-edit morph for the PRE-COMMIT `cd blogs` ↔ `cd ../highlights && cat rest-apis`
   // swap (its own state so it never collides with the zone engine or the cert reversal).
   var blogFrom = "", blogTarget = "", blogBnd = 0, blogBk = 0, blogFw = 0;
   var blogDisp = "", blogDir = 1, blogAnchor = 0, blogEnd = 1;
@@ -447,7 +447,7 @@
       blogDisp = ""; blogDir = 1; blogSwap("", LINE_BLOG); blogAnchor = 0; blogEnd = 1;
     }
     if (!blogHO.committed) {
-      // PRE-COMMIT — the cd blogs line morphs in place (cd blogs ↔ cd highlights && cat apis).
+      // PRE-COMMIT — the cd blogs line morphs in place (cd blogs ↔ cd highlights && cat rest-apis).
       if (dir < 0 && blogDir !== -1) { blogDir = -1; blogSwap(blogDisp, LINE_BLOG_BACK_PRE); blogAnchor = bp; blogEnd = 0; }
       else if (dir >= 0 && blogDir !== 1) { blogDir = 1; blogSwap(blogDisp, LINE_BLOG); blogAnchor = bp; blogEnd = 1; }
       var span = blogEnd - blogAnchor;
