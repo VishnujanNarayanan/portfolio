@@ -645,7 +645,7 @@
         var title = esc(c.title || ("Certificate " + (i + 1)));
         // encodeURI: the PDF filenames have spaces. The PNG is shown; the link opens the real PDF.
         return '<div class="cert-slide"><figure class="cert-slide__fig">' +
-          '<img class="cert-slide__img" src="' + encodeURI(c.img) + '" alt="' + title + '" loading="lazy">' +
+          '<img class="cert-slide__img" src="' + encodeURI(c.img) + '" alt="' + title + '" loading="lazy" decoding="async">' +
           (c.pdf ? '<a class="cert-slide__open" href="' + encodeURI(c.pdf) + '" target="_blank" rel="noopener">Open ' + title + ' ↗</a>' : '') +
           '</figure></div>';
       }).join("");
@@ -2949,4 +2949,57 @@
   if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
   if (feed.complete) render(); else feed.addEventListener("load", render);
   render();
+})();
+
+/* ---------- Ahead-of-arrival image decoding ----------
+   Measured cause of the worst stutter on this page: image DECODE. On battery the flow
+   grid was averaging 35fps but dropping to a 7fps 5%-low — spikes, not steady load,
+   because a full-size JPEG gets decoded on the main thread at the moment it must first
+   be painted. Halving the flow images' pixel count took that 5%-low from 7 to 23.
+
+   loading="lazy" controls when a file is FETCHED and decoding="async" merely permits an
+   off-thread decode; neither guarantees the decode is finished before the first paint that
+   needs it. img.decode() does: it resolves once the bitmap is ready, and the work happens
+   off the main thread. So decode every image while it is still ~1.5 screens away, and the
+   frame that finally paints it has nothing left to do.
+
+   Deliberately NOT decoding everything up front — the certificate slides are full-screen
+   (~1.5M px each) and all 18 images together are ~58MB of RGBA. Decoding on approach keeps
+   peak memory sane while still removing the spike. Images added later (cert slides, project
+   cards, flow cards are all built by JS) are picked up by the MutationObserver. */
+(function preDecodeImages() {
+  if (!("IntersectionObserver" in window) || !("MutationObserver" in window)) return;
+
+  var io = new IntersectionObserver(function (entries) {
+    for (var i = 0; i < entries.length; i++) {
+      var e = entries[i];
+      if (!e.isIntersecting) continue;
+      var img = e.target;
+      io.unobserve(img);
+      // decode() rejects if the element is detached or the source is broken — ignore both,
+      // the browser just falls back to decoding at paint time as it does today.
+      if (img.decode) { img.decode().catch(function () {}); }
+    }
+  }, { rootMargin: "1500px 0px" });
+
+  function watch(root) {
+    var imgs = root.querySelectorAll ? root.querySelectorAll("img") : [];
+    for (var i = 0; i < imgs.length; i++) {
+      var im = imgs[i];
+      if (im.__preDec) continue;
+      im.__preDec = 1;
+      io.observe(im);
+    }
+    if (root.tagName === "IMG" && !root.__preDec) { root.__preDec = 1; io.observe(root); }
+  }
+
+  watch(document);
+  new MutationObserver(function (muts) {
+    for (var m = 0; m < muts.length; m++) {
+      var added = muts[m].addedNodes;
+      for (var n = 0; n < added.length; n++) {
+        if (added[n].nodeType === 1) watch(added[n]);
+      }
+    }
+  }).observe(document.body, { childList: true, subtree: true });
 })();
