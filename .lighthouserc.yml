@@ -1,7 +1,7 @@
 ci:
   collect:
     url:
-      - https://vishnujan-narayanan.vercel.app/
+      - https://vishnujan.dev/
     numberOfRuns: 1
   assert:
     preset: lighthouse:recommended
