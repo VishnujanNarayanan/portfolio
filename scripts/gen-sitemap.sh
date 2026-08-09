@@ -13,7 +13,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-BASE="https://vishnujan-narayanan.vercel.app"
+BASE="https://vishnujan.dev"
 
 # "<file>|<url-path>|<priority>"
 PAGES=(
