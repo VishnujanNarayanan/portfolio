@@ -33,7 +33,7 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"Building Resumable ETL Pipelines That Repair, Not Corrupt","item":"https://vishnujan.dev/blog/building-resumable-etl-pipelines/"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Building Resumable ETL Pipelines That Repair, Not Corrupt","datePublished":"2025-05-20","dateModified":"2025-05-20","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/building-resumable-etl-pipelines/"}</script>
 </head>
-<body class="subpage-body">
+<body class="subpage-body post-body">
 <div class="mobile-nav__overlay"></div>
 <header class="show">
   <nav class="header__nav-left" aria-label="Primary navigation">
@@ -82,6 +82,17 @@
 </header>
 <main>
 <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>Building Resumable ETL Pipelines That Repair, Not Corrupt</nav>
+<div class="post-shell">
+<aside class="post-nav" aria-label="More posts">
+  <span class="post-nav__label">More writing</span>
+  <ul class="post-nav__list">
+    <li><a class="post-nav__item" href="/blog/a-year-of-ingestion-bugs/">A Year of Ingestion Bugs</a></li>
+    <li><a class="post-nav__item" href="/blog/how-i-scraped-nse-insider-filings/">How I Scraped 20 Years of NSE Insider Filings</a></li>
+    <li><span class="post-nav__item is-current" aria-current="page">Building Resumable ETL Pipelines That Repair, Not Corrupt</span></li>
+    <li><a class="post-nav__item" href="/blog/minute-level-stock-prediction/">Predicting Next-Minute Price Direction on 9.4M NSE Ticks</a></li>
+  </ul>
+  <a class="post-nav__all" href="/blog/">All writing &rarr;</a>
+</aside>
 <article class="article">
   <h1>Building Resumable ETL Pipelines That Repair, Not Corrupt</h1>
   <div class="meta"><span>Data engineering</span><span>8 min read</span><span>Published May 2025</span></div>
@@ -110,20 +121,88 @@
 
   <a class="back" href="/blog/">← Back to writing</a>
 </article>
+</div>
 </main>
-<footer class="footer">
-  <nav class="footer-nav" aria-label="Footer navigation">
-    <a href="/#projects" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Projects</span></a>
-    <a href="/#skills" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Skills</span></a>
-    <a href="/#contact" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Contact</span></a>
-    <a href="/blog/" class="footer-nav-btn"><span class="footer-nav-btn__bg"></span><span class="footer-nav-btn__label">Blog</span></a>
-  </nav>
-  <div class="footer__bottom">
-    <span class="logo-text footer__logo">VJ</span>
-    <div class="footer__meta">
-      <p class="footer__copyright">© 2026 Vishnujan Narayanan</p>
-      <a href="https://github.com/VishnujanNarayanan" class="footer__privacy" target="_blank" rel="me noopener">GitHub</a>
-      <a href="https://www.linkedin.com/in/vishnujan-narayanan" class="footer__privacy" target="_blank" rel="me noopener">LinkedIn</a>
+<footer class="lfooter">
+  <div class="lfooter__topbar">
+    <span class="lfooter__brand"><span>Vishnujan</span><span>Narayanan</span></span>
+  </div>
+
+  <div class="lfooter__layout">
+    <!-- Dark notched box (Lando footer mask) with static contour pattern inside -->
+    <div class="lfooter__clip">
+      <img class="lfooter__pattern" src="/images/footer-blobs.svg" alt="" aria-hidden="true" loading="lazy" decoding="async">
+
+      <div class="lfooter__inner">
+        <h2 class="lfooter__headline">
+          <span class="lfooter__hl-row">Data in.</span>
+          <span class="lfooter__hl-row"><span class="is-hl">Products</span> out.</span>
+        </h2>
+
+        <div class="lfooter__cols">
+          <nav class="lfooter__col lfooter__col--left" aria-label="Pages">
+            <span class="lfooter__col-label">Pages</span>
+            <a href="/" class="lfooter__navlink">Home</a>
+            <a href="/#projects" class="lfooter__navlink">Projects</a>
+            <a href="/#skills" class="lfooter__navlink">Skills</a>
+            <a href="/blog/" class="lfooter__navlink">Blog</a>
+          </nav>
+          <nav class="lfooter__col lfooter__col--right" aria-label="Social links">
+            <span class="lfooter__col-label">Follow On</span>
+            <a href="https://github.com/VishnujanNarayanan" target="_blank" rel="me noopener" class="lfooter__navlink">GitHub</a>
+            <a href="https://www.linkedin.com/in/vishnujan-narayanan" target="_blank" rel="me noopener" class="lfooter__navlink">LinkedIn</a>
+            <a href="https://www.instagram.com/___vi5hnu___/" target="_blank" rel="me noopener" class="lfooter__navlink">Instagram</a>
+            <a href="https://substack.com/@vishnujannarayanan" target="_blank" rel="me noopener" class="lfooter__navlink">Substack</a>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Sky-blue tools marquee (logos tinted via CSS mask) -->
+      <div class="lfooter__mq" aria-hidden="true">
+        <div class="lfooter__mq-track">
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+        </div>
+        <div class="lfooter__mq-track">
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+        </div>
+      </div>
+
+      <!-- Portrait cutout rising from the bottom (where the reference's helmet sits) -->
+      <img class="lfooter__me" src="/images/footer-me2.webp" alt="Vishnujan Narayanan" loading="lazy" decoding="async">
+    </div>
+
+    <!-- Pill in the bottom-centre tab of the notched box -->
+    <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me <span aria-hidden="true">&#8599;</span></a>
+
+    <!-- Legal row sits in the gradient shelves either side of the bottom tab -->
+    <div class="lfooter__bottom">
+      <span class="lfooter__copy">© 2026 Vishnujan Narayanan. All rights reserved</span>
+      <div class="lfooter__legal">
+        <a href="https://github.com/VishnujanNarayanan" target="_blank" rel="me noopener">GitHub</a>
+        <a href="https://www.linkedin.com/in/vishnujan-narayanan" target="_blank" rel="me noopener">LinkedIn</a>
+      </div>
     </div>
   </div>
 </footer>
