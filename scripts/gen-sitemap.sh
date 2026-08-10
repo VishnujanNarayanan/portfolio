@@ -26,6 +26,7 @@ PAGES=(
   "blog/how-i-scraped-nse-insider-filings/index.html|/blog/how-i-scraped-nse-insider-filings/|0.8"
   "blog/building-resumable-etl-pipelines/index.html|/blog/building-resumable-etl-pipelines/|0.8"
   "blog/minute-level-stock-prediction/index.html|/blog/minute-level-stock-prediction/|0.8"
+  "blog/a-year-of-ingestion-bugs/index.html|/blog/a-year-of-ingestion-bugs/|0.8"
 )
 
 {
