@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Predicting Next-Minute Price Direction on 9.4M NSE Ticks — Vishnujan Narayanan</title>
-<meta name="description" content="Turning 9.4M NSE trade and quote ticks into minute bars, engineering rolling and microstructure features, and backtesting a directional model without look-ahead leakage.">
+<title>What My Intraday Model Actually Predicted on 9.4M NSE Ticks — Vishnujan Narayanan</title>
+<meta name="description" content="A next-minute NSE direction model hit 61.4% precision against a 46.8% base rate — on 70 trades out of 3,100. The two ways I nearly fooled myself.">
 <link rel="icon" href="../../favicon.ico?v=2" sizes="any">
 <link rel="icon" type="image/png" href="../../favicon-512.png?v=2" sizes="512x512">
 <link rel="apple-touch-icon" href="../../apple-touch-icon.png?v=2">
 <link rel="canonical" href="https://vishnujan.dev/blog/minute-level-stock-prediction/">
 <meta name="robots" content="index, follow, max-image-preview:large">
-<meta property="og:title" content="Predicting Next-Minute Price Direction on 9.4M NSE Ticks">
+<meta property="og:title" content="What My Intraday Model Actually Predicted on 9.4M NSE Ticks">
 <meta property="og:description" content="From raw ticks to minute bars to a directional model — and the leakage traps that make backtests lie.">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Vishnujan Narayanan">
@@ -22,7 +22,7 @@
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:alt" content="Vishnujan Narayanan">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Predicting Next-Minute Price Direction on 9.4M NSE Ticks">
+<meta name="twitter:title" content="What My Intraday Model Actually Predicted on 9.4M NSE Ticks">
 <meta name="twitter:description" content="From raw ticks to minute bars to a directional model — and the leakage traps that make backtests lie.">
 <meta name="twitter:image" content="https://vishnujan.dev/og-cover.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,8 +30,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../styles.css">
 <script>document.documentElement.classList.remove("no-js");</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"Predicting Next-Minute Price Direction on 9.4M NSE Ticks","item":"https://vishnujan.dev/blog/minute-level-stock-prediction/"}]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Predicting Next-Minute Price Direction on 9.4M NSE Ticks","datePublished":"2025-05-28","dateModified":"2025-05-28","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/minute-level-stock-prediction/"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"What My Intraday Model Actually Predicted on 9.4M NSE Ticks","item":"https://vishnujan.dev/blog/minute-level-stock-prediction/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"What My Intraday Model Actually Predicted on 9.4M NSE Ticks","datePublished":"2025-05-28","dateModified":"2025-05-28","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/minute-level-stock-prediction/"}</script>
 </head>
 <body class="subpage-body post-body">
 <div class="mobile-nav__overlay"></div>
@@ -81,43 +81,106 @@
   </nav>
 </header>
 <main>
-<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>Predicting Next-Minute Price Direction on 9.4M NSE Ticks</nav>
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>What My Intraday Model Actually Predicted on 9.4M NSE Ticks</nav>
 <div class="post-shell">
 <aside class="post-nav" aria-label="More posts">
   <span class="post-nav__label">More writing</span>
   <ul class="post-nav__list">
     <li><a class="post-nav__item" href="/blog/a-year-of-ingestion-bugs/">A Year of Ingestion Bugs</a></li>
     <li><a class="post-nav__item" href="/blog/how-i-scraped-nse-insider-filings/">How I Scraped 20 Years of NSE Insider Filings</a></li>
-    <li><a class="post-nav__item" href="/blog/building-resumable-etl-pipelines/">Building Resumable ETL Pipelines That Repair, Not Corrupt</a></li>
-    <li><span class="post-nav__item is-current" aria-current="page">Predicting Next-Minute Price Direction on 9.4M NSE Ticks</span></li>
+    <li><a class="post-nav__item" href="/blog/building-resumable-etl-pipelines/">Making Pipeline Reruns Converge Instead of Drift</a></li>
+    <li><span class="post-nav__item is-current" aria-current="page">What My Intraday Model Actually Predicted on 9.4M NSE Ticks</span></li>
   </ul>
   <a class="post-nav__all" href="/blog/">All writing &rarr;</a>
 </aside>
 <article class="article">
-  <h1>Predicting Next-Minute Price Direction on 9.4M NSE Ticks</h1>
-  <div class="meta"><span>Quant / ML</span><span>9 min read</span><span>Published May 2025</span></div>
+  <h1>What my intraday model actually predicted on 9.4M NSE ticks</h1>
+  <div class="meta"><span>Quant / ML</span><span>9 min read</span><span>Published August 2026</span></div>
 
-  <p>Intraday prediction is where machine learning meets market microstructure, and where it is easiest to fool yourself. This is a walkthrough of how I built an intraday price-direction system over 9.4 million NSE tick records across 31 NIFTY stocks — from raw trades and quotes to minute bars to a model and a backtest — and, just as importantly, the leakage traps that quietly inflate results if you let them. The full project lives on the <a href="/projects/nse-stock-prediction/">Minute-Level Stock Prediction</a> page.</p>
+  <p>The test set was 3,100 minute bars, 1,451 of which were "up" — a base rate of 46.8%. Any honest reading of an intraday classifier starts there, because a model that predicts "up" every single time scores 46.8% precision while knowing nothing. My best configuration reached 61.4% precision, which sounds like a real edge until you notice it made that call 70 times out of 3,100 opportunities.</p>
+
+  <p>This is a walkthrough of building a next-minute direction model over 9.4 million NSE tick records across 31 NIFTY stocks, and of the two places I nearly fooled myself. Neither of them is the leakage everyone warns you about.</p>
 
   <h2>From ticks to minute bars</h2>
-  <p>Raw tick data is firehose-shaped: 2.9 million trades and 6.4 million quotes across 31 symbols. You cannot model on that directly, and you would not want to — the signal at the individual-tick level is mostly noise and exchange mechanics. The first job is aggregation. I ingested 31 per-symbol tick files (~9.4M rows total) with a pandas loader, tagged every record by company, and concatenated them into unified trade and quote datasets.</p>
-  <p>From there I condensed the firehose into minute bars: grouping on company and minute, then inner-joining the trade and quote aggregates on a composite key. The output is roughly 11,600 labeled OHLC feature rows — a dataset small enough to model on and structured enough to reason about. Going from 9.4M ticks to ~11,600 rows is not just compression; it is choosing the timescale at which you believe a signal exists.</p>
 
-  <h2>Features that capture momentum and liquidity</h2>
-  <p>A minute bar on its own is thin. The predictive content comes from context — what happened over the last several minutes. I constructed rolling mean and standard-deviation features over 3-, 5-, 10-, and 20-minute windows on both price and volume, using pandas <code>groupby</code>-transform so each window is computed per company without bleeding across symbols.</p>
-  <p>On top of the rolling features I derived microstructure signals: per-minute VWAP, OHLC statistics, and bid-ask spread computed from the raw order flow. Spread is a liquidity proxy; VWAP anchors price against traded volume; the rolling stats capture momentum and volatility regime. Together that is 20-plus engineered features describing not just where the price is, but how it is moving and how liquid the book is.</p>
+  <p>The raw data is 2.9 million trades and 6.4 million quotes across 31 symbols, one file per symbol. You cannot model on that directly and you would not want to — at the individual-tick level most of what you see is exchange mechanics rather than signal. I loaded the 31 per-symbol files, tagged every record with its company, concatenated them into unified trade and quote frames, then condensed to minute bars by grouping on company and minute and inner-joining the trade and quote aggregates.</p>
 
-  <h2>The leakage trap</h2>
-  <p>Here is where most intraday backtests go wrong. If you shuffle your data and do a random train/test split, you train on the future and test on the past — and your metrics look fantastic right up until you trade real money. Time-series prediction demands that the model only ever sees the past.</p>
-  <p>I labeled the target as next-minute return direction using horizon-shifted targets, and split train and test with a per-company, time-ordered split. Every test bar comes strictly after every training bar for that symbol. No shuffling, no leakage. This is unglamorous and it lowers your headline numbers, which is exactly why it matters: the numbers you get are numbers you can believe.</p>
+  <p>That leaves roughly 11,600 labelled OHLC rows with a spread feature. Going from 9.4M ticks to 11,600 rows is not compression, it is a choice about the timescale at which you believe a signal exists — and it is the single most consequential decision in the project, made before any modelling starts.</p>
 
-  <h2>Modeling for precision, not accuracy</h2>
-  <p>Accuracy is the wrong objective for a directional trading signal. If you act on every prediction, you pay costs on every trade and drown a weak edge in noise. What you actually want is to act only when the model is confident. I trained a scikit-learn <code>RandomForestClassifier</code> on the engineered features, then tuned a probability threshold of 0.63: the system only takes a long signal when predicted probability clears that bar.</p>
-  <p>That threshold lifted next-minute precision from a coin-flip 0.51 to 0.61. The trade-off is fewer trades — you are deliberately staying out of the market when the model is unsure. For a signal, that is the right trade-off. A precise signal you act on selectively beats a noisy one you act on constantly.</p>
+  <h2>The target and the split</h2>
 
-  <h2>Backtesting honestly</h2>
-  <p>Finally, the backtest. I evaluated threshold-filtered long signals across 3,100 held-out minute bars with per-trade PnL accounting, comparing precision and trade count at 0.5, 0.6, and 0.7 cutoffs. Sweeping the threshold shows you the whole frontier: lower cutoffs trade more often at lower precision, higher cutoffs trade rarely at higher precision. Seeing that curve — rather than a single cherry-picked number — is what lets you choose an operating point deliberately.</p>
-  <p>The discipline that makes this trustworthy is the same discipline from the data-engineering side of my work: be honest about what the data can and cannot tell you. The leak-free split here is the modeling cousin of the repair-not-corrupt reruns I described in <a href="/blog/building-resumable-etl-pipelines/">building resumable ETL pipelines</a>. In both cases the goal is the same — results you can actually rely on, not results that merely look good in a notebook.</p>
+  <p>The label is next-minute direction, built by shifting close price backwards within each company:</p>
+
+  <pre><code>for horizon in horizons:                       # [1, 3, 5]
+    merged[f'future_price_{horizon}'] = (
+        merged.groupby('company')['c'].shift(-horizon))
+    merged[f'future_return_{horizon}'] = (
+        (merged[f'future_price_{horizon}'] - merged['c']) / merged['c'])</code></pre>
+
+  <p>The <code>groupby('company')</code> matters. Shifting the close column without it would pull the first bar of one symbol into the last bar of the previous symbol, which manufactures a label out of two unrelated stocks. That is the leakage bug people write about, and it is genuinely easy to hit.</p>
+
+  <p>For the split I held out the last 100 bars per company rather than sampling randomly:</p>
+
+  <pre><code>train = merged.groupby('company').apply(lambda x: x.iloc[:-100]).reset_index(drop=True)
+test  = merged.groupby('company').apply(lambda x: x.iloc[-100:]).reset_index(drop=True)</code></pre>
+
+  <p>31 companies × 100 bars = the 3,100 test rows above. A random split here would be indefensible: adjacent minute bars share rolling-window features, so a randomly chosen test row usually has its own neighbours sitting in the training set. Features are rolling means and standard deviations over 3, 5, 10 and 20-bar windows on close and volume, all computed with <code>groupby('company').transform</code> so no window ever spans two symbols, and all backward-looking so none of them can see the future.</p>
+
+  <p>So the obvious traps are handled. The two that actually bit me are subtler.</p>
+
+  <h2>Trap 1: the threshold was chosen on the test set</h2>
+
+  <p>A classifier gives you a probability, and you decide where to cut. I swept thresholds and picked the one that scored best:</p>
+
+  <pre><code>for threshold in [0.5, 0.6, 0.65, 0.7]:
+    preds = (probs &gt; threshold).astype(int)
+    precision = precision_score(y_test, preds, zero_division=0)
+    print(f"Threshold: {threshold}, Precision: {precision:.4f}, Trades: {preds.sum()}")</code></pre>
+
+  <p>At 0.5 the model made 1,149 calls at 47.95% precision — statistically indistinguishable from the 46.8% base rate, which is the number that should have set my expectations for everything that followed. Raising the cut to 0.6 gave 50.8% precision on 327 calls. Pushing higher moved precision <em>below</em> the base rate, so the sweep was not a monotonic quality dial; it was a small sample getting smaller.</p>
+
+  <p>The best configuration — a random forest with the cut at 0.63 — reached 61.4% precision. That figure is real in the sense that I did not compute it wrong, and misleading in the sense that I selected the threshold by looking at the test set. The moment you tune anything against your holdout, that holdout stops measuring generalisation and starts measuring how hard you searched. Nothing in the code leaked a future price; the leakage was in my process.</p>
+
+  <h2>Trap 2: 70 trades is not a result</h2>
+
+  <p>At threshold 0.63 the confusion matrix is:</p>
+
+  <pre><code>Precision at threshold 0.63: 0.6143
+Confusion Matrix:
+[[1622   27]
+ [1408   43]]
+Predicted 1 count: 70
+Actual 1 count: 1451</code></pre>
+
+  <p>70 predictions. 43 right, 27 wrong. Against a 46.8% base rate you would expect about 33 correct by chance, so 43 is roughly two and a half standard deviations up — the kind of number that looks like significance until you remember it is one of several thresholds I tried on one dataset, and that the multiple comparisons make the nominal p-value meaningless. Read the other axis of that matrix and the picture is plainer: 1,408 of 1,451 actual up-minutes were missed. Recall is about 3%.</p>
+
+  <p>What I had was not a model that predicts the market 61% of the time. It was a model that abstains on 97.7% of minutes and, on the tiny remainder, has an edge I cannot distinguish from luck at this sample size.</p>
+
+  <h2>The backtest, and why it settled the question</h2>
+
+  <p>I simulated fixed-size trades over the test window at the 0.6 threshold's 327 signals. The result was effectively flat before costs — well under a tenth of a percent on the starting capital — and comfortably negative once realistic Indian brokerage and STT are applied to 327 round trips. I am not quoting the figure because it does not clear the bar I set for reporting numbers: it does not beat a naive baseline in any meaningful sense.</p>
+
+  <p>That is the useful outcome. The precision number in isolation invites you to keep going. The P&amp;L with costs attached tells you the edge is smaller than the friction, which is the only question that matters and the one a classification report never answers on its own.</p>
+
+  <h2>What I'd do differently</h2>
+
+  <p><strong>Split three ways, not two.</strong> Threshold and hyperparameters get chosen on a validation slice; the holdout is touched once, at the end, and whatever it says is the answer. My whole threshold sweep should have run against data the final number never saw.</p>
+
+  <p><strong>Put costs in the objective, not the postscript.</strong> Optimising precision and checking P&amp;L afterwards is backwards when a round trip costs more than the edge. The threshold sweep should have been maximising net return per trade, in which case most of the range would have been visibly negative from the start.</p>
+
+  <p><strong>Walk forward instead of one split.</strong> One 100-bar-per-symbol holdout is a single sample of one market regime. Rolling the train/test boundary forward and reporting the distribution across windows would say far more than a single precision figure, and would have made the sample-size problem obvious immediately.</p>
+
+  <p><strong>Size the holdout to the decision.</strong> If a configuration only fires 70 times in the test window, the test window is too short to evaluate it. Either lengthen the data or restrict the search to thresholds that produce enough decisions to measure.</p>
+
+  <p>The data pipeline underneath this — the tick ingestion and the minute-bar construction — is the part I would reuse. It is described on the <a href="/projects/nse-stock-prediction/">minute-level stock prediction</a> page, and the ingestion patterns it shares with the rest of my market data work are in <a href="/blog/building-resumable-etl-pipelines/">reruns that converge</a>.</p>
+
+  <h2>Elsewhere</h2>
+
+  <p>Marcos López de Prado's <a href="https://www.wiley.com/en-us/Advances+in+Financial+Machine+Learning-p-9781119482086" target="_blank" rel="noopener">Advances in Financial Machine Learning</a> is where purged and embargoed cross-validation comes from — the standard fix for exactly the overlapping-window problem that makes a random split useless here. His chapter on backtest overfitting is a direct description of trap 1.</p>
+
+  <p>scikit-learn's <a href="https://scikit-learn.org/stable/modules/cross_validation.html#time-series-split" target="_blank" rel="noopener">TimeSeriesSplit</a> is the minimum viable version of walk-forward validation and takes about four lines to adopt.</p>
+
+  <p>On reporting: a <a href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.precision_recall_curve.html" target="_blank" rel="noopener">precision-recall curve</a> against the base rate would have shown in one picture what my threshold table took several runs to reveal — that most of the curve sits at or under the no-skill line.</p>
 
   <a class="back" href="/blog/">← Back to writing</a>
 </article>
