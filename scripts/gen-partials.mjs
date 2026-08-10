@@ -1,5 +1,5 @@
 /**
- * Inject the canonical footer (partials/footer.html) into every page as STATIC HTML.
+ * Inject the canonical header and footer (partials/*.html) into every page as STATIC HTML.
  *
  * Why a generator and not a runtime include: the footer carries the site's internal
  * link graph (Pages column, social links with rel="me", the email pill). Building it
@@ -17,9 +17,9 @@
  *   {{HOME}}        '' on the homepage so its in-page anchors behave exactly as
  *                   before; '/' on sub-pages so #projects leaves the sub-page.
  *
- * Run after editing partials/footer.html:
+ * Run after editing partials/header.html or partials/footer.html:
  *
- *   node scripts/gen-footer.mjs
+ *   node scripts/gen-partials.mjs
  *
  * Idempotent: re-running with no source change produces no diff.
  */
@@ -29,14 +29,19 @@ import { dirname, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const PARTIAL = resolve(root, "partials/footer.html");
-
-const BEGIN = "<!-- BEGIN generated: footer (source: partials/footer.html — run scripts/gen-footer.mjs) -->";
-const END = "<!-- END generated: footer -->";
-
-// Strip the partial's own leading explanatory comment; it is guidance for whoever
-// edits the source, not something to ship on every page.
-const partial = readFileSync(PARTIAL, "utf8").replace(/^<!--[\s\S]*?-->\n/, "").trim();
+// Each partial: the source file, the markers it lives between, and the element it
+// replaces on a page that has not been generated into yet.
+const PARTIALS = [
+  { name: "header", file: "partials/header.html", adopt: /<header[\s\S]*?<\/header>/ },
+  { name: "footer", file: "partials/footer.html", adopt: /<footer[\s\S]*?<\/footer>/ },
+].map((p) => ({
+  ...p,
+  // Strip the partial's own leading comment; it is guidance for whoever edits the
+  // source, not something to ship on every page.
+  body: readFileSync(resolve(root, p.file), "utf8").replace(/^<!--[\s\S]*?-->\n/, "").trim(),
+  begin: `<!-- BEGIN generated: ${p.name} (source: ${p.file} — run scripts/gen-partials.mjs) -->`,
+  end: `<!-- END generated: ${p.name} -->`,
+}));
 
 // node:fs globSync needs Node 22; enumerate the two content dirs instead so this
 // runs on whatever Node the machine has.
@@ -61,36 +66,36 @@ let changed = 0;
 for (const file of pages) {
   const rel = relative(root, file);
   const isHome = rel === "index.html";
-  const html = readFileSync(file, "utf8");
+  const before = readFileSync(file, "utf8");
+  let html = before;
 
-  const rendered =
-    BEGIN +
-    "\n" +
-    partial
-      .replaceAll("{{CONTACT_ID}}", isHome ? ' id="contact"' : "")
-      .replaceAll("{{HOME}}", isHome ? "" : "/") +
-    "\n" +
-    END;
+  for (const part of PARTIALS) {
+    const rendered =
+      part.begin +
+      "\n" +
+      part.body
+        .replaceAll("{{HOME}}", isHome ? "" : "/")
+        .replaceAll("{{BLOG}}", isHome ? "#blog" : "/blog/")
+        .replaceAll("{{HOME_HREF}}", isHome ? "#top" : "/")
+        .replaceAll("{{CONTACT_ID}}", isHome ? ' id="contact"' : "") +
+      "\n" +
+      part.end;
 
-  let out;
-  if (html.includes(BEGIN)) {
-    // Re-generate in place.
-    out = html.replace(
-      new RegExp(escapeRe(BEGIN) + "[\\s\\S]*?" + escapeRe(END)),
-      () => rendered,
-    );
-  } else {
-    // First run: adopt whatever footer the page currently has.
-    const footer = /<footer[\s\S]*?<\/footer>/;
-    if (!footer.test(html)) {
-      console.warn(`skip (no <footer>): ${rel}`);
-      continue;
+    if (html.includes(part.begin)) {
+      html = html.replace(
+        new RegExp(escapeRe(part.begin) + "[\\s\\S]*?" + escapeRe(part.end)),
+        () => rendered,
+      );
+    } else if (part.adopt.test(html)) {
+      // First run: adopt whatever the page currently has.
+      html = html.replace(part.adopt, () => rendered);
+    } else {
+      console.warn(`skip ${part.name} (not found): ${rel}`);
     }
-    out = html.replace(footer, () => rendered);
   }
 
-  if (out !== html) {
-    writeFileSync(file, out);
+  if (html !== before) {
+    writeFileSync(file, html);
     changed++;
     console.log(`wrote ${rel}`);
   } else {
