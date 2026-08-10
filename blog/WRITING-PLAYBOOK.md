@@ -257,3 +257,65 @@ Handled by CSS, but worth knowing when drafting:
 - Article column is ~860px. Long `<pre>` blocks scroll inside the article rather than
   widening the page.
 - Sub-pages hide the centred VJ mark and sit on `--color-bg`.
+
+---
+
+## 7. The overriding rule: clear, simple narration
+
+Set 2026-08-10, and it outranks everything above it. If any earlier guidance conflicts with
+this, this wins.
+
+**A post is one continuous explanation that a competent developer who has never touched
+market data can read top to bottom and follow.** Not a list of incidents. Not notes.
+
+Three failure modes to check every draft against:
+
+### Don't swallow the context
+
+The reader was not there. Every incident needs all four parts, in order, before it means
+anything:
+
+1. **What I was trying to do** — the goal, in a sentence
+2. **What actually happened** — the symptom, concretely
+3. **Why it mattered** — the consequence, in real terms
+4. **What changed** — the fix
+
+Dropping (1) is the most common mistake and the most damaging: a symptom with no goal
+attached is just a fragment. "The dedup key was wrong" means nothing. "I was trying to stop
+the same filing being stored twice when windows overlap, and the key I used didn't match any
+real column, so every filing for a symbol on a day collapsed into one row" means something.
+
+### Don't jump between things
+
+Each section must follow from the one before it. If a section could be moved anywhere in
+the post without anything reading oddly, the post has no spine and the reader is being asked
+to assemble it themselves.
+
+Write the transition explicitly. One sentence at the top of a section saying how it connects
+to the last one is almost always worth its space:
+
+> *"So the obvious traps are handled. The two that actually bit me are subtler."*
+
+Bullet lists are where this rule dies most often. A list of five things is five fragments
+unless the prose around it says what they have in common and why they are grouped.
+
+### Define the term the first time you use it
+
+In one clause, inline, no digression. Not a glossary, not a footnote:
+
+- "the PIT endpoint" → "NSE's insider-trading disclosure endpoint"
+- "an anti-join" → "keeping only the rows whose key isn't already stored"
+- "TLS fingerprinting" → "blocking based on how the connection is opened, not what the
+  request says"
+- "the base rate" → "how often the thing you're predicting happens anyway"
+
+This costs a clause and buys the entire audience outside your specialty — which, for a
+portfolio, is most of the people who matter.
+
+### The test
+
+Read the draft as someone who knows how to program but has never seen this domain. If you
+stop anywhere and think *"wait, what is that"* or *"why are we suddenly here"*, that is a
+defect in the post, not in the reader. Fix it by adding a sentence, not by removing the
+detail — the numbers and the specifics are the whole value. Length is not the enemy;
+compression is.
