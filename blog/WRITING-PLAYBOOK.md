@@ -169,3 +169,91 @@ may not be.
 - The recruiter reading this should conclude "this person has operated data pipelines and knows
   where they break" — which happens automatically if the posts are shapes 1, 2, or 4, and not at
   all if they're tutorials.
+
+---
+
+## 6. Post mechanics — rules set while writing the ingestion-bugs post
+
+### Never explain how the post was made
+
+Cut anything describing the *process* of assembling the piece: "I grepped my commit log
+for fix-shaped messages," "I went back through a year of history," "the format is lifted
+from X." Two reasons:
+
+1. It reads as machine-assembled even when it isn't, which is the exact signal we're
+   trying to avoid.
+2. The reader does not need it. State the finding. "Over the last year I fixed about 30
+   bugs across 32 scripts" stands on its own; how the 30 was counted belongs in a caveats
+   section as *limitations of the number*, never as *the procedure I ran*.
+
+The distinction that keeps this honest: **caveats about the number are good, provenance of
+the method is not.** "This counts bugs I found, and the whole argument is that a class of
+bug produces no signal" is a real limitation and stays. "I grepped for commits matching
+fix|bug|broke" is method disclosure and goes.
+
+### No style attribution
+
+Do not credit or link the blog whose structure was studied, and do not describe the post as
+following anyone's format. Absorbing a structure is normal writing practice; announcing it
+makes the piece read as an exercise rather than a report. Links to a source's *content*
+(a paper, an analysis, a doc page) are fine and encouraged — links that say "I copied this
+person's format" are not.
+
+### One heading per category, and explain all of them
+
+An early draft listed five failure categories, then wrote up one of them in depth and
+lumped the rest into "the loud twenty-two." That is a broken promise: the reader was given
+a taxonomy and then handed one branch of it.
+
+- Every category named in the classification gets its own `<h2>`, with the count in the
+  heading: `2. The source fighting back — 9 bugs`.
+- Individual incidents inside a category get an `<h3>`.
+- It is fine for a category to be three sentences ending in "these are the bugs you fix once
+  and stop thinking about." Short is not the same as skipped. Say plainly which category is
+  the interesting one so the reader knows where to spend attention.
+
+### Code examples
+
+Include one wherever the bug *is* the code and prose has to work hard to describe it. The
+format that carries the most information per line is **before/after in one block**, with the
+comment doing the explaining:
+
+```python
+# Before: any row can become the resume point, including one
+# that carries a date and no prices at all.
+start = pd.read_csv(path)["Date"].max()
+
+# After: only rows that actually carry a price count.
+df = pd.read_csv(path)
+start = df[df["Close"].notna()]["Date"].max()
+```
+
+Keep them under ~12 lines, real (paste from the actual fix, don't invent a cleaner version),
+and never include a block that only restates the sentence above it. Three per post is plenty.
+
+### Images and charts
+
+Add one only when it shows something the prose can't. A distribution across categories
+qualifies; a decorative header image does not. Rules:
+
+- **Inline SVG**, not a raster file — it stays sharp, needs no build step, costs no request,
+  and can use the site's own colour tokens.
+- Load the `dataviz` skill before writing chart markup.
+- Single series → **one hue** (`--color-highlight` #3932DC, validated against the #fcfcfc
+  surface), direct value labels at the bar ends, no legend, recessive 1px axis.
+- Always `role="img"` with a full `aria-label` naming every value, plus a `<figcaption>`
+  that says what the reader should take from it.
+- The numbers must also appear in the body text — the chart is a second view of the data,
+  never the only one.
+
+### Page furniture
+
+Handled by CSS, but worth knowing when drafting:
+
+- Posts wrap in `.post-shell` (a 1180px grid) with a sticky `.post-nav` rail on the left
+  listing every post and marking the current one. Adding a post means adding a line to that
+  rail **in all four files** — there is no template yet, which is the main argument for
+  building the markdown generator.
+- Article column is ~860px. Long `<pre>` blocks scroll inside the article rather than
+  widening the page.
+- Sub-pages hide the centred VJ mark and sit on `--color-bg`.
