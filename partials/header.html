@@ -1,0 +1,61 @@
+<!--
+  CANONICAL HEADER — the single source for every page.
+  Edit ONLY this file, then run:  node scripts/gen-partials.mjs
+
+  Tokens:
+    {{HOME}}       '' on the homepage (so #projects scrolls in place), '/' elsewhere
+    {{BLOG}}       '#blog' on the homepage (the in-page section), '/blog/' elsewhere
+    {{HOME_HREF}}  '#top' on the homepage (scroll to the hero), '/' elsewhere
+
+  The centred Home link carries BOTH header__nav-left and header__nav-centre:
+  main.js builds the per-letter hover animation by querying '.header__nav-left a',
+  so reusing that class is what makes Home behave identically to the other nav
+  items rather than needing a parallel implementation. header__nav-centre only
+  positions it.
+-->
+<header class="show">
+  <nav class="header__nav-left" aria-label="Primary navigation">
+    <a href="{{HOME}}#projects">Projects</a>
+    <a href="{{HOME}}#skills">Skills</a>
+    <a href="{{HOME}}#contact">Contact</a>
+    <a href="{{BLOG}}">Blog</a>
+  </nav>
+  <nav class="header__nav-left header__nav-centre" aria-label="Home">
+    <a href="{{HOME_HREF}}">Home</a>
+  </nav>
+  <nav class="header__nav-right" aria-label="Header actions">
+    <div class="header__ctas">
+      <a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Hire Me</span></a>
+      <a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark"><span class="pill-btn-span">Get In Touch</span></a>
+    </div>
+    <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
+      <span class="menu-btn__icon">
+        <span class="menu-btn__line menu-btn__line--1"></span>
+        <span class="menu-btn__line menu-btn__line--2"></span>
+        <span class="menu-btn__line menu-btn__line--3"></span>
+      </span>
+    </button>
+  </nav>
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <div class="mobile-nav__panel-bg"></div>
+    <div class="mobile-nav__panel">
+      <div class="mobile-nav__header">
+        <a href="/" class="mobile-nav__logo"><span class="logo-text">VJ</span></a>
+        <button class="mobile-nav__close" type="button" aria-label="Close menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="#050419"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="#050419"></rect></svg>
+        </button>
+      </div>
+      <ul class="mobile-nav__list">
+        <li class="mobile-nav__item"><a href="{{HOME_HREF}}">Home</a></li>
+        <li class="mobile-nav__item"><a href="{{HOME}}#projects">Projects</a></li>
+        <li class="mobile-nav__item"><a href="{{HOME}}#skills">Skills</a></li>
+        <li class="mobile-nav__item"><a href="{{HOME}}#contact">Contact</a></li>
+        <li class="mobile-nav__item"><a href="{{BLOG}}">Blog</a></li>
+      </ul>
+      <div class="mobile-nav__ctas">
+        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Hire Me</span></a></div>
+        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark mobile-nav__cta"><span class="pill-btn-span">Get In Touch</span></a></div>
+      </div>
+    </div>
+  </nav>
+</header>
