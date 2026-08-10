@@ -98,86 +98,87 @@
 </aside>
 <article class="article">
   <h1>Making pipeline reruns converge instead of drift</h1>
-  <div class="meta"><span>Data engineering</span><span>8 min read</span><span>Published August 2026</span></div>
+  <div class="meta"><span>Data engineering</span><span>9 min read</span><span>Published August 2026</span></div>
 
-  <p>The rule I hold every ingestion pipeline to is that running it again must move the dataset toward correctness. Fill a gap, fix a bad row, leave everything else alone. It should not be possible for a second run to make the data worse than one run.</p>
+  <p>I run about 28 scripts that download Indian market data — prices, company announcements, insider filings — and most of them run on a schedule, unattended. The rule I hold all of them to is simple to state: running a script again must leave the data better than before, or at least no worse. Fill in a gap, correct a bad row, otherwise change nothing.</p>
 
-  <p>Across 28 ingestion pipelines that pull Indian market data, I have broken that rule in four distinct ways, and each break produced a dataset that looked fine. This is what the guards are, what each one was added in response to, and the one case where I still cannot promise convergence.</p>
+  <p>That sounds like it should be the default. It is not. I have broken it four separate ways, and every time the result was a dataset that looked completely normal. This is what each break was, and what stops it now.</p>
 
-  <h2>The data is the checkpoint — so validate it before trusting it</h2>
+  <h2>Why a rerun is where the danger is</h2>
 
-  <p>Every pipeline resumes by asking the data where it stopped, rather than keeping a separate checkpoint file. Interrupted run, killed process, machine reboot: restart it and each symbol picks up from its own last row. No state to corrupt, no lockfile to go stale.</p>
+  <p>A script that downloads data once is easy. You run it, you look at the output, you can see whether it worked. The second run is different, because now the script has to decide what it already has and what it still needs — and it makes that decision by reading data that a previous run wrote.</p>
 
-  <p>That property is also how I destroyed several months of history. The price source returns a bar all-or-nothing, so a throttled request or a request for today's unsettled bar comes back as a row with a date and no prices. The loader wrote them, and then:</p>
+  <p>Every one of my pipelines works out where to continue by looking at the data itself: it reads the file, finds the newest row, and asks the source for everything after that. No separate progress file, no database of what has been done. If a run is interrupted, the next one just reads the file and carries on. That is a genuinely good property — there is no progress file to get out of step with reality, because reality is the file.</p>
 
-  <pre><code># Resume point = newest date in the file, valid or not.
+  <p>It also means <strong>every row you write is an instruction to your future self.</strong> Write a bad row and you have not just stored bad data, you have told the next run to start from the wrong place. That single fact explains three of the four failures below.</p>
+
+  <h2>Break one: a row with no prices in it</h2>
+
+  <p>The price source returns a day's trading data all-or-nothing. If it is rate-limiting you, or if you ask for today before the market has settled, you get back a row that has a date on it and no prices — the fields are simply empty. My loader wrote those rows to the file like any other. Then the next run did this:</p>
+
+  <pre><code># Where do we continue from? The newest date in the file.
 start = pd.read_csv(path)["Date"].max()</code></pre>
 
-  <p>A blank row dated today becomes the high-water mark, and every real bar behind it is never fetched again. The gap-repair mechanism was what made the gap permanent. The fix is one predicate:</p>
+  <p>An empty row dated today is the newest date in the file. So the pipeline concluded it was fully up to date, and every real day of trading behind that empty row was never requested again. The gap was permanent, and it was the gap-filling logic that made it permanent.</p>
 
-  <pre><code># Resume only from rows that actually carry a price.
+  <p>The fix is one condition — continue from the newest row that actually has a price in it:</p>
+
+  <pre><code># Continue only from rows that actually carry a closing price.
 df = pd.read_csv(path)
 start = df[df["Close"].notna()]["Date"].max()</code></pre>
 
-  <p>Plus the two corollaries: a download frame that is entirely NaN is treated as a failed fetch rather than data, and a startup pass purges blank rows already on disk so old damage heals instead of persisting. A row dated in the future gets the same treatment — left alone it convinces the pipeline it has data through 2027 and stops fetching entirely.</p>
+  <p>Two things follow from it. A response where every row is empty is now treated as a failed download rather than as data, so it never reaches the file. And a pass at startup deletes empty rows that earlier runs already wrote, so old damage repairs itself instead of sitting there forever. A row dated in the future gets the same treatment, for the same reason — left alone it convinces the pipeline it has data through 2027 and it stops fetching entirely.</p>
 
-  <p>The general form: <strong>if the data is your checkpoint, then every write is also a write to your control flow.</strong> Validate before writing, or you are appending instructions as well as rows.</p>
+  <h2>Break two: the file kept changing its name</h2>
 
-  <h2>Identity has to be stable across runs</h2>
+  <p>Each stock gets its own file, and I named those files using the company's full name, looked up at the moment the file was created. That lookup goes over the network, and it is rate-limited — so it returns the proper company name when the source is healthy, and just the ticker symbol when it is not. Rename a company upstream and you get a third answer.</p>
 
-  <p>Per-symbol files were named with the company name looked up at runtime. That lookup is rate-limited, so it returns the real name when the source is healthy and the bare symbol when it is not — and a different name again when a company gets renamed upstream. Three names, three filenames, three files that each looked to the resume logic like a symbol with no history. Each run happily re-downloaded twenty years into a fresh file.</p>
+  <p>Three answers meant three filenames for one stock. And since the pipeline works out what it already has by reading the file, a new filename looked exactly like a stock with no history at all — so it downloaded twenty years from scratch into it. I ended up with stocks spread across three files, each holding a different partial copy of the same history, none of them complete.</p>
 
-  <p>Two guards. Filenames are resolved by reusing any existing <code>SYMBOL_*.csv</code> rather than by regenerating the name, so identity is decided once and then remembered. And a consolidation pass at startup merges any duplicates that already exist into one canonical file, taking the union of rows and preferring the copy with a valid Close where they disagree.</p>
+  <p>Two changes fixed it. Filenames are now resolved by looking for an existing file for that symbol and reusing whatever it is already called, so the name is decided once and then remembered rather than recalculated every run. And a pass at startup merges any duplicate files that already exist into one, keeping all the rows and preferring the version that has real prices where two disagree.</p>
 
-  <p>The lesson generalises past filenames: <strong>anything that derives an identifier from a network call will eventually derive a different one.</strong> If that identifier decides where data goes, a bad minute at the source becomes a permanent fork in your dataset.</p>
+  <p>The general version of this: <strong>anything you derive from a network call will eventually come back different.</strong> If that value decides where data gets stored, one bad minute at the source permanently splits your dataset in two.</p>
 
-  <h2>Dedup with an anti-join, not a merge</h2>
+  <h2>Break three: the duplicate check that created duplicates</h2>
 
-  <p>Overlapping windows are unavoidable — reruns deliberately re-pull a buffer of recent history so late-arriving records get picked up. That makes deduplication load-bearing rather than defensive.</p>
+  <p>Reruns deliberately re-download a few days they already have, because data sometimes arrives late and a run that starts exactly where the last one stopped would step over it. So the pipeline constantly sees rows it already has, and needs a reliable way to recognise them.</p>
 
-  <p>I originally implemented it as a merge. A merge against existing data that already contains duplicate keys does not deduplicate; it does a partial cartesian product and multiplies rows. Set membership does not have that failure mode:</p>
+  <p>It does that by building a key from a few fields that together identify a row, and discarding rows whose key it already holds. I originally implemented the check as a merge — joining the new rows against the stored rows to see which matched. That works right up until the stored data itself contains duplicates, at which point each new row matches several stored rows and you get one output row per match. The check meant to remove duplicates was multiplying them.</p>
+
+  <p>Asking a simpler question avoids this. Build the set of keys already stored, then keep only new rows whose key is not in that set:</p>
 
   <pre><code>def deduplicate(new_df, existing_df):
     new_keys = _composite_key(new_df, DEDUP_KEYS)
     existing_keys = set(_composite_key(existing_df, DEDUP_KEYS))
-    # Set-membership anti-join — immune to duplicate keys in existing_df
-    # (a merge cartesian-inflates when the right side has repeats).
     return new_df[(~new_keys.isin(existing_keys)).values]</code></pre>
 
-  <p>The composite key itself needs normalising, because the same record does not arrive identically twice. A quantity comes back as <code>629221</code> from one endpoint and <code>629221.0</code> from another; a date is <code>15-Jan-2026</code> in one and <code>2026-01-15</code> in the other. Unnormalised, those are different keys and you store the row twice:</p>
+  <p>This never joins anything, so it cannot multiply rows no matter what mess is already in the file. It answers yes or no about each incoming row and nothing else.</p>
 
-  <pre><code>for k in dedup_keys:
-    if k == 'intimDt':
-        col = pd.to_datetime(df[k], errors='coerce').dt.strftime('%Y-%m-%d')
-    else:
-        # '100', 100 and 100.0 collapse to one key; names fall back to string.
-        numeric = pd.to_numeric(df[k], errors='coerce').astype('float64')
-        col = numeric.where(numeric.notna(), df[k]).astype(str)
-    parts.append(col.fillna('').astype(str))</code></pre>
+  <p>There is a catch underneath, which is that a key only works if the same row always produces the same key — and it does not. The same quantity arrives as <code>629221</code> one time and <code>629221.0</code> the next. The same date is <code>15-Jan-2026</code> in one response and <code>2026-01-15</code> in another. Compared as text those are different, so the same row gets stored twice. Every field is therefore forced into one standard form before the key is built: dates to a single format, anything numeric to an actual number.</p>
 
-  <p>One warning from experience: the key must be built from column names that actually exist in the response. I once deduplicated on three fields that were not real column names, which produced an identical empty key for every row and collapsed every filing for a symbol on a given day into one. Nothing raised. If you are using <a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html" target="_blank" rel="noopener"><code>DataFrame.merge</code></a> for this, <code>validate="one_to_one"</code> turns the silent inflation into an exception.</p>
+  <p>One warning from experience, because it cost me months: the key has to be built from fields that genuinely exist in the response. I once built one from three field names that were not real columns, which gave every row an identical empty key and collapsed entire days of records into a single row, silently. If you are using <a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html" target="_blank" rel="noopener"><code>DataFrame.merge</code></a> for this, <code>validate="one_to_one"</code> turns that silent inflation into an error you can actually see.</p>
 
-  <h2>Pace against the source, don't fight it</h2>
+  <h2>Break four: going too fast and writing the wreckage</h2>
 
-  <p>Convergence assumes the source keeps answering. A pipeline that hammers a rate limit gets partial responses, and partial responses are how bad rows get written in the first place — so backoff is a data-quality control, not just politeness.</p>
+  <p>All of the above assumes the source keeps answering properly. When you hit a rate limit you often do not get a clean refusal — you get a partial or empty response, which is precisely how bad rows end up in the file in the first place. So backing off is not politeness here, it is a data-quality control.</p>
 
-  <p>The price downloader runs a thread pool whose size moves on its own: five workers, drop one on any API or rate-limit error, add one back after fifteen consecutive clean calls. Individual requests get three retries with exponential backoff and a ten-second timeout. It speeds up when the source is healthy and slows down the moment it pushes back, with no manual tuning and no fixed sleep that is either too slow or too aggressive depending on the day.</p>
+  <p>The price downloader adjusts its own speed. It starts with five downloads running at once, drops one whenever the source returns an error, and adds one back after fifteen requests in a row succeed. Individual requests get three attempts with a widening wait between them, and a ten-second cut-off. It speeds up when the source is healthy and slows down the moment it pushes back, without me picking a fixed delay that is either too slow on a good day or too aggressive on a bad one.</p>
 
-  <h2>Where I can't promise convergence</h2>
+  <h2>The case I still cannot handle</h2>
 
-  <p>All of the above makes reruns converge against <em>my</em> errors. None of it helps when the source itself changes an old value.</p>
+  <p>Everything above makes reruns recover from <em>my</em> mistakes. None of it helps when the source changes a value it already gave me.</p>
 
-  <p>If a record is restated upstream — a corrected filing, an adjusted price after a corporate action — my dedup key sees a row it already has and drops the correction on the floor. Convergence and immutability are in direct conflict here, and I chose immutability without really deciding to. For prices this is mostly handled because corporate-action adjustment gets recomputed, but for filings it is a real gap.</p>
+  <p>If a company corrects a filing it submitted last month, my duplicate check looks at the corrected row, recognises the key, decides it already has that record, and throws the correction away. Converging on a stable dataset and accepting corrections pull in opposite directions, and I picked one without ever really deciding to. For prices it mostly works out, because adjustments for stock splits and similar events get recalculated anyway. For filings it is a genuine hole.</p>
 
-  <p>I also cannot currently tell the difference between "the source had nothing new" and "the source refused to answer," which is the failure mode that has cost me the most across these pipelines. I wrote up the full accounting of that in <a href="/blog/a-year-of-ingestion-bugs/">a year of ingestion bugs</a>. The next thing I want to build is a scheduled re-fetch that diffs old data against itself, which is the only way I can see to detect both problems.</p>
+  <p>I also still cannot tell the difference between "the source had nothing new" and "the source refused to answer" — the failure that has cost me the most across all of these pipelines. I wrote up the whole accounting of that in <a href="/blog/a-year-of-ingestion-bugs/">a year of ingestion bugs</a>. The fix for both problems is probably the same thing: re-download data I already have on a schedule and compare it against what I stored. That is the next thing I want to build.</p>
 
   <h2>Elsewhere</h2>
 
-  <p><a href="https://jepsen.io/analyses" target="_blank" rel="noopener">Jepsen</a> is the reference point for the general shape of this problem: systems that report success while silently losing or duplicating writes, findable only by checking on purpose rather than waiting for an error.</p>
+  <p><a href="https://jepsen.io/analyses" target="_blank" rel="noopener">Jepsen</a> tests databases by deliberately breaking them and then checking whether the data survived. The reports are worth reading even if you never touch distributed systems, because they are the clearest demonstration of the pattern behind this whole post: a system reporting success while quietly losing or duplicating writes, findable only by checking on purpose.</p>
 
-  <p><a href="https://pandera.readthedocs.io/" target="_blank" rel="noopener">pandera</a> lets you declare the schema and column constraints and fail a load rather than writing an invalid row — the declarative version of the hand-rolled validity checks above. I am not using it yet; I probably should be.</p>
+  <p><a href="https://pandera.readthedocs.io/" target="_blank" rel="noopener">pandera</a> lets you declare what a valid row looks like — which columns must exist, what values are allowed — and rejects a load that does not match. It is the tidy version of the hand-written validity checks above. I am not using it yet; I probably should be.</p>
 
-  <p>The pipelines described here are part of the <a href="/projects/market-data-pipeline/">market-data platform</a>, and the chunking and reconciliation side of it is in <a href="/blog/how-i-scraped-nse-insider-filings/">scraping NSE insider filings</a>.</p>
+  <p>These pipelines are part of the <a href="/projects/market-data-pipeline/">market-data platform</a>, and the chunking and two-source reconciliation side of the same system is in <a href="/blog/how-i-scraped-nse-insider-filings/">scraping NSE insider filings</a>.</p>
 
   <a class="back" href="/blog/">← Back to writing</a>
 </article>
