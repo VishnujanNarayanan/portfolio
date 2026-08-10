@@ -1414,3 +1414,64 @@ html.boot-active{overflow:hidden;height:100%}
   .lfooter__email:hover{transform:translateY(-2px)}
   .lfooter__bottom{position:static;flex-direction:column;align-items:flex-start;gap:10px;padding:14px 10px 16px}
 }
+
+/* ---- Blog post chrome (2026-08-10) -------------------------------------------
+   The sub-pages sat on a dark navy body (#1b2236) while every .article rule
+   paints with the LIGHT tokens (--color-text #050419, --color-text-muted
+   #585765) and the shared header nav resolves to #050419 — so body copy, the
+   breadcrumb and the nav were all dark-on-dark. The page now uses the site's own
+   background and every one of those tokens reads correctly with no override. */
+.subpage-body{background-color:var(--color-bg)}
+
+/* The centred VJ mark is redundant on a sub-page (the left nav already links
+   home) and sits directly above the breadcrumb. Hidden on sub-pages only —
+   the homepage header is untouched. */
+.subpage-body .header__logo{display:none}
+
+/* Post shell: "more writing" rail on the left, article on the right.
+   minmax(0,1fr) (not 1fr) so a long <pre> line scrolls INSIDE the article
+   instead of widening the grid track and pushing the page sideways. */
+.post-shell{max-width:1180px;margin:0 auto;padding:0 var(--space-xl);
+  display:grid;grid-template-columns:230px minmax(0,1fr);gap:64px;align-items:start}
+.post-shell .article{max-width:none;padding-left:0;padding-right:0}
+.post-body .breadcrumb{max-width:1180px}
+
+.post-nav{position:sticky;top:120px;padding-top:36px}
+.post-nav__label{display:block;font-family:var(--font-ui);font-size:12px;text-transform:uppercase;
+  letter-spacing:var(--tracking-wide);color:var(--color-text-disabled);margin-bottom:18px;padding-left:14px}
+.post-nav__list{display:flex;flex-direction:column;gap:16px;margin:0 0 24px;padding:0;list-style:none}
+.post-nav__item{display:block;font-family:var(--font-ui);font-size:14px;line-height:1.45;
+  color:var(--color-text-muted);text-decoration:none;padding-left:14px;
+  border-left:2px solid transparent;transition:color .25s ease,border-color .25s ease}
+a.post-nav__item:hover{color:var(--color-highlight);border-left-color:var(--color-highlight)}
+.post-nav__item.is-current{color:var(--color-text);border-left-color:var(--color-highlight)}
+.post-nav__all{display:inline-block;font-family:var(--font-ui);font-size:13px;
+  color:var(--color-highlight);padding-left:14px}
+
+/* Article sub-heads — the cause sections need a level below h2. */
+.article h3{font-family:"Inter",sans-serif;font-weight:500;font-size:20px;letter-spacing:-.2px;
+  color:var(--color-text);margin:30px 0 10px}
+
+/* Code. There was no rule for pre/code at all, so blocks inherited 18px Roboto
+   and inline code was indistinguishable from body text. */
+.article pre{background:var(--color-bg-muted);border:1px solid var(--color-border);border-radius:10px;
+  padding:18px 20px;margin:0 0 24px;overflow-x:auto}
+.article code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  font-size:.9em;background:var(--color-bg-muted);border:1px solid var(--color-border);
+  border-radius:4px;padding:1px 5px;color:var(--color-text)}
+.article pre code{display:block;font-size:14px;line-height:1.6;white-space:pre;
+  background:none;border:0;padding:0}
+
+/* Figures (inline SVG charts). */
+.article .fig{margin:0 0 30px}
+.article .fig__chart{display:block;width:100%;max-width:660px;height:auto}
+.article figcaption{font-family:var(--font-ui);font-size:13px;color:var(--color-text-disabled);margin-top:12px}
+
+@media (max-width:980px){
+  /* Single column: article first, the rail becomes a footer list. */
+  .post-shell{grid-template-columns:minmax(0,1fr);gap:0;max-width:820px}
+  .post-shell .article{order:1}
+  .post-nav{order:2;position:static;padding-top:28px;margin-top:44px;
+    border-top:1px solid var(--color-border)}
+  .post-body .breadcrumb{max-width:820px}
+}
