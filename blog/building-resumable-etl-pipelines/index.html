@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Building Resumable ETL Pipelines That Repair, Not Corrupt — Vishnujan Narayanan</title>
-<meta name="description" content="Incremental loads that resume from the last stored bar, adaptive concurrency that backs off on rate limits, and reruns that heal gaps instead of corrupting history.">
+<title>Making Pipeline Reruns Converge Instead of Drift — Vishnujan Narayanan</title>
+<meta name="description" content="Four ways I broke the rule that a rerun must improve the data, the guard added for each, and the one case where convergence still is not guaranteed.">
 <link rel="icon" href="../../favicon.ico?v=2" sizes="any">
 <link rel="icon" type="image/png" href="../../favicon-512.png?v=2" sizes="512x512">
 <link rel="apple-touch-icon" href="../../apple-touch-icon.png?v=2">
 <link rel="canonical" href="https://vishnujan.dev/blog/building-resumable-etl-pipelines/">
 <meta name="robots" content="index, follow, max-image-preview:large">
-<meta property="og:title" content="Building Resumable ETL Pipelines That Repair, Not Corrupt">
+<meta property="og:title" content="Making Pipeline Reruns Converge Instead of Drift">
 <meta property="og:description" content="Incremental loads, adaptive backoff, and reruns that heal gaps instead of corrupting history.">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Vishnujan Narayanan">
@@ -22,7 +22,7 @@
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:alt" content="Vishnujan Narayanan">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Building Resumable ETL Pipelines That Repair, Not Corrupt">
+<meta name="twitter:title" content="Making Pipeline Reruns Converge Instead of Drift">
 <meta name="twitter:description" content="Incremental loads, adaptive backoff, and reruns that heal gaps instead of corrupting history.">
 <meta name="twitter:image" content="https://vishnujan.dev/og-cover.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,8 +30,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../styles.css">
 <script>document.documentElement.classList.remove("no-js");</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"Building Resumable ETL Pipelines That Repair, Not Corrupt","item":"https://vishnujan.dev/blog/building-resumable-etl-pipelines/"}]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Building Resumable ETL Pipelines That Repair, Not Corrupt","datePublished":"2025-05-20","dateModified":"2025-05-20","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/building-resumable-etl-pipelines/"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"Making Pipeline Reruns Converge Instead of Drift","item":"https://vishnujan.dev/blog/building-resumable-etl-pipelines/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Making Pipeline Reruns Converge Instead of Drift","datePublished":"2025-05-20","dateModified":"2025-05-20","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/building-resumable-etl-pipelines/"}</script>
 </head>
 <body class="subpage-body post-body">
 <div class="mobile-nav__overlay"></div>
@@ -81,48 +81,106 @@
   </nav>
 </header>
 <main>
-<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>Building Resumable ETL Pipelines That Repair, Not Corrupt</nav>
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>Making Pipeline Reruns Converge Instead of Drift</nav>
 <div class="post-shell">
 <aside class="post-nav" aria-label="More posts">
   <span class="post-nav__label">More writing</span>
   <ul class="post-nav__list">
     <li><a class="post-nav__item" href="/blog/a-year-of-ingestion-bugs/">A Year of Ingestion Bugs</a></li>
     <li><a class="post-nav__item" href="/blog/how-i-scraped-nse-insider-filings/">How I Scraped 20 Years of NSE Insider Filings</a></li>
-    <li><span class="post-nav__item is-current" aria-current="page">Building Resumable ETL Pipelines That Repair, Not Corrupt</span></li>
-    <li><a class="post-nav__item" href="/blog/minute-level-stock-prediction/">Predicting Next-Minute Price Direction on 9.4M NSE Ticks</a></li>
+    <li><span class="post-nav__item is-current" aria-current="page">Making Pipeline Reruns Converge Instead of Drift</span></li>
+    <li><a class="post-nav__item" href="/blog/minute-level-stock-prediction/">What My Intraday Model Actually Predicted on 9.4M NSE Ticks</a></li>
   </ul>
   <a class="post-nav__all" href="/blog/">All writing &rarr;</a>
 </aside>
 <article class="article">
-  <h1>Building Resumable ETL Pipelines That Repair, Not Corrupt</h1>
-  <div class="meta"><span>Data engineering</span><span>8 min read</span><span>Published May 2025</span></div>
+  <h1>Making pipeline reruns converge instead of drift</h1>
+  <div class="meta"><span>Data engineering</span><span>8 min read</span><span>Published August 2026</span></div>
 
-  <p>Anyone can write a script that downloads data once. The hard part — and the part that separates a pipeline you babysit from one you forget about — is what happens on the second run. Does it re-download everything? Does it duplicate rows? Does a half-finished run leave the dataset in a worse state than before it started? Over building roughly 28 ingestion pipelines for a <a href="/projects/market-data-pipeline/">market-data platform</a>, I converged on a small set of patterns that make reruns boring. Boring is exactly what you want.</p>
+  <p>The rule I hold every ingestion pipeline to is that running it again must move the dataset toward correctness. Fill a gap, fix a bad row, leave everything else alone. It should not be possible for a second run to make the data worse than one run.</p>
 
-  <h2>Fetch only what is new</h2>
-  <p>The foundation of every reliable pipeline I build is incremental loading. Take the price pipeline as an example: it tracks roughly 1,665 tickers, and on each run it resumes every ticker from its last stored bar and fetches only the new data since then. The first run is a full history pull; every run after that touches a few new rows per symbol. This single decision changes the economics of the whole system. A full re-download of twenty years of prices for 1,665 symbols is an overnight job that hammers the source. An incremental refresh is a few minutes and a polite number of requests.</p>
-  <p>Incremental loading also makes the pipeline naturally resumable. If the last stored bar is the source of truth for where to continue, an interrupted run does not need a separate checkpoint file — the data itself is the checkpoint. Restart it and it asks each ticker "what is the latest bar you have?" and carries on.</p>
+  <p>Across 28 ingestion pipelines that pull Indian market data, I have broken that rule in four distinct ways, and each break produced a dataset that looked fine. This is what the guards are, what each one was added in response to, and the one case where I still cannot promise convergence.</p>
 
-  <h2>Slow down when the source pushes back</h2>
-  <p>External sources rate-limit you, and they rarely do it politely. You get an HTTP 429, an auth error, or — worst of all — a silent throttle where requests still return but the data quietly degrades. A pipeline that ignores this will either get banned or corrupt its own dataset with partial responses.</p>
-  <p>My answer is adaptive concurrency. The price downloader runs on a <code>concurrent.futures</code> thread pool, but the pool size is not fixed. On an HTTP 429 or auth error it drops workers and pauses for 30 seconds, then — once it sees 15 clean calls in a row — it ramps concurrency back up. The system speeds up when the source is healthy and slows down the moment it pushes back, without any manual tuning. This is the difference between a downloader that respects rate limits and one that fights them.</p>
+  <h2>The data is the checkpoint — so validate it before trusting it</h2>
 
-  <h2>Reruns must repair, not corrupt</h2>
-  <p>This is the rule I care about most. A rerun should always move the dataset toward correctness. If a previous run left a gap, the rerun fills it. If it wrote a bad row, the rerun fixes it. It should never be possible for running the pipeline again to make the data worse.</p>
-  <p>Concretely, that meant building data-quality safeguards directly into the load step: purging rows with NaN prices, merging duplicates on a <code>(Date, Symbol)</code> key, and consolidating duplicate files that accumulate over time. Because these run on every load, the dataset self-heals. You can rerun after a crash, after a bad source response, or just out of paranoia, and the result converges instead of drifting.</p>
-  <p>Deduplication deserves special care because real-world keys are messy. The same record can come back with numeric drift — <code>629221</code> one time, <code>629221.0</code> the next. A normalized composite-key anti-join collapses that drift so overlapping fetch windows never double-count. I wrote about that in more detail in the post on <a href="/blog/how-i-scraped-nse-insider-filings/">scraping NSE insider filings</a>, where overlapping windows are unavoidable.</p>
+  <p>Every pipeline resumes by asking the data where it stopped, rather than keeping a separate checkpoint file. Interrupted run, killed process, machine reboot: restart it and each symbol picks up from its own last row. No state to corrupt, no lockfile to go stale.</p>
 
-  <h2>Handle format changes without breaking history</h2>
-  <p>Sources change on you. Midway through 2024, NSE changed the URL format for its F&amp;O bhavcopy files (the move to UDiFF). A brittle pipeline would simply start 404-ing and silently stop ingesting. Mine detects which format applies for a given date and handles both, streaming each ZIP from memory into per-day CSVs. The historical data keeps flowing and the new format is picked up transparently. Designing for the source to change — rather than assuming it never will — is what keeps a backfill from rotting.</p>
+  <p>That property is also how I destroyed several months of history. The price source returns a bar all-or-nothing, so a throttled request or a request for today's unsettled bar comes back as a row with a date and no prices. The loader wrote them, and then:</p>
 
-  <h2>The payoff: unattended pipelines</h2>
-  <p>Put these together — incremental loads, adaptive backoff, self-healing reruns, and tolerance for format changes — and you get pipelines that run unattended. That is the whole point. I am not watching dashboards waiting to manually restart a failed job; the pipeline restarts itself from the data, paces itself against the source, and repairs any damage on the next run. The same patterns generalize well beyond market data: the resilient-ingestion approach carried directly into the real-time scraping in <a href="/projects/product-explorer/">Product Explorer</a>, where queues and caching play the role that incremental loads play here.</p>
-  <p>If you take one idea away, make it this: design for the second run, not the first. The first run always works in a demo. The second run is where reliability lives.</p>
+  <pre><code># Resume point = newest date in the file, valid or not.
+start = pd.read_csv(path)["Date"].max()</code></pre>
+
+  <p>A blank row dated today becomes the high-water mark, and every real bar behind it is never fetched again. The gap-repair mechanism was what made the gap permanent. The fix is one predicate:</p>
+
+  <pre><code># Resume only from rows that actually carry a price.
+df = pd.read_csv(path)
+start = df[df["Close"].notna()]["Date"].max()</code></pre>
+
+  <p>Plus the two corollaries: a download frame that is entirely NaN is treated as a failed fetch rather than data, and a startup pass purges blank rows already on disk so old damage heals instead of persisting. A row dated in the future gets the same treatment — left alone it convinces the pipeline it has data through 2027 and stops fetching entirely.</p>
+
+  <p>The general form: <strong>if the data is your checkpoint, then every write is also a write to your control flow.</strong> Validate before writing, or you are appending instructions as well as rows.</p>
+
+  <h2>Identity has to be stable across runs</h2>
+
+  <p>Per-symbol files were named with the company name looked up at runtime. That lookup is rate-limited, so it returns the real name when the source is healthy and the bare symbol when it is not — and a different name again when a company gets renamed upstream. Three names, three filenames, three files that each looked to the resume logic like a symbol with no history. Each run happily re-downloaded twenty years into a fresh file.</p>
+
+  <p>Two guards. Filenames are resolved by reusing any existing <code>SYMBOL_*.csv</code> rather than by regenerating the name, so identity is decided once and then remembered. And a consolidation pass at startup merges any duplicates that already exist into one canonical file, taking the union of rows and preferring the copy with a valid Close where they disagree.</p>
+
+  <p>The lesson generalises past filenames: <strong>anything that derives an identifier from a network call will eventually derive a different one.</strong> If that identifier decides where data goes, a bad minute at the source becomes a permanent fork in your dataset.</p>
+
+  <h2>Dedup with an anti-join, not a merge</h2>
+
+  <p>Overlapping windows are unavoidable — reruns deliberately re-pull a buffer of recent history so late-arriving records get picked up. That makes deduplication load-bearing rather than defensive.</p>
+
+  <p>I originally implemented it as a merge. A merge against existing data that already contains duplicate keys does not deduplicate; it does a partial cartesian product and multiplies rows. Set membership does not have that failure mode:</p>
+
+  <pre><code>def deduplicate(new_df, existing_df):
+    new_keys = _composite_key(new_df, DEDUP_KEYS)
+    existing_keys = set(_composite_key(existing_df, DEDUP_KEYS))
+    # Set-membership anti-join — immune to duplicate keys in existing_df
+    # (a merge cartesian-inflates when the right side has repeats).
+    return new_df[(~new_keys.isin(existing_keys)).values]</code></pre>
+
+  <p>The composite key itself needs normalising, because the same record does not arrive identically twice. A quantity comes back as <code>629221</code> from one endpoint and <code>629221.0</code> from another; a date is <code>15-Jan-2026</code> in one and <code>2026-01-15</code> in the other. Unnormalised, those are different keys and you store the row twice:</p>
+
+  <pre><code>for k in dedup_keys:
+    if k == 'intimDt':
+        col = pd.to_datetime(df[k], errors='coerce').dt.strftime('%Y-%m-%d')
+    else:
+        # '100', 100 and 100.0 collapse to one key; names fall back to string.
+        numeric = pd.to_numeric(df[k], errors='coerce').astype('float64')
+        col = numeric.where(numeric.notna(), df[k]).astype(str)
+    parts.append(col.fillna('').astype(str))</code></pre>
+
+  <p>One warning from experience: the key must be built from column names that actually exist in the response. I once deduplicated on three fields that were not real column names, which produced an identical empty key for every row and collapsed every filing for a symbol on a given day into one. Nothing raised. If you are using <a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html" target="_blank" rel="noopener"><code>DataFrame.merge</code></a> for this, <code>validate="one_to_one"</code> turns the silent inflation into an exception.</p>
+
+  <h2>Pace against the source, don't fight it</h2>
+
+  <p>Convergence assumes the source keeps answering. A pipeline that hammers a rate limit gets partial responses, and partial responses are how bad rows get written in the first place — so backoff is a data-quality control, not just politeness.</p>
+
+  <p>The price downloader runs a thread pool whose size moves on its own: five workers, drop one on any API or rate-limit error, add one back after fifteen consecutive clean calls. Individual requests get three retries with exponential backoff and a ten-second timeout. It speeds up when the source is healthy and slows down the moment it pushes back, with no manual tuning and no fixed sleep that is either too slow or too aggressive depending on the day.</p>
+
+  <h2>Where I can't promise convergence</h2>
+
+  <p>All of the above makes reruns converge against <em>my</em> errors. None of it helps when the source itself changes an old value.</p>
+
+  <p>If a record is restated upstream — a corrected filing, an adjusted price after a corporate action — my dedup key sees a row it already has and drops the correction on the floor. Convergence and immutability are in direct conflict here, and I chose immutability without really deciding to. For prices this is mostly handled because corporate-action adjustment gets recomputed, but for filings it is a real gap.</p>
+
+  <p>I also cannot currently tell the difference between "the source had nothing new" and "the source refused to answer," which is the failure mode that has cost me the most across these pipelines. I wrote up the full accounting of that in <a href="/blog/a-year-of-ingestion-bugs/">a year of ingestion bugs</a>. The next thing I want to build is a scheduled re-fetch that diffs old data against itself, which is the only way I can see to detect both problems.</p>
+
+  <h2>Elsewhere</h2>
+
+  <p><a href="https://jepsen.io/analyses" target="_blank" rel="noopener">Jepsen</a> is the reference point for the general shape of this problem: systems that report success while silently losing or duplicating writes, findable only by checking on purpose rather than waiting for an error.</p>
+
+  <p><a href="https://pandera.readthedocs.io/" target="_blank" rel="noopener">pandera</a> lets you declare the schema and column constraints and fail a load rather than writing an invalid row — the declarative version of the hand-rolled validity checks above. I am not using it yet; I probably should be.</p>
+
+  <p>The pipelines described here are part of the <a href="/projects/market-data-pipeline/">market-data platform</a>, and the chunking and reconciliation side of it is in <a href="/blog/how-i-scraped-nse-insider-filings/">scraping NSE insider filings</a>.</p>
 
   <a class="back" href="/blog/">← Back to writing</a>
 </article>
 </div>
 </main>
+<!-- BEGIN generated: footer (source: partials/footer.html — run scripts/gen-footer.mjs) -->
 <footer class="lfooter">
   <div class="lfooter__topbar">
     <span class="lfooter__brand"><span>Vishnujan</span><span>Narayanan</span></span>
@@ -142,7 +200,7 @@
         <div class="lfooter__cols">
           <nav class="lfooter__col lfooter__col--left" aria-label="Pages">
             <span class="lfooter__col-label">Pages</span>
-            <a href="/" class="lfooter__navlink">Home</a>
+            <a href="/#top" class="lfooter__navlink">Home</a>
             <a href="/#projects" class="lfooter__navlink">Projects</a>
             <a href="/#skills" class="lfooter__navlink">Skills</a>
             <a href="/blog/" class="lfooter__navlink">Blog</a>
@@ -206,6 +264,7 @@
     </div>
   </div>
 </footer>
+<!-- END generated: footer -->
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
 <script src="../../main.js" defer></script>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>How I Scraped 20 Years of NSE Insider Filings — Vishnujan Narayanan</title>
-<meta name="description" content="Backfilling two decades of NSE insider-trade filings from the PIT API: chunked 180-day windows, composite-key dedup that survives numeric drift, and source reconciliation.">
+<meta name="description" content="Backfilling two decades of NSE insider filings: 180-day windows, a dedup key that silently deleted data, and the 30-60 day lag that needs a second source.">
 <link rel="icon" href="../../favicon.ico?v=2" sizes="any">
 <link rel="icon" type="image/png" href="../../favicon-512.png?v=2" sizes="512x512">
 <link rel="apple-touch-icon" href="../../apple-touch-icon.png?v=2">
@@ -88,40 +88,110 @@
   <ul class="post-nav__list">
     <li><a class="post-nav__item" href="/blog/a-year-of-ingestion-bugs/">A Year of Ingestion Bugs</a></li>
     <li><span class="post-nav__item is-current" aria-current="page">How I Scraped 20 Years of NSE Insider Filings</span></li>
-    <li><a class="post-nav__item" href="/blog/building-resumable-etl-pipelines/">Building Resumable ETL Pipelines That Repair, Not Corrupt</a></li>
-    <li><a class="post-nav__item" href="/blog/minute-level-stock-prediction/">Predicting Next-Minute Price Direction on 9.4M NSE Ticks</a></li>
+    <li><a class="post-nav__item" href="/blog/building-resumable-etl-pipelines/">Making Pipeline Reruns Converge Instead of Drift</a></li>
+    <li><a class="post-nav__item" href="/blog/minute-level-stock-prediction/">What My Intraday Model Actually Predicted on 9.4M NSE Ticks</a></li>
   </ul>
   <a class="post-nav__all" href="/blog/">All writing &rarr;</a>
 </aside>
 <article class="article">
-  <h1>How I Scraped 20 Years of NSE Insider Filings</h1>
-  <div class="meta"><span>Data engineering</span><span>9 min read</span><span>Published May 2025</span></div>
+  <h1>How I scraped 20 years of NSE insider filings</h1>
+  <div class="meta"><span>Data engineering</span><span>10 min read</span><span>Published August 2026</span></div>
 
-  <p>Insider-trade filings are one of the richest signals you can feed a quant research team, and one of the most annoying to collect. India's National Stock Exchange publishes them through its PIT (Prohibition of Insider Trading) disclosure API, but "publishes" is doing a lot of work in that sentence. The endpoint is happy to hand you a few weeks of data and distinctly unhappy if you ask for twenty years in one request. This post walks through how I backfilled roughly two decades of NSE insider-trade filings into a clean, deduplicated dataset that reruns safely — part of the wider <a href="/projects/market-data-pipeline/">market-data platform</a> I built and own.</p>
+  <p>India's National Stock Exchange publishes insider-trade disclosures through its PIT (Prohibition of Insider Trading) endpoint, and it will hand you a few weeks of data quite happily. Ask it for twenty years and it does not refuse — it times out, or truncates, or returns a partial page that looks exactly like a complete one. Backfilling two decades into a dataset that reruns safely took three things: the right window size, a deduplication key that survives two sources, and a second source entirely.</p>
 
-  <h2>The problem with "just download everything"</h2>
-  <p>The naive approach — request a date range spanning 2005 to today — fails in several ways at once. The API times out on wide ranges, silently truncates results, and applies rate limits that you only discover when your rows quietly stop arriving. A twenty-year backfill is not a single download; it is thousands of small downloads that have to be orchestrated, paced, and stitched back together without gaps or duplicates.</p>
-  <p>So the first design decision was to stop thinking of it as one job. I split the full history into chunked 180-day windows and walked them sequentially. A 180-day window is small enough that the API reliably returns a complete result, and large enough that you are not making tens of thousands of requests. Each window writes its own slice; the orchestration layer tracks which windows are done so an interrupted run picks up where it left off rather than starting over.</p>
+  <h2>Twenty years is not one download</h2>
 
-  <h2>Backfill once, then stay current cheaply</h2>
-  <p>A historical backfill and a daily refresh have completely different cost profiles, and conflating them is a classic mistake. The backfill is a one-time, expensive march through history. The daily refresh should be almost free. I built the pipeline to recognize which mode it is in: on a cold start it chunks the wide range into 180-day windows, but on subsequent runs it switches to a one-year incremental re-pull. The one-year overlap is deliberate — filings can be amended or arrive late, so re-pulling a trailing window catches corrections without re-downloading the entire history every day.</p>
+  <p>The naive request fails in several ways at once, and only one of them is loud. Wide ranges time out. Slightly less wide ranges return without error and without all the rows. So the first decision is to stop treating this as one job:</p>
 
-  <h2>Deduplication that survives numeric drift</h2>
-  <p>Once you are appending overlapping windows, duplicates are guaranteed. The interesting part is that naive deduplication does not work, because the same filing does not always look identical across fetches. A quantity field might come back as the integer <code>629221</code> in one response and the float <code>629221.0</code> in another. String versus numeric drift like this defeats a plain row-equality check, and you end up double-counting the same disclosure.</p>
-  <p>The fix was a normalized composite-key set anti-join. Instead of comparing whole rows, I build a composite key from the fields that actually identify a filing, normalize each component so <code>629221</code> and <code>629221.0</code> collapse to the same token, and then anti-join new rows against the keys already on disk. Only genuinely new filings get appended. This is what lets the pipeline rerun across overlapping windows without ever inflating the dataset — a property that matters enormously when the numbers downstream are feeding research.</p>
+  <pre><code>DEFAULT_CHUNK_DAYS = 180   # max span fetched per API request when looping a wide range
 
-  <h2>Closing the reporting lag with a second source</h2>
-  <p>Even a perfect scrape of NSE has a structural problem: the exchange's insider data carries a 30-to-60-day reporting lag. For research that cares about recent activity, that lag is a real blind spot. To close it, I reconciled the NSE feed against a second source, Trendlyne, which surfaces filings sooner. That meant parsing Trendlyne's HTML tables with BeautifulSoup and normalizing them into exactly the same schema as the NSE records, so the two sources merge into one consistent view rather than two datasets you have to reason about separately.</p>
-  <p>Source reconciliation is its own small discipline. The two feeds disagree on column names, date formats, and occasionally on the filings themselves. The composite-key approach from earlier pays off again here: once both sources are normalized into the same key space, deduplication across sources is the same operation as deduplication within a source.</p>
+def fetch_range(session, from_date, to_date, chunk_days, retries=3):
+    """Fetch a (possibly wide) date range by splitting it into chunk_days windows."""
+    start = from_date
+    while start &lt;= to_date:
+        end = min(start + timedelta(days=chunk_days - 1), to_date)
+        ...
+        start = end + timedelta(days=1)</code></pre>
 
-  <h2>What made it reliable</h2>
-  <p>None of these pieces are exotic on their own. The reliability came from combining them: chunked windows so requests always succeed, a mode switch so daily runs stay cheap, normalized composite-key dedup so reruns repair instead of corrupt, and source reconciliation so the data is timely. The result is a pipeline I can leave alone — it fetches only what is new, heals gaps on rerun, and keeps two decades of insider activity current across ~1,665 listed companies.</p>
-  <p>If you want the broader picture of how this fits into a 28-pipeline ingestion layer, the <a href="/projects/market-data-pipeline/">Market Data Platform project</a> covers the prices, options, news, and corporate-action pipelines that sit alongside this one. And the companion post on <a href="/blog/building-resumable-etl-pipelines/">resumable ETL pipelines</a> goes deeper on the incremental-load and backoff patterns that keep all of them running unattended.</p>
+  <p>180 days is the number I settled on: small enough that the endpoint reliably returns everything in the window, large enough that twenty years is roughly forty requests rather than thousands. It is not a documented limit — I found it by walking the window size up until results started going missing, which is the only way to find an undocumented cap.</p>
+
+  <p>The run modes fall out of the same structure. First run backfills twenty years. Every run after that re-pulls from the newest record already stored, minus a buffer, through today. The buffer is not superstition: filings arrive late, so a window that starts exactly where you stopped will permanently miss anything that was filed for a date you already passed.</p>
+
+  <h2>The dedup key that deleted data</h2>
+
+  <p>Overlapping windows are the whole point of the buffer, so deduplication is load-bearing. For months mine ran on this:</p>
+
+  <pre><code># Written from memory instead of from the response. None of these are
+# real NSE column names.
+DEDUP_KEYS = ['personName', 'acqQty', 'securityName']
+
+# What the endpoint actually returns.
+DEDUP_KEYS = ['symbol', 'intimDt', 'acqName', 'secAcq']</code></pre>
+
+  <p>Because none of the first three columns existed, every row produced the same missing key, and every distinct filing for a symbol on a given day collapsed into a single row. A company that disclosed four separate transactions in a day was stored as one. Nothing raised, nothing logged, and the row count looked plausible because it was never compared to anything.</p>
+
+  <p>Fixing the key exposed a second bug beneath it. The dedup was a merge, and a merge against existing data that already contains duplicate keys inflates rather than collapses — a partial cartesian product. So the pipeline went from dropping filings to inventing them. A set-membership anti-join has neither failure mode, and does not care what is already in the file:</p>
+
+  <pre><code>def deduplicate(new_df, existing_df):
+    new_keys = _composite_key(new_df, DEDUP_KEYS)
+    existing_keys = set(_composite_key(existing_df, DEDUP_KEYS))
+    return new_df[(~new_keys.isin(existing_keys)).values]</code></pre>
+
+  <p>If you are reaching for <a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html" target="_blank" rel="noopener"><code>DataFrame.merge</code></a> here, <code>validate="one_to_one"</code> raises on exactly the inflation case instead of silently doing it.</p>
+
+  <h2>Normalising keys so two sources agree</h2>
+
+  <p>A composite key only works if the same record produces the same key every time, and it does not. The same quantity arrives as <code>629221</code> from one place and <code>629221.0</code> from another. The same date is <code>15-Jan-2026</code> here and <code>2026-01-15</code> there. Unnormalised, those are distinct keys and the row is stored twice:</p>
+
+  <pre><code>for k in dedup_keys:
+    if k == 'intimDt':
+        col = pd.to_datetime(df[k], errors='coerce').dt.strftime('%Y-%m-%d')
+    else:
+        # '100', 100 and 100.0 all collapse to one key;
+        # non-numeric values (names) fall back to their string form.
+        numeric = pd.to_numeric(df[k], errors='coerce').astype('float64')
+        col = numeric.where(numeric.notna(), df[k]).astype(str)
+    parts.append(col.fillna('').astype(str))
+return parts[0].str.cat(parts[1:], sep='|')</code></pre>
+
+  <p>This is the piece that makes the next section possible. Without it, merging a second source produces a dataset that is duplicated everywhere the two overlap, which is worse than having one source.</p>
+
+  <h2>NSE lags itself by a month or more</h2>
+
+  <p>The bigger problem is not collection, it is timeliness. Filings take roughly 30 to 60 days to appear in NSE's indexed history. For a backfill that is irrelevant; for anything current it means the most recent two months of your dataset are systematically incomplete, and nothing about the response tells you so.</p>
+
+  <p>So the pipeline supplements the last 60 days from a second source, mapped onto NSE's 32-column schema and deduplicated against it with the normalised key above. That is only sound because the key normalisation makes cross-source matching reliable — otherwise you are stacking two partially-overlapping datasets and calling it coverage.</p>
+
+  <p>The second source fought back in two specific ways worth knowing about:</p>
+
+  <ul>
+    <li><strong>Cloudflare 405s to plain <code>requests</code>.</strong> Rotating the user agent does nothing here, because the block keys on the TLS fingerprint rather than the header. <a href="https://pypi.org/project/curl-cffi/" target="_blank" rel="noopener">curl_cffi</a> with Chrome impersonation gets a matching fingerprint. Worse than the block itself: the run reported success with zero new rows, which is indistinguishable from a quiet day. It now prints an explicit pass/fail summary so a fully-blocked run cannot be mistaken for an empty one.</li>
+    <li><strong>A 200-row cap per window on the free tier.</strong> Wider windows silently return the first 200 records with no truncation flag anywhere in the response. The supplement fetches one day at a time by default for this reason. You cannot detect this without knowing the cap exists.</li>
+  </ul>
+
+  <p>A single IP will not finish a full historical crawl of that source either, so the crawl runs through a rotating proxy pool. Free proxies are fine for testing rotation and not for a real run.</p>
+
+  <h2>What I would change</h2>
+
+  <p><strong>Verify counts against something external.</strong> Every silent failure above shares one property: the output was plausible and unchecked. A filing count for a handful of known symbols, compared against the exchange's own published figures, would have caught the dedup-key bug immediately instead of eventually.</p>
+
+  <p><strong>Treat "zero new rows" as suspicious by default.</strong> It is the correct answer often enough to be unremarkable and wrong often enough to be dangerous. Anything that can legitimately return nothing needs to distinguish an empty source from a refused request.</p>
+
+  <p><strong>Decide what a restatement means before it happens.</strong> If a filing is corrected upstream, my dedup key sees a record it already holds and drops the correction. That was never a decision, it is a consequence of using set membership, and for a compliance-adjacent dataset it is the gap that bothers me most.</p>
+
+  <p>The full accounting of what has broken across these pipelines is in <a href="/blog/a-year-of-ingestion-bugs/">a year of ingestion bugs</a>, the rerun guards are in <a href="/blog/building-resumable-etl-pipelines/">reruns that converge</a>, and the wider stack is on the <a href="/projects/market-data-pipeline/">market-data platform</a> page.</p>
+
+  <h2>Elsewhere</h2>
+
+  <p>SEBI's <a href="https://www.sebi.gov.in/sebi_data/attachdocs/1421319519608.pdf" target="_blank" rel="noopener">Prohibition of Insider Trading Regulations, 2015</a> (the original 2015 gazette notification; it has been amended since) define what has to be disclosed and within what deadline, which is what sets the shape of the data and the reporting lag you have to design around.</p>
+
+  <p>NSE's <a href="https://www.nseindia.com/companies-listing/corporate-filings-insider-trading" target="_blank" rel="noopener">insider trading disclosures</a> page is the human-facing view of the same records the endpoint serves — useful for spot-checking a symbol when you suspect your own pipeline.</p>
 
   <a class="back" href="/blog/">← Back to writing</a>
 </article>
 </div>
 </main>
+<!-- BEGIN generated: footer (source: partials/footer.html — run scripts/gen-footer.mjs) -->
 <footer class="lfooter">
   <div class="lfooter__topbar">
     <span class="lfooter__brand"><span>Vishnujan</span><span>Narayanan</span></span>
@@ -141,7 +211,7 @@
         <div class="lfooter__cols">
           <nav class="lfooter__col lfooter__col--left" aria-label="Pages">
             <span class="lfooter__col-label">Pages</span>
-            <a href="/" class="lfooter__navlink">Home</a>
+            <a href="/#top" class="lfooter__navlink">Home</a>
             <a href="/#projects" class="lfooter__navlink">Projects</a>
             <a href="/#skills" class="lfooter__navlink">Skills</a>
             <a href="/blog/" class="lfooter__navlink">Blog</a>
@@ -205,6 +275,7 @@
     </div>
   </div>
 </footer>
+<!-- END generated: footer -->
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
 <script src="../../main.js" defer></script>
 </body>

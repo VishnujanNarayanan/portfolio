@@ -88,8 +88,8 @@
   <ul class="post-nav__list">
     <li><span class="post-nav__item is-current" aria-current="page">A Year of Ingestion Bugs</span></li>
     <li><a class="post-nav__item" href="/blog/how-i-scraped-nse-insider-filings/">How I Scraped 20 Years of NSE Insider Filings</a></li>
-    <li><a class="post-nav__item" href="/blog/building-resumable-etl-pipelines/">Building Resumable ETL Pipelines That Repair, Not Corrupt</a></li>
-    <li><a class="post-nav__item" href="/blog/minute-level-stock-prediction/">Predicting Next-Minute Price Direction on 9.4M NSE Ticks</a></li>
+    <li><a class="post-nav__item" href="/blog/building-resumable-etl-pipelines/">Making Pipeline Reruns Converge Instead of Drift</a></li>
+    <li><a class="post-nav__item" href="/blog/minute-level-stock-prediction/">What My Intraday Model Actually Predicted on 9.4M NSE Ticks</a></li>
   </ul>
   <a class="post-nav__all" href="/blog/">All writing &rarr;</a>
 </aside>
@@ -251,6 +251,7 @@ frames = [f.result().df for f in as_completed(futures)]
 </article>
 </div>
 </main>
+<!-- BEGIN generated: footer (source: partials/footer.html — run scripts/gen-footer.mjs) -->
 <footer class="lfooter">
   <div class="lfooter__topbar">
     <span class="lfooter__brand"><span>Vishnujan</span><span>Narayanan</span></span>
@@ -270,7 +271,7 @@ frames = [f.result().df for f in as_completed(futures)]
         <div class="lfooter__cols">
           <nav class="lfooter__col lfooter__col--left" aria-label="Pages">
             <span class="lfooter__col-label">Pages</span>
-            <a href="/" class="lfooter__navlink">Home</a>
+            <a href="/#top" class="lfooter__navlink">Home</a>
             <a href="/#projects" class="lfooter__navlink">Projects</a>
             <a href="/#skills" class="lfooter__navlink">Skills</a>
             <a href="/blog/" class="lfooter__navlink">Blog</a>
@@ -334,6 +335,7 @@ frames = [f.result().df for f in as_completed(futures)]
     </div>
   </div>
 </footer>
+<!-- END generated: footer -->
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
 <script src="../../main.js" defer></script>
 </body>
