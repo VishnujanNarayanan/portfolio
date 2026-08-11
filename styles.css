@@ -1633,7 +1633,9 @@ html.boot-active{overflow:hidden;height:100%}
   flex-wrap:wrap;margin-top:26px}
 .post-head__foot .byline--lg{margin-top:0}
 .share-row{display:flex;align-items:center;gap:8px}
-.share-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;
+/* .article a paints links blue and outranks a lone .share-btn, so the row is
+   qualified here to keep the marks recessive until hover. */
+.share-btn,.article .share-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;
   border-radius:50%;background:var(--color-bg-muted);border:1px solid var(--color-border);
   color:var(--color-text-muted);transition:color .25s ease,background .25s ease,border-color .25s ease}
 .share-btn:hover{color:var(--color-text-light);background:var(--color-highlight);
