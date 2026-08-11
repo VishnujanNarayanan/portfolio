@@ -136,7 +136,6 @@
   <div class="post-head">
     <div class="tag-row"><span class="tag">ETL</span><span class="tag">Data engineering</span></div>
     <h1>Making pipeline reruns converge instead of drift</h1>
-    <p class="post-head__dek">Four ways I broke the rule that a rerun must improve the data, the guard added for each, and the one case where convergence still is not guaranteed.</p>
     <div class="post-head__foot">
     <div class="byline byline--lg">
         <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
@@ -144,7 +143,7 @@
         <span class="byline__sep" aria-hidden="true">·</span>
         <span class="byline__date">August 2026</span>
       </div>
-      <div class="share-row">
+<div class="share-row">
       <a class="share-btn" href="mailto:?subject=Making%20Pipeline%20Reruns%20Converge%20Instead%20of%20Drift&body=Making%20Pipeline%20Reruns%20Converge%20Instead%20of%20Drift%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fbuilding-resumable-etl-pipelines%2F" aria-label="Share by email" title="Share by email"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
       <a class="share-btn" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fbuilding-resumable-etl-pipelines%2F&text=Making%20Pipeline%20Reruns%20Converge%20Instead%20of%20Drift" target="_blank" rel="noopener" aria-label="Share on X" title="Share on X"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.2 3h3.3l-7.2 8.2L21.8 21h-6.6l-4.3-5.6L5.9 21H2.6l7.7-8.8L2.5 3h6.8l3.9 5.2L17.2 3Zm-1.2 16h1.8L8.1 4.8H6.2L16 19Z"/></svg></a>
       <a class="share-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fbuilding-resumable-etl-pipelines%2F" target="_blank" rel="noopener" aria-label="Share on LinkedIn" title="Share on LinkedIn"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M6.9 8.6H4.2V20h2.7V8.6ZM5.5 4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2ZM20 13.4c0-2.9-1.6-4.3-3.6-4.3-1.7 0-2.4.9-2.8 1.5V8.6H10.9c0 .8 0 11.4 0 11.4h2.7v-6.4c0-.3 0-.6.1-.8.3-.6.8-1.2 1.7-1.2 1.2 0 1.7.9 1.7 2.2V20H20v-6.6Z"/></svg></a>
@@ -153,6 +152,7 @@
       <a class="share-btn" href="https://api.whatsapp.com/send?text=Making%20Pipeline%20Reruns%20Converge%20Instead%20of%20Drift%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fbuilding-resumable-etl-pipelines%2F" target="_blank" rel="noopener" aria-label="Share on WhatsApp" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Zm0 1.7a7.3 7.3 0 1 1-3.7 13.6l-.3-.2-2.7.7.7-2.6-.2-.3A7.3 7.3 0 0 1 12 4.7Zm4.2 9.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1-.6.7-.7.9-.3.2-.5.1a6 6 0 0 1-1.8-1.1 6.6 6.6 0 0 1-1.2-1.6c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 2 4.5 4.5 0 0 0 1 2.4 10.2 10.2 0 0 0 3.9 3.4c1.8.7 1.8.5 2.2.4a2.3 2.3 0 0 0 1.5-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"/></svg></a>
     </div>
     </div>
+    <p class="post-head__dek">Four ways I broke the rule that a rerun must improve the data, the guard added for each, and the one case where convergence still is not guaranteed.</p>
   </div>
   <figure class="post-hero">
     <img src="/images/blog/resumable-etl.jpg" alt="" width="1000" height="563" fetchpriority="high" decoding="async">
@@ -250,8 +250,8 @@ start = df[df["Close"].notna()]["Date"].max()</code></pre>
         <div class="post-card__body">
           <div class="tag-row"><span class="tag">Data engineering</span><span class="tag">Reliability</span></div>
           <h3 class="post-card__title">A Year of Ingestion Bugs: What Actually Broke in 32 Market-Data Pipelines</h3>
-          <p class="post-card__excerpt">Roughly 30 bugs across a year of scraping Indian market data, sorted by cause. Eight of them produced no error at all, and those were the expensive ones.</p>
           <div class="byline"><span class="byline__date">August 2026</span></div>
+          <p class="post-card__excerpt">Roughly 30 bugs across a year of scraping Indian market data, sorted by cause. Eight of them produced no error at all, and those were the expensive ones.</p>
         </div>
       </a>
       <a class="post-card post-card--sm" href="/blog/how-i-scraped-nse-insider-filings/">
@@ -261,8 +261,8 @@ start = df[df["Close"].notna()]["Date"].max()</code></pre>
         <div class="post-card__body">
           <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Data engineering</span></div>
           <h3 class="post-card__title">How I Scraped 20 Years of NSE Insider Filings</h3>
-          <p class="post-card__excerpt">180-day windows, a dedup key that silently deleted filings, and the 30-60 day indexing lag that forces a second source.</p>
           <div class="byline"><span class="byline__date">August 2026</span></div>
+          <p class="post-card__excerpt">180-day windows, a dedup key that silently deleted filings, and the 30-60 day indexing lag that forces a second source.</p>
         </div>
       </a>
       <a class="post-card post-card--sm" href="/blog/minute-level-stock-prediction/">
@@ -272,8 +272,8 @@ start = df[df["Close"].notna()]["Date"].max()</code></pre>
         <div class="post-card__body">
           <div class="tag-row"><span class="tag">Quant / ML</span><span class="tag">Machine learning</span></div>
           <h3 class="post-card__title">What My Intraday Model Actually Predicted on 9.4M NSE Ticks</h3>
-          <p class="post-card__excerpt">61.4% precision against a 46.8% base rate sounds like an edge — until you notice it fired 70 times out of 3,100. The two ways I nearly fooled myself.</p>
           <div class="byline"><span class="byline__date">August 2026</span></div>
+          <p class="post-card__excerpt">61.4% precision against a 46.8% base rate sounds like an edge — until you notice it fired 70 times out of 3,100. The two ways I nearly fooled myself.</p>
         </div>
       </a>
     </div>

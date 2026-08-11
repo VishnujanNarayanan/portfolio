@@ -1468,7 +1468,7 @@ html.boot-active{overflow:hidden;height:100%}
 .byline__avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;flex:0 0 auto}
 .byline__name{color:var(--color-text);font-weight:500}
 .byline__sep{color:var(--color-text-disabled)}
-.byline--lg{margin-top:26px;font-size:14px;gap:10px}
+.byline--lg{font-size:14px;gap:10px}
 .byline--lg .byline__avatar{width:40px;height:40px}
 
 /* Tag chips */
@@ -1491,7 +1491,7 @@ html.boot-active{overflow:hidden;height:100%}
 .feature-card__title{font-family:"Inter",sans-serif;font-weight:500;font-size:34px;line-height:1.12;
   letter-spacing:-1px;color:var(--color-text);margin-bottom:12px;transition:color .25s ease}
 .feature-card:hover .feature-card__title{color:var(--color-highlight)}
-.feature-card__excerpt{font-size:17px;line-height:1.6;color:var(--color-text-muted);margin-bottom:20px}
+.feature-card__excerpt{font-size:17px;line-height:1.6;color:var(--color-text-muted);margin-bottom:0}
 
 .post-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px 32px}
 .post-card{display:flex;flex-direction:column;text-decoration:none;padding:0;border:0}
@@ -1500,7 +1500,7 @@ html.boot-active{overflow:hidden;height:100%}
 .post-card__title{font-family:"Inter",sans-serif;font-weight:500;font-size:21px;line-height:1.25;
   letter-spacing:-.4px;color:var(--color-text);margin-bottom:10px;transition:color .25s ease}
 .post-card:hover .post-card__title{color:var(--color-highlight)}
-.post-card__excerpt{font-size:15px;line-height:1.55;color:var(--color-text-muted);margin-bottom:16px}
+.post-card__excerpt{font-size:15px;line-height:1.55;color:var(--color-text-muted);margin-bottom:0}
 
 /* Post masthead + hero */
 .post-head{margin-bottom:32px}
@@ -1614,8 +1614,11 @@ html.boot-active{overflow:hidden;height:100%}
 /* ---- Post share row + action rail (2026-08-11) --------------------------------
    Byline left, share links right, as one row under the dek. */
 .post-head__foot{display:flex;align-items:center;justify-content:space-between;gap:20px;
-  flex-wrap:wrap;margin-top:26px}
+  flex-wrap:wrap;margin:20px 0 22px}
 .post-head__foot .byline--lg{margin-top:0}
+/* Byline sits above the description in cards too, so it carries the gap. */
+.feature-card .byline{margin-bottom:16px}
+.post-card .byline{margin-bottom:12px}
 .share-row{display:flex;align-items:center;gap:8px}
 /* .article a paints links blue and outranks a lone .share-btn, so the row is
    qualified here to keep the marks recessive until hover. */
