@@ -75,7 +75,9 @@ for (const file of pages) {
       "\n" +
       part.body
         .replaceAll("{{HOME}}", isHome ? "" : "/")
-        .replaceAll("{{BLOG}}", isHome ? "#blog" : "/blog/")
+        // Always the blog PAGE, never the homepage's in-page writing section: the
+        // nav item promises a blog and the section is only a teaser for it.
+        .replaceAll("{{BLOG}}", "/blog/")
         .replaceAll("{{HOME_HREF}}", isHome ? "#top" : "/")
         .replaceAll("{{CONTACT_ID}}", isHome ? ' id="contact"' : "") +
       "\n" +

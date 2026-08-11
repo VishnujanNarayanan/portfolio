@@ -49,7 +49,7 @@
   <nav class="header__nav-right" aria-label="Header actions">
     <div class="header__ctas">
       <a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Hire Me</span></a>
-      <a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark"><span class="pill-btn-span">Get In Touch</span></a>
+      <button type="button" class="pill-btn pill-btn--dark" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button>
     </div>
     <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
       <span class="menu-btn__icon">
@@ -77,28 +77,60 @@
       </ul>
       <div class="mobile-nav__ctas">
         <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Hire Me</span></a></div>
-        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark mobile-nav__cta"><span class="pill-btn-span">Get In Touch</span></a></div>
+        <div class="mncta"><button type="button" class="pill-btn pill-btn--dark mobile-nav__cta" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button></div>
       </div>
     </div>
   </nav>
 </header>
+
+<!--
+  Subscribe modal. A static site has no backend, so it cannot store an address or
+  send mail — the signup has to be completed by Substack either way. Two ways to
+  do that: their embed iframe (cross-origin, so its orange button cannot be
+  restyled from here) or this — our own form, styled in the site's blue, GET-ing
+  to Substack's subscribe page with the address in the query string so it arrives
+  pre-filled. No JS: a plain GET form builds ?email=... on its own, so this still
+  works if main.js never runs.
+  Opened by any [data-subscribe-open] button (see the subscribe IIFE in main.js).
+-->
+<dialog class="submodal" id="subscribe-modal" aria-labelledby="submodal-title">
+  <button type="button" class="submodal__close" data-subscribe-close aria-label="Close">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="currentColor"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="currentColor"></rect></svg>
+  </button>
+  <h2 class="submodal__title" id="submodal-title">Get new posts by email</h2>
+  <p class="submodal__text">Subscribe to get new posts on data engineering and quantitative research — data pipelines, web scraping, and market-data experiments — delivered to your inbox as they go up.</p>
+  <form class="subform" action="https://vishnujannarayanan.substack.com/subscribe" method="get" target="_blank" rel="noopener">
+    <label class="subform__label" for="subscribe-email">Email</label>
+    <div class="subform__row">
+      <input class="subform__input" id="subscribe-email" type="email" name="email" required autocomplete="email" placeholder="you@example.com" spellcheck="false">
+      <button class="subform__btn" type="submit">Subscribe</button>
+    </div>
+  </form>
+  <p class="submodal__note">No account needed, and you can unsubscribe from any email.</p>
+  <p class="submodal__terms">By subscribing you agree to Substack's <a href="https://substack.com/tos" target="_blank" rel="noopener">Terms of Use</a>, its <a href="https://substack.com/privacy" target="_blank" rel="noopener">Privacy Policy</a> and its <a href="https://substack.com/ccpa#personal-data-collected" target="_blank" rel="noopener">Information collection notice</a>.</p>
+  <a class="substack-badge" href="https://vishnujannarayanan.substack.com/" target="_blank" rel="me noopener">
+    <svg viewBox="0 0 21 24" width="13" height="15" aria-hidden="true" focusable="false"><path d="M20.999 0H0v2.836h20.999V0Z" fill="currentColor"></path><path d="M20.999 5.406H0v2.836h20.999V5.406Z" fill="currentColor"></path><path d="M0 10.813V24l10.499-5.887L21 24V10.813H0Z" fill="currentColor"></path></svg>
+    <span>Delivered by Substack</span>
+  </a>
+</dialog>
 <!-- END generated: header -->
 <main>
 <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>How I Scraped 20 Years of NSE Insider Filings</nav>
-<div class="post-shell">
-<aside class="post-nav" aria-label="More posts">
-  <span class="post-nav__label">More writing</span>
-  <ul class="post-nav__list">
-    <li><a class="post-nav__item" href="/blog/a-year-of-ingestion-bugs/">A Year of Ingestion Bugs</a></li>
-    <li><span class="post-nav__item is-current" aria-current="page">How I Scraped 20 Years of NSE Insider Filings</span></li>
-    <li><a class="post-nav__item" href="/blog/building-resumable-etl-pipelines/">Making Pipeline Reruns Converge Instead of Drift</a></li>
-    <li><a class="post-nav__item" href="/blog/minute-level-stock-prediction/">What My Intraday Model Actually Predicted on 9.4M NSE Ticks</a></li>
-  </ul>
-  <a class="post-nav__all" href="/blog/">All writing &rarr;</a>
-</aside>
 <article class="article">
-  <h1>How I scraped 20 years of NSE insider filings</h1>
-  <div class="meta"><span>Data engineering</span><span>10 min read</span><span>Published August 2026</span></div>
+  <div class="post-head">
+    <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Data engineering</span></div>
+    <h1>How I scraped 20 years of NSE insider filings</h1>
+    <p class="post-head__dek">180-day windows, a dedup key that silently deleted filings, and the 30-60 day indexing lag that forces a second source.</p>
+    <div class="byline byline--lg">
+        <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
+        <span class="byline__name">Vishnujan Narayanan</span>
+        <span class="byline__sep" aria-hidden="true">·</span>
+        <span class="byline__date">August 2026</span>
+      </div>
+  </div>
+  <figure class="post-hero">
+    <img src="/images/blog/scraping.jpg" alt="" width="1000" height="563" fetchpriority="high" decoding="async">
+  </figure>
 
   <p>When a company director buys or sells shares in their own company, they have to tell the exchange. In India those disclosures are public, and the National Stock Exchange serves them from what it calls its PIT endpoint — PIT being Prohibition of Insider Trading, the regulation that requires the disclosure in the first place. I wanted all of them, going back twenty years, in one file I could keep up to date.</p>
 
@@ -199,16 +231,59 @@ return parts[0].str.cat(parts[1:], sep='|')</code></pre>
   <p>SEBI's <a href="https://www.sebi.gov.in/sebi_data/attachdocs/1421319519608.pdf" target="_blank" rel="noopener">Prohibition of Insider Trading Regulations, 2015</a> (the original gazette notification, amended several times since) set out who has to disclose what and by when. Those deadlines are what produce the reporting lag you have to design around, so it is worth reading before deciding how far back your update window should reach.</p>
 
   <p>NSE's <a href="https://www.nseindia.com/companies-listing/corporate-filings-insider-trading" target="_blank" rel="noopener">insider trading disclosures</a> page shows the same records a human would see. It is the fastest way to check a single company by hand when you suspect your own pipeline is lying to you.</p>
-
-  <a class="back" href="/blog/">← Back to writing</a>
 </article>
-</div>
+
+<section class="keep-reading" aria-labelledby="keep-reading-h">
+  <div class="keep-reading__inner">
+    <h2 class="keep-reading__title" id="keep-reading-h">Keep reading</h2>
+    <div class="post-grid post-grid--sm">
+      <a class="post-card post-card--sm" href="/blog/a-year-of-ingestion-bugs/">
+        <div class="post-card__media">
+          <img src="/images/blog/ingestion-bugs.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">Data engineering</span><span class="tag">Reliability</span></div>
+          <h3 class="post-card__title">A Year of Ingestion Bugs: What Actually Broke in 32 Market-Data Pipelines</h3>
+          <p class="post-card__excerpt">Roughly 30 bugs across a year of scraping Indian market data, sorted by cause. Eight of them produced no error at all, and those were the expensive ones.</p>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+        </div>
+      </a>
+      <a class="post-card post-card--sm" href="/blog/building-resumable-etl-pipelines/">
+        <div class="post-card__media">
+          <img src="/images/blog/resumable-etl.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">ETL</span><span class="tag">Data engineering</span></div>
+          <h3 class="post-card__title">Making Pipeline Reruns Converge Instead of Drift</h3>
+          <p class="post-card__excerpt">Four ways I broke the rule that a rerun must improve the data, the guard added for each, and the one case where convergence still is not guaranteed.</p>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+        </div>
+      </a>
+      <a class="post-card post-card--sm" href="/blog/minute-level-stock-prediction/">
+        <div class="post-card__media">
+          <img src="/images/blog/intraday-model.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">Quant / ML</span><span class="tag">Machine learning</span></div>
+          <h3 class="post-card__title">What My Intraday Model Actually Predicted on 9.4M NSE Ticks</h3>
+          <p class="post-card__excerpt">61.4% precision against a 46.8% base rate sounds like an edge — until you notice it fired 70 times out of 3,100. The two ways I nearly fooled myself.</p>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+        </div>
+      </a>
+    </div>
+    <div class="sub-cta">
+      <h2 class="sub-cta__title">Get the next one</h2>
+      <p class="sub-cta__text">I write these up as I build. New posts on pipelines, scrapers, and market-data ML land on Substack first.</p>
+      <div class="sub-cta__actions">
+        <button type="button" class="pill-btn pill-btn--dark" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button>
+        <a class="sub-cta__link" href="/blog/">All writing &rarr;</a>
+      </div>
+    </div>
+  </div>
+</section>
 </main>
 <!-- BEGIN generated: footer (source: partials/footer.html — run scripts/gen-partials.mjs) -->
 <footer class="lfooter">
-  <div class="lfooter__topbar">
-    <span class="lfooter__brand"><span>Vishnujan</span><span>Narayanan</span></span>
-  </div>
 
   <div class="lfooter__layout">
     <!-- Dark notched box (Lando footer mask) with static contour pattern inside -->
