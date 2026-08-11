@@ -74,7 +74,7 @@ const FOOTER_SUBSCRIBE = `      <div class="lfooter__sub">
         <p class="lfooter__sub-note">No account needed, and you can unsubscribe from this email. By subscribing you agree to Substack's <a href="https://substack.com/tos" target="_blank" rel="noopener">Terms of Use</a> and <a href="https://substack.com/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>
         <a class="substack-badge substack-badge--dark" href="https://vishnujannarayanan.substack.com/" target="_blank" rel="me noopener">
           <svg viewBox="0 0 21 24" width="13" height="15" aria-hidden="true" focusable="false"><path d="M20.999 0H0v2.836h20.999V0Z" fill="currentColor"></path><path d="M20.999 5.406H0v2.836h20.999V5.406Z" fill="currentColor"></path><path d="M0 10.813V24l10.499-5.887L21 24V10.813H0Z" fill="currentColor"></path></svg>
-          <span>Delivered by Substack</span>
+          <span>Substack</span>
         </a>
       </div>`;
 
