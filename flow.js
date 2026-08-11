@@ -1264,7 +1264,6 @@
     // still undefined/out of band the raw −1 is kept, so zone 1 plays its entry at the pin.
     var csel = (lastCsel !== undefined && lastCsel >= 0 && lastCsel < N)
       ? clamp(cselRaw, 0, N - 1) : cselRaw;
-    var clocal = globalRaw - csel;                   // [−0.5, 0.5] within the active stage
     // Active stage slides from R_END (right, entry) to L_END (leftmost). R_END=8 is the
     // original right entry (unchanged). L_END raised 0→2.4 so the card stops short of
     // centre — 30% less leftward travel. OFF_L/OFF_R = off-screen park (passed/upcoming).
@@ -1346,7 +1345,13 @@
       var pinX = -(pi * vw + trackX);
       setSt(cardsEl, "transform", "translate(calc(-50% + " + (panel._coff * F + pinX).toFixed(1) + "px),-50%)");
       setSt(cardsEl, "opacity", (isActive || exiting) ? "1" : "0");
-      setSt(cardsEl, "pointerEvents", (isActive && Math.abs(clocal) < 0.4) ? "auto" : "none");
+      // Hit-testable for the WHOLE of the active stage. This used to also require
+      // |clocal| < 0.4, which left the outer fifth of every zone — the approach to each
+      // threshold — visible but not hoverable, since refreshHover reads elementFromPoint
+      // and pointer-events:none makes the cursor pass straight through. Being active is
+      // the only condition that matters: the outgoing panel is not active while it plays
+      // its exit, so only one panel is ever hit-testable.
+      setSt(cardsEl, "pointerEvents", isActive ? "auto" : "none");
     });
 
     // Opposite-direction column parallax — VERTICAL ONLY (horizontal is the scroll-slide
