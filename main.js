@@ -3428,3 +3428,81 @@ function buildPillReel(pill) {
     });
   }
 })();
+
+/* ---- Footer link reel (2026-08-12) --------------------------------------------
+   Same idea as buildPillReel, with its own classes: each letter becomes a clip
+   holding the live copy and a sky-blue copy waiting underneath, and CSS rolls the
+   column up on hover. Built in JS because the alternative is eight hand-written
+   links of per-letter markup in partials/footer.html. */
+(function footerLinkReel() {
+  var links = document.querySelectorAll(".lfooter__navlink");
+  if (!links.length) return;
+  var STEP = 0.022;   // per-letter stagger, left to right
+
+  Array.prototype.forEach.call(links, function (a) {
+    if (a.querySelector(".lreel")) return;          // already built
+    var txt = a.textContent.trim();
+    if (!txt) return;
+    a.setAttribute("aria-label", txt);
+    a.textContent = "";
+    for (var i = 0; i < txt.length; i++) {
+      var ch = txt[i];
+      var clip = document.createElement("span");
+      clip.className = "lreel";
+      clip.setAttribute("aria-hidden", "true");
+      var col = document.createElement("span");
+      col.className = "lreel__col";
+      col.style.setProperty("--rd", (i * STEP).toFixed(3) + "s");
+      var top = document.createElement("span");
+      top.className = "lreel__a";
+      top.textContent = ch;
+      var bot = document.createElement("span");
+      bot.className = "lreel__b";
+      bot.textContent = ch;
+      col.appendChild(top);
+      col.appendChild(bot);
+      clip.appendChild(col);
+      a.appendChild(clip);
+    }
+  });
+})();
+
+/* ---- Rail hands off to the footer (2026-08-12) --------------------------------
+   The fixed rail would otherwise sit on top of the footer. Once the footer's top
+   comes within a margin of the rail's bottom, the rail stops holding its fixed
+   position and rides up 1:1 with the scroll — the overlap is applied as a
+   translate, so it leaves with the page instead of vanishing abruptly. */
+(function railFooterHandoff() {
+  var rail = document.querySelector(".post-rail");
+  var footer = document.querySelector(".lfooter");
+  if (!rail || !footer) return;
+  var GAP = 24;        // release this far before the footer edge
+  var FADE = 90;       // travel over which it fades out
+  var ticking = false;
+
+  function update() {
+    ticking = false;
+    var r = rail.getBoundingClientRect();
+    // Measured against the untranslated position, so the maths can't compound.
+    var current = parseFloat(rail.dataset.shift || "0");
+    var bottom = r.bottom + -current;
+    var over = footer.getBoundingClientRect().top - (bottom + GAP);
+    var shift = over < 0 ? over : 0;
+    if (shift !== current) {
+      rail.dataset.shift = String(shift);
+      rail.style.transform = shift ? "translateY(" + shift + "px)" : "";
+      rail.style.opacity = shift ? String(Math.max(0, 1 + shift / FADE)) : "";
+      rail.style.pointerEvents = shift < -FADE ? "none" : "";
+    }
+  }
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(update);
+  }
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll);
+  if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
+  update();
+})();
