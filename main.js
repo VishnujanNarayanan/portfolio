@@ -2387,7 +2387,8 @@ function buildPillReel(pill) {
     // Column-stagger constants + the seam element it closes against — declared here for
     // the same reason: sizeSection() → cardOverflow() → staggerCardH() runs during setup,
     // and a `var` read before its assignment line would be undefined (→ NaN height).
-    var COL_OFFSET_FRAC = 0.8;   // offset at the cover threshold, in card heights
+    var COL_OFFSET_FRAC = 0.75;  // offset at the cover threshold, in card heights
+    var COL_CLOSE_AT = 0.8;      // fraction of the run to the seam at which it reaches 0
     var COL_OFFSET_MAX = 2.5;    // cap when scrolling back up, in card heights
     var COL_MIN_CARDS = 8;       // below this the grid reads as plain rows — no stagger
     var brandEl = document.querySelector(".brand-teaser");
@@ -2867,7 +2868,8 @@ function buildPillReel(pill) {
       if (span <= 0) return 1;
       // NOT clamped below 0: scrolling back up past the threshold (toward the blog)
       // carries p negative, so the columns keep parting further instead of resting at
-      // half a card. Clamped above at 1 — once the bulge is half-drawn they stay flush.
+      // the threshold offset. Clamped above at 1; applyColumnOffset closes the gap over
+      // COL_CLOSE_AT of that run, so they are flush a little before the bulge.
       return Math.min(1, -top / span);
     }
     // Card height when the stagger is live, else 0. A small (filtered) result set sits
@@ -2891,7 +2893,11 @@ function buildPillReel(pill) {
       if (cols < 1) cols = 1;
       // Scrolling up keeps opening the gap; cap it so it can't run away on a long
       // scroll back through the blog (the cards stay latched-visible up there).
-      var frac = Math.min(COL_OFFSET_MAX, (1 - p) * COL_OFFSET_FRAC);
+      // Closes over COL_CLOSE_AT of the run rather than all of it, so the columns are
+      // flush before the seam rather than exactly at it. Floored at 0 — p is clamped
+      // above at 1, so past the close point the term goes negative and would other-
+      // wise lift the offset columns above their neighbours.
+      var frac = Math.max(0, Math.min(COL_OFFSET_MAX, (1 - p / COL_CLOSE_AT) * COL_OFFSET_FRAC));
       var off = null, vi = 0;
       for (var i = 0; i < cardEls.length; i++) {
         var el = cardEls[i];
