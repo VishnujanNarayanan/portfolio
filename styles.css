@@ -1516,7 +1516,9 @@ html.boot-active{overflow:hidden;height:100%}
   color:var(--color-text);margin-bottom:32px}
 .post-grid--sm{gap:32px 28px}
 .post-grid--sm .post-card__title{font-size:19px}
-.sub-cta{padding:0 var(--space-xl) var(--space-4xl)}
+/* position/z-index for the same reason .lfooter carries them: the homepage's
+   #bg-contours canvas is fixed and would otherwise paint over this block. */
+.sub-cta{position:relative;z-index:2;padding:0 var(--space-xl) var(--space-4xl)}
 /* Blue field cut from the footer's own gradient + contour sheet, so the page's
    last two blocks read as one world. Ink is the footer's --lf-ink for the same
    reason: this is the footer's light side, not a new palette. */
