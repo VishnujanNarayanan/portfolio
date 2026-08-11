@@ -1715,3 +1715,26 @@ html.boot-active{overflow:hidden;height:100%}
   .lfooter__navlink:hover .lreel__col{transform:none}
   .lfooter__navlink:hover{color:var(--lf-sky-bright)}
 }
+
+/* ---- Blog pages sit on the Skills field's blue (2026-08-12) -------------------
+   rgb(208,225,235) is the exact fill main.js paints behind the Skills section
+   (`isSkills` in the darkSecs table), so the blog reads as the same world rather
+   than as plain white. Flat colour only — no contour canvas here.
+   The footer's own runway starts from that same colour, which is why the
+   .subpage-body override that made it start from --color-bg is undone for blog
+   pages: on this background the seam disappears without it. */
+.blog-body{background-color:rgb(208,225,235)}
+.blog-body .lfooter{background-color:rgb(208,225,235);--lf-lead:clamp(70px,12vh,150px)}
+/* Chips, code blocks and the cards' image wells read as white-on-white against
+   the muted token; give them a touch more contrast on the blue. */
+.blog-body .tag{background:rgba(255,255,255,.62);border-color:rgba(5,4,25,.08)}
+.blog-body .article pre,
+.blog-body .article code{background:rgba(255,255,255,.66);border-color:rgba(5,4,25,.1)}
+.blog-body .feature-card__media,
+.blog-body .post-card__media,
+.blog-body .post-hero{background:rgba(255,255,255,.5)}
+.blog-body .post-rail__btn{background:rgba(255,255,255,.72);border-color:rgba(5,4,25,.1)}
+.blog-body .post-rail__pop{background:rgba(255,255,255,.95);border-color:rgba(5,4,25,.1)}
+.blog-body .share-btn,.blog-body .article .share-btn{background:rgba(255,255,255,.62);
+  border-color:rgba(5,4,25,.08)}
+.blog-body .keep-reading{border-top-color:rgba(5,4,25,.1)}
