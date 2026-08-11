@@ -47,6 +47,13 @@ const PARTIALS = [
   end: `<!-- END generated: ${p.name} -->`,
 }));
 
+// The footer headline. Blog pages ask for the subscription the card below it
+// takes; every other page keeps the site's line.
+const FOOTER_HEADLINE_DEFAULT = `          <span class="lfooter__hl-row">Data in.</span>
+          <span class="lfooter__hl-row"><span class="is-hl">Products</span> out.</span>`;
+const FOOTER_HEADLINE_BLOG = `          <span class="lfooter__hl-row">Subscribe to my</span>
+          <span class="lfooter__hl-row"><span class="is-hl">Newsletter</span></span>`;
+
 // The two things that can fill the bottom of the footer's dark box.
 const FOOTER_PORTRAIT = `      <img class="lfooter__me" src="/images/footer-me2.webp" alt="Vishnujan Narayanan" loading="lazy" decoding="async">`;
 
@@ -111,7 +118,8 @@ for (const file of pages) {
         .replaceAll("{{CONTACT_ID}}", isHome ? ' id="contact"' : "")
         // Blog pages close on the subscribe card; every other page keeps the
         // portrait cutout. Same field, different invitation.
-        .replaceAll("{{FOOTER_FEATURE}}", isBlog ? FOOTER_SUBSCRIBE : FOOTER_PORTRAIT) +
+        .replaceAll("{{FOOTER_FEATURE}}", isBlog ? FOOTER_SUBSCRIBE : FOOTER_PORTRAIT)
+        .replaceAll("{{FOOTER_HEADLINE}}", isBlog ? FOOTER_HEADLINE_BLOG : FOOTER_HEADLINE_DEFAULT) +
       "\n" +
       part.end;
 
