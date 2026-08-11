@@ -16,15 +16,15 @@
 <meta property="og:site_name" content="Vishnujan Narayanan">
 <meta property="og:locale" content="en_US">
 <meta property="og:url" content="https://vishnujan.dev/blog/minute-level-stock-prediction/">
-<meta property="og:image" content="https://vishnujan.dev/og-cover.jpg">
+<meta property="og:image" content="https://vishnujan.dev/images/blog/share-intraday-model.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:type" content="image/jpeg">
-<meta property="og:image:alt" content="Vishnujan Narayanan">
+<meta property="og:image:alt" content="What My Intraday Model Actually Predicted on 9.4M NSE Ticks">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="What My Intraday Model Actually Predicted on 9.4M NSE Ticks">
 <meta name="twitter:description" content="From raw ticks to minute bars to a directional model — and the leakage traps that make backtests lie.">
-<meta name="twitter:image" content="https://vishnujan.dev/og-cover.jpg">
+<meta name="twitter:image" content="https://vishnujan.dev/images/blog/share-intraday-model.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
@@ -49,7 +49,7 @@
   <nav class="header__nav-right" aria-label="Header actions">
     <div class="header__ctas">
       <a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Hire Me</span></a>
-      <a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark"><span class="pill-btn-span">Get In Touch</span></a>
+      <button type="button" class="pill-btn pill-btn--dark" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button>
     </div>
     <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
       <span class="menu-btn__icon">
@@ -77,28 +77,82 @@
       </ul>
       <div class="mobile-nav__ctas">
         <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Hire Me</span></a></div>
-        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--dark mobile-nav__cta"><span class="pill-btn-span">Get In Touch</span></a></div>
+        <div class="mncta"><button type="button" class="pill-btn pill-btn--dark mobile-nav__cta" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button></div>
       </div>
     </div>
   </nav>
 </header>
+
+<!--
+  Subscribe modal. A static site has no backend, so it cannot store an address or
+  send mail — the signup has to be completed by Substack either way. Two ways to
+  do that: their embed iframe (cross-origin, so its orange button cannot be
+  restyled from here) or this — our own form, styled in the site's blue, GET-ing
+  to Substack's subscribe page with the address in the query string so it arrives
+  pre-filled. No JS: a plain GET form builds ?email=... on its own, so this still
+  works if main.js never runs.
+  Opened by any [data-subscribe-open] button (see the subscribe IIFE in main.js).
+-->
+<dialog class="submodal" id="subscribe-modal" aria-labelledby="submodal-title">
+  <button type="button" class="submodal__close" data-subscribe-close aria-label="Close">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="currentColor"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="currentColor"></rect></svg>
+  </button>
+  <h2 class="submodal__title" id="submodal-title">Get new posts by email</h2>
+  <p class="submodal__text">Subscribe to get new posts on data engineering and quantitative research — data pipelines, web scraping, and market-data experiments — delivered to your inbox as they go up.</p>
+  <form class="subform" action="https://vishnujannarayanan.substack.com/subscribe" method="get" target="_blank" rel="noopener">
+    <label class="subform__label" for="subscribe-email">Email</label>
+    <div class="subform__row">
+      <input class="subform__input" id="subscribe-email" type="email" name="email" required autocomplete="email" placeholder="you@example.com" spellcheck="false">
+      <button class="subform__btn" type="submit">Subscribe</button>
+    </div>
+  </form>
+  <p class="submodal__note">No account needed, and you can unsubscribe from this email.</p>
+  <p class="submodal__terms">By subscribing you agree to Substack's <a href="https://substack.com/tos" target="_blank" rel="noopener">Terms of Use</a>, its <a href="https://substack.com/privacy" target="_blank" rel="noopener">Privacy Policy</a> and its <a href="https://substack.com/ccpa#personal-data-collected" target="_blank" rel="noopener">Information collection notice</a>.</p>
+  <a class="substack-badge" href="https://vishnujannarayanan.substack.com/" target="_blank" rel="me noopener">
+    <svg viewBox="0 0 21 24" width="13" height="15" aria-hidden="true" focusable="false"><path d="M20.999 0H0v2.836h20.999V0Z" fill="currentColor"></path><path d="M20.999 5.406H0v2.836h20.999V5.406Z" fill="currentColor"></path><path d="M0 10.813V24l10.499-5.887L21 24V10.813H0Z" fill="currentColor"></path></svg>
+    <span>Delivered by Substack</span>
+  </a>
+</dialog>
 <!-- END generated: header -->
 <main>
-<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>What My Intraday Model Actually Predicted on 9.4M NSE Ticks</nav>
-<div class="post-shell">
-<aside class="post-nav" aria-label="More posts">
-  <span class="post-nav__label">More writing</span>
-  <ul class="post-nav__list">
-    <li><a class="post-nav__item" href="/blog/a-year-of-ingestion-bugs/">A Year of Ingestion Bugs</a></li>
-    <li><a class="post-nav__item" href="/blog/how-i-scraped-nse-insider-filings/">How I Scraped 20 Years of NSE Insider Filings</a></li>
-    <li><a class="post-nav__item" href="/blog/building-resumable-etl-pipelines/">Making Pipeline Reruns Converge Instead of Drift</a></li>
-    <li><span class="post-nav__item is-current" aria-current="page">What My Intraday Model Actually Predicted on 9.4M NSE Ticks</span></li>
-  </ul>
-  <a class="post-nav__all" href="/blog/">All writing &rarr;</a>
+<aside class="post-rail" aria-label="Post actions">
+  <a class="post-rail__btn" href="/blog/" aria-label="Back to all writing" title="Back to all writing">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+  </a>
+  <button class="post-rail__btn" type="button" data-like aria-pressed="false" aria-label="Like this post" title="Like this post">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 6.6a5 5 0 0 0-7.1 0l-1.7 1.7-1.7-1.7a5 5 0 1 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1Z"/></svg>
+  </button>
+  <button class="post-rail__btn" type="button" data-share="https://vishnujan.dev/blog/minute-level-stock-prediction/" aria-label="Share this post" title="Share this post">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4"/><path d="m15.4 6.5-6.8 4"/></svg>
+  </button>
+  <span class="post-rail__toast" data-share-toast hidden>Link copied</span>
 </aside>
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>What My Intraday Model Actually Predicted on 9.4M NSE Ticks</nav>
 <article class="article">
-  <h1>What my intraday model actually predicted on 9.4M NSE ticks</h1>
-  <div class="meta"><span>Quant / ML</span><span>10 min read</span><span>Published August 2026</span></div>
+  <div class="post-head">
+    <div class="tag-row"><span class="tag">Quant / ML</span><span class="tag">Machine learning</span></div>
+    <h1>What my intraday model actually predicted on 9.4M NSE ticks</h1>
+    <p class="post-head__dek">61.4% precision against a 46.8% base rate sounds like an edge — until you notice it fired 70 times out of 3,100. The two ways I nearly fooled myself.</p>
+    <div class="post-head__foot">
+    <div class="byline byline--lg">
+        <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
+        <span class="byline__name">Vishnujan Narayanan</span>
+        <span class="byline__sep" aria-hidden="true">·</span>
+        <span class="byline__date">August 2026</span>
+      </div>
+      <div class="share-row">
+      <a class="share-btn" href="mailto:?subject=What%20My%20Intraday%20Model%20Actually%20Predicted%20on%209.4M%20NSE%20Ticks&body=What%20My%20Intraday%20Model%20Actually%20Predicted%20on%209.4M%20NSE%20Ticks%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F" aria-label="Share by email" title="Share by email"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
+      <a class="share-btn" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F&text=What%20My%20Intraday%20Model%20Actually%20Predicted%20on%209.4M%20NSE%20Ticks" target="_blank" rel="noopener" aria-label="Share on X" title="Share on X"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.2 3h3.3l-7.2 8.2L21.8 21h-6.6l-4.3-5.6L5.9 21H2.6l7.7-8.8L2.5 3h6.8l3.9 5.2L17.2 3Zm-1.2 16h1.8L8.1 4.8H6.2L16 19Z"/></svg></a>
+      <a class="share-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F" target="_blank" rel="noopener" aria-label="Share on LinkedIn" title="Share on LinkedIn"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M6.9 8.6H4.2V20h2.7V8.6ZM5.5 4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2ZM20 13.4c0-2.9-1.6-4.3-3.6-4.3-1.7 0-2.4.9-2.8 1.5V8.6H10.9c0 .8 0 11.4 0 11.4h2.7v-6.4c0-.3 0-.6.1-.8.3-.6.8-1.2 1.7-1.2 1.2 0 1.7.9 1.7 2.2V20H20v-6.6Z"/></svg></a>
+      <a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F" target="_blank" rel="noopener" aria-label="Share on Facebook" title="Share on Facebook"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M14.5 8.5V6.9c0-.7.2-1.1 1.2-1.1h1.5V3.1C16.8 3 16 3 15.1 3c-2 0-3.4 1.2-3.4 3.5v2H9.3V11h2.4v8h2.8v-8h2.3l.4-2.5h-2.7Z"/></svg></a>
+      <a class="share-btn" href="https://www.reddit.com/submit?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F&title=What%20My%20Intraday%20Model%20Actually%20Predicted%20on%209.4M%20NSE%20Ticks" target="_blank" rel="noopener" aria-label="Share on Reddit" title="Share on Reddit"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M22 12.1a2.1 2.1 0 0 0-3.6-1.5 10.3 10.3 0 0 0-5.2-1.6l.9-4.2 2.9.6a1.5 1.5 0 1 0 .2-1.2l-3.4-.7a.6.6 0 0 0-.7.5l-1 4.7a10.4 10.4 0 0 0-5.3 1.6 2.1 2.1 0 1 0-2.3 3.4 3.8 3.8 0 0 0 0 .6c0 3 3.6 5.5 8 5.5s8-2.5 8-5.5a3.8 3.8 0 0 0 0-.6 2.1 2.1 0 0 0 1.5-2Zm-13.6 1.4a1.5 1.5 0 1 1 1.5 1.5 1.5 1.5 0 0 1-1.5-1.5Zm8.3 4a5.6 5.6 0 0 1-3.7 1.1 5.6 5.6 0 0 1-3.7-1.1.5.5 0 1 1 .7-.7 4.7 4.7 0 0 0 3 .8 4.7 4.7 0 0 0 3-.8.5.5 0 1 1 .7.7Zm-.2-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5Z"/></svg></a>
+      <a class="share-btn" href="https://api.whatsapp.com/send?text=What%20My%20Intraday%20Model%20Actually%20Predicted%20on%209.4M%20NSE%20Ticks%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F" target="_blank" rel="noopener" aria-label="Share on WhatsApp" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Zm0 1.7a7.3 7.3 0 1 1-3.7 13.6l-.3-.2-2.7.7.7-2.6-.2-.3A7.3 7.3 0 0 1 12 4.7Zm4.2 9.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1-.6.7-.7.9-.3.2-.5.1a6 6 0 0 1-1.8-1.1 6.6 6.6 0 0 1-1.2-1.6c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 2 4.5 4.5 0 0 0 1 2.4 10.2 10.2 0 0 0 3.9 3.4c1.8.7 1.8.5 2.2.4a2.3 2.3 0 0 0 1.5-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"/></svg></a>
+    </div>
+    </div>
+  </div>
+  <figure class="post-hero">
+    <img src="/images/blog/intraday-model.jpg" alt="" width="1000" height="563" fetchpriority="high" decoding="async">
+  </figure>
 
   <p>I wanted to know whether the price of a stock would be higher or lower one minute from now. I had 9.4 million raw records from the National Stock Exchange to work with, covering 31 large Indian companies. This is what I built, what it scored, and the two ways I nearly convinced myself it worked.</p>
 
@@ -188,16 +242,63 @@ Actual 1 count: 1451</code></pre>
   <p>scikit-learn's <a href="https://scikit-learn.org/stable/modules/cross_validation.html#time-series-split" target="_blank" rel="noopener">TimeSeriesSplit</a> is the smallest useful version of testing across many periods, and it is about four lines to adopt.</p>
 
   <p>A <a href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.precision_recall_curve.html" target="_blank" rel="noopener">precision-recall curve</a> plotted against the 46.8% baseline would have shown in a single picture what my table of confidence levels took several runs to reveal: that most of the curve sits at or below the line you get for free.</p>
-
-  <a class="back" href="/blog/">← Back to writing</a>
 </article>
-</div>
+
+<section class="keep-reading" aria-labelledby="keep-reading-h">
+  <div class="keep-reading__inner">
+    <h2 class="keep-reading__title" id="keep-reading-h">Keep reading</h2>
+    <div class="post-grid post-grid--sm">
+      <a class="post-card post-card--sm" href="/blog/a-year-of-ingestion-bugs/">
+        <div class="post-card__media">
+          <img src="/images/blog/ingestion-bugs.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">Data engineering</span><span class="tag">Reliability</span></div>
+          <h3 class="post-card__title">A Year of Ingestion Bugs: What Actually Broke in 32 Market-Data Pipelines</h3>
+          <p class="post-card__excerpt">Roughly 30 bugs across a year of scraping Indian market data, sorted by cause. Eight of them produced no error at all, and those were the expensive ones.</p>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+        </div>
+      </a>
+      <a class="post-card post-card--sm" href="/blog/how-i-scraped-nse-insider-filings/">
+        <div class="post-card__media">
+          <img src="/images/blog/scraping.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Data engineering</span></div>
+          <h3 class="post-card__title">How I Scraped 20 Years of NSE Insider Filings</h3>
+          <p class="post-card__excerpt">180-day windows, a dedup key that silently deleted filings, and the 30-60 day indexing lag that forces a second source.</p>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+        </div>
+      </a>
+      <a class="post-card post-card--sm" href="/blog/building-resumable-etl-pipelines/">
+        <div class="post-card__media">
+          <img src="/images/blog/resumable-etl.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">ETL</span><span class="tag">Data engineering</span></div>
+          <h3 class="post-card__title">Making Pipeline Reruns Converge Instead of Drift</h3>
+          <p class="post-card__excerpt">Four ways I broke the rule that a rerun must improve the data, the guard added for each, and the one case where convergence still is not guaranteed.</p>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+        </div>
+      </a>
+    </div>
+    <!-- BEGIN generated: subscribe (source: partials/subscribe.html — run scripts/gen-partials.mjs) -->
+<section class="sub-cta">
+  <div class="sub-cta__inner">
+    <h2 class="sub-cta__title">Get the next one</h2>
+    <p class="sub-cta__text">New posts on data pipelines, web scraping, and market-data experiments — delivered to your inbox as they go up.</p>
+    <div class="sub-cta__actions">
+      <button type="button" class="pill-btn pill-btn--dark" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button>
+      <a class="sub-cta__link" href="/blog/">All writing &rarr;</a>
+    </div>
+  </div>
+</section>
+<!-- END generated: subscribe -->
+  </div>
+</section>
 </main>
 <!-- BEGIN generated: footer (source: partials/footer.html — run scripts/gen-partials.mjs) -->
 <footer class="lfooter">
-  <div class="lfooter__topbar">
-    <span class="lfooter__brand"><span>Vishnujan</span><span>Narayanan</span></span>
-  </div>
 
   <div class="lfooter__layout">
     <!-- Dark notched box (Lando footer mask) with static contour pattern inside -->
