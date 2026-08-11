@@ -3355,8 +3355,16 @@ function buildPillReel(pill) {
     });
   }
 
+  // The rail's share button opens a small grid of the same targets that sit under
+  // the byline — cloned from that row rather than duplicated in markup, so the two
+  // can never disagree — plus a copy-link item. navigator.share is not used: the
+  // rail is desktop-only (hidden under 1200px) and desktop browsers largely have
+  // no share sheet.
   var share = rail.querySelector("[data-share]");
   var toast = rail.querySelector("[data-share-toast]");
+  var row = document.querySelector(".share-row");
+  var pop = null;
+
   function flash(msg) {
     if (!toast) return;
     toast.textContent = msg;
@@ -3364,22 +3372,59 @@ function buildPillReel(pill) {
     clearTimeout(flash._t);
     flash._t = setTimeout(function () { toast.hidden = true; }, 1800);
   }
-  if (share) {
-    share.addEventListener("click", function () {
+
+  function buildPop() {
+    pop = document.createElement("div");
+    pop.className = "post-rail__pop";
+    pop.hidden = true;
+    if (row) {
+      Array.prototype.forEach.call(row.querySelectorAll(".share-btn"), function (a) {
+        var c = a.cloneNode(true);
+        c.className = "post-rail__pop-btn";
+        pop.appendChild(c);
+      });
+    }
+    var copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "post-rail__pop-btn";
+    copy.setAttribute("aria-label", "Copy link");
+    copy.title = "Copy link";
+    copy.innerHTML =
+      '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+    copy.addEventListener("click", function () {
       var url = share.getAttribute("data-share");
-      var title = document.title;
-      if (navigator.share) {
-        navigator.share({ title: title, url: url }).catch(function () {});
-        return;
-      }
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(
-          function () { flash("Link copied"); },
-          function () { flash(url); },
-        );
+        navigator.clipboard.writeText(url).then(function () { flash("Link copied"); }, function () { flash(url); });
       } else {
         flash(url);
       }
+      close();
+    });
+    pop.appendChild(copy);
+    rail.appendChild(pop);
+  }
+
+  function open() {
+    if (!pop) buildPop();
+    pop.hidden = false;
+    share.setAttribute("aria-expanded", "true");
+  }
+  function close() {
+    if (pop) pop.hidden = true;
+    share.setAttribute("aria-expanded", "false");
+  }
+
+  if (share) {
+    share.setAttribute("aria-expanded", "false");
+    share.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (pop && !pop.hidden) close(); else open();
+    });
+    document.addEventListener("click", function (e) {
+      if (pop && !pop.hidden && !rail.contains(e.target)) close();
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") close();
     });
   }
 })();

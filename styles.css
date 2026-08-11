@@ -1660,3 +1660,19 @@ html.boot-active{overflow:hidden;height:100%}
   .post-head__foot{gap:14px}
   .share-btn{width:32px;height:32px}
 }
+
+/* Six share targets: let the row wrap rather than squeeze on a narrow column. */
+.share-row{flex-wrap:wrap;justify-content:flex-end}
+
+/* The rail's share popover — the same targets in a 2-up grid. */
+.post-rail{position:fixed}
+.post-rail__pop{position:absolute;left:52px;top:84px;display:grid;
+  grid-template-columns:repeat(2,40px);gap:10px;padding:14px;border-radius:16px;
+  background:var(--color-bg);border:1px solid var(--color-border);
+  box-shadow:0 18px 40px rgba(5,4,25,.14)}
+.post-rail__pop-btn{display:flex;align-items:center;justify-content:center;width:40px;height:40px;
+  border-radius:50%;background:var(--color-bg-muted);border:1px solid var(--color-border);
+  color:var(--color-text-muted);
+  transition:color .25s ease,background .25s ease,border-color .25s ease}
+.post-rail__pop-btn:hover{color:var(--color-text-light);background:var(--color-highlight);
+  border-color:var(--color-highlight)}
