@@ -47,6 +47,30 @@ const PARTIALS = [
   end: `<!-- END generated: ${p.name} -->`,
 }));
 
+// The two things that can fill the bottom of the footer's dark box.
+const FOOTER_PORTRAIT = `      <img class="lfooter__me" src="/images/footer-me2.webp" alt="Vishnujan Narayanan" loading="lazy" decoding="async">`;
+
+// A real form, not a picture of one: same GET-to-Substack handoff as the modal in
+// partials/header.html, so a reader who scrolls to the end of a post can subscribe
+// without opening anything. Its id is suffixed to keep it unique against the
+// modal's field, which is present on the same page.
+const FOOTER_SUBSCRIBE = `      <div class="lfooter__sub">
+        <h3 class="lfooter__sub-title">Get new posts by email</h3>
+        <p class="lfooter__sub-text">Data pipelines, web scraping, and market-data experiments — delivered as they go up.</p>
+        <form class="subform" action="https://vishnujannarayanan.substack.com/subscribe" method="get" target="_blank" rel="noopener">
+          <label class="subform__label" for="footer-subscribe-email">Email</label>
+          <div class="subform__row">
+            <input class="subform__input" id="footer-subscribe-email" type="email" name="email" required autocomplete="email" placeholder="you@example.com" spellcheck="false">
+            <button class="subform__btn" type="submit">Subscribe</button>
+          </div>
+        </form>
+        <p class="lfooter__sub-note">No account needed, and you can unsubscribe from this email. By subscribing you agree to Substack's <a href="https://substack.com/tos" target="_blank" rel="noopener">Terms of Use</a> and <a href="https://substack.com/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+        <a class="substack-badge substack-badge--dark" href="https://vishnujannarayanan.substack.com/" target="_blank" rel="me noopener">
+          <svg viewBox="0 0 21 24" width="13" height="15" aria-hidden="true" focusable="false"><path d="M20.999 0H0v2.836h20.999V0Z" fill="currentColor"></path><path d="M20.999 5.406H0v2.836h20.999V5.406Z" fill="currentColor"></path><path d="M0 10.813V24l10.499-5.887L21 24V10.813H0Z" fill="currentColor"></path></svg>
+          <span>Delivered by Substack</span>
+        </a>
+      </div>`;
+
 // node:fs globSync needs Node 22; enumerate the two content dirs instead so this
 // runs on whatever Node the machine has.
 function pagesIn(dir) {
@@ -70,6 +94,7 @@ let changed = 0;
 for (const file of pages) {
   const rel = relative(root, file);
   const isHome = rel === "index.html";
+  const isBlog = rel.startsWith("blog/");
   const before = readFileSync(file, "utf8");
   let html = before;
 
@@ -83,7 +108,10 @@ for (const file of pages) {
         // nav item promises a blog and the section is only a teaser for it.
         .replaceAll("{{BLOG}}", "/blog/")
         .replaceAll("{{HOME_HREF}}", isHome ? "#top" : "/")
-        .replaceAll("{{CONTACT_ID}}", isHome ? ' id="contact"' : "") +
+        .replaceAll("{{CONTACT_ID}}", isHome ? ' id="contact"' : "")
+        // Blog pages close on the subscribe card; every other page keeps the
+        // portrait cutout. Same field, different invitation.
+        .replaceAll("{{FOOTER_FEATURE}}", isBlog ? FOOTER_SUBSCRIBE : FOOTER_PORTRAIT) +
       "\n" +
       part.end;
 
