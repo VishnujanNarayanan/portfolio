@@ -1328,7 +1328,7 @@ html.boot-active{overflow:hidden;height:100%}
 /* left / right columns */
 .lfooter__cols{
   display:flex;justify-content:space-between;align-items:flex-start;
-  gap:24px;margin-top:auto;margin-bottom:clamp(96px,12vw,205px);
+  gap:24px;margin-top:auto;margin-bottom:clamp(128px,16vw,265px);
 }
 .lfooter__col{display:flex;flex-direction:column;gap:6px}
 .lfooter__col--right{text-align:right;align-items:flex-end}

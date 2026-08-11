@@ -43,6 +43,29 @@ const PARTIALS = [
   end: `<!-- END generated: ${p.name} -->`,
 }));
 
+// Footer marquee. Each track animates translateX(-100%) of its OWN width, so the
+// loop is only seamless while a track is at least as wide as the footer —
+// otherwise the strip runs out after the last logo, sits empty, and snaps when it
+// wraps. At the clamped maxima a logo occupies 42px + a 68px gap = 110px, so one
+// pass of the twelve is ~1320px: narrower than any desktop. Repeating them three
+// times puts a track at ~3960px, clear of even an ultrawide.
+const MARQUEE_LOGOS = [
+  "Python", "FastAPI", "PostgresSQL", "Docker", "Apache Airflow", "Apache Spark",
+  "AWS", "Linux", "Git", "Bash", "Ubuntu", "Vim",
+];
+const MARQUEE_REPEATS = 3;
+const MARQUEE_TRACKS = [0, 1]
+  .map(function () {
+    const items = [];
+    for (let r = 0; r < MARQUEE_REPEATS; r++) {
+      for (const logo of MARQUEE_LOGOS) {
+        items.push(`          <i style="--logo:url('/images/logos/${logo}.svg')"></i>`);
+      }
+    }
+    return `        <div class="lfooter__mq-track">\n${items.join("\n")}\n        </div>`;
+  })
+  .join("\n");
+
 // The footer headline. Blog pages ask for the subscription the card below it
 // takes; every other page keeps the site's line.
 const FOOTER_HEADLINE_DEFAULT = `          <span class="lfooter__hl-row">Data in.</span>
@@ -115,7 +138,8 @@ for (const file of pages) {
         // Blog pages close on the subscribe card; every other page keeps the
         // portrait cutout. Same field, different invitation.
         .replaceAll("{{FOOTER_FEATURE}}", isBlog ? FOOTER_SUBSCRIBE : FOOTER_PORTRAIT)
-        .replaceAll("{{FOOTER_HEADLINE}}", isBlog ? FOOTER_HEADLINE_BLOG : FOOTER_HEADLINE_DEFAULT) +
+        .replaceAll("{{FOOTER_HEADLINE}}", isBlog ? FOOTER_HEADLINE_BLOG : FOOTER_HEADLINE_DEFAULT)
+        .replaceAll("{{MARQUEE_TRACKS}}", MARQUEE_TRACKS) +
       "\n" +
       part.end;
 
