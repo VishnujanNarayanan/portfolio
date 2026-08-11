@@ -3332,3 +3332,54 @@ function buildPillReel(pill) {
   buildPillReel(hdr.querySelector(".pill-btn--glass"));
   buildPillReel(hdr.querySelector(".pill-btn--dark"));
 })();
+
+/* ---- Post action rail (2026-08-11) --------------------------------------------
+   Back is a plain link. Like is stored in localStorage and is per-browser only:
+   this site is static, so there is nowhere to keep a shared count — showing a
+   number would mean inventing one. Share uses the Web Share sheet where the
+   browser has one (mobile, Safari) and falls back to copying the URL. */
+(function postRail() {
+  var rail = document.querySelector(".post-rail");
+  if (!rail) return;
+
+  var like = rail.querySelector("[data-like]");
+  if (like) {
+    var key = "liked:" + location.pathname;
+    try {
+      if (localStorage.getItem(key) === "1") like.setAttribute("aria-pressed", "true");
+    } catch (e) {}
+    like.addEventListener("click", function () {
+      var on = like.getAttribute("aria-pressed") !== "true";
+      like.setAttribute("aria-pressed", on ? "true" : "false");
+      try { on ? localStorage.setItem(key, "1") : localStorage.removeItem(key); } catch (e) {}
+    });
+  }
+
+  var share = rail.querySelector("[data-share]");
+  var toast = rail.querySelector("[data-share-toast]");
+  function flash(msg) {
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.hidden = false;
+    clearTimeout(flash._t);
+    flash._t = setTimeout(function () { toast.hidden = true; }, 1800);
+  }
+  if (share) {
+    share.addEventListener("click", function () {
+      var url = share.getAttribute("data-share");
+      var title = document.title;
+      if (navigator.share) {
+        navigator.share({ title: title, url: url }).catch(function () {});
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(
+          function () { flash("Link copied"); },
+          function () { flash(url); },
+        );
+      } else {
+        flash(url);
+      }
+    });
+  }
+})();

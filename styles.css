@@ -1516,13 +1516,22 @@ html.boot-active{overflow:hidden;height:100%}
   color:var(--color-text);margin-bottom:32px}
 .post-grid--sm{gap:32px 28px}
 .post-grid--sm .post-card__title{font-size:19px}
-.sub-cta{margin-top:64px;background:var(--color-bg-muted);border:1px solid var(--color-border);
-  border-radius:20px;padding:44px var(--space-xl);text-align:center}
-.sub-cta__title{font-family:"Inter",sans-serif;font-weight:500;font-size:28px;letter-spacing:-.6px;
-  color:var(--color-text);margin-bottom:10px}
-.sub-cta__text{font-size:17px;line-height:1.6;color:var(--color-text-muted);max-width:520px;margin:0 auto 26px}
+.sub-cta{padding:0 var(--space-xl) var(--space-4xl)}
+/* Blue field cut from the footer's own gradient + contour sheet, so the page's
+   last two blocks read as one world. Ink is the footer's --lf-ink for the same
+   reason: this is the footer's light side, not a new palette. */
+.sub-cta__inner{max-width:1120px;margin:0 auto;border-radius:24px;overflow:hidden;
+  padding:60px var(--space-xl);text-align:center;
+  background:#6db4f8 url("images/blog/subscribe-bg.jpg") center/cover no-repeat}
+.sub-cta__title{font-family:"Inter",sans-serif;font-weight:700;font-size:40px;letter-spacing:-1.2px;
+  text-transform:uppercase;color:#0f1a2e;margin-bottom:12px}
+.sub-cta__text{font-size:17px;line-height:1.6;color:rgba(15,26,46,.82);max-width:520px;margin:0 auto 28px}
 .sub-cta__actions{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
-.sub-cta__link{font-family:var(--font-ui);font-size:14px;color:var(--color-highlight)}
+.sub-cta__link{font-family:var(--font-ui);font-size:14px;color:#0f1a2e;text-decoration:underline;
+  text-underline-offset:3px}
+.sub-cta__link:hover{color:#fcfcfc}
+/* The post pages nest this inside .keep-reading__inner, which already pads. */
+.keep-reading__inner .sub-cta{padding:0;margin-top:64px}
 
 @media (max-width:980px){
   .feature-card{grid-template-columns:minmax(0,1fr);gap:20px}
@@ -1615,3 +1624,35 @@ html.boot-active{overflow:hidden;height:100%}
 .substack-badge svg{display:block;flex:0 0 auto}
 .substack-badge:hover{border-color:color-mix(in srgb,var(--color-highlight) 40%,transparent);
   background:color-mix(in srgb,var(--color-highlight) 7%,transparent)}
+
+/* ---- Post share row + action rail (2026-08-11) --------------------------------
+   Byline left, share links right, as one row under the dek. */
+.post-head__foot{display:flex;align-items:center;justify-content:space-between;gap:20px;
+  flex-wrap:wrap;margin-top:26px}
+.post-head__foot .byline--lg{margin-top:0}
+.share-row{display:flex;align-items:center;gap:8px}
+.share-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;
+  border-radius:50%;background:var(--color-bg-muted);border:1px solid var(--color-border);
+  color:var(--color-text-muted);transition:color .25s ease,background .25s ease,border-color .25s ease}
+.share-btn:hover{color:var(--color-text-light);background:var(--color-highlight);
+  border-color:var(--color-highlight)}
+
+/* The rail floats in the empty margin left of the reading column. It is hidden
+   below 1200px, where there is no margin to float in — the same actions are
+   reachable from the breadcrumb and the share row. */
+.post-rail{position:fixed;left:clamp(16px,3vw,52px);top:180px;z-index:6;
+  display:flex;flex-direction:column;align-items:center;gap:10px}
+.post-rail__btn{display:flex;align-items:center;justify-content:center;width:42px;height:42px;
+  border-radius:50%;background:var(--color-bg);border:1px solid var(--color-border);
+  color:var(--color-text-muted);transition:color .25s ease,border-color .25s ease,transform .25s ease}
+.post-rail__btn:hover{color:var(--color-text);border-color:var(--color-text-subtle);transform:translateY(-1px)}
+.post-rail__btn[aria-pressed="true"]{color:#e0245e;border-color:#e0245e}
+.post-rail__btn[aria-pressed="true"] svg{fill:#e0245e}
+.post-rail__toast{font-family:var(--font-ui);font-size:11px;color:var(--color-text-muted);
+  background:var(--color-bg-muted);border:1px solid var(--color-border);border-radius:999px;
+  padding:4px 9px;white-space:nowrap}
+@media (max-width:1200px){.post-rail{display:none}}
+@media (max-width:560px){
+  .post-head__foot{gap:14px}
+  .share-btn{width:32px;height:32px}
+}
