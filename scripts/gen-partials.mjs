@@ -34,10 +34,6 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PARTIALS = [
   { name: "header", file: "partials/header.html", adopt: /<header[\s\S]*?<\/header>/ },
   { name: "footer", file: "partials/footer.html", adopt: /<footer[\s\S]*?<\/footer>/ },
-  // Only pages that already carry the markers get this one — `adopt` matches the
-  // hand-written block the post pages started with, and pages with neither (the
-  // project pages) are skipped with a warning, which is the intended outcome.
-  { name: "subscribe", file: "partials/subscribe.html", adopt: /<div class="sub-cta">[\s\S]*?<\/div>\n    <\/div>/ },
 ].map((p) => ({
   ...p,
   // Strip the partial's own leading comment; it is guidance for whoever edits the
