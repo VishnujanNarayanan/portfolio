@@ -43,36 +43,14 @@
         </div>
       </div>
 
-      <!-- Sky-blue tools marquee (logos tinted via CSS mask) -->
+      <!-- Sky-blue tools marquee (logos tinted via CSS mask). Two identical tracks,
+           each animated translateX(-100%) of ITS OWN width — so a seamless loop
+           needs every track to be at least as wide as the footer, or the strip
+           empties out after the last logo and snaps when it wraps. The generator
+           repeats the logo list enough times to clear any viewport. -->
       <div class="lfooter__mq" aria-hidden="true">
-        <div class="lfooter__mq-track">
-          <i style="--logo:url('/images/logos/Python.svg')"></i>
-          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
-          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
-          <i style="--logo:url('/images/logos/Docker.svg')"></i>
-          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
-          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
-          <i style="--logo:url('/images/logos/AWS.svg')"></i>
-          <i style="--logo:url('/images/logos/Linux.svg')"></i>
-          <i style="--logo:url('/images/logos/Git.svg')"></i>
-          <i style="--logo:url('/images/logos/Bash.svg')"></i>
-          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
-          <i style="--logo:url('/images/logos/Vim.svg')"></i>
-        </div>
-        <div class="lfooter__mq-track">
-          <i style="--logo:url('/images/logos/Python.svg')"></i>
-          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
-          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
-          <i style="--logo:url('/images/logos/Docker.svg')"></i>
-          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
-          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
-          <i style="--logo:url('/images/logos/AWS.svg')"></i>
-          <i style="--logo:url('/images/logos/Linux.svg')"></i>
-          <i style="--logo:url('/images/logos/Git.svg')"></i>
-          <i style="--logo:url('/images/logos/Bash.svg')"></i>
-          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
-          <i style="--logo:url('/images/logos/Vim.svg')"></i>
-        </div>
+{{MARQUEE_TRACKS}}
+      </div>
       </div>
 
       <!-- Blog pages: the subscribe card. Everywhere else: the portrait cutout
