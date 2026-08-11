@@ -2387,7 +2387,7 @@ function buildPillReel(pill) {
     // Column-stagger constants + the seam element it closes against — declared here for
     // the same reason: sizeSection() → cardOverflow() → staggerCardH() runs during setup,
     // and a `var` read before its assignment line would be undefined (→ NaN height).
-    var COL_OFFSET_FRAC = 0.5;   // offset at the cover threshold, in card heights
+    var COL_OFFSET_FRAC = 0.8;   // offset at the cover threshold, in card heights
     var COL_OFFSET_MAX = 2.5;    // cap when scrolling back up, in card heights
     var COL_MIN_CARDS = 8;       // below this the grid reads as plain rows — no stagger
     var brandEl = document.querySelector(".brand-teaser");
@@ -2818,9 +2818,9 @@ function buildPillReel(pill) {
     // height and the pan, so the two stay in lock-step.
     var PAN_PAD = 24;
     function cardOverflow() {
-      // + the column stagger's depth: the offset columns hang up to half a card below
-      // the grid's layout box, and `translate` doesn't affect scrollHeight — without
-      // this the pin is that much too short and their last row can never scroll fully
+      // + the column stagger's depth: the offset columns hang up to four-fifths of a
+      // card below the grid's layout box, and `translate` doesn't affect scrollHeight;
+      // without this the pin is that much too short and their last row can never scroll fully
       // into view. Uses the MAX (threshold) offset so the pin length stays constant
       // rather than shifting under the mapping as the offset closes.
       var ov = panEl.scrollHeight - viewEl.clientHeight + staggerCardH() * COL_OFFSET_FRAC;
