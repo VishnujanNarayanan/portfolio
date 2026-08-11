@@ -3,6 +3,37 @@
    Loaded with `defer` on every page; each feature guards on the
    elements it needs, so the same file is safe on sub-pages.
    ============================================================ */
+/* Per-LETTER reel structure for a CTA pill. Lives at file scope because BOTH the
+   homepage (where the hero zoom also flips the letters' colour world) and every
+   sub-page (hover reel only) need it — it used to be defined inside the `if
+   (hero)` block, so on sub-pages the pills were plain text and hovering them did
+   nothing. The roll itself is CSS on :hover; this only builds the markup. */
+function buildPillReel(pill) {
+  if (!pill) return null;
+  var span = pill.querySelector(".pill-btn-span"); if (!span) return null;
+  if (span.querySelector(".pill-char")) return span;   // already built
+  var txt = span.textContent;
+  span.setAttribute("aria-label", txt); span.textContent = "";
+  for (var i = 0; i < txt.length; i++) {
+    var clip = document.createElement("span"); clip.className = "pill-char"; clip.setAttribute("aria-hidden", "true");
+    clip.style.setProperty("--d", (i * 0.03).toFixed(3) + "s");   // world-flip stagger, no word gap
+    clip.style.setProperty("--hd", (i * 0.022).toFixed(3) + "s"); // hover-reel stagger (local to the pill)
+    var ch = txt[i] === " " ? " " : txt[i];
+    // __col = hover roller; inside it __face (the world-flip clip: __a/__b) + __c (a same-colour
+    // self-reel clone, color:inherit → always legible). Hover rolls __col up to reveal __c.
+    var col = document.createElement("span"); col.className = "pill-char__col";
+    var face = document.createElement("span"); face.className = "pill-char__face";
+    var a = document.createElement("span"); a.className = "pill-char__a"; a.textContent = ch;
+    var b = document.createElement("span"); b.className = "pill-char__b"; b.textContent = ch;
+    var cl = document.createElement("span"); cl.className = "pill-char__c"; cl.textContent = ch;
+    face.appendChild(a); face.appendChild(b);
+    col.appendChild(face); col.appendChild(cl);
+    clip.appendChild(col);
+    span.appendChild(clip);
+  }
+  return span;   // colour is driven on the span; the __a letters inherit it
+}
+
 (function () {
   "use strict";
 
@@ -308,30 +339,6 @@
     // current world, colour inherited from the span) and __b (the alt-world colour, fixed in CSS).
     // Letters stagger left→right (--d = i·step) like the nav, but with NO word gap, and BOTH pills
     // roll together (.is-rolled toggled on both at once) so the two buttons reel in unison.
-    function buildPillReel(pill) {
-      if (!pill) return null;
-      var span = pill.querySelector(".pill-btn-span"); if (!span) return null;
-      var txt = span.textContent;
-      span.setAttribute("aria-label", txt); span.textContent = "";
-      for (var i = 0; i < txt.length; i++) {
-        var clip = document.createElement("span"); clip.className = "pill-char"; clip.setAttribute("aria-hidden", "true");
-        clip.style.setProperty("--d", (i * 0.03).toFixed(3) + "s");   // world-flip stagger, no word gap
-        clip.style.setProperty("--hd", (i * 0.022).toFixed(3) + "s"); // hover-reel stagger (local to the pill)
-        var ch = txt[i] === " " ? " " : txt[i];
-        // __col = hover roller; inside it __face (the world-flip clip: __a/__b) + __c (a same-colour
-        // self-reel clone, color:inherit → always legible). Hover rolls __col up to reveal __c.
-        var col = document.createElement("span"); col.className = "pill-char__col";
-        var face = document.createElement("span"); face.className = "pill-char__face";
-        var a = document.createElement("span"); a.className = "pill-char__a"; a.textContent = ch;
-        var b = document.createElement("span"); b.className = "pill-char__b"; b.textContent = ch;
-        var cl = document.createElement("span"); cl.className = "pill-char__c"; cl.textContent = ch;
-        face.appendChild(a); face.appendChild(b);
-        col.appendChild(face); col.appendChild(cl);
-        clip.appendChild(col);
-        span.appendChild(clip);
-      }
-      return span;   // colour is driven on the span; the __a letters inherit it
-    }
     var hireSpan = buildPillReel(glassPill);   // Hire Me letters (__a inherits white in the dark world)
     var giSpan   = buildPillReel(darkPill);    // Get In Touch letters (__a inherits black in the dark world)
     var EXIT_MIN_SCALE = 0.35;      // IMAGE size: how far the page-rectangle recedes on zoom-out. The frozen
@@ -3261,4 +3268,67 @@
   if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
   if (feed.complete) render(); else feed.addEventListener("load", render);
   render();
+})();
+
+/* ---- Subscribe modal (2026-08-11) ---------------------------------------------
+   Every [data-subscribe-open] button (header CTA, mobile nav, the "Get the next
+   one" block at the foot of a post) opens the same <dialog> from the generated
+   header partial. The email field inside it is Substack's embed iframe — a static
+   site has no backend to accept a POST, so the handoff has to happen there.
+   <dialog>.showModal() gives focus trapping, Esc-to-close and inertness for free;
+   this only adds backdrop-click closing and pausing Lenis so the page behind the
+   modal does not scroll. */
+(function subscribeModal() {
+  var dlg = document.getElementById("subscribe-modal");
+  if (!dlg || typeof dlg.showModal !== "function") return;
+
+  function open() {
+    if (dlg.open) return;
+    dlg.showModal();
+    if (window.__lenis && typeof window.__lenis.stop === "function") window.__lenis.stop();
+  }
+  function close() {
+    if (dlg.open) dlg.close();
+  }
+
+  document.addEventListener("click", function (e) {
+    var opener = e.target.closest("[data-subscribe-open]");
+    if (opener) {
+      e.preventDefault();
+      // The mobile menu sits above the dialog's backdrop; close it first.
+      var panel = document.querySelector(".mobile-nav.is-open");
+      if (panel) document.querySelector(".mobile-nav__close")?.click();
+      open();
+      return;
+    }
+    if (e.target.closest("[data-subscribe-close]")) close();
+  });
+
+  // Clicking the backdrop: the dialog element's own box is the panel, so a click
+  // whose coordinates fall outside that rect landed on the backdrop.
+  dlg.addEventListener("click", function (e) {
+    var r = dlg.getBoundingClientRect();
+    var out =
+      e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+    if (out) close();
+  });
+
+  dlg.addEventListener("close", function () {
+    if (window.__lenis && typeof window.__lenis.start === "function") window.__lenis.start();
+  });
+})();
+
+/* ---- Sub-page header pills (2026-08-11) --------------------------------------
+   On the homepage the hero block builds the per-letter reel on both CTA pills as
+   part of the zoom-out choreography. Sub-pages have no .hero, so that block never
+   runs and the pills sat there as plain text — hovering them did nothing, which is
+   what made the blog header feel unlike the homepage. Build the same structure
+   here; the roll is CSS (.pill-btn:hover .pill-char__col), and there is no world
+   flip to drive because sub-pages are always the light world. */
+(function subpageHeaderPills() {
+  if (document.querySelector(".hero")) return;   // homepage owns these
+  var hdr = document.querySelector("header");
+  if (!hdr) return;
+  buildPillReel(hdr.querySelector(".pill-btn--glass"));
+  buildPillReel(hdr.querySelector(".pill-btn--dark"));
 })();
