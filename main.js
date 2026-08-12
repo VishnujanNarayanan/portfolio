@@ -1528,6 +1528,13 @@ function buildPillReel(pill) {
         });
       }
     }
+    // Thinnest possible contour stroke. The 2D context is scaled by DPR, so a lineWidth
+    // of 1/DPR is exactly ONE DEVICE pixel — the finest line that still rasterises
+    // crisply. (Going below that does not get thinner, it just fades the line out via
+    // coverage anti-aliasing.) Recomputed on resize, since DPR changes when the window
+    // is moved between displays.
+    var LINE_W = 1;
+    function lineWidthPx() { LINE_W = 1 / DPR; }
     function sizeCanvas(canvas, context) {
       canvas.width = W * DPR; canvas.height = H * DPR;
       canvas.style.width = W + "px"; canvas.style.height = H + "px";
@@ -1536,6 +1543,7 @@ function buildPillReel(pill) {
     function resize() {
       DPR = Math.min(window.devicePixelRatio || 1, 2);
       W = window.innerWidth; H = window.innerHeight;
+      lineWidthPx();
       sizeCanvas(cv, ctx); if (hcv) sizeCanvas(hcv, hctx); if (wcv) sizeCanvas(wcv, wctx);
       cols = Math.ceil(W / CELL) + 1; rows = Math.ceil(H / CELL) + 1;
       buildBase();
@@ -1607,7 +1615,7 @@ function buildPillReel(pill) {
       // #bg-contours plane → the contour field reads as ONE continuous background across sections.
       g.save(); if (oy) g.translate(0, oy);
       g.lineCap = "round"; g.lineJoin = "round";
-      g.strokeStyle = stroke; g.lineWidth = 1.1;
+      g.strokeStyle = stroke; g.lineWidth = LINE_W;
       strokeIso(g);
       g.restore();
     }
@@ -1767,7 +1775,7 @@ function buildPillReel(pill) {
           ft = ft < 0 ? 0 : ft > 1 ? 1 : ft;
           lineStyle = "rgba(57,50,220," + (sec.lineBaseA * (1 - ft)).toFixed(3) + ")";
         }
-        sg.strokeStyle = lineStyle; sg.lineWidth = 1.1;
+        sg.strokeStyle = lineStyle; sg.lineWidth = LINE_W;
         strokeIso(sg);
         sg.restore();
       }
