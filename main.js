@@ -1619,6 +1619,36 @@ function buildPillReel(pill) {
       strokeIso(g);
       g.restore();
     }
+    /* ---------- Geometry cache ----------
+       This loop read a getBoundingClientRect (and an offsetHeight) per dark section
+       EVERY frame. Each of those flushes style+layout, and on a ~17,000px document a
+       single flush measured in the multiple-milliseconds — dwarfing the field maths.
+       A section's position in the DOCUMENT and its height do not change while
+       scrolling, so they are measured once and the viewport rect is derived as
+       (documentTop - scrollY). Reading scrollY does not flush.
+       Invalidated on resize, after load/fonts, and by sizeSection() — which is the one
+       thing that legitimately changes a section's height at runtime (the projects
+       filter re-sizes .features). */
+    var wpTop = 0, wpH = 0;
+    function scrollY0() { return window.scrollY || window.pageYOffset || 0; }
+    function measureSecs() {
+      var sy = scrollY0(), i, r;
+      for (i = 0; i < darkSecs.length; i++) {
+        r = darkSecs[i].el.getBoundingClientRect();
+        darkSecs[i].docTop = r.top + sy;
+        darkSecs[i].docH = r.height;
+      }
+      if (writingPin) { r = writingPin.getBoundingClientRect(); wpTop = r.top + sy; wpH = r.height; }
+    }
+    // Same fields this loop reads off a DOMRect.
+    function rectOf(top, h) { var t = top - scrollY0(); return { top: t, bottom: t + h, height: h }; }
+    measureSecs();
+    window.addEventListener("resize", measureSecs, { passive: true });
+    window.addEventListener("load", measureSecs);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureSecs);
+    window.__remeasureContours = measureSecs;   // sizeSection() calls this after resizing .features
+    var featuresGeo = null;
+    for (var fg = 0; fg < darkSecs.length; fg++) if (darkSecs[fg].el === featuresEl) featuresGeo = darkSecs[fg];
     var t = 0, last = 0, navDark = false, ctaDark = false;   // nav reel + CTA pills now flip TOGETHER at the features-hit threshold
     // Perf: the field resample (rows×cols cells, noise+exp each) dominates frame cost.
     // The field is time-driven only (scroll alignment happens at draw time via translate),
@@ -1708,7 +1738,7 @@ function buildPillReel(pill) {
       // bg reaches/covers the fixed header (the same threshold the terminal reveals
       // at). Previously nav flipped at blogProg 0.60 and CTA at 0.07 — two separate,
       // later points; now they're unified to this single features-hit threshold.
-      var fTop = featuresEl ? featuresEl.getBoundingClientRect().top : (H || 1);
+      var fTop = featuresGeo ? (featuresGeo.docTop - scrollY0()) : (H || 1);
       // Snap/lock lands the page at rect.top = 0, but browsers round scrollY to an
       // integer while layout is sub-pixel — so the section settles a fraction of a px
       // SHORT (rect.top ≈ +0.4), which a strict `<= 0` reads as "not covered", leaving
@@ -1725,15 +1755,15 @@ function buildPillReel(pill) {
       }
       // Blog canvas: solid light blue (end-of-zone-4) + dark indigo lines (no gradient).
       if (wctx && writingPin) {
-        var wr = writingPin.getBoundingClientRect();
+        var wr = rectOf(wpTop, wpH);
         if (wr.bottom > 0 && wr.top < H)                 // skip while the blog pin is off-screen
           drawContours(wctx, "rgba(57,50,220,0.5)", "rgb(208,225,235)", -wr.top);
       }
       // Dark content sections (Selected work / Skills / Services): solid dark navy + light-blue lines.
       for (var ds = 0; ds < darkSecs.length; ds++) {
-        var sec = darkSecs[ds], sr = sec.el.getBoundingClientRect();
+        var sec = darkSecs[ds], sr = rectOf(sec.docTop, sec.docH);
         if (sr.bottom <= 0 || sr.top >= H) continue;
-        var sh = sec.el.offsetHeight;
+        var sh = sec.docH;
         // The canvas is VIEWPORT-sized (capped at the section height), not section-
         // tall, and slides down the section each frame to cover the visible window.
         // Section-tall bitmaps meant .features alone carried 1920x2160 — 66MB at
@@ -1793,7 +1823,7 @@ function buildPillReel(pill) {
           sideCv.getContext("2d").setTransform(DPR, 0, 0, DPR, 0, 0);
         }
         if (cw && ch) {
-          var scg = sideCv.getContext("2d"), srect = sideCv.getBoundingClientRect();
+          var scg = sideCv.getContext("2d");   // (was also calling getBoundingClientRect here — result unused, pure forced reflow)
           scg.clearRect(0, 0, cw, ch);
           scg.fillStyle = "rgb(27,34,54)"; scg.fillRect(0, 0, cw, ch);
         }
@@ -2289,6 +2319,24 @@ function buildPillReel(pill) {
     var body = document.getElementById("term-body");
     var sec = document.querySelector(".features");
     if (!body || !sec) return;
+    /* Geometry cache. update() and panCards() run every frame and each called
+       sec.getBoundingClientRect(), which flushes style+layout for the whole document —
+       measured at ~10ms per call on this page. The section's DOCUMENT position and
+       height do not change while scrolling, so measure once and derive the viewport
+       top as (documentTop - scrollY); reading scrollY does not flush.
+       sizeSection() is the exception — it sets sec.style.height at runtime — so it
+       re-measures itself at the end. */
+    var secDocTop = 0, secH = 0;
+    function measureSec() {
+      var r = sec.getBoundingClientRect();
+      secDocTop = r.top + (window.scrollY || window.pageYOffset || 0);
+      secH = r.height;
+    }
+    function secTop() { return secDocTop - (window.scrollY || window.pageYOffset || 0); }
+    measureSec();
+    window.addEventListener("resize", measureSec, { passive: true });
+    window.addEventListener("load", measureSec);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureSec);
     var PROMPT =
       '<span class="term-user">vishnu@ASUS-TUF-F16-Vishnu</span>' +
       '<span class="term-path">:~</span>$ ';
@@ -2554,7 +2602,7 @@ function buildPillReel(pill) {
       // internal scroll state stops its own rAF from restoring the previous position
       // on the very next frame.
       function alignToThreshold() {
-        var target = window.scrollY + sec.getBoundingClientRect().top + ALIGN_EPS;
+        var target = window.scrollY + secTop() + ALIGN_EPS;
         var L = window.__lenis;
         if (L && L.scrollTo) L.scrollTo(target, { immediate: true, force: true });
         window.scrollTo(0, target);
@@ -2870,7 +2918,7 @@ function buildPillReel(pill) {
       // Land EXACTLY at the cover line (rect.top = 0) so the base pan is 0 — the cards
       // appear un-panned with full top clearance regardless of scroll overshoot/momentum.
       var vel = (lenis && typeof lenis.velocity === "number") ? lenis.velocity : scrollVel;
-      lockY = window.scrollY + sec.getBoundingClientRect().top; // scrollY where rect.top = 0
+      lockY = window.scrollY + secTop(); // scrollY where rect.top = 0
       locked = true;
       if (lenis) { lenis.scrollTo(lockY, { immediate: true }); lenis.stop(); }
       else window.scrollTo(0, lockY);
@@ -2917,6 +2965,9 @@ function buildPillReel(pill) {
     function sizeSection() {
       if (window.innerWidth <= 820) { sec.style.height = ""; return; } // mobile: natural flow
       sec.style.height = (window.innerHeight + cardOverflow()) + "px";
+      measureSec();                                      // height just changed
+      // .features just changed height — the contour loop caches section geometry.
+      if (window.__remeasureContours) window.__remeasureContours();
     }
     // ---- Column stagger ----
     // The EVEN columns (2 and 4, i.e. zero-based index 1 and 3) sit half a card lower
@@ -2941,8 +2992,8 @@ function buildPillReel(pill) {
     // covers a filtered 1–2 card result that has no pinned scroll at all.
     var BULGE_RANGE = 0.6, BULGE_MID = 0.5;              // mirror the seam's own constants
     function colOffsetProgress() {
-      var top = sec.getBoundingClientRect().top;
-      if (!brandEl) return Math.min(1, Math.max(0, -top / Math.max(1, sec.offsetHeight - window.innerHeight)));
+      var top = secTop();
+      if (!brandEl) return Math.min(1, Math.max(0, -top / Math.max(1, secH - window.innerHeight)));
       var vh = window.innerHeight;
       // Layout distance from the terminal's top to the seam — constant, so measuring it
       // live each frame costs nothing and survives resizes/filters.
@@ -3010,14 +3061,14 @@ function buildPillReel(pill) {
       // because the pan maps scroll 1:1, those 2px became 2px of pan and sliced the top
       // border off the first row of the non-offset columns. Absorbing the same epsilon
       // here keeps the first row flush; over a several-hundred-px pin it's invisible.
-      var travel = -sec.getBoundingClientRect().top - ALIGN_EPS;
+      var travel = -secTop() - ALIGN_EPS;
       var range = Math.max(1, pinScroll - ALIGN_EPS);
       var past = Math.min(1, Math.max(0, travel / range));
       panEl.style.transform = "translateY(" + (-(past * range) + mom).toFixed(1) + "px)";
     }
     function update() {
       raf = 0;
-      var r = sec.getBoundingClientRect(), vh = window.innerHeight;
+      var r = { top: secTop() }, vh = window.innerHeight;
       // Top bar: reversible at the threshold — hidden while the terminal covers the
       // top (r.top ≤ 0), back the moment you scroll up past it. Toggled every frame
       // (independent of the latched card reveal below).
@@ -3167,9 +3218,19 @@ function buildPillReel(pill) {
   const SPREAD = 1.16;
   // Responsive: the captured values are at 20rem cards; scale offsets to the
   // actual rendered card width so the fan stays proportional on smaller screens.
+  // paint() runs every frame while the springs settle, and offsetWidth FLUSHES
+  // style+layout — a synchronous reflow of the whole document from an animation
+  // loop. The card's layout width only changes on resize (it is set in rem/vw and
+  // is explicitly independent of the transform), so measure it there instead and
+  // read the cached value per frame.
+  let _sf = 0;
+  function measureSizeFactor() {
+    const cw = (cards[0] && cards[0].offsetWidth) || 320; // layout width, ignores transform
+    _sf = (cw / (20 * rem())) * SPREAD;
+  }
   function sizeFactor() {
-    const cw = cards[0].offsetWidth || 320; // layout width, ignores transform
-    return (cw / (20 * rem())) * SPREAD;
+    if (!_sf) measureSizeFactor();
+    return _sf;
   }
 
   // ---- target pose (px, pre-sizeFactor) for the current hover state ----
@@ -3215,12 +3276,20 @@ function buildPillReel(pill) {
   }
 
   // fan out once the card layout is ~85% up the viewport; fold back when it leaves
+  // evalReveal runs on every scroll event; getBoundingClientRect there flushes
+  // style+layout for the whole document. The layout block's DOCUMENT position is
+  // static, so cache it and derive the viewport centre from scrollY.
+  let _layTop = 0, _layH = 0;
+  function measureLayout() {
+    const r = layout.getBoundingClientRect();
+    _layTop = r.top + (window.scrollY || window.pageYOffset || 0);
+    _layH = r.height;
+  }
   function evalReveal() {
     if (reduce) { pT = 1; return; }
-    const vh = window.innerHeight;
-    const rect = layout.getBoundingClientRect();
-    const center = rect.top + rect.height / 2;
-    pT = center < vh * 0.85 ? 1 : 0;
+    if (!_layH) measureLayout();
+    const center = (_layTop - (window.scrollY || window.pageYOffset || 0)) + _layH / 2;
+    pT = center < window.innerHeight * 0.85 ? 1 : 0;
   }
 
   function paint() {
@@ -3277,7 +3346,8 @@ function buildPillReel(pill) {
   cards.forEach((c, i) => c.addEventListener("pointerenter", () => setHover(i)));
   layout.addEventListener("pointerleave", () => setHover(-1));
   window.addEventListener("scroll", onScroll, { passive: true });
-  window.addEventListener("resize", () => { if (mq.matches) clearMobile(); else { evalReveal(); kick(); } });
+  window.addEventListener("resize", () => { measureSizeFactor(); measureLayout(); if (mq.matches) clearMobile(); else { evalReveal(); kick(); } });
+  window.addEventListener("load", () => { measureSizeFactor(); measureLayout(); });
   if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
   if (mq.matches) clearMobile(); else { evalReveal(); kick(); }
 })();
