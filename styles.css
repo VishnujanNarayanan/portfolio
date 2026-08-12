@@ -468,8 +468,13 @@ header .header__nav-left a{color:#050419;font-size:16px}
    out of the blog section through them. Text recolours to light.
    ============================================================ */
 .features,.standards,.faq{background:transparent;background-color:transparent}
-/* per-section contour canvas sits behind the content */
-.section-contours{position:absolute;inset:0;z-index:0;pointer-events:none}
+/* Per-section contour canvas, behind the content. NOT stretched to the section
+   (no `inset:0`): the bitmap is viewport-sized and main.js slides it down the
+   section with a transform to track the visible window — a section-tall canvas
+   meant .features carried a 1920x2160 bitmap (66MB at DPR 2) that was cleared,
+   filled and re-uploaded to the GPU every frame to show one viewport of it.
+   Height is set from JS; transform is the per-frame offset. */
+.section-contours{position:absolute;left:0;top:0;width:100%;z-index:0;pointer-events:none;will-change:transform}
 /* keep each section's real content above its canvas */
 .features__sticky,.standards__container,.faq__container{position:relative;z-index:1}
 

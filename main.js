@@ -1359,7 +1359,7 @@ function buildPillReel(pill) {
       // keeps the standard dark navy + its light-blue lines.
       var isFeatures = sel === ".features", isSkills = sel === ".brand-teaser" || sel === ".brand-manifesto";
       darkSecs.push({
-        el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0,
+        el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0, ty: -1,
         noLines: isFeatures,
         // Brand zone: contour lines fade to the fill colour so they're invisible
         // by the time the manifesto ("I build data systems...") fills the screen.
@@ -1684,17 +1684,34 @@ function buildPillReel(pill) {
         var sec = darkSecs[ds], sr = sec.el.getBoundingClientRect();
         if (sr.bottom <= 0 || sr.top >= H) continue;
         var sh = sec.el.offsetHeight;
-        if (sec.w !== W || sec.h !== sh) {
-          sec.w = W; sec.h = sh;
-          sec.cv.width = W * DPR; sec.cv.height = sh * DPR;
-          sec.cv.style.width = W + "px"; sec.cv.style.height = sh + "px";
+        // The canvas is VIEWPORT-sized (capped at the section height), not section-
+        // tall, and slides down the section each frame to cover the visible window.
+        // Section-tall bitmaps meant .features alone carried 1920x2160 — 66MB at
+        // DPR 2 — cleared, filled and re-uploaded to the GPU every frame just to
+        // show the one viewport of it that is actually on screen.
+        var cvH = sh < H ? sh : H;
+        if (sec.w !== W || sec.h !== cvH) {
+          sec.w = W; sec.h = cvH;
+          sec.cv.width = W * DPR; sec.cv.height = cvH * DPR;
+          sec.cv.style.width = W + "px"; sec.cv.style.height = cvH + "px";
           sec.ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+          sec.ty = -1;                                     // force the transform to be re-written
         }
+        // Offset of the canvas WITHIN the section: follow the viewport top, clamped
+        // so the canvas can never poke out of the section box (which would paint
+        // over the neighbouring section). translate, not `top`, so it composites
+        // instead of triggering layout every frame.
+        var ty = -sr.top, tyMax = sh - cvH;
+        if (ty < 0) ty = 0; else if (ty > tyMax) ty = tyMax;
+        if (sec.ty !== ty) { sec.ty = ty; sec.cv.style.transform = "translateY(" + ty + "px)"; }
         var sg = sec.ctx;
-        sg.clearRect(0, 0, W, sh);
-        sg.fillStyle = sec.fill; sg.fillRect(0, 0, W, sh);
+        sg.clearRect(0, 0, W, cvH);
+        sg.fillStyle = sec.fill; sg.fillRect(0, 0, W, cvH);
         if (sec.noLines) continue;                         // projects: solid fill, no contour lines
-        sg.save(); sg.translate(0, -sr.top);
+        // The iso field is sampled in SCREEN space, so shift by the canvas's own top
+        // edge in viewport coords (sr.top + ty) to keep these lines continuous with
+        // #bg-contours. Was just -sr.top back when the canvas started at the section top.
+        sg.save(); sg.translate(0, -(sr.top + ty));
         sg.lineCap = "round"; sg.lineJoin = "round";
         var lineStyle = sec.line;
         if (sec.fadeOut) {
