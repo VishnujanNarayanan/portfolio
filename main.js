@@ -1376,13 +1376,48 @@ function buildPillReel(pill) {
     var W = 0, H = 0, DPR = 1, CELL = 12, cols = 0, rows = 0, field = [];
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
     // tiny value noise (for domain-warping the field → breaks perfect circles/ovals)
+    //
     function vh(i, j) { var n = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return n - Math.floor(n); }
-    function noise2(x, y) {
-      var ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
-      var ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
-      var a = vh(ix, iy), b = vh(ix + 1, iy), c2 = vh(ix, iy + 1), d = vh(ix + 1, iy + 1);
-      return (a * (1 - ux) + b * ux) * (1 - uy) + (c2 * (1 - ux) + d * ux) * uy;
+    // The resample called vh() 8x per grid cell — 119,232 Math.sin per frame at
+    // 1920x1080 — but the noise LATTICE is enormously coarser than the grid: the warp
+    // frequency is wf = 1.5/min(W,H), so one lattice cell spans ~1/1.5 of the viewport
+    // and a whole grid row crosses only ~3 of them. Consecutive cells therefore ask for
+    // the SAME four corner hashes over and over.
+    // So each call site gets its own one-entry memo of the current lattice cell and
+    // recomputes the four corners only when (ix,iy) actually changes — a few dozen sin
+    // calls per frame instead of 119k, and bit-identical output since it is the same
+    // vh() on the same integers. (A precomputed wrap-around table was tried first and
+    // is WRONG: the y input goes negative as time drifts, and vh(-12) is not vh(244).)
+    function makeNoise() {
+      var cix = NaN, ciy = NaN, a = 0, b = 0, c2 = 0, d = 0;
+      return function (x, y) {
+        var ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+        if (ix !== cix || iy !== ciy) {
+          cix = ix; ciy = iy;
+          a = vh(ix, iy); b = vh(ix + 1, iy); c2 = vh(ix, iy + 1); d = vh(ix + 1, iy + 1);
+        }
+        var ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+        return (a * (1 - ux) + b * ux) * (1 - uy) + (c2 * (1 - ux) + d * ux) * uy;
+      };
     }
+    var noiseWarpX = makeNoise(), noiseWarpY = makeNoise();
+    // exp(-z) for z >= 0, sampled + linearly interpolated. The field's only exponentials
+    // are Gaussians exp(-z); beyond z = EXP_MAX the value is < 1e-6, which against blob
+    // weights of ~0.2 and contour LEVELS spaced 0.16 apart is far below anything that
+    // could move a line. Interpolation error is ~4e-6, likewise irrelevant.
+    var EXP_MAX = 14, EXP_N = 2048, EXP_SC = EXP_N / EXP_MAX, EXPT = new Float32Array(EXP_N + 2);
+    (function () {
+      for (var k = 0; k <= EXP_N + 1; k++) EXPT[k] = Math.exp(-k / EXP_SC);
+    })();
+    function fexp(z) {                       // z >= 0
+      if (z >= EXP_MAX) return 0;
+      var f = z * EXP_SC, k = f | 0;
+      var g = f - k;
+      return EXPT[k] + (EXPT[k + 1] - EXPT[k]) * g;
+    }
+    // u-space cutoffs for the two blob Gaussians (u = (d/r)^2): past these the term
+    // is below the table's floor, so the cell/blob pair contributes nothing.
+    var HALO_CUT = 12.5 * EXP_MAX, CORE_CUT = 2 * EXP_MAX;
     // Lando blob sheet: the reference site's contour "pattern" is a HAND-DRAWN SVG of
     // 11 smooth closed loops (blobs_footer_1.svg — already local as images/footer-blobs.svg,
     // viewBox 1688x1056), not a procedural field. Instead of stroking it verbatim (static),
@@ -1600,12 +1635,13 @@ function buildPillReel(pill) {
       var needField = repel || (frameNo & 1) === 0 || fieldRows !== rows || fieldCols !== cols;
       if (needField) {
       fieldRows = rows; fieldCols = cols;
-      var bx = [], by = [], br = [], bw2 = [], i, c, r;
+      var bx = [], by = [], br = [], bw2 = [], bri2 = [], i, c, r;
       for (i = 0; i < BLOBS.length; i++) {
         var b = BLOBS[i];
         bx[i] = (b.bx + Math.cos(t * b.sx * 6.28 + b.px) * b.ox) * W;
         by[i] = (b.by + Math.sin(t * b.sy * 6.28 + b.py) * b.oy) * H;
         br[i] = b.r * md;
+        bri2[i] = 1 / (br[i] * br[i]);       // hoisted: the cell loop multiplies, never divides
         // pulse swings the SIGNED strength (never flips sign) → features grow/fade
         bw2[i] = b.w * (0.65 + 0.35 * Math.sin(t * b.pulse + b.pph));
       }
@@ -1613,25 +1649,31 @@ function buildPillReel(pill) {
         field[r] = field[r] || [];
         for (c = 0; c <= cols; c++) {
           var px = c * CELL, py = r * CELL;
-          var wx = px + (noise2(px * wf + t * 0.3, py * wf) - 0.5) * 2 * warp;
-          var wy = py + (noise2(px * wf + 5.2, py * wf - t * 0.3) - 0.5) * 2 * warp;
+          var wx = px + (noiseWarpX(px * wf + t * 0.3, py * wf) - 0.5) * 2 * warp;
+          var wy = py + (noiseWarpY(px * wf + 5.2, py * wf - t * 0.3) - 0.5) * 2 * warp;
           if (repel) {
             // Sample TOWARD the cursor (fall peaks at ~R) so the pattern renders pushed
             // AWAY from it — the lines bow out of a soft bubble. Zero at the exact centre
             // and beyond the radius, so nothing snaps or spikes.
             var tox = mxE - px, toy = myE - py;
-            var fall = Math.exp(-(tox * tox + toy * toy) * rInv) * rKick;
+            var fall = fexp((tox * tox + toy * toy) * rInv) * rKick;
             wx += tox * fall; wy += toy * fall;
           }
           // Lando base shape at the warped coords + the signed drifting perturbation:
           // positive blobs bulge/merge the loops, negative ones pinch/split them.
           var sum = sampleBase(wx / BCELL, wy / BCELL);
           for (i = 0; i < BLOBS.length; i++) {
-            var dx = wx - bx[i], dy = wy - by[i], rr = br[i], d2 = dx * dx + dy * dy;
+            var dx = wx - bx[i], dy = wy - by[i], d2 = dx * dx + dy * dy;
             // core + a WIDE, WEAK halo (2.5x radius, quarter strength): loops near a
             // passing blob lean subtly toward/away from it before the core arrives.
-            sum += bw2[i] * (Math.exp(-d2 / (2 * rr * rr)) +
-                             0.20 * Math.exp(-d2 / (12.5 * rr * rr)));
+            // u = (d/r)^2, so both terms become exp(-u*k) off the shared table.
+            // Cells far outside the halo are skipped: at u > 12.5*EXP_MAX the halo is
+            // already under 1e-6, and the core (2.5x tighter) vanished long before.
+            var u = d2 * bri2[i];
+            if (u > HALO_CUT) continue;
+            var s = 0.20 * fexp(u * 0.08);                 // halo: 1/12.5
+            if (u < CORE_CUT) s += fexp(u * 0.5);          // core: 1/2
+            sum += bw2[i] * s;
           }
           field[r][c] = sum;
         }
