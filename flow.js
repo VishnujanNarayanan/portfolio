@@ -549,26 +549,13 @@
   }
 
   /* ---------- Floating cards: fly-in / rest / fly-out ---------- */
-  var DIRS = {
-    "top": [0, -1], "bottom": [0, 1], "left": [-1, 0], "right": [1, 0],
-    "top-left": [-0.8, -0.8], "top-right": [0.8, -0.8],
-    "bottom-left": [-0.8, 0.8], "bottom-right": [0.8, 0.8]
-  };
-  var cards = [];
-  panels.forEach(function (panel, pi) {
-    Array.prototype.slice.call(panel.querySelectorAll(".flow-card")).forEach(function (el, ci) {
-      cards.push({
-        el: el, panel: pi,
-        from: DIRS[el.dataset.from] || [1, 0],
-        to: DIRS[el.dataset.to] || [-1, 0],
-        depth: parseFloat(el.dataset.depth) || 0.3,
-        tilt: parseFloat(el.dataset.tilt) || 0,
-        stagger: ci * 0.022,
-        fp: 3 + (ci % 3), ph: Math.random() * Math.PI * 2,
-        cx: 0, cy: 0, init: false
-      });
-    });
-  });
+  // NOTE: the old .flow-card "floats" system lived here — a DIRS table of entry/exit
+  // directions (including the diagonals), a cardState() pose function with its own
+  // entry/exit windows, depth parallax, tilt and idle float. It was the DOM half of the
+  // horizontal card journey. Those elements no longer exist in the markup (0 .flow-card
+  // in the page, and no data-from/to/depth/tilt attributes anywhere), so `cards` was
+  // permanently empty and the whole system was unreachable. Removed with the rest of the
+  // horizontal/diagonal machinery — the per-stage .flow-pcard grid carries the cards now.
   /* ---------- Per-stage cards (the GL "image" replaced by 4 square cards) ----------
      Each stage shows a 2x2 grid of square cards reusing the Projects-section
      .proj-card look (notched frame + hover reveal + blue activation). Hovering a
@@ -702,19 +689,17 @@
   // per-COLUMN baseY offset (left col up, right col down) so it's not a flat grid, plus
   // a DEPTH so it drifts toward the cursor by a different amount. Both are folded into
   // the card's own transform (the .flow-panel__cards container still owns the slide).
-  var pcardList = [];
   panels.forEach(function (panel) {
+    // Cards are stored ON their panel: the per-frame pose is a panel-level quantity, so
+    // the loop walks panels and applies one result to that panel's cards.
+    var list = panel._pcards = [];
     Array.prototype.slice.call(panel.querySelectorAll(".flow-panel__cards .flow-pcard")).forEach(function (el, i) {
       // dir matches the reference: left column y = −p, right column y = +p.
       // panel = owning stage. dir is the only per-card variable left: it picks which of
       // the panel's two mirrored column poses this card takes. (rowSign used to drive the
       // per-ROW diagonal enter/exit; that effect is gone with the horizontal slide.)
-      pcardList.push({ el: el, panel: panel, dir: (i % 2 === 0) ? -1 : 1 });
+      list.push({ el: el, dir: (i % 2 === 0) ? -1 : 1 });
     });
-    // Grouped per panel too: the per-frame pose is a PANEL-level quantity, so the loop
-    // walks panels and applies the result to that panel's cards, instead of walking a
-    // flat list and recomputing the same panel values once per card.
-    panel._pcards = pcardList.filter(function (o) { return o.panel === panel; });
   });
   var mTY = 0, mCY = 0;       // cursor Y target / current (smoothed), normalised −0.5..0.5
   var mSplay = 0, splayVel = 0;   // scroll-momentum column splay: held offset (rem) + its velocity
@@ -724,27 +709,6 @@
     mTY = e.clientY / window.innerHeight - 0.5;
   }, { passive: true });
 
-  // pp-space: 0 = one zone before, 0.5 = centred, 1 = one zone after. The
-  // entry/exit windows are kept SHORT (0.12 wide) so cards snap into and out of
-  // place over less scroll, with a wider rest band (.36–.64) in between. They
-  // still overlap the neighbouring zone a little (entry starts ~pp .24, exit
-  // ends ~pp .76) so the screen never goes fully empty at the seam. Cards emerge
-  // from a near offset (0.4×) and scale up slightly, so they drift + settle into
-  // place (subtle depth) rather than shooting across and getting clipped.
-  function cardState(c, pp) {
-    var vw = window.innerWidth, vh = window.innerHeight;
-    var ex = c.from[0] * vw * 0.4, ey = c.from[1] * vh * 0.4;
-    var qx = c.to[0] * vw * 0.4, qy = c.to[1] * vh * 0.4;
-    var e0 = 0.24 + c.stagger, e1 = e0 + 0.12;   // tighter entry (compressed scroll)
-    var x0 = 0.64 + c.stagger, x1 = x0 + 0.12;   // tighter exit (compressed scroll)
-    var x, y, op, sc;
-    if (pp <= e0) { x = ex; y = ey; op = 0; sc = 0.9; }
-    else if (pp < e1) { var t = smooth((pp - e0) / (e1 - e0)); x = lerp(ex, 0, t); y = lerp(ey, 0, t); op = t; sc = lerp(0.9, 1, t); }
-    else if (pp < x0) { x = 0; y = 0; op = 1; sc = 1; }   // settled rest
-    else if (pp < x1) { var t2 = (pp - x0) / (x1 - x0); x = lerp(0, qx, t2); y = lerp(0, qy, t2); op = 1 - t2; sc = lerp(1, 0.94, t2); }   // exit = constant speed (linear)
-    else { x = qx; y = qy; op = 0; sc = 0.94; }
-    return { x: x, y: y, op: op, sc: sc };
-  }
 
   /* ---------- Journey spine: wavy path + station nodes ---------- */
   var NODE_PTS = [{ x: 0.12, y: 0.46 }, { x: 0.38, y: 0.70 }, { x: 0.64, y: 0.40 }, { x: 0.90, y: 0.28 }];
@@ -1271,27 +1235,6 @@
       }
     }
 
-    // On desktop the GL image planes replace the DOM card floats (hidden via
-    // CSS), so skip their per-frame transforms entirely. Mobile never reaches
-    // this loop (it returns early in boot), so the card code still serves it.
-    if (!deskFx) cards.forEach(function (c) {
-      var pp = 0.5 + (global - c.panel) * 0.5;
-      var st = cardState(c, pp);
-      if (!c.init) { c.cx = st.x; c.cy = st.y; c.csc = st.sc; c.init = true; }
-      c.cx += (st.x - c.cx) * 0.14;
-      c.cy += (st.y - c.cy) * 0.14;
-      c.csc += (st.sc - c.csc) * 0.14;
-      var floatY = Math.sin(now / 1000 / c.fp + c.ph) * 7;
-      // Depth parallax tied to scroll position: the card keeps drifting through
-      // its whole visible window (not just on entry/exit), so even at rest the
-      // scene reads as one continuous space you travel through, not four slides.
-      var par = (pp - 0.5) * c.depth * 220;
-      c.el.style.transform = "translate3d(" + (c.cx + par) + "px," + (c.cy + floatY) + "px,0) scale(" + c.csc.toFixed(3) + ") rotate(" + c.tilt + "deg)";
-      c.el.style.opacity = st.op;
-    });
-
-    // (was: renderGL — the GL scene drew nothing; removed with three.js)
-
     // The spine (curve) is fixed; the nodes flow ALONG it in unison — left as you
     // scroll forward, right as you scroll back. Each node's x is driven directly
     // by scroll so the active node (global == i) sits dead-centre, and its y is
@@ -1369,7 +1312,6 @@
   window.addEventListener("resize", function () {
     vh = window.innerHeight;
     cdLineHeight();
-    cards.forEach(function (c) { c.init = false; });
   });
   // .flow--gl is now purely a CSS hook: above 820px it hides .flow-panel__floats,
   // whose per-frame transform loop is skipped in step with it (see deskFx).
