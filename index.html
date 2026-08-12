@@ -876,65 +876,12 @@
 </footer>
 <!-- END generated: footer -->
 
-<script>
-  // Custom Three.js fullscreen shader background — blue palette:
-  // dark navy base (#0f1628, matches the projects section) with slow flowing bright-blue accents.
-  document.addEventListener('DOMContentLoaded', function () {
-    if (typeof THREE === 'undefined') return;
-    var host = document.getElementById('vanta-bg');
-    if (!host) return;
-
-    var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.domElement.classList.add('gl-bg');
-    host.appendChild(renderer.domElement);
-
-    var scene = new THREE.Scene();
-    var camera = new THREE.Camera();
-
-    var uniforms = {
-      u_time: { value: 0 },
-      u_res:  { value: new THREE.Vector2(1, 1) }
-    };
-
-    var frag = [
-      'precision highp float;',
-      'uniform float u_time; uniform vec2 u_res;',
-      // palette — clean dark gradient (no smoky fbm clouds)
-      'const vec3 DARK = vec3(0.0588,0.0863,0.1569);',  // #0f1628 navy (projects section)
-      'const vec3 DARK2= vec3(0.0392,0.0588,0.1098);',  // #0a0f1c deeper navy
-      'void main(){',
-      '  vec2 uv=gl_FragCoord.xy/u_res.xy;',
-      '  vec3 col=mix(DARK2,DARK,smoothstep(0.0,1.0,uv.y));',  // soft vertical gradient
-      '  float vig=smoothstep(1.25,0.2,length(uv-0.5));',      // subtle vignette
-      '  col*=mix(0.82,1.04,vig);',
-      '  gl_FragColor=vec4(col,1.0);',
-      '}'
-    ].join('\n');
-
-    var mat = new THREE.ShaderMaterial({
-      uniforms: uniforms,
-      vertexShader: 'void main(){gl_Position=vec4(position,1.0);}',
-      fragmentShader: frag
-    });
-    scene.add(new THREE.Mesh(new THREE.PlaneBufferGeometry(2, 2), mat));
-
-    function resize() {
-      var w = window.innerWidth, h = window.innerHeight;
-      renderer.setSize(w, h);
-      uniforms.u_res.value.set(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
-    }
-    resize();
-    window.addEventListener('resize', resize);
-
-    var start = performance.now();
-    (function loop(now) {
-      uniforms.u_time.value = (now - start) * 0.001;
-      renderer.render(scene, camera);
-      requestAnimationFrame(loop);
-    })(start);
-  });
-</script>
+<!-- The fullscreen background used to be a three.js ShaderMaterial here. Its fragment
+     shader declared u_time but never referenced it: the output was a STATIC vertical
+     gradient (#0f1628 top -> #0a0f1c bottom) with a soft vignette (x1.04 centre, ~x0.94
+     corners). It was re-rendered as a full-viewport WebGL pass every frame, forever,
+     with no visibility gating. It is now pure CSS on #vanta-bg (see styles.css) --
+     same image, zero per-frame cost, and no three.js dependency. -->
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
 <script src="main.js" defer></script>
 <script src="flow.js" defer></script>
