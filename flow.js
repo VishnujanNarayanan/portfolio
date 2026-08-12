@@ -473,15 +473,6 @@
   function easeOut(t) { return 1 - Math.pow(1 - t, 2); }
   function easeIn(t) { return t * t * t; }
   function smooth(t) { return t * t * (3 - 2 * t); }
-  // A panel's grid offset (_coff) as it was delayMs ago, read from a short history
-  // ring — used to give one card column a true time-delayed entrance at the swap.
-  function coffDelayed(panel, delayMs, now) {
-    var h = panel._coffHist;
-    if (!h || !h.length) return panel._coff;
-    var tt = now - delayMs;
-    for (var i = h.length - 1; i >= 0; i--) { if (h[i].t <= tt) return h[i].v; }
-    return h[0].v;
-  }
 
   /* ---------- Zone-title poses ----------
      A title pose = where the .flow-panel__content sits relative to its rest spot:
@@ -715,11 +706,15 @@
   panels.forEach(function (panel) {
     Array.prototype.slice.call(panel.querySelectorAll(".flow-panel__cards .flow-pcard")).forEach(function (el, i) {
       // dir matches the reference: left column y = −p, right column y = +p.
-      // panel = owning stage (for the grid's _coff slide); rowSign drives the
-      // per-ROW diagonal enter/exit (top row up, bottom row down) — i<2 = top row
-      // since the 2-col grid is filled row-major.
-      pcardList.push({ el: el, panel: panel, dir: (i % 2 === 0) ? -1 : 1, rowSign: (i < 2) ? -1 : 1 });
+      // panel = owning stage. dir is the only per-card variable left: it picks which of
+      // the panel's two mirrored column poses this card takes. (rowSign used to drive the
+      // per-ROW diagonal enter/exit; that effect is gone with the horizontal slide.)
+      pcardList.push({ el: el, panel: panel, dir: (i % 2 === 0) ? -1 : 1 });
     });
+    // Grouped per panel too: the per-frame pose is a PANEL-level quantity, so the loop
+    // walks panels and applies the result to that panel's cards, instead of walking a
+    // flat list and recomputing the same panel values once per card.
+    panel._pcards = pcardList.filter(function (o) { return o.panel === panel; });
   });
   var mTY = 0, mCY = 0;       // cursor Y target / current (smoothed), normalised −0.5..0.5
   var mSplay = 0, splayVel = 0;   // scroll-momentum column splay: held offset (rem) + its velocity
@@ -1130,10 +1125,6 @@
     // still undefined/out of band the raw −1 is kept, so zone 1 plays its entry at the pin.
     var csel = (lastCsel !== undefined && lastCsel >= 0 && lastCsel < N)
       ? clamp(cselRaw, 0, N - 1) : cselRaw;
-    // Active stage slides from R_END (right, entry) to L_END (leftmost). R_END=8 is the
-    // original right entry (unchanged). L_END raised 0→2.4 so the card stops short of
-    // centre — 30% less leftward travel. OFF_L/OFF_R = off-screen park (passed/upcoming).
-    var R_END = 8, L_END = 2.4, OFF_L = -22, OFF_R = 22;
     var F = vh / 16.658;                             // 1 world unit in px (2·(17−1)·tan(55°/2))
     // STEP 1 (flow-columns-stationary): the card grid no longer parallax-scrolls
     // horizontally. Every panel's grid is pinned at a fixed REST_X spot (no R_END→OFF
@@ -1202,15 +1193,13 @@
       var exiting = panel._exitT0 !== undefined && (now - panel._exitT0) < CARD_EXIT_MS;
       if (panel._exitT0 !== undefined && !exiting) panel._exitT0 = undefined;  // exit finished
       if (panel._enterT0 !== undefined && (now - panel._enterT0) >= CARD_ENTER_MS) panel._enterT0 = undefined;  // enter finished
-      panel._coff = REST_X;                                   // stationary — no horizontal slide
-      var hist = panel._coffHist || (panel._coffHist = []);   // short history for the delayed column
-      hist.push({ t: now, v: panel._coff });
-      while (hist.length > 1 && hist[1].t < now - 250) hist.shift();
-      if (isActive) { if (!panel._wasActive) panel._arriveT0 = now; panel._wasActive = true; }
-      else panel._wasActive = false;                          // stamp the moment a panel becomes active
+      // The grid is stationary at REST_X (no horizontal slide), so what used to be a
+      // per-frame _coff plus a 250ms history buffer — pushed and shifted every frame, per
+      // panel, to feed a delayed column that no longer exists — is just this constant.
+      panel._cardsOn = isActive || exiting;                   // grid is visible this frame
       var pinX = -(pi * vw + trackX);
-      setSt(cardsEl, "transform", "translate(calc(-50% + " + (panel._coff * F + pinX).toFixed(1) + "px),-50%)");
-      setSt(cardsEl, "opacity", (isActive || exiting) ? "1" : "0");
+      setSt(cardsEl, "transform", "translate(calc(-50% + " + (REST_X * F + pinX).toFixed(1) + "px),-50%)");
+      setSt(cardsEl, "opacity", panel._cardsOn ? "1" : "0");
       // Hit-testable for the WHOLE of the active stage. This used to also require
       // |clocal| < 0.4, which left the outer fifth of every zone — the approach to each
       // threshold — visible but not hoverable, since refreshHover reads elementFromPoint
@@ -1239,72 +1228,47 @@
     splayVel = splayVel * SPLAY_FRICTION + dGlobal * SPLAY_IMPULSE * (1 - SPLAY_FRICTION);
     mSplay = clamp(mSplay + dGlobal * SPLAY_GAIN + splayVel, -SPLAY_MAX, SPLAY_MAX);
     var pScroll = mSplay;          // rem (held; composes with the hover p above)
-    // Per-ROW diagonal — ONLY on the SET-CHANGE swap, NOT the within-zone scroll-slide.
-    // The active set scrubs horizontally inside the rest band [L_END, R_END] (that
-    // right→left slide stays purely horizontal, unchanged). A set only travels OUTSIDE
-    // that band when the active stage changes: arriving from OFF_R or leaving to OFF_L.
-    // So the diagonal is gated to outside-the-band: dn = 0 within [L_END, R_END]; it
-    // ramps 0→1 as the grid heads to OFF_R (arriving) or OFF_L (leaving). A super-linear
-    // dn^P keeps the path flat near the band edge and steep far out — so an arriving set
-    // comes in steep-from-the-corner then eases to horizontal, and a leaving set starts
-    // shallow then steepens as it flies off. rowSign sends the top row up (top-right in /
-    // top-left out), the bottom row down. The column stagger (o.dir·p) is preserved.
-    var DIAG_STEEP = 200, DIAG_P = 1.7;
-    // Two layered effects, BOTH active only on the ENTRANCE/EXIT swap (gated to outside
-    // the rest band [L_END,R_END] via dn / g, so NEITHER does anything while you scroll
-    // within a zone):
-    //  1) Diagonal OFFSET that EASES in — diagY = rowSign·STEEP·dn^P is the target, and
-    //     o.diagCur lerps toward it (per-column rate; the lag column eases in slower), so
-    //     the offset settles into the row instead of snapping. dn=0 in the band ⇒ no
-    //     within-zone offset.
-    //  2) Per-column ENTRANCE DELAY — the LAG column renders the grid position from
-    //     COL_DELAY_MS ago (coffDelayed), so it flies in/out a touch later than the lead
-    //     column. dx is gated by g (0 inside the band) so the lag only happens during the
-    //     swap and fades out as the column joins the band — never during scrolling.
-    // On scroll-BACK the lead/lag (and the fast/slow ease) flip per column.
-    var COL_DELAY_MS = 90, SETTLE_FAST = 0.052, SETTLE_SLOW = 0.048, ARRIVE_WINDOW = 650;
-    var leftLeads = scrollDir >= 0;   // forward: left col leads; back: right col leads
-    for (var pc = 0; pc < pcardList.length; pc++) {
-      var o = pcardList[pc];
-      var coffNow = (o.panel._coff === undefined) ? L_END : o.panel._coff;
-      var isLag = (o.dir < 0) !== leftLeads;                  // the delayed (later) column
-      var coffUse = isLag ? coffDelayed(o.panel, COL_DELAY_MS, now) : coffNow;
-      // Vertical-diagonal ramp: 0 inside the rest band, ramps to 1 off either edge.
-      var g = 0;
-      if (coffUse > R_END) g = clamp((coffUse - R_END) / (OFF_R - R_END), 0, 1);
-      else if (coffUse < L_END) g = clamp((coffUse - L_END) / (OFF_L - L_END), 0, 1);
-      // Horizontal per-column delay is ARRIVAL-ONLY, gated by TIME since the panel became
-      // active — NOT by off-band position. (Position-gating spent the whole delay off the
-      // right edge, so the cards looked aligned by the time they were visible.) wDelay = 1
-      // at the swap, eases to 0 over ARRIVE_WINDOW, covering the visible entrance and then
-      // releasing before the within-zone scrub (no scroll lag). Only the active panel; on
-      // EXIT it's 0 so both columns leave together.
-      var aw = (o.panel._arriveT0 === undefined) ? 0 : clamp(1 - (now - o.panel._arriveT0) / ARRIVE_WINDOW, 0, 1);
-      var wDelay = (o.panel === panels[csel]) ? aw : 0;
-      var dx = isLag ? (coffUse - coffNow) * F * wDelay : 0;
-      var diagTarget = o.rowSign * DIAG_STEEP * Math.pow(g, DIAG_P);  // super-linear off the band
-      var settle = ((o.dir < 0) === leftLeads) ? SETTLE_FAST : SETTLE_SLOW;  // lag col eases slower
-      if (o.diagCur === undefined) o.diagCur = diagTarget;
-      o.diagCur += (diagTarget - o.diagCur) * settle;
-      // Column Y: hover parallax + the held scroll splay — or, if this card's panel is
-      // mid-EXIT (zone swap), a ramp from its captured pose (_exitFrom already includes
-      // any unfinished entry) off past the viewport edge at CONSTANT SPEED — linear, no
-      // acceleration, and it starts the frame the threshold is crossed. o.dir sends the
-      // left column up / the right down for a forward swap; _exitDir mirrors it backward.
-      // The INCOMING zone's columns come in from the OPPOSITE side of the exit (forward:
-      // left col rises from the bottom, right col drops from the top) and EASE OUT into
-      // the neutral pose, then scroll takes over.
-      var FLY_REM = vh / 16 + SPLAY_MAX;
+    // Per-card pose. The grid owns the horizontal placement; each card adds only the
+    // COLUMN STAGGER — left column up, right column down — off a shared yRem, so the two
+    // columns are exact mirrors and there are only ever TWO distinct poses per panel.
+    //
+    // What used to live here: a per-ROW diagonal entry/exit offset and a per-COLUMN
+    // entrance delay, from the era when the grid slid horizontally across the stage
+    // (R_END -> L_END, parking at OFF_L/OFF_R). That slide is gone — the grid is pinned at
+    // REST_X, deliberately inside the old rest band — so every one of those terms
+    // evaluated to a constant 0 on every frame: g was always 0, hence Math.pow(g,1.7) = 0,
+    // hence diagTarget = 0; and coffDelayed() always returned REST_X, hence dx = 0. The
+    // history buffer, its backward scan, the pow, the clamps and the settle lerps all
+    // resolved to translate(0px,0px) for all 13 cards, every frame. Removed rather than
+    // left computing zero.
+    var FLY_REM = vh / 16 + SPLAY_MAX;          // loop-invariant (was recomputed per card)
+    for (var pi2 = 0; pi2 < panels.length; pi2++) {
+      var pnl = panels[pi2];
+      // Skip panels whose grid is not on stage: it is opacity 0 AND a full viewport away,
+      // so its cards were being transformed (and re-rasterised) invisibly. Three of the
+      // four panels are in that state at any moment. The pose is a pure function of the
+      // current scroll//timers, so a skipped panel is correct again on its first visible
+      // frame — nothing to catch up.
+      if (!pnl._cardsOn) continue;
+      // yRem is PANEL-level (the enter/exit ramps live on the panel), so it is computed
+      // once per panel instead of once per card.
       var yRem = p + pScroll;
-      if (o.panel._exitT0 !== undefined) {
-        var et = clamp((now - o.panel._exitT0) / CARD_EXIT_MS, 0, 1);
-        yRem = p + lerp(o.panel._exitFrom, o.panel._exitTo, et);
-      } else if (o.panel._enterT0 !== undefined) {
-        var nt = clamp((now - o.panel._enterT0) / CARD_ENTER_MS, 0, 1);
-        var ef = (o.panel._enterFrom === undefined) ? -FLY_REM * o.panel._enterDir : o.panel._enterFrom;
+      if (pnl._exitT0 !== undefined) {
+        var et = clamp((now - pnl._exitT0) / CARD_EXIT_MS, 0, 1);
+        yRem = p + lerp(pnl._exitFrom, pnl._exitTo, et);
+      } else if (pnl._enterT0 !== undefined) {
+        var nt = clamp((now - pnl._enterT0) / CARD_ENTER_MS, 0, 1);
+        var ef = (pnl._enterFrom === undefined) ? -FLY_REM * pnl._enterDir : pnl._enterFrom;
         yRem = p + pScroll + ef * (1 - nt) * (1 - nt);   // ease-out: decelerates into place
       }
-      setSt(o.el, "transform", "translate(" + dx.toFixed(1) + "px," + o.diagCur.toFixed(1) + "px) translateY(" + (o.dir * yRem).toFixed(3) + "rem)");
+      // Two poses, two toFixed calls per panel — not three per card.
+      var upPose = "translateY(" + (-yRem).toFixed(3) + "rem)";
+      var downPose = "translateY(" + yRem.toFixed(3) + "rem)";
+      var list = pnl._pcards;
+      for (var k = 0; k < list.length; k++) {
+        var o = list[k];
+        setSt(o.el, "transform", o.dir < 0 ? upPose : downPose);
+      }
     }
 
     // On desktop the GL image planes replace the DOM card floats (hidden via
