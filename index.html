@@ -155,12 +155,15 @@
 
 <!-- Pull-in transition video. Clicking the cert CTA (once it's active) plays this once,
      zooming IN from the hero video's CURRENT on-screen rectangle to full screen (the reverse
-     of the scroll zoom-out, position-aware). Body-level so it covers the header too. -->
-<video class="pullout-video" src="videos/pullout_animation.mp4" muted playsinline preload="auto" aria-hidden="true"></video>
+     of the scroll zoom-out, position-aware). Body-level so it covers the header too.
+     preload="none": invisible during the hero, so it must not compete with the autoplaying
+     hero video for bandwidth/decoder on first paint. main.js warms it (preload=auto + load())
+     the moment the cert frame becomes clickable — see warmTransitionVideos(). -->
+<video class="pullout-video" src="videos/pullout_animation.mp4" muted playsinline preload="none" aria-hidden="true"></video>
 
 <!-- Closing transition video: plays when you reach the end of the gallery (or hit Esc / the
      back button), zooming the gallery back OUT to the hero rectangle it came from. -->
-<video class="receive-video" src="videos/recieve_animation.mp4" muted playsinline preload="auto" aria-hidden="true"></video>
+<video class="receive-video" src="videos/recieve_animation.mp4" muted playsinline preload="none" aria-hidden="true"></video>
 
 <!-- Certificate gallery: opens once the pull-in finishes. Each certificate is a sticky
      full-screen slide; scrolling brings the next one up to COVER the previous (the same

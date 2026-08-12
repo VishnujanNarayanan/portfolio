@@ -557,9 +557,25 @@ function buildPillReel(pill) {
       if (window.__updateHeroExit) window.__updateHeroExit();
       if (!colorRAF) { colorLast = 0; colorRAF = requestAnimationFrame(colorTick); }   // ease the text blue
     }
+    // The two transition clips (pull-in + closing, ~2.6MB together) are preload="none"
+    // in the markup: neither is visible during the hero, and preload="auto" had them
+    // competing with the autoplaying hero video for bandwidth AND the decoder on first
+    // paint. They're fetched here instead — the moment the cert frame becomes CLICKABLE,
+    // which is the earliest point a click is possible, and still well ahead of one.
+    var warmed = false;
+    function warmTransitionVideos() {
+      if (warmed) return;
+      warmed = true;
+      [pullout, receive].forEach(function (v) {
+        if (!v) return;
+        v.preload = "auto";
+        try { v.load(); } catch (e) { /* fetch is best-effort; play() would still work */ }
+      });
+    }
     function setActive(on) {
       if (on === active) return;
       active = on;
+      if (on) warmTransitionVideos();
       layer.classList.toggle("is-active", on);
       if (heroVid) { heroVid.style.pointerEvents = on ? "auto" : "none"; heroVid.style.cursor = on ? "pointer" : ""; }
       if (!on) { setHover(false); pressCancel(heroVid); }   // clear any held press when the frame stops being clickable
