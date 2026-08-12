@@ -815,154 +815,20 @@
     else window.scrollTo({ top: y, behavior: "smooth" });
   }
 
-  /* ---------- three.js depth scene ---------- */
-  var THREEok = (typeof THREE !== "undefined") && !isMobile && !reduce;
-  var renderer, scene, camera, focal = [], images = [], clock, keyLight, bulbLight, GAP = 14;
-  var IMG_Z = 1;                  // hero plane sits in front, close to camera
-  var BOX_W = 9.5, BOX_H = 6;     // bounding box; each plane fits inside it (kept
-                                  // narrow so the image lives on the RIGHT half,
-                                  // clear of the left-aligned text)
-  var REST_X = 8;                 // right-side entry position; image scrolls from
-                                  // here (right) to centre over a zone
-  var OFF_L = -22;                // off-screen left — where a passed image exits
-  var OFF_R = 22;                 // off-screen right — where the next image waits
-
-  // Resize a group's image plane so it keeps the texture's real aspect ratio
-  // while fitting inside BOX_W×BOX_H.
-  function fitPlane(grp, aspect) {
-    var w = BOX_W, h = BOX_W / aspect;
-    if (h > BOX_H) { h = BOX_H; w = BOX_H * aspect; }
-    var u = grp.userData;
-    u.img.geometry.dispose(); u.img.geometry = new THREE.PlaneGeometry(w, h);
-  }
-
-  // One hero image plane per panel, loaded from panel.dataset.img. A missing
-  // file degrades to a solid indigo placeholder plane so the scene still works
-  // before real assets are dropped into images/flow/.
-  function createImageObject(panel, i) {
-    var grp = new THREE.Group();
-    grp.position.set(i * GAP, 0, IMG_Z);
-
-    // Unlit so the texture shows at its true colours (no light shading / colour
-    // cast / emissive tint). Placeholder colour until the texture loads.
-    var mat = new THREE.MeshBasicMaterial({ color: 0x7b73ff, side: THREE.DoubleSide });
-    var img = new THREE.Mesh(new THREE.PlaneGeometry(BOX_W, BOX_H), mat);
-    grp.add(img);
-
-    var edge = null;   // edge frame removed (was indigo)
-
-    grp.userData = { baseY: 0, amp: 0.4 + (i % 3) * 0.12, fp: 0.5 + i * 0.07, ph: Math.random() * Math.PI * 2, img: img, edge: edge };
-    scene.add(grp); images.push(grp);
-
-    var src = panel.getAttribute("data-img");
-    if (src) {
-      new THREE.TextureLoader().load(src, function (tex) {
-        if ("sRGBEncoding" in THREE) tex.encoding = THREE.sRGBEncoding;
-        mat.map = tex; mat.color.set(0xffffff); mat.needsUpdate = true;
-        var iw = (tex.image && tex.image.width) || 1, ih = (tex.image && tex.image.height) || 1;
-        fitPlane(grp, iw / ih);
-        grp.userData.loaded = true; grp.userData.iw = iw; grp.userData.ih = ih;
-      }, undefined, function (err) {
-        grp.userData.loaded = false; grp.userData.err = (err && err.message) || "load error";
-      });
-    }
-  }
-
-  function initGL() {
-    var canvas = document.createElement("canvas");
-    canvas.className = "flow__gl";
-    canvas.setAttribute("aria-hidden", "true");
-    wrapper.insertBefore(canvas, track);
-    renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    if ("sRGBEncoding" in THREE) renderer.outputEncoding = THREE.sRGBEncoding;
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(55, 1, 0.1, 220);
-    camera.position.set(0, 0, 17);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.85));
-    keyLight = new THREE.DirectionalLight(0xffffff, 0.7); keyLight.position.set(6, 9, 12);
-    scene.add(keyLight);
-    scene.add(keyLight.target);
-    var rim = new THREE.DirectionalLight(0x4d8bff, 0.5); rim.position.set(-7, -3, 5); scene.add(rim);
-
-    // Warm point light driven by the hanging HTML bulb; travels with the camera.
-    bulbLight = new THREE.PointLight(0xfff0d0, 0.0, 60, 2); bulbLight.position.set(9, 7, 9); scene.add(bulbLight);
-
-    // Hero image plane per panel — DISABLED: the panel image is now a DOM grid of
-    // four square project/blog cards (.flow-panel__cards, built below), so the GL
-    // scene renders nothing but the camera/light rig still runs harmlessly. Keeping
-    // createImageObject + the empty render path avoids touching the rest of the loop.
-    // panels.forEach(createImageObject);
-
-    // (Background geometric forms — icosahedron / torus / knot / octahedron — removed.)
-
-    clock = new THREE.Clock();
-    resizeGL();
-  }
-  function resizeGL() {
-    if (!renderer) return;
-    var w = window.innerWidth, h = wrapper.clientHeight || window.innerHeight;
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-  }
-  var glCleared = false;
-  function renderGL(progress, globalRaw) {
-    if (!renderer) return;
-    // Image planes are disabled (createImageObject commented out) and the geometric
-    // forms are gone, so the scene draws nothing visible — rendering it every frame
-    // is a full-viewport GL pass for a transparent output. Clear once so the canvas
-    // is blank, then skip; re-enables itself automatically if planes come back.
-    if (!images.length && !focal.length) {
-      if (!glCleared) { glCleared = true; renderer.render(scene, camera); }
-      return;
-    }
-    var global = progress * (N - 1);
-    if (globalRaw === undefined) globalRaw = global;
-    var gx = progress * (N - 1) * GAP;
-    camera.position.x = gx;
-    camera.position.y = Math.sin(progress * Math.PI * 2) * 0.55;
-    camera.lookAt(gx, 0, IMG_Z);
-    var t = clock.getElapsedTime();
-    var bulbPulse = 0.7 + 0.3 * Math.sin(t * 0.8);   // gentle breathing glow
-
-    // One image at a time. The ACTIVE panel's image is scroll-driven: it enters
-    // from the right (REST_X) and slides LEFT to centre across the zone, using
-    // only the right half until the midpoint — x = REST_X*(0.5 - local), so
-    // scrolling DOWN moves it left. The OTHER images wait off-screen: passed ones
-    // off the LEFT, upcoming ones off the RIGHT. When the active panel flips — the
-    // exact instant the text swaps — the lerp resolves the jump as the quick
-    // switch: the outgoing image shoots off to the LEFT (allowed to use that side
-    // during the change) and the incoming one comes in from the RIGHT.
-    // Use the UNCLAMPED global so the first/last images get entry/exit travel
-    // outside the [0,N-1] band. sel can reach -0 (round(-0.5)) up to N (round of
-    // the upper clamp), so the first image is mid-entry during the lead-in and the
-    // last image becomes "passed" (exits left) at the very end.
-    var sel = Math.round(globalRaw);
-    var local = globalRaw - sel;                          // [-0.5, 0.5], incl. the edge overscroll
-    for (var k = 0; k < images.length; k++) {
-      var g = images[k], u = g.userData;
-      var targetX = (k === sel) ? (REST_X * (0.5 - local)) : (k < sel ? OFF_L : OFF_R);
-      if (u.off === undefined) u.off = targetX;
-      u.off += (targetX - u.off) * 0.08;                  // tracks scroll; softer catch-up so the flip swaps less abruptly
-      g.position.x = camera.position.x + u.off;
-      g.position.y = u.baseY + Math.sin(t * u.fp + u.ph) * u.amp;
-      g.rotation.x = Math.sin(t * 0.3 + k) * 0.01;        // gentle idle sway only (no mouse reaction)
-      g.rotation.y = Math.sin(t * 0.22 + k) * 0.015;
-    }
-
-    for (var i = 0; i < focal.length; i++) {
-      focal[i].rotation.y = t * focal[i].userData.spin;
-      focal[i].rotation.x = Math.sin(t * 0.2 + i) * 0.14;
-    }
-
-    // Warm bulb light pulses gently and travels with the journey.
-    keyLight.position.x = gx + 6; keyLight.target.position.set(gx, 0, IMG_Z);
-    bulbLight.position.x = gx + 9;   // top-right, mirroring the HTML bulb
-    bulbLight.intensity = 0.55 * bulbPulse;
-
-    renderer.render(scene, camera);
-  }
+  /* ---------- Desktop motion flag ----------
+     Was `THREEok`, gating a three.js depth scene. That scene rendered NOTHING:
+     createImageObject was disabled, so `images`/`focal` stayed empty and renderGL
+     early-returned after a single clear — yet the library was still a
+     render-blocking ~145KB gz on the critical path. The whole rig (renderer,
+     scene, camera, lights, TextureLoader, the .flow__gl canvas) is gone, along
+     with the <script> tag in index.html.
+     The FLAG is kept, because it never really meant "GL is up" — it means
+     "desktop, motion allowed", and it still drives two live behaviours: the
+     .flow--gl class (CSS hides .flow-panel__floats above 820px) and skipping the
+     floats' per-frame transform loop. With THREE present and initGL not throwing,
+     THREEok evaluated to exactly `!isMobile && !reduce` — which is this — so the
+     rendered result is unchanged. */
+  var deskFx = !isMobile && !reduce;
 
   /* ---------- Main loop ---------- */
   var lastSel = -1;
@@ -1444,7 +1310,7 @@
     // On desktop the GL image planes replace the DOM card floats (hidden via
     // CSS), so skip their per-frame transforms entirely. Mobile never reaches
     // this loop (it returns early in boot), so the card code still serves it.
-    if (!THREEok) cards.forEach(function (c) {
+    if (!deskFx) cards.forEach(function (c) {
       var pp = 0.5 + (global - c.panel) * 0.5;
       var st = cardState(c, pp);
       if (!c.init) { c.cx = st.x; c.cy = st.y; c.csc = st.sc; c.init = true; }
@@ -1460,7 +1326,7 @@
       c.el.style.opacity = st.op;
     });
 
-    if (THREEok) renderGL(progress, globalRaw);
+    // (was: renderGL — the GL scene drew nothing; removed with three.js)
 
     // The spine (curve) is fixed; the nodes flow ALONG it in unison — left as you
     // scroll forward, right as you scroll back. Each node's x is driven directly
@@ -1522,33 +1388,9 @@
   /* ---------- Debug overlay (?debug) ---------- */
   function updateDebug(progress, global) {
     var lines = [];
-    lines.push("THREEok=" + THREEok + "  flow--gl=" + flow.classList.contains("flow--gl"));
-    if (renderer) {
-      var sz = renderer.getSize(new THREE.Vector2());
-      lines.push("canvas " + Math.round(sz.x) + "x" + Math.round(sz.y) + "  rect.top=" + Math.round(flow.getBoundingClientRect().top));
-    } else {
-      lines.push("renderer = NONE (GL never initialised)");
-    }
-    lines.push("progress=" + progress.toFixed(3) + " global=" + global.toFixed(2) + " camX=" + (camera ? camera.position.x.toFixed(1) : "-"));
-    if (renderer && renderer.info) lines.push("draws=" + renderer.info.render.calls + " tris=" + renderer.info.render.triangles);
-    var cv = renderer && renderer.domElement;
-    if (cv) { var cs = getComputedStyle(cv); lines.push("canvas vis=" + cs.visibility + " op=" + cs.opacity + " disp=" + cs.display + " z=" + cs.zIndex); }
-    lines.push("images=" + images.length);
-    for (var k = 0; k < images.length; k++) {
-      var g = images[k], u = g.userData;
-      var gp = u.img.geometry.parameters || {};
-      var v = g.position.clone(); if (camera) v.project(camera);
-      var onScreen = Math.abs(v.x) <= 1 && Math.abs(v.y) <= 1 && v.z > -1 && v.z < 1;
-      var hit = "";
-      if (onScreen) {
-        var px = (v.x * 0.5 + 0.5) * window.innerWidth, py = (-v.y * 0.5 + 0.5) * window.innerHeight;
-        var el = document.elementFromPoint(px, py);
-        hit = " topEl=" + (el ? (el.tagName + "." + (typeof el.className === "string" ? el.className.split(" ")[0] : "")) : "null");
-      }
-      lines.push("  #" + k + " loaded=" + (u.loaded === true ? "Y" : u.loaded === false ? "ERR(" + (u.err || "") + ")" : "…") +
-        " plane=" + (gp.width ? gp.width.toFixed(1) + "x" + gp.height.toFixed(1) : "?") +
-        " screen=(" + (v.x * 50 + 50).toFixed(0) + "%," + (50 - v.y * 50).toFixed(0) + "%) " + (onScreen ? "ON" : "off") + hit);
-    }
+    lines.push("deskFx=" + deskFx + "  flow--gl=" + flow.classList.contains("flow--gl"));
+    lines.push("rect.top=" + Math.round(flow.getBoundingClientRect().top));
+    lines.push("progress=" + progress.toFixed(3) + " global=" + global.toFixed(2));
     dbg.textContent = lines.join("\n");
   }
 
@@ -1563,12 +1405,11 @@
   window.addEventListener("resize", function () {
     vh = window.innerHeight;
     cdLineHeight();
-    resizeGL();
     cards.forEach(function (c) { c.init = false; });
   });
-  if (THREEok) {
-    try { initGL(); flow.classList.add("flow--gl"); } catch (e) { THREEok = false; }
-  }
+  // .flow--gl is now purely a CSS hook: above 820px it hides .flow-panel__floats,
+  // whose per-frame transform loop is skipped in step with it (see deskFx).
+  if (deskFx) flow.classList.add("flow--gl");
   if (DEBUG) {
     dbg = document.createElement("pre");
     dbg.style.cssText = "position:fixed;left:8px;bottom:8px;z-index:9999;margin:0;padding:8px 10px;background:rgba(5,4,25,.85);color:#9cff9c;font:11px/1.4 monospace;white-space:pre;pointer-events:none;border-radius:6px;max-width:90vw";
