@@ -557,9 +557,25 @@ function buildPillReel(pill) {
       if (window.__updateHeroExit) window.__updateHeroExit();
       if (!colorRAF) { colorLast = 0; colorRAF = requestAnimationFrame(colorTick); }   // ease the text blue
     }
+    // The two transition clips (pull-in + closing, ~2.6MB together) are preload="none"
+    // in the markup: neither is visible during the hero, and preload="auto" had them
+    // competing with the autoplaying hero video for bandwidth AND the decoder on first
+    // paint. They're fetched here instead — the moment the cert frame becomes CLICKABLE,
+    // which is the earliest point a click is possible, and still well ahead of one.
+    var warmed = false;
+    function warmTransitionVideos() {
+      if (warmed) return;
+      warmed = true;
+      [pullout, receive].forEach(function (v) {
+        if (!v) return;
+        v.preload = "auto";
+        try { v.load(); } catch (e) { /* fetch is best-effort; play() would still work */ }
+      });
+    }
     function setActive(on) {
       if (on === active) return;
       active = on;
+      if (on) warmTransitionVideos();
       layer.classList.toggle("is-active", on);
       if (heroVid) { heroVid.style.pointerEvents = on ? "auto" : "none"; heroVid.style.cursor = on ? "pointer" : ""; }
       if (!on) { setHover(false); pressCancel(heroVid); }   // clear any held press when the frame stops being clickable
@@ -1343,7 +1359,7 @@ function buildPillReel(pill) {
       // keeps the standard dark navy + its light-blue lines.
       var isFeatures = sel === ".features", isSkills = sel === ".brand-teaser" || sel === ".brand-manifesto";
       darkSecs.push({
-        el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0,
+        el: el, cv: c, ctx: c.getContext("2d"), w: 0, h: 0, ty: -1,
         noLines: isFeatures,
         // Brand zone: contour lines fade to the fill colour so they're invisible
         // by the time the manifesto ("I build data systems...") fills the screen.
@@ -1360,13 +1376,48 @@ function buildPillReel(pill) {
     var W = 0, H = 0, DPR = 1, CELL = 12, cols = 0, rows = 0, field = [];
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
     // tiny value noise (for domain-warping the field → breaks perfect circles/ovals)
+    //
     function vh(i, j) { var n = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return n - Math.floor(n); }
-    function noise2(x, y) {
-      var ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
-      var ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
-      var a = vh(ix, iy), b = vh(ix + 1, iy), c2 = vh(ix, iy + 1), d = vh(ix + 1, iy + 1);
-      return (a * (1 - ux) + b * ux) * (1 - uy) + (c2 * (1 - ux) + d * ux) * uy;
+    // The resample called vh() 8x per grid cell — 119,232 Math.sin per frame at
+    // 1920x1080 — but the noise LATTICE is enormously coarser than the grid: the warp
+    // frequency is wf = 1.5/min(W,H), so one lattice cell spans ~1/1.5 of the viewport
+    // and a whole grid row crosses only ~3 of them. Consecutive cells therefore ask for
+    // the SAME four corner hashes over and over.
+    // So each call site gets its own one-entry memo of the current lattice cell and
+    // recomputes the four corners only when (ix,iy) actually changes — a few dozen sin
+    // calls per frame instead of 119k, and bit-identical output since it is the same
+    // vh() on the same integers. (A precomputed wrap-around table was tried first and
+    // is WRONG: the y input goes negative as time drifts, and vh(-12) is not vh(244).)
+    function makeNoise() {
+      var cix = NaN, ciy = NaN, a = 0, b = 0, c2 = 0, d = 0;
+      return function (x, y) {
+        var ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+        if (ix !== cix || iy !== ciy) {
+          cix = ix; ciy = iy;
+          a = vh(ix, iy); b = vh(ix + 1, iy); c2 = vh(ix, iy + 1); d = vh(ix + 1, iy + 1);
+        }
+        var ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+        return (a * (1 - ux) + b * ux) * (1 - uy) + (c2 * (1 - ux) + d * ux) * uy;
+      };
     }
+    var noiseWarpX = makeNoise(), noiseWarpY = makeNoise();
+    // exp(-z) for z >= 0, sampled + linearly interpolated. The field's only exponentials
+    // are Gaussians exp(-z); beyond z = EXP_MAX the value is < 1e-6, which against blob
+    // weights of ~0.2 and contour LEVELS spaced 0.16 apart is far below anything that
+    // could move a line. Interpolation error is ~4e-6, likewise irrelevant.
+    var EXP_MAX = 14, EXP_N = 2048, EXP_SC = EXP_N / EXP_MAX, EXPT = new Float32Array(EXP_N + 2);
+    (function () {
+      for (var k = 0; k <= EXP_N + 1; k++) EXPT[k] = Math.exp(-k / EXP_SC);
+    })();
+    function fexp(z) {                       // z >= 0
+      if (z >= EXP_MAX) return 0;
+      var f = z * EXP_SC, k = f | 0;
+      var g = f - k;
+      return EXPT[k] + (EXPT[k + 1] - EXPT[k]) * g;
+    }
+    // u-space cutoffs for the two blob Gaussians (u = (d/r)^2): past these the term
+    // is below the table's floor, so the cell/blob pair contributes nothing.
+    var HALO_CUT = 12.5 * EXP_MAX, CORE_CUT = 2 * EXP_MAX;
     // Lando blob sheet: the reference site's contour "pattern" is a HAND-DRAWN SVG of
     // 11 smooth closed loops (blobs_footer_1.svg — already local as images/footer-blobs.svg,
     // viewBox 1688x1056), not a procedural field. Instead of stroking it verbatim (static),
@@ -1477,6 +1528,13 @@ function buildPillReel(pill) {
         });
       }
     }
+    // Thinnest possible contour stroke. The 2D context is scaled by DPR, so a lineWidth
+    // of 1/DPR is exactly ONE DEVICE pixel — the finest line that still rasterises
+    // crisply. (Going below that does not get thinner, it just fades the line out via
+    // coverage anti-aliasing.) Recomputed on resize, since DPR changes when the window
+    // is moved between displays.
+    var LINE_W = 1;
+    function lineWidthPx() { LINE_W = 1 / DPR; }
     function sizeCanvas(canvas, context) {
       canvas.width = W * DPR; canvas.height = H * DPR;
       canvas.style.width = W + "px"; canvas.style.height = H + "px";
@@ -1485,6 +1543,7 @@ function buildPillReel(pill) {
     function resize() {
       DPR = Math.min(window.devicePixelRatio || 1, 2);
       W = window.innerWidth; H = window.innerHeight;
+      lineWidthPx();
       sizeCanvas(cv, ctx); if (hcv) sizeCanvas(hcv, hctx); if (wcv) sizeCanvas(wcv, wctx);
       cols = Math.ceil(W / CELL) + 1; rows = Math.ceil(H / CELL) + 1;
       buildBase();
@@ -1556,7 +1615,7 @@ function buildPillReel(pill) {
       // #bg-contours plane → the contour field reads as ONE continuous background across sections.
       g.save(); if (oy) g.translate(0, oy);
       g.lineCap = "round"; g.lineJoin = "round";
-      g.strokeStyle = stroke; g.lineWidth = 1.1;
+      g.strokeStyle = stroke; g.lineWidth = LINE_W;
       strokeIso(g);
       g.restore();
     }
@@ -1584,12 +1643,13 @@ function buildPillReel(pill) {
       var needField = repel || (frameNo & 1) === 0 || fieldRows !== rows || fieldCols !== cols;
       if (needField) {
       fieldRows = rows; fieldCols = cols;
-      var bx = [], by = [], br = [], bw2 = [], i, c, r;
+      var bx = [], by = [], br = [], bw2 = [], bri2 = [], i, c, r;
       for (i = 0; i < BLOBS.length; i++) {
         var b = BLOBS[i];
         bx[i] = (b.bx + Math.cos(t * b.sx * 6.28 + b.px) * b.ox) * W;
         by[i] = (b.by + Math.sin(t * b.sy * 6.28 + b.py) * b.oy) * H;
         br[i] = b.r * md;
+        bri2[i] = 1 / (br[i] * br[i]);       // hoisted: the cell loop multiplies, never divides
         // pulse swings the SIGNED strength (never flips sign) → features grow/fade
         bw2[i] = b.w * (0.65 + 0.35 * Math.sin(t * b.pulse + b.pph));
       }
@@ -1597,25 +1657,31 @@ function buildPillReel(pill) {
         field[r] = field[r] || [];
         for (c = 0; c <= cols; c++) {
           var px = c * CELL, py = r * CELL;
-          var wx = px + (noise2(px * wf + t * 0.3, py * wf) - 0.5) * 2 * warp;
-          var wy = py + (noise2(px * wf + 5.2, py * wf - t * 0.3) - 0.5) * 2 * warp;
+          var wx = px + (noiseWarpX(px * wf + t * 0.3, py * wf) - 0.5) * 2 * warp;
+          var wy = py + (noiseWarpY(px * wf + 5.2, py * wf - t * 0.3) - 0.5) * 2 * warp;
           if (repel) {
             // Sample TOWARD the cursor (fall peaks at ~R) so the pattern renders pushed
             // AWAY from it — the lines bow out of a soft bubble. Zero at the exact centre
             // and beyond the radius, so nothing snaps or spikes.
             var tox = mxE - px, toy = myE - py;
-            var fall = Math.exp(-(tox * tox + toy * toy) * rInv) * rKick;
+            var fall = fexp((tox * tox + toy * toy) * rInv) * rKick;
             wx += tox * fall; wy += toy * fall;
           }
           // Lando base shape at the warped coords + the signed drifting perturbation:
           // positive blobs bulge/merge the loops, negative ones pinch/split them.
           var sum = sampleBase(wx / BCELL, wy / BCELL);
           for (i = 0; i < BLOBS.length; i++) {
-            var dx = wx - bx[i], dy = wy - by[i], rr = br[i], d2 = dx * dx + dy * dy;
+            var dx = wx - bx[i], dy = wy - by[i], d2 = dx * dx + dy * dy;
             // core + a WIDE, WEAK halo (2.5x radius, quarter strength): loops near a
             // passing blob lean subtly toward/away from it before the core arrives.
-            sum += bw2[i] * (Math.exp(-d2 / (2 * rr * rr)) +
-                             0.20 * Math.exp(-d2 / (12.5 * rr * rr)));
+            // u = (d/r)^2, so both terms become exp(-u*k) off the shared table.
+            // Cells far outside the halo are skipped: at u > 12.5*EXP_MAX the halo is
+            // already under 1e-6, and the core (2.5x tighter) vanished long before.
+            var u = d2 * bri2[i];
+            if (u > HALO_CUT) continue;
+            var s = 0.20 * fexp(u * 0.08);                 // halo: 1/12.5
+            if (u < CORE_CUT) s += fexp(u * 0.5);          // core: 1/2
+            sum += bw2[i] * s;
           }
           field[r][c] = sum;
         }
@@ -1668,17 +1734,34 @@ function buildPillReel(pill) {
         var sec = darkSecs[ds], sr = sec.el.getBoundingClientRect();
         if (sr.bottom <= 0 || sr.top >= H) continue;
         var sh = sec.el.offsetHeight;
-        if (sec.w !== W || sec.h !== sh) {
-          sec.w = W; sec.h = sh;
-          sec.cv.width = W * DPR; sec.cv.height = sh * DPR;
-          sec.cv.style.width = W + "px"; sec.cv.style.height = sh + "px";
+        // The canvas is VIEWPORT-sized (capped at the section height), not section-
+        // tall, and slides down the section each frame to cover the visible window.
+        // Section-tall bitmaps meant .features alone carried 1920x2160 — 66MB at
+        // DPR 2 — cleared, filled and re-uploaded to the GPU every frame just to
+        // show the one viewport of it that is actually on screen.
+        var cvH = sh < H ? sh : H;
+        if (sec.w !== W || sec.h !== cvH) {
+          sec.w = W; sec.h = cvH;
+          sec.cv.width = W * DPR; sec.cv.height = cvH * DPR;
+          sec.cv.style.width = W + "px"; sec.cv.style.height = cvH + "px";
           sec.ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+          sec.ty = -1;                                     // force the transform to be re-written
         }
+        // Offset of the canvas WITHIN the section: follow the viewport top, clamped
+        // so the canvas can never poke out of the section box (which would paint
+        // over the neighbouring section). translate, not `top`, so it composites
+        // instead of triggering layout every frame.
+        var ty = -sr.top, tyMax = sh - cvH;
+        if (ty < 0) ty = 0; else if (ty > tyMax) ty = tyMax;
+        if (sec.ty !== ty) { sec.ty = ty; sec.cv.style.transform = "translateY(" + ty + "px)"; }
         var sg = sec.ctx;
-        sg.clearRect(0, 0, W, sh);
-        sg.fillStyle = sec.fill; sg.fillRect(0, 0, W, sh);
+        sg.clearRect(0, 0, W, cvH);
+        sg.fillStyle = sec.fill; sg.fillRect(0, 0, W, cvH);
         if (sec.noLines) continue;                         // projects: solid fill, no contour lines
-        sg.save(); sg.translate(0, -sr.top);
+        // The iso field is sampled in SCREEN space, so shift by the canvas's own top
+        // edge in viewport coords (sr.top + ty) to keep these lines continuous with
+        // #bg-contours. Was just -sr.top back when the canvas started at the section top.
+        sg.save(); sg.translate(0, -(sr.top + ty));
         sg.lineCap = "round"; sg.lineJoin = "round";
         var lineStyle = sec.line;
         if (sec.fadeOut) {
@@ -1692,7 +1775,7 @@ function buildPillReel(pill) {
           ft = ft < 0 ? 0 : ft > 1 ? 1 : ft;
           lineStyle = "rgba(57,50,220," + (sec.lineBaseA * (1 - ft)).toFixed(3) + ")";
         }
-        sg.strokeStyle = lineStyle; sg.lineWidth = 1.1;
+        sg.strokeStyle = lineStyle; sg.lineWidth = LINE_W;
         strokeIso(sg);
         sg.restore();
       }

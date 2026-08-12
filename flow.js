@@ -473,15 +473,6 @@
   function easeOut(t) { return 1 - Math.pow(1 - t, 2); }
   function easeIn(t) { return t * t * t; }
   function smooth(t) { return t * t * (3 - 2 * t); }
-  // A panel's grid offset (_coff) as it was delayMs ago, read from a short history
-  // ring — used to give one card column a true time-delayed entrance at the swap.
-  function coffDelayed(panel, delayMs, now) {
-    var h = panel._coffHist;
-    if (!h || !h.length) return panel._coff;
-    var tt = now - delayMs;
-    for (var i = h.length - 1; i >= 0; i--) { if (h[i].t <= tt) return h[i].v; }
-    return h[0].v;
-  }
 
   /* ---------- Zone-title poses ----------
      A title pose = where the .flow-panel__content sits relative to its rest spot:
@@ -558,26 +549,13 @@
   }
 
   /* ---------- Floating cards: fly-in / rest / fly-out ---------- */
-  var DIRS = {
-    "top": [0, -1], "bottom": [0, 1], "left": [-1, 0], "right": [1, 0],
-    "top-left": [-0.8, -0.8], "top-right": [0.8, -0.8],
-    "bottom-left": [-0.8, 0.8], "bottom-right": [0.8, 0.8]
-  };
-  var cards = [];
-  panels.forEach(function (panel, pi) {
-    Array.prototype.slice.call(panel.querySelectorAll(".flow-card")).forEach(function (el, ci) {
-      cards.push({
-        el: el, panel: pi,
-        from: DIRS[el.dataset.from] || [1, 0],
-        to: DIRS[el.dataset.to] || [-1, 0],
-        depth: parseFloat(el.dataset.depth) || 0.3,
-        tilt: parseFloat(el.dataset.tilt) || 0,
-        stagger: ci * 0.022,
-        fp: 3 + (ci % 3), ph: Math.random() * Math.PI * 2,
-        cx: 0, cy: 0, init: false
-      });
-    });
-  });
+  // NOTE: the old .flow-card "floats" system lived here — a DIRS table of entry/exit
+  // directions (including the diagonals), a cardState() pose function with its own
+  // entry/exit windows, depth parallax, tilt and idle float. It was the DOM half of the
+  // horizontal card journey. Those elements no longer exist in the markup (0 .flow-card
+  // in the page, and no data-from/to/depth/tilt attributes anywhere), so `cards` was
+  // permanently empty and the whole system was unreachable. Removed with the rest of the
+  // horizontal/diagonal machinery — the per-stage .flow-pcard grid carries the cards now.
   /* ---------- Per-stage cards (the GL "image" replaced by 4 square cards) ----------
      Each stage shows a 2x2 grid of square cards reusing the Projects-section
      .proj-card look (notched frame + hover reveal + blue activation). Hovering a
@@ -711,14 +689,16 @@
   // per-COLUMN baseY offset (left col up, right col down) so it's not a flat grid, plus
   // a DEPTH so it drifts toward the cursor by a different amount. Both are folded into
   // the card's own transform (the .flow-panel__cards container still owns the slide).
-  var pcardList = [];
   panels.forEach(function (panel) {
+    // Cards are stored ON their panel: the per-frame pose is a panel-level quantity, so
+    // the loop walks panels and applies one result to that panel's cards.
+    var list = panel._pcards = [];
     Array.prototype.slice.call(panel.querySelectorAll(".flow-panel__cards .flow-pcard")).forEach(function (el, i) {
       // dir matches the reference: left column y = −p, right column y = +p.
-      // panel = owning stage (for the grid's _coff slide); rowSign drives the
-      // per-ROW diagonal enter/exit (top row up, bottom row down) — i<2 = top row
-      // since the 2-col grid is filled row-major.
-      pcardList.push({ el: el, panel: panel, dir: (i % 2 === 0) ? -1 : 1, rowSign: (i < 2) ? -1 : 1 });
+      // panel = owning stage. dir is the only per-card variable left: it picks which of
+      // the panel's two mirrored column poses this card takes. (rowSign used to drive the
+      // per-ROW diagonal enter/exit; that effect is gone with the horizontal slide.)
+      list.push({ el: el, dir: (i % 2 === 0) ? -1 : 1 });
     });
   });
   var mTY = 0, mCY = 0;       // cursor Y target / current (smoothed), normalised −0.5..0.5
@@ -729,27 +709,6 @@
     mTY = e.clientY / window.innerHeight - 0.5;
   }, { passive: true });
 
-  // pp-space: 0 = one zone before, 0.5 = centred, 1 = one zone after. The
-  // entry/exit windows are kept SHORT (0.12 wide) so cards snap into and out of
-  // place over less scroll, with a wider rest band (.36–.64) in between. They
-  // still overlap the neighbouring zone a little (entry starts ~pp .24, exit
-  // ends ~pp .76) so the screen never goes fully empty at the seam. Cards emerge
-  // from a near offset (0.4×) and scale up slightly, so they drift + settle into
-  // place (subtle depth) rather than shooting across and getting clipped.
-  function cardState(c, pp) {
-    var vw = window.innerWidth, vh = window.innerHeight;
-    var ex = c.from[0] * vw * 0.4, ey = c.from[1] * vh * 0.4;
-    var qx = c.to[0] * vw * 0.4, qy = c.to[1] * vh * 0.4;
-    var e0 = 0.24 + c.stagger, e1 = e0 + 0.12;   // tighter entry (compressed scroll)
-    var x0 = 0.64 + c.stagger, x1 = x0 + 0.12;   // tighter exit (compressed scroll)
-    var x, y, op, sc;
-    if (pp <= e0) { x = ex; y = ey; op = 0; sc = 0.9; }
-    else if (pp < e1) { var t = smooth((pp - e0) / (e1 - e0)); x = lerp(ex, 0, t); y = lerp(ey, 0, t); op = t; sc = lerp(0.9, 1, t); }
-    else if (pp < x0) { x = 0; y = 0; op = 1; sc = 1; }   // settled rest
-    else if (pp < x1) { var t2 = (pp - x0) / (x1 - x0); x = lerp(0, qx, t2); y = lerp(0, qy, t2); op = 1 - t2; sc = lerp(1, 0.94, t2); }   // exit = constant speed (linear)
-    else { x = qx; y = qy; op = 0; sc = 0.94; }
-    return { x: x, y: y, op: op, sc: sc };
-  }
 
   /* ---------- Journey spine: wavy path + station nodes ---------- */
   var NODE_PTS = [{ x: 0.12, y: 0.46 }, { x: 0.38, y: 0.70 }, { x: 0.64, y: 0.40 }, { x: 0.90, y: 0.28 }];
@@ -815,154 +774,20 @@
     else window.scrollTo({ top: y, behavior: "smooth" });
   }
 
-  /* ---------- three.js depth scene ---------- */
-  var THREEok = (typeof THREE !== "undefined") && !isMobile && !reduce;
-  var renderer, scene, camera, focal = [], images = [], clock, keyLight, bulbLight, GAP = 14;
-  var IMG_Z = 1;                  // hero plane sits in front, close to camera
-  var BOX_W = 9.5, BOX_H = 6;     // bounding box; each plane fits inside it (kept
-                                  // narrow so the image lives on the RIGHT half,
-                                  // clear of the left-aligned text)
-  var REST_X = 8;                 // right-side entry position; image scrolls from
-                                  // here (right) to centre over a zone
-  var OFF_L = -22;                // off-screen left — where a passed image exits
-  var OFF_R = 22;                 // off-screen right — where the next image waits
-
-  // Resize a group's image plane so it keeps the texture's real aspect ratio
-  // while fitting inside BOX_W×BOX_H.
-  function fitPlane(grp, aspect) {
-    var w = BOX_W, h = BOX_W / aspect;
-    if (h > BOX_H) { h = BOX_H; w = BOX_H * aspect; }
-    var u = grp.userData;
-    u.img.geometry.dispose(); u.img.geometry = new THREE.PlaneGeometry(w, h);
-  }
-
-  // One hero image plane per panel, loaded from panel.dataset.img. A missing
-  // file degrades to a solid indigo placeholder plane so the scene still works
-  // before real assets are dropped into images/flow/.
-  function createImageObject(panel, i) {
-    var grp = new THREE.Group();
-    grp.position.set(i * GAP, 0, IMG_Z);
-
-    // Unlit so the texture shows at its true colours (no light shading / colour
-    // cast / emissive tint). Placeholder colour until the texture loads.
-    var mat = new THREE.MeshBasicMaterial({ color: 0x7b73ff, side: THREE.DoubleSide });
-    var img = new THREE.Mesh(new THREE.PlaneGeometry(BOX_W, BOX_H), mat);
-    grp.add(img);
-
-    var edge = null;   // edge frame removed (was indigo)
-
-    grp.userData = { baseY: 0, amp: 0.4 + (i % 3) * 0.12, fp: 0.5 + i * 0.07, ph: Math.random() * Math.PI * 2, img: img, edge: edge };
-    scene.add(grp); images.push(grp);
-
-    var src = panel.getAttribute("data-img");
-    if (src) {
-      new THREE.TextureLoader().load(src, function (tex) {
-        if ("sRGBEncoding" in THREE) tex.encoding = THREE.sRGBEncoding;
-        mat.map = tex; mat.color.set(0xffffff); mat.needsUpdate = true;
-        var iw = (tex.image && tex.image.width) || 1, ih = (tex.image && tex.image.height) || 1;
-        fitPlane(grp, iw / ih);
-        grp.userData.loaded = true; grp.userData.iw = iw; grp.userData.ih = ih;
-      }, undefined, function (err) {
-        grp.userData.loaded = false; grp.userData.err = (err && err.message) || "load error";
-      });
-    }
-  }
-
-  function initGL() {
-    var canvas = document.createElement("canvas");
-    canvas.className = "flow__gl";
-    canvas.setAttribute("aria-hidden", "true");
-    wrapper.insertBefore(canvas, track);
-    renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    if ("sRGBEncoding" in THREE) renderer.outputEncoding = THREE.sRGBEncoding;
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(55, 1, 0.1, 220);
-    camera.position.set(0, 0, 17);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.85));
-    keyLight = new THREE.DirectionalLight(0xffffff, 0.7); keyLight.position.set(6, 9, 12);
-    scene.add(keyLight);
-    scene.add(keyLight.target);
-    var rim = new THREE.DirectionalLight(0x4d8bff, 0.5); rim.position.set(-7, -3, 5); scene.add(rim);
-
-    // Warm point light driven by the hanging HTML bulb; travels with the camera.
-    bulbLight = new THREE.PointLight(0xfff0d0, 0.0, 60, 2); bulbLight.position.set(9, 7, 9); scene.add(bulbLight);
-
-    // Hero image plane per panel — DISABLED: the panel image is now a DOM grid of
-    // four square project/blog cards (.flow-panel__cards, built below), so the GL
-    // scene renders nothing but the camera/light rig still runs harmlessly. Keeping
-    // createImageObject + the empty render path avoids touching the rest of the loop.
-    // panels.forEach(createImageObject);
-
-    // (Background geometric forms — icosahedron / torus / knot / octahedron — removed.)
-
-    clock = new THREE.Clock();
-    resizeGL();
-  }
-  function resizeGL() {
-    if (!renderer) return;
-    var w = window.innerWidth, h = wrapper.clientHeight || window.innerHeight;
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-  }
-  var glCleared = false;
-  function renderGL(progress, globalRaw) {
-    if (!renderer) return;
-    // Image planes are disabled (createImageObject commented out) and the geometric
-    // forms are gone, so the scene draws nothing visible — rendering it every frame
-    // is a full-viewport GL pass for a transparent output. Clear once so the canvas
-    // is blank, then skip; re-enables itself automatically if planes come back.
-    if (!images.length && !focal.length) {
-      if (!glCleared) { glCleared = true; renderer.render(scene, camera); }
-      return;
-    }
-    var global = progress * (N - 1);
-    if (globalRaw === undefined) globalRaw = global;
-    var gx = progress * (N - 1) * GAP;
-    camera.position.x = gx;
-    camera.position.y = Math.sin(progress * Math.PI * 2) * 0.55;
-    camera.lookAt(gx, 0, IMG_Z);
-    var t = clock.getElapsedTime();
-    var bulbPulse = 0.7 + 0.3 * Math.sin(t * 0.8);   // gentle breathing glow
-
-    // One image at a time. The ACTIVE panel's image is scroll-driven: it enters
-    // from the right (REST_X) and slides LEFT to centre across the zone, using
-    // only the right half until the midpoint — x = REST_X*(0.5 - local), so
-    // scrolling DOWN moves it left. The OTHER images wait off-screen: passed ones
-    // off the LEFT, upcoming ones off the RIGHT. When the active panel flips — the
-    // exact instant the text swaps — the lerp resolves the jump as the quick
-    // switch: the outgoing image shoots off to the LEFT (allowed to use that side
-    // during the change) and the incoming one comes in from the RIGHT.
-    // Use the UNCLAMPED global so the first/last images get entry/exit travel
-    // outside the [0,N-1] band. sel can reach -0 (round(-0.5)) up to N (round of
-    // the upper clamp), so the first image is mid-entry during the lead-in and the
-    // last image becomes "passed" (exits left) at the very end.
-    var sel = Math.round(globalRaw);
-    var local = globalRaw - sel;                          // [-0.5, 0.5], incl. the edge overscroll
-    for (var k = 0; k < images.length; k++) {
-      var g = images[k], u = g.userData;
-      var targetX = (k === sel) ? (REST_X * (0.5 - local)) : (k < sel ? OFF_L : OFF_R);
-      if (u.off === undefined) u.off = targetX;
-      u.off += (targetX - u.off) * 0.08;                  // tracks scroll; softer catch-up so the flip swaps less abruptly
-      g.position.x = camera.position.x + u.off;
-      g.position.y = u.baseY + Math.sin(t * u.fp + u.ph) * u.amp;
-      g.rotation.x = Math.sin(t * 0.3 + k) * 0.01;        // gentle idle sway only (no mouse reaction)
-      g.rotation.y = Math.sin(t * 0.22 + k) * 0.015;
-    }
-
-    for (var i = 0; i < focal.length; i++) {
-      focal[i].rotation.y = t * focal[i].userData.spin;
-      focal[i].rotation.x = Math.sin(t * 0.2 + i) * 0.14;
-    }
-
-    // Warm bulb light pulses gently and travels with the journey.
-    keyLight.position.x = gx + 6; keyLight.target.position.set(gx, 0, IMG_Z);
-    bulbLight.position.x = gx + 9;   // top-right, mirroring the HTML bulb
-    bulbLight.intensity = 0.55 * bulbPulse;
-
-    renderer.render(scene, camera);
-  }
+  /* ---------- Desktop motion flag ----------
+     Was `THREEok`, gating a three.js depth scene. That scene rendered NOTHING:
+     createImageObject was disabled, so `images`/`focal` stayed empty and renderGL
+     early-returned after a single clear — yet the library was still a
+     render-blocking ~145KB gz on the critical path. The whole rig (renderer,
+     scene, camera, lights, TextureLoader, the .flow__gl canvas) is gone, along
+     with the <script> tag in index.html.
+     The FLAG is kept, because it never really meant "GL is up" — it means
+     "desktop, motion allowed", and it still drives two live behaviours: the
+     .flow--gl class (CSS hides .flow-panel__floats above 820px) and skipping the
+     floats' per-frame transform loop. With THREE present and initGL not throwing,
+     THREEok evaluated to exactly `!isMobile && !reduce` — which is this — so the
+     rendered result is unchanged. */
+  var deskFx = !isMobile && !reduce;
 
   /* ---------- Main loop ---------- */
   var lastSel = -1;
@@ -1264,10 +1089,6 @@
     // still undefined/out of band the raw −1 is kept, so zone 1 plays its entry at the pin.
     var csel = (lastCsel !== undefined && lastCsel >= 0 && lastCsel < N)
       ? clamp(cselRaw, 0, N - 1) : cselRaw;
-    // Active stage slides from R_END (right, entry) to L_END (leftmost). R_END=8 is the
-    // original right entry (unchanged). L_END raised 0→2.4 so the card stops short of
-    // centre — 30% less leftward travel. OFF_L/OFF_R = off-screen park (passed/upcoming).
-    var R_END = 8, L_END = 2.4, OFF_L = -22, OFF_R = 22;
     var F = vh / 16.658;                             // 1 world unit in px (2·(17−1)·tan(55°/2))
     // STEP 1 (flow-columns-stationary): the card grid no longer parallax-scrolls
     // horizontally. Every panel's grid is pinned at a fixed REST_X spot (no R_END→OFF
@@ -1336,15 +1157,13 @@
       var exiting = panel._exitT0 !== undefined && (now - panel._exitT0) < CARD_EXIT_MS;
       if (panel._exitT0 !== undefined && !exiting) panel._exitT0 = undefined;  // exit finished
       if (panel._enterT0 !== undefined && (now - panel._enterT0) >= CARD_ENTER_MS) panel._enterT0 = undefined;  // enter finished
-      panel._coff = REST_X;                                   // stationary — no horizontal slide
-      var hist = panel._coffHist || (panel._coffHist = []);   // short history for the delayed column
-      hist.push({ t: now, v: panel._coff });
-      while (hist.length > 1 && hist[1].t < now - 250) hist.shift();
-      if (isActive) { if (!panel._wasActive) panel._arriveT0 = now; panel._wasActive = true; }
-      else panel._wasActive = false;                          // stamp the moment a panel becomes active
+      // The grid is stationary at REST_X (no horizontal slide), so what used to be a
+      // per-frame _coff plus a 250ms history buffer — pushed and shifted every frame, per
+      // panel, to feed a delayed column that no longer exists — is just this constant.
+      panel._cardsOn = isActive || exiting;                   // grid is visible this frame
       var pinX = -(pi * vw + trackX);
-      setSt(cardsEl, "transform", "translate(calc(-50% + " + (panel._coff * F + pinX).toFixed(1) + "px),-50%)");
-      setSt(cardsEl, "opacity", (isActive || exiting) ? "1" : "0");
+      setSt(cardsEl, "transform", "translate(calc(-50% + " + (REST_X * F + pinX).toFixed(1) + "px),-50%)");
+      setSt(cardsEl, "opacity", panel._cardsOn ? "1" : "0");
       // Hit-testable for the WHOLE of the active stage. This used to also require
       // |clocal| < 0.4, which left the outer fifth of every zone — the approach to each
       // threshold — visible but not hoverable, since refreshHover reads elementFromPoint
@@ -1373,94 +1192,48 @@
     splayVel = splayVel * SPLAY_FRICTION + dGlobal * SPLAY_IMPULSE * (1 - SPLAY_FRICTION);
     mSplay = clamp(mSplay + dGlobal * SPLAY_GAIN + splayVel, -SPLAY_MAX, SPLAY_MAX);
     var pScroll = mSplay;          // rem (held; composes with the hover p above)
-    // Per-ROW diagonal — ONLY on the SET-CHANGE swap, NOT the within-zone scroll-slide.
-    // The active set scrubs horizontally inside the rest band [L_END, R_END] (that
-    // right→left slide stays purely horizontal, unchanged). A set only travels OUTSIDE
-    // that band when the active stage changes: arriving from OFF_R or leaving to OFF_L.
-    // So the diagonal is gated to outside-the-band: dn = 0 within [L_END, R_END]; it
-    // ramps 0→1 as the grid heads to OFF_R (arriving) or OFF_L (leaving). A super-linear
-    // dn^P keeps the path flat near the band edge and steep far out — so an arriving set
-    // comes in steep-from-the-corner then eases to horizontal, and a leaving set starts
-    // shallow then steepens as it flies off. rowSign sends the top row up (top-right in /
-    // top-left out), the bottom row down. The column stagger (o.dir·p) is preserved.
-    var DIAG_STEEP = 200, DIAG_P = 1.7;
-    // Two layered effects, BOTH active only on the ENTRANCE/EXIT swap (gated to outside
-    // the rest band [L_END,R_END] via dn / g, so NEITHER does anything while you scroll
-    // within a zone):
-    //  1) Diagonal OFFSET that EASES in — diagY = rowSign·STEEP·dn^P is the target, and
-    //     o.diagCur lerps toward it (per-column rate; the lag column eases in slower), so
-    //     the offset settles into the row instead of snapping. dn=0 in the band ⇒ no
-    //     within-zone offset.
-    //  2) Per-column ENTRANCE DELAY — the LAG column renders the grid position from
-    //     COL_DELAY_MS ago (coffDelayed), so it flies in/out a touch later than the lead
-    //     column. dx is gated by g (0 inside the band) so the lag only happens during the
-    //     swap and fades out as the column joins the band — never during scrolling.
-    // On scroll-BACK the lead/lag (and the fast/slow ease) flip per column.
-    var COL_DELAY_MS = 90, SETTLE_FAST = 0.052, SETTLE_SLOW = 0.048, ARRIVE_WINDOW = 650;
-    var leftLeads = scrollDir >= 0;   // forward: left col leads; back: right col leads
-    for (var pc = 0; pc < pcardList.length; pc++) {
-      var o = pcardList[pc];
-      var coffNow = (o.panel._coff === undefined) ? L_END : o.panel._coff;
-      var isLag = (o.dir < 0) !== leftLeads;                  // the delayed (later) column
-      var coffUse = isLag ? coffDelayed(o.panel, COL_DELAY_MS, now) : coffNow;
-      // Vertical-diagonal ramp: 0 inside the rest band, ramps to 1 off either edge.
-      var g = 0;
-      if (coffUse > R_END) g = clamp((coffUse - R_END) / (OFF_R - R_END), 0, 1);
-      else if (coffUse < L_END) g = clamp((coffUse - L_END) / (OFF_L - L_END), 0, 1);
-      // Horizontal per-column delay is ARRIVAL-ONLY, gated by TIME since the panel became
-      // active — NOT by off-band position. (Position-gating spent the whole delay off the
-      // right edge, so the cards looked aligned by the time they were visible.) wDelay = 1
-      // at the swap, eases to 0 over ARRIVE_WINDOW, covering the visible entrance and then
-      // releasing before the within-zone scrub (no scroll lag). Only the active panel; on
-      // EXIT it's 0 so both columns leave together.
-      var aw = (o.panel._arriveT0 === undefined) ? 0 : clamp(1 - (now - o.panel._arriveT0) / ARRIVE_WINDOW, 0, 1);
-      var wDelay = (o.panel === panels[csel]) ? aw : 0;
-      var dx = isLag ? (coffUse - coffNow) * F * wDelay : 0;
-      var diagTarget = o.rowSign * DIAG_STEEP * Math.pow(g, DIAG_P);  // super-linear off the band
-      var settle = ((o.dir < 0) === leftLeads) ? SETTLE_FAST : SETTLE_SLOW;  // lag col eases slower
-      if (o.diagCur === undefined) o.diagCur = diagTarget;
-      o.diagCur += (diagTarget - o.diagCur) * settle;
-      // Column Y: hover parallax + the held scroll splay — or, if this card's panel is
-      // mid-EXIT (zone swap), a ramp from its captured pose (_exitFrom already includes
-      // any unfinished entry) off past the viewport edge at CONSTANT SPEED — linear, no
-      // acceleration, and it starts the frame the threshold is crossed. o.dir sends the
-      // left column up / the right down for a forward swap; _exitDir mirrors it backward.
-      // The INCOMING zone's columns come in from the OPPOSITE side of the exit (forward:
-      // left col rises from the bottom, right col drops from the top) and EASE OUT into
-      // the neutral pose, then scroll takes over.
-      var FLY_REM = vh / 16 + SPLAY_MAX;
+    // Per-card pose. The grid owns the horizontal placement; each card adds only the
+    // COLUMN STAGGER — left column up, right column down — off a shared yRem, so the two
+    // columns are exact mirrors and there are only ever TWO distinct poses per panel.
+    //
+    // What used to live here: a per-ROW diagonal entry/exit offset and a per-COLUMN
+    // entrance delay, from the era when the grid slid horizontally across the stage
+    // (R_END -> L_END, parking at OFF_L/OFF_R). That slide is gone — the grid is pinned at
+    // REST_X, deliberately inside the old rest band — so every one of those terms
+    // evaluated to a constant 0 on every frame: g was always 0, hence Math.pow(g,1.7) = 0,
+    // hence diagTarget = 0; and coffDelayed() always returned REST_X, hence dx = 0. The
+    // history buffer, its backward scan, the pow, the clamps and the settle lerps all
+    // resolved to translate(0px,0px) for all 13 cards, every frame. Removed rather than
+    // left computing zero.
+    var FLY_REM = vh / 16 + SPLAY_MAX;          // loop-invariant (was recomputed per card)
+    for (var pi2 = 0; pi2 < panels.length; pi2++) {
+      var pnl = panels[pi2];
+      // Skip panels whose grid is not on stage: it is opacity 0 AND a full viewport away,
+      // so its cards were being transformed (and re-rasterised) invisibly. Three of the
+      // four panels are in that state at any moment. The pose is a pure function of the
+      // current scroll//timers, so a skipped panel is correct again on its first visible
+      // frame — nothing to catch up.
+      if (!pnl._cardsOn) continue;
+      // yRem is PANEL-level (the enter/exit ramps live on the panel), so it is computed
+      // once per panel instead of once per card.
       var yRem = p + pScroll;
-      if (o.panel._exitT0 !== undefined) {
-        var et = clamp((now - o.panel._exitT0) / CARD_EXIT_MS, 0, 1);
-        yRem = p + lerp(o.panel._exitFrom, o.panel._exitTo, et);
-      } else if (o.panel._enterT0 !== undefined) {
-        var nt = clamp((now - o.panel._enterT0) / CARD_ENTER_MS, 0, 1);
-        var ef = (o.panel._enterFrom === undefined) ? -FLY_REM * o.panel._enterDir : o.panel._enterFrom;
+      if (pnl._exitT0 !== undefined) {
+        var et = clamp((now - pnl._exitT0) / CARD_EXIT_MS, 0, 1);
+        yRem = p + lerp(pnl._exitFrom, pnl._exitTo, et);
+      } else if (pnl._enterT0 !== undefined) {
+        var nt = clamp((now - pnl._enterT0) / CARD_ENTER_MS, 0, 1);
+        var ef = (pnl._enterFrom === undefined) ? -FLY_REM * pnl._enterDir : pnl._enterFrom;
         yRem = p + pScroll + ef * (1 - nt) * (1 - nt);   // ease-out: decelerates into place
       }
-      setSt(o.el, "transform", "translate(" + dx.toFixed(1) + "px," + o.diagCur.toFixed(1) + "px) translateY(" + (o.dir * yRem).toFixed(3) + "rem)");
+      // Two poses, two toFixed calls per panel — not three per card.
+      var upPose = "translateY(" + (-yRem).toFixed(3) + "rem)";
+      var downPose = "translateY(" + yRem.toFixed(3) + "rem)";
+      var list = pnl._pcards;
+      for (var k = 0; k < list.length; k++) {
+        var o = list[k];
+        setSt(o.el, "transform", o.dir < 0 ? upPose : downPose);
+      }
     }
-
-    // On desktop the GL image planes replace the DOM card floats (hidden via
-    // CSS), so skip their per-frame transforms entirely. Mobile never reaches
-    // this loop (it returns early in boot), so the card code still serves it.
-    if (!THREEok) cards.forEach(function (c) {
-      var pp = 0.5 + (global - c.panel) * 0.5;
-      var st = cardState(c, pp);
-      if (!c.init) { c.cx = st.x; c.cy = st.y; c.csc = st.sc; c.init = true; }
-      c.cx += (st.x - c.cx) * 0.14;
-      c.cy += (st.y - c.cy) * 0.14;
-      c.csc += (st.sc - c.csc) * 0.14;
-      var floatY = Math.sin(now / 1000 / c.fp + c.ph) * 7;
-      // Depth parallax tied to scroll position: the card keeps drifting through
-      // its whole visible window (not just on entry/exit), so even at rest the
-      // scene reads as one continuous space you travel through, not four slides.
-      var par = (pp - 0.5) * c.depth * 220;
-      c.el.style.transform = "translate3d(" + (c.cx + par) + "px," + (c.cy + floatY) + "px,0) scale(" + c.csc.toFixed(3) + ") rotate(" + c.tilt + "deg)";
-      c.el.style.opacity = st.op;
-    });
-
-    if (THREEok) renderGL(progress, globalRaw);
 
     // The spine (curve) is fixed; the nodes flow ALONG it in unison — left as you
     // scroll forward, right as you scroll back. Each node's x is driven directly
@@ -1522,33 +1295,9 @@
   /* ---------- Debug overlay (?debug) ---------- */
   function updateDebug(progress, global) {
     var lines = [];
-    lines.push("THREEok=" + THREEok + "  flow--gl=" + flow.classList.contains("flow--gl"));
-    if (renderer) {
-      var sz = renderer.getSize(new THREE.Vector2());
-      lines.push("canvas " + Math.round(sz.x) + "x" + Math.round(sz.y) + "  rect.top=" + Math.round(flow.getBoundingClientRect().top));
-    } else {
-      lines.push("renderer = NONE (GL never initialised)");
-    }
-    lines.push("progress=" + progress.toFixed(3) + " global=" + global.toFixed(2) + " camX=" + (camera ? camera.position.x.toFixed(1) : "-"));
-    if (renderer && renderer.info) lines.push("draws=" + renderer.info.render.calls + " tris=" + renderer.info.render.triangles);
-    var cv = renderer && renderer.domElement;
-    if (cv) { var cs = getComputedStyle(cv); lines.push("canvas vis=" + cs.visibility + " op=" + cs.opacity + " disp=" + cs.display + " z=" + cs.zIndex); }
-    lines.push("images=" + images.length);
-    for (var k = 0; k < images.length; k++) {
-      var g = images[k], u = g.userData;
-      var gp = u.img.geometry.parameters || {};
-      var v = g.position.clone(); if (camera) v.project(camera);
-      var onScreen = Math.abs(v.x) <= 1 && Math.abs(v.y) <= 1 && v.z > -1 && v.z < 1;
-      var hit = "";
-      if (onScreen) {
-        var px = (v.x * 0.5 + 0.5) * window.innerWidth, py = (-v.y * 0.5 + 0.5) * window.innerHeight;
-        var el = document.elementFromPoint(px, py);
-        hit = " topEl=" + (el ? (el.tagName + "." + (typeof el.className === "string" ? el.className.split(" ")[0] : "")) : "null");
-      }
-      lines.push("  #" + k + " loaded=" + (u.loaded === true ? "Y" : u.loaded === false ? "ERR(" + (u.err || "") + ")" : "…") +
-        " plane=" + (gp.width ? gp.width.toFixed(1) + "x" + gp.height.toFixed(1) : "?") +
-        " screen=(" + (v.x * 50 + 50).toFixed(0) + "%," + (50 - v.y * 50).toFixed(0) + "%) " + (onScreen ? "ON" : "off") + hit);
-    }
+    lines.push("deskFx=" + deskFx + "  flow--gl=" + flow.classList.contains("flow--gl"));
+    lines.push("rect.top=" + Math.round(flow.getBoundingClientRect().top));
+    lines.push("progress=" + progress.toFixed(3) + " global=" + global.toFixed(2));
     dbg.textContent = lines.join("\n");
   }
 
@@ -1563,12 +1312,10 @@
   window.addEventListener("resize", function () {
     vh = window.innerHeight;
     cdLineHeight();
-    resizeGL();
-    cards.forEach(function (c) { c.init = false; });
   });
-  if (THREEok) {
-    try { initGL(); flow.classList.add("flow--gl"); } catch (e) { THREEok = false; }
-  }
+  // .flow--gl is now purely a CSS hook: above 820px it hides .flow-panel__floats,
+  // whose per-frame transform loop is skipped in step with it (see deskFx).
+  if (deskFx) flow.classList.add("flow--gl");
   if (DEBUG) {
     dbg = document.createElement("pre");
     dbg.style.cssText = "position:fixed;left:8px;bottom:8px;z-index:9999;margin:0;padding:8px 10px;background:rgba(5,4,25,.85);color:#9cff9c;font:11px/1.4 monospace;white-space:pre;pointer-events:none;border-radius:6px;max-width:90vw";
