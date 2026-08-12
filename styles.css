@@ -16,7 +16,18 @@ header.header--on-light .header__nav-left a .nav-char__a,header.header--on-light
 /* Vanta NET background lives full-screen behind everything (continuous,
    like the reference's fixed Three.js canvas). Light blue-grey scene. */
 #app{position:fixed;inset:0;width:100vw;height:100vh;z-index:-1;pointer-events:none}
-#vanta-bg{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+/* Global background. Was a three.js fullscreen ShaderMaterial whose fragment shader
+   declared u_time but never used it — a STATIC vertical gradient + vignette, redrawn
+   as a full-viewport WebGL pass every frame. Reproduced here as a static paint:
+   linear  = mix(#0a0f1c bottom, #0f1628 top), the shader's DARK2->DARK on uv.y;
+   radial  = the vignette, mix(0.82,1.04,vig) — a slight lift at centre falling to
+             ~0.94 in the corners. */
+#vanta-bg{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(ellipse 105% 105% at 50% 50%,
+      rgba(0,0,0,0) 60%,
+      rgba(0,0,0,.075) 100%),
+    linear-gradient(to top, #0a0f1c 0%, #0f1628 100%)}
 body{background-color:#1b2236}
 /* content pages sit on a solid surface (no Vanta behind text) */
 .subpage-body{background-color:#1b2236}
@@ -141,10 +152,11 @@ body.nav-open{overflow:hidden}
 .hero-spacer{min-height:316svh}/* 300 base + 16 (HERO_DWELL 0.16·vh) for the fullscreen checkpoint dwell */
 
 /* ============================================================
-   Flow — three.js parallax journey (2026-06-16)
+   Flow — parallax journey (2026-06-16)
    500vh section; the wrapper pins for one screen and four stages
-   slide left. A transparent three.js canvas (.flow__gl) renders the
-   depth scene behind the DOM content; the journey spine stays pinned.
+   slide left. DOM carries all the content; the journey spine stays
+   pinned. (A three.js depth canvas used to sit here — it rendered
+   nothing and was removed along with the library.)
    ============================================================ */
 .flow{height:500vh;background:transparent}
 .flow__wrapper{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
@@ -155,9 +167,6 @@ body.nav-open{overflow:hidden}
    making flow's end ~rgb(198,218,237) vs the writing section's bare #d0e1eb — a subtle
    shade seam. Now flow bottoms out at the same #d0e1eb contour bg as writing. */
 .flow__horizon{display:none}
-
-/* three.js canvas — between sky and content */
-.flow__gl{position:absolute;inset:0;z-index:1;width:100%;height:100%;pointer-events:none}
 
 /* Horizontal track of four full-viewport stages */
 .flow__track{position:absolute;inset:0;z-index:2;display:flex;width:400vw;height:100%;will-change:transform}
@@ -221,7 +230,7 @@ body.nav-open{overflow:hidden}
 @media (max-width:820px){
   .flow{height:auto}
   .flow__wrapper{position:relative;height:auto;overflow:visible}
-  .flow__gl,.flow__sky,.flow__horizon,.flow-journey{display:none}
+  .flow__sky,.flow__horizon,.flow-journey{display:none}
   .flow__track{position:relative;flex-direction:column;width:100%;transform:none!important}
   .flow-panel{width:100%;height:auto;padding:88px 24px 40px;background:linear-gradient(180deg,#e8eef7,#f5f6f9)}
   .flow-panel:nth-child(2){background:linear-gradient(180deg,#eaedf5,#f6f6f9)}
@@ -235,10 +244,11 @@ body.nav-open{overflow:hidden}
   .flow-card{position:relative!important;left:auto!important;top:auto!important;width:100%!important;transform:none!important;opacity:1!important;backdrop-filter:none;background:#fff}
   .flow-card--focal{width:100%!important}
 }
-/* ---- Flow 3D image objects (desktop GL replaces the DOM card floats) ---- */
 /* The reference's global `canvas{opacity:0}` (only `canvas.is-ready` is shown)
-   was hiding our WebGL canvases — they never get .is-ready. Force them visible. */
-.flow__gl,#vanta-bg canvas,#bg-contours,#hero-contours,#writing-contours,.section-contours,.term-side-contours{opacity:1}
+   was hiding our contour canvases — they never get .is-ready. Force them visible. */
+#bg-contours,#hero-contours,#writing-contours,.section-contours,.term-side-contours{opacity:1}
+/* .flow--gl is set by flow.js on desktop with motion allowed (was: "GL initialised").
+   The DOM card floats stay hidden there — the per-stage cards carry the motion. */
 @media (min-width:821px){.flow--gl .flow-panel__floats{display:none}}
 
 /* Scroll cue: white text. Exit = reverse of its entrance (label slides back down into the
@@ -458,8 +468,13 @@ header .header__nav-left a{color:#050419;font-size:16px}
    out of the blog section through them. Text recolours to light.
    ============================================================ */
 .features,.standards,.faq{background:transparent;background-color:transparent}
-/* per-section contour canvas sits behind the content */
-.section-contours{position:absolute;inset:0;z-index:0;pointer-events:none}
+/* Per-section contour canvas, behind the content. NOT stretched to the section
+   (no `inset:0`): the bitmap is viewport-sized and main.js slides it down the
+   section with a transform to track the visible window — a section-tall canvas
+   meant .features carried a 1920x2160 bitmap (66MB at DPR 2) that was cleared,
+   filled and re-uploaded to the GPU every frame to show one viewport of it.
+   Height is set from JS; transform is the per-frame offset. */
+.section-contours{position:absolute;left:0;top:0;width:100%;z-index:0;pointer-events:none;will-change:transform}
 /* keep each section's real content above its canvas */
 .features__sticky,.standards__container,.faq__container{position:relative;z-index:1}
 
