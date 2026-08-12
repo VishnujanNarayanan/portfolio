@@ -53,6 +53,39 @@
   var cdStack = flow.querySelector(".flow__cd-stack");
   var flowCd = flow.querySelector(".flow__cd");   // CLI wrapper — carries the scroll-darkened colour vars
   var writingEl = document.getElementById("blog"); // the writing/blog section — drives the exit approach
+
+  /* ---------- Geometry cache ----------
+     getBoundingClientRect / clientWidth / offsetHeight FLUSH style+layout. Called from
+     the per-frame loop they force a synchronous reflow of a ~17,000px document, which
+     measured at 10-17ms/frame — several times the cost of everything this loop actually
+     computes. None of the geometry they read changes while scrolling: a section's
+     position in the DOCUMENT and its size are functions of layout, not of scroll.
+     So measure once, then derive the viewport rect as (documentTop - scrollY).
+     window.scrollY does not flush layout, so the per-frame path becomes read-free.
+     Re-measured on resize (and after load, when fonts/images can still shift things). */
+  var geo = { flowTop: 0, flowH: 0, wrTop: 0, wrH: 0, jw: 0 };
+  function measureGeo() {
+    var sy = window.scrollY || window.pageYOffset || 0;
+    var r = flow.getBoundingClientRect();
+    geo.flowTop = r.top + sy;
+    geo.flowH = r.height;
+    if (writingEl) {
+      var w = writingEl.getBoundingClientRect();
+      geo.wrTop = w.top + sy; geo.wrH = w.height;
+    }
+    geo.jw = (journey && journey.clientWidth) || window.innerWidth;
+  }
+  function scrollNow() { return window.scrollY || window.pageYOffset || 0; }
+  // Same shape as a DOMRect for the properties this file reads (top/bottom/height).
+  function flowRect() {
+    var t = geo.flowTop - scrollNow();
+    return { top: t, bottom: t + geo.flowH, height: geo.flowH };
+  }
+  function writingRect() {
+    if (!writingEl) return null;
+    var t = geo.wrTop - scrollNow();
+    return { top: t, bottom: t + geo.wrH, height: geo.wrH };
+  }
   // The stack is an APPEND-ONLY terminal log, like a real shell: the `cd highlights`
   // row is committed first, then every zone threshold crossed — forward OR backward —
   // appends a NEW `cat domain N` row UNDER the last one and the whole stack scrolls up.
@@ -102,7 +135,7 @@
   function positionTerminal(rect) {
     if (!cdEl) return;
     var vhh = window.innerHeight;
-    if (window.innerWidth <= 820) { cdEl.style.position = ""; cdEl.style.top = ""; cdEl.style.opacity = ""; lastCdTop = null; return; }
+    if (window.innerWidth <= 820) { cdEl.style.position = ""; cdEl.style.top = ""; cdEl.style.transform = ""; cdEl.style.opacity = ""; lastCdTop = null; return; }
     cdEl.style.position = "fixed";
     // z-index stays LOW (1) through hero/ride/pin so the CLI sits UNDER the hero video (hidden
     // until the zoom-out reveals it); it's only lifted above the blog panel during the exit slide.
@@ -128,7 +161,7 @@
       // move it up 1:1 WITH the blog's rise — the same speed as the section itself — so it
       // reads as attached to the blog, sliding away as it takes the full page. It's never
       // covered (its z-index sits above the blog panel while sliding).
-      var wr0 = writingEl ? writingEl.getBoundingClientRect() : null;
+      var wr0 = writingRect();
       if (wr0) {
         var slideStart = vhh * 0.21;                       // blog top at 21% down ⟺ blog covers 79%
         if (wr0.top < slideStart) {
@@ -141,8 +174,12 @@
         top = termREST - (vhh - rect.bottom);
       }
     }
-    var ts = top.toFixed(1) + "px";
-    if (ts !== lastCdTop) { lastCdTop = ts; cdEl.style.top = ts; }
+    // Same reason as the journey nodes: `top` is a layout property and this runs every
+    // frame. The CSS base is top:calc(var(--header-height) + 18px), which is exactly
+    // termREST, so offsetting from it by transform lands in the identical place while
+    // invalidating nothing. (At the pin, top === termREST → translateY(0).)
+    var ts = (top - termREST).toFixed(1);
+    if (ts !== lastCdTop) { lastCdTop = ts; cdEl.style.transform = "translateY(" + ts + "px)"; }
     if (wantZ !== lastCdZ) { lastCdZ = wantZ; cdEl.style.zIndex = wantZ; }
     // No fade-in — the CLI is fully visible as soon as it's positioned (it now sits UNDER the
     // video in z-index, so the video zoom-out reveals it rather than it fading up over the top).
@@ -761,8 +798,11 @@
     return last.y;
   }
   nodeEls.forEach(function (n, i) {
-    n.style.left = (NODE_PTS[i].x * 100) + "%";
-    n.style.top = (NODE_PTS[i].y * VBH) + "px";
+    // Base offsets stay at 0 — the per-frame transform carries the whole position (see
+    // the loop). These used to seed a left/top placement that the first frame overwrote
+    // anyway; leaving them set would now double-count against the transform.
+    n.style.left = "0px";
+    n.style.top = "0px";
     n.addEventListener("click", function () { jumpTo(i); });
   });
   function jumpTo(i) {
@@ -799,6 +839,7 @@
   var navOn = false;   // top-nav reel state; fired once per threshold crossing
   var vh = window.innerHeight;
   var lastHitT = 0;    // loop-side hover hit-test throttle stamp
+  var hoverDue = false;  // set at the end of a frame, serviced at the top of the next
   // Change-gate caches: a style/custom-prop write with an UNCHANGED value still
   // invalidates paint on its subtree, so each scroll-lerped colour remembers its
   // last written string and only touches the DOM when the rounded value moves.
@@ -819,7 +860,17 @@
   function schedule() { if (!flowRaf && !document.hidden) flowRaf = requestAnimationFrame(loop); }
   function loop() {
     flowRaf = 0;
-    var rect = flow.getBoundingClientRect();
+    // Hover hit-test FIRST, before this frame writes any styles. elementFromPoint
+    // flushes style+layout, and it used to run at the END of the loop — after every
+    // transform/opacity write — so it always paid for a full reflow (measured at
+    // ~13-16ms per call, the single most expensive thing in the frame). Run at the
+    // top, the pending layout is whatever the browser already committed for this
+    // frame, so the flush is cheap or free. Still throttled: cards drift slowly and
+    // deliberate pointer moves are handled immediately by the pointermove listener.
+    if (hoverDue && performance.now() - lastHitT > 90) {
+      lastHitT = performance.now(); hoverDue = false; refreshHover();
+    }
+    var rect = flowRect();
     // Off-screen early-outs — skip the whole per-frame body when the section can't
     // be seen. Below the viewport (approaching): the fixed CLI terminal is still on
     // stage during the hero video zoom-out, so keep just it alive (approachP is 0 and
@@ -842,7 +893,7 @@
       driveBlogHandover(rect.bottom);
       // Keep looping only while the blog is still on screen (the terminal is sliding away over
       // it); once the blog has scrolled fully past, nothing flow-related is visible → dormant.
-      var wr = writingEl ? writingEl.getBoundingClientRect() : null;
+      var wr = writingRect();
       if (wr && wr.bottom > 0) schedule();
       return;
     }
@@ -1261,12 +1312,20 @@
     }
 
     if (nodesEl && curveXY.length) {
-      var jw = journey.clientWidth || vw;
+      var jw = geo.jw || vw;
       var SPACING = VBW * 0.42;               // viewBox gap between adjacent nodes
       nodeEls.forEach(function (n, i) {
         var vbX = VBW / 2 + (i - global) * SPACING;
-        setSt(n, "left", (vbX / VBW * jw).toFixed(1) + "px");
-        setSt(n, "top", yAtX(vbX).toFixed(1) + "px");
+        // Positioned by TRANSFORM, not left/top. left/top are LAYOUT properties: writing
+        // them every frame dirtied layout for the whole document, so the next
+        // getBoundingClientRect (this loop's own, at the top of the next frame) had to
+        // pay for a full reflow of a 17,000px page. Measured at ~15.5ms/frame. A
+        // transform composites and invalidates nothing. The -50%,-50% is the centring
+        // that .flow-journey__node used to carry in CSS; percentages resolve against the
+        // element's own box and px against the container, so the composed result is
+        // identical to the old left/top placement.
+        setSt(n, "transform", "translate(-50%,-50%) translate(" +
+          (vbX / VBW * jw).toFixed(1) + "px," + yAtX(vbX).toFixed(1) + "px)");
         // Pop in one-by-one as the drawing frontier sweeps past each node (so the
         // first node appears, then the second…); once fully drawn all are present.
         n.classList.toggle("flow-journey__node--in", drawP >= 1 || vbX <= drawnX + 6);
@@ -1285,9 +1344,8 @@
     // to skip the layout flush when nothing under the cursor is moving, and throttled —
     // elementFromPoint forces a style/layout flush, so at most ~11 hit-tests/s from the
     // loop (pointermove stays immediate); cards drift slowly enough that this tracks.
-    if (hoverX >= 0 && (sceneScrolled || Math.abs(mTY - mCY) > 1e-4) && now - lastHitT > 90) {
-      lastHitT = now; refreshHover();
-    }
+    // (the hit-test now runs at the TOP of the next frame — see hoverDue)
+    hoverDue = hoverX >= 0 && (sceneScrolled || Math.abs(mTY - mCY) > 1e-4);
 
     schedule();
   }
@@ -1309,8 +1367,14 @@
     return;
   }
   cdLineHeight();
+  measureGeo();
+  // Late layout shifts (web fonts swapping, images arriving) move sections in the
+  // document, so re-measure once everything has settled rather than trusting boot.
+  window.addEventListener("load", measureGeo);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureGeo);
   window.addEventListener("resize", function () {
     vh = window.innerHeight;
+    measureGeo();
     cdLineHeight();
   });
   // .flow--gl is now purely a CSS hook: above 820px it hides .flow-panel__floats,
