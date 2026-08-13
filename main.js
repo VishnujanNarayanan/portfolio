@@ -3248,11 +3248,19 @@ function buildPillReel(pill) {
     // → overflow 0 → height 100vh → no extra pin, so you scroll on out of the section
     // normally (no fixed dead-zone). Recomputed on init, resize, and every filter change.
     function sizeSection() {
-      if (window.innerWidth <= 820) { sec.style.height = ""; return; } // mobile: natural flow
-      sec.style.height = (window.innerHeight + cardOverflow()) + "px";
+      var prevH = sec.style.height;
+      if (window.innerWidth <= 820) { sec.style.height = ""; }         // mobile: natural flow
+      else sec.style.height = (window.innerHeight + cardOverflow()) + "px";
+      if (sec.style.height === prevH) return;            // nothing moved; don't re-measure
       measureSec();                                      // height just changed
       // .features just changed height — the contour loop caches section geometry.
       if (window.__remeasureContours) window.__remeasureContours();
+      // ...and so does every scroll effect BELOW this section: changing the pin length
+      // moves them in the DOCUMENT, but their cached document-top was measured against
+      // the OLD height. Without this their thresholds fire at the wrong scroll position
+      // — most visibly the socials fan, whose cards spread early/late by exactly the
+      // height delta after the reveal's post-collapse re-size (and after every filter).
+      window.dispatchEvent(new Event("layoutshift"));
     }
     // ---- Column stagger ----
     // The EVEN columns (2 and 4, i.e. zero-based index 1 and 3) sit half a card lower
@@ -3662,6 +3670,10 @@ function buildPillReel(pill) {
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", () => { measureSizeFactor(); measureLayout(); if (mq.matches) clearMobile(); else { evalReveal(); kick(); } });
   window.addEventListener("load", () => { measureSizeFactor(); measureLayout(); });
+  // The projects terminal sets .features' height from JS (at the reveal, on resize and on
+  // every filter click), which shifts this section's DOCUMENT position — re-measure and
+  // re-evaluate the trigger, or the fan opens against a stale position.
+  window.addEventListener("layoutshift", () => { measureLayout(); if (!mq.matches) { evalReveal(); kick(); } });
   if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
   if ("IntersectionObserver" in window) {
     const host = layout.closest("section") || layout;
@@ -3704,6 +3716,8 @@ function buildPillReel(pill) {
   }
   window.addEventListener("resize", measureStack, { passive: true });
   window.addEventListener("load", measureStack);
+  // .features' JS-set height moves this stack in the document (see sizeSection).
+  window.addEventListener("layoutshift", function () { measureStack(); onScroll(); });
   function render() {
     ticking = false;
     if (stackTop === null) measureStack();
