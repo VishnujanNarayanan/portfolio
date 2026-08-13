@@ -8,6 +8,41 @@
    sub-page (hover reel only) need it — it used to be defined inside the `if
    (hero)` block, so on sub-pages the pills were plain text and hovering them did
    nothing. The roll itself is CSS on :hover; this only builds the markup. */
+/* The same reel for a PLAIN text link or button — one that has no .pill-btn-span
+   wrapper and no colour world to flip, so each letter needs only the hover roller
+   (__col) and the identical clone (__c) rising from below. The cert gallery's Back
+   button grew this inline first; the footer email link and the socials links want
+   the identical effect, so it lives here once. CSS does the roll on :hover — see the
+   .cert-gallery__back / .lfooter__email / .callout-socials-link block in styles.css.
+   An aria-label already on the element is left alone (Back to home says something
+   different from its visible text); otherwise the visible text becomes the label,
+   because the letters themselves are split into aria-hidden spans. */
+function buildLinkReel(el) {
+  if (!el || el.querySelector(".pill-char")) return el;   // missing or already built
+  var txt = el.textContent.trim();
+  if (!txt) return el;
+  if (!el.getAttribute("aria-label")) el.setAttribute("aria-label", txt);
+  el.textContent = "";
+  for (var i = 0; i < txt.length; i++) {
+    var clip = document.createElement("span");
+    clip.className = "pill-char"; clip.setAttribute("aria-hidden", "true");
+    clip.style.setProperty("--hd", (i * 0.022).toFixed(3) + "s");   // left→right stagger
+    var col  = document.createElement("span"); col.className  = "pill-char__col";
+    var face = document.createElement("span"); face.className = "pill-char__face"; face.textContent = txt[i];
+    var c    = document.createElement("span"); c.className    = "pill-char__c";    c.textContent    = txt[i];
+    col.appendChild(face); col.appendChild(c); clip.appendChild(col); el.appendChild(clip);
+  }
+  return el;
+}
+
+/* Footer email link + the three links under the socials cards get that reel. Both are
+   plain <a>s, present on every page (the email) or the homepage only (the socials),
+   so this runs unconditionally and no-ops on whatever is absent. */
+(function buildTextLinkReels() {
+  buildLinkReel(document.querySelector(".lfooter__email"));
+  Array.prototype.forEach.call(document.querySelectorAll(".callout-socials-link"), buildLinkReel);
+})();
+
 function buildPillReel(pill) {
   if (!pill) return null;
   var span = pill.querySelector(".pill-btn-span"); if (!span) return null;
@@ -174,7 +209,9 @@ function buildPillReel(pill) {
     // The critical assets are cached, so the only thing still worth doing is priming
     // the hero video's decoder; that runs in the background instead of gating.
     if (seen() && !isReload()) {
-      boot.style.display = "none";
+      // Nothing to hide: #boot-loader is display:none until html.boot-active says
+      // otherwise, which this path never sets. Hiding it from JS was too late — the
+      // first frame had already painted it black.
       warmCritical();
       bootResolve();
       applyHash();
@@ -1074,21 +1111,11 @@ function buildPillReel(pill) {
 
     // ---- Close triggers: back button, Esc, and reaching the end of the gallery scroll. ----
     var backBtn = gallery && gallery.querySelector(".cert-gallery__back");
-    // Give the back button the nav-pill REEL: wrap each letter in a clip whose __col rolls up on
-    // hover to reveal an identical __c clone rising from below (staggered left→right via --hd).
-    if (backBtn) {
-      var backTxt = backBtn.textContent;
-      backBtn.setAttribute("aria-label", "Back to home");
-      backBtn.textContent = "";
-      for (var bi = 0; bi < backTxt.length; bi++) {
-        var bclip = document.createElement("span"); bclip.className = "pill-char"; bclip.setAttribute("aria-hidden", "true");
-        bclip.style.setProperty("--hd", (bi * 0.022).toFixed(3) + "s");
-        var bcol = document.createElement("span"); bcol.className = "pill-char__col";
-        var bface = document.createElement("span"); bface.className = "pill-char__face"; bface.textContent = backTxt[bi];
-        var bc = document.createElement("span"); bc.className = "pill-char__c"; bc.textContent = backTxt[bi];
-        bcol.appendChild(bface); bcol.appendChild(bc); bclip.appendChild(bcol); backBtn.appendChild(bclip);
-      }
-    }
+    // Give the back button the nav-pill REEL (see buildLinkReel at the top of this file):
+    // each letter becomes a clip whose __col rolls up on hover to reveal an identical __c
+    // clone rising from below, staggered left→right. Its markup already carries
+    // aria-label="Back to home", which the builder leaves alone.
+    buildLinkReel(backBtn);
     if (backBtn) backBtn.addEventListener("click", closeCertGallery);
     // "Scroll to see more" hint: hide it once the last certificate is reached (nothing more below).
     var hintEl = gallery && gallery.querySelector(".cert-gallery__hint");
