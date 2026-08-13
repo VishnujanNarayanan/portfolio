@@ -760,7 +760,11 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .proj-card:hover .proj-card__img{transform:scale(1.06);filter:saturate(1.05) brightness(1.03)}
 /* Inverted: blue reveal panel is OPEN by default (blue tint), and the SAME wipe
    animation closes it on hover/active to expose the full-colour photo. */
-.proj-card__reveal{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;padding:22px;background:linear-gradient(160deg,rgba(28,31,42,.72),rgba(56,61,80,.92));clip-path:polygon(0% -14%,12.5% -7.9%,25% -3.5%,37.5% -0.9%,50% 0%,62.5% -0.9%,75% -3.5%,87.5% -7.9%,100% -14%,100% 100%,0% 100%);transition:clip-path .32s cubic-bezier(.4,0,.2,1)}
+.proj-card__reveal{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;padding:22px;background:linear-gradient(160deg,rgba(28,31,42,.72),rgba(56,61,80,.92));/* Lid edge = a parabola: depth at x is A*((x-50)/50)^2, so the single number A is the
+   curviness. A was 14%, which bowed hard enough to read as a scallop; 6% keeps the
+   curve legible without the pronounced dip. Recompute all four intermediate pairs
+   from A if you change it — they are not independent. */
+  clip-path:polygon(0% -6%,12.5% -3.4%,25% -1.5%,37.5% -0.4%,50% 0%,62.5% -0.4%,75% -1.5%,87.5% -3.4%,100% -6%,100% 100%,0% 100%);transition:clip-path .32s cubic-bezier(.4,0,.2,1)}
 .proj-card:hover .proj-card__reveal,.proj-card:focus-within .proj-card__reveal{clip-path:polygon(0% 100%,12.5% 100%,25% 100%,37.5% 100%,50% 100%,62.5% 100%,75% 100%,87.5% 100%,100% 100%,100% 100%,0% 100%);transition:clip-path .65s cubic-bezier(.19,1,.22,1)}
 .proj-card__desc{font-size:13.5px;line-height:1.55;color:#fff}
 /* notched frame (two layers; overlay lights up on hover) */
