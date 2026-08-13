@@ -3,7 +3,12 @@
   Edit ONLY this file, then run:  node scripts/gen-partials.mjs
 
   Tokens:
-    {{HOME}}       '' on the homepage (so in-page anchors scroll in place), '/' elsewhere
+    {{TO}}<id>     a homepage SECTION link. '#<id>' on the homepage (a plain in-page
+                   scroll), '/?go=<id>' elsewhere — NOT '/#<id>', because a fragment
+                   does not survive a cross-document navigation here and the visitor
+                   lands on the hero instead. main.js reads ?go= on arrival and tidies
+                   the URL back to /#<id>. See {{TO}} in scripts/gen-partials.mjs.
+    {{HOME}}       '' on the homepage, '/' elsewhere (for non-section links)
     {{BLOG}}       '/blog/' on every page
     {{HOME_HREF}}  '#top' on the homepage (scroll to the hero), '/' elsewhere
 
@@ -15,17 +20,14 @@
 -->
 <header class="show">
   <nav class="header__nav-left" aria-label="Primary navigation">
-    <!-- Projects points at the Blog index for now: the projects write-ups will be
-         added to that page later, so it deliberately shares Blog's destination
-         rather than scrolling to the homepage's #projects terminal section. -->
-    <a href="{{BLOG}}">Projects</a>
-    <a href="{{HOME}}#contact">Contact</a>
+    <a href="{{TO}}projects">Projects</a>
+    <a href="{{TO}}contact">Contact</a>
     <a href="{{BLOG}}">Blog</a>
     <a href="{{HOME_HREF}}">Home</a>
   </nav>
   <nav class="header__nav-right" aria-label="Header actions">
     <div class="header__ctas">
-      <a href="{{HOME}}#socials" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Socials</span></a>
+      <a href="{{TO}}socials" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Socials</span></a>
       <button type="button" class="pill-btn pill-btn--dark" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button>
     </div>
     <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
@@ -47,12 +49,12 @@
       </div>
       <ul class="mobile-nav__list">
         <li class="mobile-nav__item"><a href="{{HOME_HREF}}">Home</a></li>
-        <li class="mobile-nav__item"><a href="{{BLOG}}">Projects</a></li>
-        <li class="mobile-nav__item"><a href="{{HOME}}#contact">Contact</a></li>
+        <li class="mobile-nav__item"><a href="{{TO}}projects">Projects</a></li>
+        <li class="mobile-nav__item"><a href="{{TO}}contact">Contact</a></li>
         <li class="mobile-nav__item"><a href="{{BLOG}}">Blog</a></li>
       </ul>
       <div class="mobile-nav__ctas">
-        <div class="mncta"><a href="{{HOME}}#socials" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Socials</span></a></div>
+        <div class="mncta"><a href="{{TO}}socials" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Socials</span></a></div>
         <div class="mncta"><button type="button" class="pill-btn pill-btn--dark mobile-nav__cta" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button></div>
       </div>
     </div>
