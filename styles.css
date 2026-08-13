@@ -257,7 +257,7 @@ body.nav-open{overflow:hidden}
 .hero.show .hero__scroll-btn.is-exiting .hsbtn-in{transform:translate3d(0,calc(100% + 7px),0);transition-duration:.13s;transition-timing-function:cubic-bezier(.4,0,1,1)}
 .hero.show .hero__scroll-btn.is-exiting>span:after{transform:scaleX(0) translateZ(0);transition-duration:.11s;transition-delay:0s}
 
-/* Header over the hero: white "Hire Me" + white, slightly larger left nav links. */
+/* Header over the hero: white "Socials" pill + white, slightly larger left nav links. */
 .pill-btn--glass{color:#050419}
 header .header__nav-left a{color:#050419;font-size:16px}
 
@@ -532,7 +532,7 @@ header .header__nav-left a{color:#050419;font-size:16px}
 
 /* ============================================================
    CTA pill text reel (2026-06-20, branch cta-reel-sync)
-   Both header pills (Hire Me + Get In Touch) reel PER-LETTER on a
+   Both header pills (Socials + Subscribe) reel PER-LETTER on a
    world flip (like the nav), but with NO word gap, and both pills
    roll together (.is-rolled toggled on both at once) so they're in
    unison. __a = current-world copy (colour inherited from the span,
@@ -544,7 +544,7 @@ header .pill-char__a,header .pill-char__b{display:block;transition:transform .5s
 header .pill-char__a{color:inherit}
 header .pill-char__b{position:absolute;left:0;top:100%}
 header .pill-btn.is-rolled .pill-char__a,header .pill-btn.is-rolled .pill-char__b{transform:translateY(-100%)}
-header .pill-btn--glass .pill-char__b{color:#050419}                 /* Hire Me — light-world black */
+header .pill-btn--glass .pill-char__b{color:#050419}                 /* Socials — light-world black */
 header .pill-btn--dark .pill-char__b{color:var(--color-text-light)}  /* Get In Touch — light-world white */
 
 /* ============================================================
@@ -1543,21 +1543,12 @@ html.boot-active{overflow:hidden;height:100%}
   .post-head__dek{font-size:18px}
 }
 
-/* ---- Centred Home nav item (2026-08-10) --------------------------------------
-   The Home link is markup-identical to the other nav items and carries
-   .header__nav-left as well, so it inherits that selector's typography, colour,
-   hover colour and the per-letter hover animation main.js builds by querying
-   '.header__nav-left a'. This rule does nothing but move it to the centre, which
-   is why Home cannot drift out of sync with the rest of the nav.
-   The header is a flex row, so absolute centring keeps Home on the page's midline
-   rather than the midline of the space left over between the two nav groups. */
-.header__nav-centre{position:absolute;left:50%;transform:translateX(-50%);pointer-events:auto}
-
-@media (max-width:820px){
-  /* The mobile layout collapses the left nav into the burger menu, where Home is
-     already the first item — a floating centred copy would duplicate it. */
-  .header__nav-centre{display:none}
-}
+/* The centred Home nav item (.header__nav-centre, 2026-08-10) lived here: a second
+   nav absolutely positioned on the page midline, holding a Home link that also
+   carried .header__nav-left so it inherited that selector's typography and the
+   per-letter hover animation. Home is now the fourth item of the primary nav, so
+   the separate nav and both of its rules (the centring, and the ≤820px display:none
+   that stopped it duplicating the burger menu's Home) are gone. */
 
 /* ---- Subscribe modal (2026-08-11) --------------------------------------------
    Native <dialog>: it handles focus trapping, Esc and inertness, so the CSS only
