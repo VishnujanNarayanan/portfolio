@@ -2147,6 +2147,14 @@ function buildPillReel(pill) {
       }
       var vh = window.innerHeight;
       var rect = writingViewRect();
+      // This loop is unconditional — requestAnimationFrame(frame) re-arms forever — so
+      // the whole blog state machine ran every frame for the life of the page, including
+      // while you are in projects or the footer with nothing it drives on screen
+      // (measured ~6.7ms/frame there). Skip when the section is far outside the viewport.
+      // The margin is a full viewport on each side, and every zoneOf threshold sits
+      // within one viewport of the section, so no crossing can happen while skipped;
+      // lastT is cleared so easings resume from rest instead of jumping on a big dt.
+      if (rect.bottom < -vh || rect.top > vh * 2) { lastT = 0; return; }
       updatePinDwell(rect, vh);                          // drift + vanish run every frame (even after the fan settles)
       if (reduceMo) { setSettled(true); return; }        // no fan: land in place immediately
       // Drive the open state off the threshold-crossing state machine (see zoneOf above),
