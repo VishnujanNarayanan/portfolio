@@ -1653,7 +1653,14 @@ function buildPillReel(pill) {
        Invalidated on resize, after load/fonts, and by sizeSection() — which is the one
        thing that legitimately changes a section's height at runtime (the projects
        filter re-sizes .features). */
-    var wpTop = 0, wpH = 0;
+    // NOTE: .writing__pin is position:sticky, so its viewport rect CANNOT be derived as
+    // (documentTop - scrollY) — once it sticks, the real rect.top clamps to 0 while the
+    // derived value keeps going negative, and that wrong offset shifts the blog's
+    // contour lines off their canvas (they appear cut off / sliding). Only its STATIC
+    // parent section is cached, purely as a cheap on-screen test; the sticky pin itself
+    // is read live, and only on the frames the blog is actually visible.
+    var wsTop = 0, wsH = 0;
+    var writingSec = writingPin ? (writingPin.closest(".writing") || writingPin.parentNode) : null;
     function scrollY0() { return window.scrollY || window.pageYOffset || 0; }
     function measureSecs() {
       var sy = scrollY0(), i, r;
@@ -1662,7 +1669,7 @@ function buildPillReel(pill) {
         darkSecs[i].docTop = r.top + sy;
         darkSecs[i].docH = r.height;
       }
-      if (writingPin) { r = writingPin.getBoundingClientRect(); wpTop = r.top + sy; wpH = r.height; }
+      if (writingSec) { r = writingSec.getBoundingClientRect(); wsTop = r.top + sy; wsH = r.height; }
     }
     // Same fields this loop reads off a DOMRect.
     function rectOf(top, h) { var t = top - scrollY0(); return { top: t, bottom: t + h, height: h }; }
@@ -1779,9 +1786,12 @@ function buildPillReel(pill) {
       }
       // Blog canvas: solid light blue (end-of-zone-4) + dark indigo lines (no gradient).
       if (wctx && writingPin) {
-        var wr = rectOf(wpTop, wpH);
-        if (wr.bottom > 0 && wr.top < H)                 // skip while the blog pin is off-screen
-          drawContours(wctx, "rgba(57,50,220,0.5)", "rgb(208,225,235)", -wr.top);
+        var ws = rectOf(wsTop, wsH);                     // static parent: cheap visibility test
+        if (ws.bottom > 0 && ws.top < H) {                // blog off-screen → no read at all
+          var wr = writingPin.getBoundingClientRect();    // sticky → must be measured live
+          if (wr.bottom > 0 && wr.top < H)
+            drawContours(wctx, "rgba(57,50,220,0.5)", "rgb(208,225,235)", -wr.top);
+        }
       }
       // Dark content sections (Selected work / Skills / Services): solid dark navy + light-blue lines.
       for (var ds = 0; ds < darkSecs.length; ds++) {
