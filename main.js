@@ -53,6 +53,17 @@ function buildPillReel(pill) {
     requestAnimationFrame(raf);
   }
 
+  /* ---------- ?novideo — dev switch, same spirit as ?nolenis ----------
+     Skips the fullscreen hero video entirely. This is what isolated the hero's frame
+     cost from the rest of the page: the hero is the only section with a fullscreen
+     video decoding, and loading with ?novideo is what proved it was the video and not
+     the canvases or the text transition. Kept so the comparison can be re-run. */
+  (function () {
+    if (!/[?&]novideo\b/.test(location.search)) return;
+    var hv = document.querySelector(".hero-video");
+    if (hv) { hv.autoplay = false; hv.preload = "none"; try { hv.pause(); } catch (e) {} hv.removeAttribute("src"); hv.style.visibility = "hidden"; }
+  })();
+
   /* ---------- Linux terminal boot loader + asset/animation warming ----------
      Holds an opaque "pip install" terminal over the page while the critical
      first-view assets decode and the deferred inits (Three.js bg shader,
@@ -101,14 +112,28 @@ function buildPillReel(pill) {
         setTimeout(done, 8000); // never hang on a single asset
       });
     }
-    function loadVideo(src) {
+    // Fetch + decode, and PRIME the decoder: roll the video briefly here behind the
+    // loader, then park it back at frame 0. Buffered bytes do not mean the decode
+    // pipeline is spun up, and paying for that spin-up later — at the first scroll,
+    // when the video is being revealed — would just move the stall somewhere visible.
+    // Doing it under the loader is precisely what the loader is for.
+    // Afterwards the video stays PAUSED until it is actually on screen (see setVidPlay).
+    function loadVideo(src, prime) {
       return new Promise(function (resolve) {
         var v = document.querySelector('video[src="' + src + '"]'), done = function () { resolve(); };
         if (!v) { done(); return; }
-        if (v.readyState >= 3) { done(); return; }
+        var warm = function () {
+          if (!prime) { done(); return; }
+          var park = function () { try { v.pause(); v.currentTime = 0; } catch (e) {} done(); };
+          var pr;
+          try { pr = v.play(); } catch (e) { park(); return; }
+          if (pr && pr.then) pr.then(function () { setTimeout(park, 220); }, park);
+          else setTimeout(park, 220);
+        };
+        if (v.readyState >= 3) { warm(); return; }
         v.preload = "auto";
-        v.addEventListener("canplaythrough", done, { once: true });
-        v.addEventListener("loadeddata", done, { once: true });
+        v.addEventListener("canplaythrough", warm, { once: true });
+        v.addEventListener("loadeddata", warm, { once: true });
         try { v.load(); } catch (e) {}
         setTimeout(done, 8000);
       });
@@ -117,7 +142,7 @@ function buildPillReel(pill) {
     // Ordered typing queue: [label, promise]. Labels drive the "Collecting …" lines.
     var tasks = [];
     tasks.push(["setuptools",    (document.fonts && document.fonts.ready) ? document.fonts.ready.catch(function () {}) : Promise.resolve()]);
-    tasks.push(["opencv-python", loadVideo("videos/interview_office.mp4")]);
+    tasks.push(["opencv-python", loadVideo("videos/interview_office.mp4", true)]);
     IMG.forEach(function (p) { tasks.push([p[0], loadImage(p[1])]); });
 
     // The reveal is gated ONLY on the curated first-view set above (fonts + hero video +
@@ -328,8 +353,20 @@ function buildPillReel(pill) {
     var heroContent = hero.querySelector(".hero__content");
     var heroVid = document.querySelector(".hero-video");  // office video revealed beneath the hero
     // Scroll-controlled playback: rate ≤ 0 pauses; otherwise play at the given rate (clamped).
+    // HIDDEN = PAUSED. .hero-video is a fixed, fullscreen element sitting at z-index 2,
+    // and .hero__bg is an opaque fixed layer above it at z-index 3 — so until the hero
+    // starts riding up (scrollY > 0) the video is completely invisible, yet it was
+    // decoding and presenting a fullscreen frame on every single refresh. That is the
+    // one per-frame cost the hero has and the rest of the page does not, which is why
+    // only the hero stuttered; and it gets much worse in Armoury Crate's turbo mode,
+    // where the panel runs at ~146Hz instead of ~62Hz (so ~2.4x the decodes per second)
+    // and the MUX switch can hand the display to the dGPU, off the iGPU's video path.
+    // Confirmed by A/B: loading with ?novideo makes the hero smooth in turbo.
+    // The decoder is already primed under the boot loader (see loadVideo), so starting
+    // playback on that first pixel of scroll costs nothing visible.
     function setVidPlay(rate) {
       if (!heroVid) return;
+      if (rate > 0.001 && window.scrollY <= 0) rate = 0;   // fully covered by the hero → don't decode
       if (rate <= 0.001) { if (!heroVid.paused) heroVid.pause(); return; }
       heroVid.playbackRate = Math.max(0.1, Math.min(rate, 1));
       if (heroVid.paused) { var pr = heroVid.play(); if (pr && pr.catch) pr.catch(function () {}); }

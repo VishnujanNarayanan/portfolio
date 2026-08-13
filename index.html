@@ -183,8 +183,12 @@
 
     <!-- Office video: sits UNDER the hero. Scroll lifts the hero off the top to reveal
          it; once it fully covers the screen the zoom-out applies to the video. It plays
-         at normal speed on its own — scroll never touches its playback position. -->
-    <video class="hero-video" src="videos/interview_office.mp4" autoplay muted loop playsinline aria-hidden="true"></video>
+         at normal speed on its own — scroll never touches its playback position.
+         NO `autoplay`: while the loader and then the un-scrolled hero cover the screen
+         this video is invisible, and decoding a fullscreen frame per refresh behind them
+         is what made the hero entrance stutter (see setVidPlay in main.js). The loader
+         primes the decoder instead, and playback starts on the first pixel of scroll. -->
+    <video class="hero-video" src="videos/interview_office.mp4" muted loop playsinline aria-hidden="true"></video>
 
     <!-- GitHub card revealed OVER the video during the internal zoom-out (phase A,
          the 1.55→1.0 camera pull-back), then faded out as the edge zoom-out begins.

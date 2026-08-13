@@ -1066,12 +1066,17 @@
       // 2x (durations halved) for a really quick scroll; 1x (base) for a slow one.
       var speedK = 1 + clamp(gSpeed / SPEED_FULL, 0, 1);
       var hadPrev = !!panels[lastSel];   // an outgoing title exists → hold the entrance briefly
-      // Exit target that actually LEAVES the screen: the EXIT/APPEAR pose plus a full
-      // screen-space slide off the side it belongs on (behind = left, ahead = right),
-      // so a departing title travels all the way off instead of lingering at the edge.
+      // Exit target: the EXIT/APPEAR pose plus a screen-space slide off the side it
+      // belongs on (behind = left, ahead = right). Leftward (forward scroll) travels a
+      // full viewport so the title clears the screen. RIGHTWARD (scrolling BACK up) is
+      // deliberately SHORT: the APPEAR pose already carries sx:50 (+~23vw of its own
+      // width) off a 6vw rest spot, so a full-vw slide flung the title clear across the
+      // page. RIGHT_FRAC lands it around mid-screen instead — it has faded out (linear,
+      // EXIT_MS) by the time it gets there, so it never lingers visibly at the edge.
+      var RIGHT_FRAC = 0.15;
       function flyOff(pi) {
         var b = pi < rawSel ? P.EXIT : P.APPEAR;
-        return { ex: (pi < rawSel ? -1 : 1) * vw, sx: b.sx, tx: b.tx, ty: b.ty, ry: b.ry, rx: b.rx };
+        return { ex: pi < rawSel ? -vw : vw * RIGHT_FRAC, sx: b.sx, tx: b.tx, ty: b.ty, ry: b.ry, rx: b.rx };
       }
       panels.forEach(function (panel, pi) {
         var a = panel._anim;
