@@ -1724,7 +1724,11 @@ function buildPillReel(pill) {
     window.__remeasureContours = measureSecs;   // sizeSection() calls this after resizing .features
     var featuresGeo = null;
     for (var fg = 0; fg < darkSecs.length; fg++) if (darkSecs[fg].el === featuresEl) featuresGeo = darkSecs[fg];
-    var t = 0, last = 0, navDark = false, ctaDark = false;   // nav reel + CTA pills now flip TOGETHER at the features-hit threshold
+    // First LIGHT section below the dark projects run — .brand-teaser (#skills). Its top
+    // is where the header has to reel back to black; see the world flip in frame().
+    var lightEl = document.querySelector(".brand-teaser"), lightGeo = null;
+    for (var lg = 0; lg < darkSecs.length; lg++) if (darkSecs[lg].el === lightEl) lightGeo = darkSecs[lg];
+    var t = 0, last = 0, navDark = false, ctaDark = false;   // nav reel + CTA pills flip TOGETHER, on at .features and off at .brand-teaser
     // Perf: the field resample (rows×cols cells, noise+exp each) dominates frame cost.
     // The field is time-driven only (scroll alignment happens at draw time via translate),
     // and it drifts slowly — so when the cursor repel is idle it's resampled every OTHER
@@ -1814,12 +1818,30 @@ function buildPillReel(pill) {
       // at). Previously nav flipped at blogProg 0.60 and CTA at 0.07 — two separate,
       // later points; now they're unified to this single features-hit threshold.
       var fTop = featuresGeo ? (featuresGeo.docTop - scrollY0()) : (H || 1);
+      // ...and handed BACK to the light world at the far edge of the dark run. The dark
+      // region is .features plus the .projects-tail spacer below it (#0f1628); from
+      // .brand-teaser (#skills) onward everything is light — the teaser and manifesto
+      // draw the blog's light field, and socials and the footer are both rgb(208,225,235).
+      // Keying the flip off the features top ALONE latched dark forever, since fTop only
+      // goes more negative as you scroll on, so the white nav carried straight over the
+      // light Skills background. Closing the range on the light section's own top means
+      // the reel plays in reverse to black exactly as Skills reaches the header — and,
+      // being a plain range test rather than a latch, it flips back on the way up too.
+      // LIGHT_LEAD: fire the reel slightly BEFORE the light section's top actually
+      // reaches the header, rather than exactly on it. The .skills-curve seam bulges up
+      // out of .brand-teaser, so the light world starts arriving under the bar a little
+      // above the section's own top edge — waiting for the exact edge reads as late.
+      // Raise it to flip earlier, lower it (to 1) to flip right on the boundary.
+      // Landed at 0.02 by eye: on the boundary (1) read late, H*0.1 clearly early,
+      // and 0.05 / 0.04 / 0.025 each still a touch early.
+      var LIGHT_LEAD = H * 0.02;
+      var lTop = lightGeo ? (lightGeo.docTop - scrollY0()) : Infinity;
       // Snap/lock lands the page at rect.top = 0, but browsers round scrollY to an
       // integer while layout is sub-pixel — so the section settles a fraction of a px
       // SHORT (rect.top ≈ +0.4), which a strict `<= 0` reads as "not covered", leaving
       // the nav light until a manual scroll nudges it negative. A 1px tolerance treats
       // that sub-pixel landing as covered so the flip fires on the snap itself.
-      var wantDark = fTop <= 1;
+      var wantDark = fTop <= 1 && lTop > LIGHT_LEAD;
       if (wantDark !== navDark) {
         navDark = wantDark;
         if (window.__navLight) window.__navLight(!navDark, true);
