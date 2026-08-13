@@ -3841,6 +3841,61 @@ function buildPillReel(pill) {
   buildPillReel(hdr.querySelector(".pill-btn--dark"));
 })();
 
+/* ---- Nav scale handed across a page hop (2026-08-13) --------------------------
+   updateHeroExit shrinks the two nav groups to .88 once you scroll off the hero, as
+   an inline transform with a .3s transition. That is homepage-only state living in
+   one document, so arriving on a sub-page the nav is simply at scale 1 from its very
+   first frame — there is nothing to animate FROM, and the size change reads as a snap.
+   (Leaving a sub-page is fine: the homepage's own scroll handler drives the shrink.)
+   So the outgoing scale is recorded on the way out and replayed on arrival: apply it
+   instantly, then transition to 1 on the next frame, which is the expansion.
+   RESTORE IS SUB-PAGE ONLY — deliberately. On the homepage updateHeroExit owns this
+   transform and sets it from real scroll position every frame; touching it there would
+   fight that, and the ask was to leave the leaving-the-blog direction alone. */
+(function navScaleHandoff() {
+  var KEY = "vj:nav-scale";
+  var groups = [
+    [document.querySelector(".header__nav-left"), "left center"],
+    [document.querySelector(".header__nav-right"), "right center"]
+  ].filter(function (g) { return g[0]; });
+  if (!groups.length) return;
+
+  function scaleOf(el) {
+    var t = getComputedStyle(el).transform;
+    if (!t || t === "none") return 1;
+    var m = /matrix\(([^,]+),/.exec(t);            // matrix(a, b, c, d, e, f) → a is scaleX
+    return m ? parseFloat(m[1]) || 1 : 1;
+  }
+  // Record on the way out. pagehide (not beforeunload) so it also fires when the page
+  // goes into the back/forward cache.
+  addEventListener("pagehide", function () {
+    try { sessionStorage.setItem(KEY, String(scaleOf(groups[0][0]))); } catch (e) {}
+  });
+
+  if (document.querySelector(".hero")) return;     // homepage: updateHeroExit owns it
+  var from = 1;
+  try { from = parseFloat(sessionStorage.getItem(KEY)); } catch (e) {}
+  // Consume it either way, so a later plain load does not replay a stale expansion.
+  try { sessionStorage.removeItem(KEY); } catch (e) {}
+  if (!(from > 0) || from > 0.999) return;         // arrived from an already-expanded nav
+
+  groups.forEach(function (g) {
+    g[0].style.transition = "none";
+    g[0].style.transformOrigin = g[1];
+    g[0].style.transform = "scale(" + from + ")";
+  });
+  // Two frames: the first commits the shrunk pose, the second starts the transition
+  // (setting both in one frame would be coalesced into no animation at all).
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      groups.forEach(function (g) {
+        g[0].style.transition = "transform .3s var(--ease-default)";   // matches updateHeroExit
+        g[0].style.transform = "scale(1)";
+      });
+    });
+  });
+})();
+
 /* ---- Post action rail (2026-08-11) --------------------------------------------
    Back is a plain link. Like is stored in localStorage and is per-browser only:
    this site is static, so there is nowhere to keep a shared count — showing a
@@ -3889,6 +3944,10 @@ function buildPillReel(pill) {
       Array.prototype.forEach.call(row.querySelectorAll(".share-btn"), function (a) {
         var c = a.cloneNode(true);
         c.className = "post-rail__pop-btn";
+        // Choosing a target closes the panel. The outside-click handler below cannot do
+        // it — these live INSIDE the rail — and they open in a new tab, so the page never
+        // navigates away either; the panel just sat there open over the article.
+        c.addEventListener("click", close);
         pop.appendChild(c);
       });
     }
@@ -3924,12 +3983,19 @@ function buildPillReel(pill) {
 
   if (share) {
     share.setAttribute("aria-expanded", "false");
+    // Toggle. No stopPropagation: the document handler below decides for itself whether
+    // a click concerns it, which is sturdier than relying on this one click never
+    // reaching it. (Anything else on the page calling stopPropagation on the way up
+    // would silently disable the outside-click close under the old arrangement.)
     share.addEventListener("click", function (e) {
-      e.stopPropagation();
+      e.preventDefault();
       if (pop && !pop.hidden) close(); else open();
     });
     document.addEventListener("click", function (e) {
-      if (pop && !pop.hidden && !rail.contains(e.target)) close();
+      if (!pop || pop.hidden) return;
+      if (share.contains(e.target)) return;   // the toggle handles its own click
+      if (pop.contains(e.target)) return;     // a share target closes via its own handler
+      close();                                // anywhere else dismisses the panel
     });
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") close();

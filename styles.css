@@ -1733,8 +1733,6 @@ html.boot-active #boot-loader{display:flex}
 .share-btn,.article .share-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;
   border-radius:50%;background:var(--color-bg-muted);border:1px solid var(--color-border);
   color:var(--color-text-muted);transition:color .25s ease,background .25s ease,border-color .25s ease}
-.share-btn:hover{color:var(--color-text-light);background:var(--color-highlight);
-  border-color:var(--color-highlight)}
 
 /* The rail floats in the empty margin left of the reading column. It is hidden
    below 1200px, where there is no margin to float in — the same actions are
@@ -1761,6 +1759,16 @@ html.boot-active #boot-loader{display:flex}
 
 /* The rail's share popover — the same targets in a 2-up grid. */
 .post-rail{position:fixed}
+/* The rail popover clones the byline's share marks but swaps the class, so they had no
+   styling of their own — hence plain, unfilled hovers. Same resting shape as .share-btn. */
+.post-rail__pop-btn{display:flex;align-items:center;justify-content:center;width:40px;height:40px;
+  border-radius:50%;background:var(--color-bg-muted);border:1px solid var(--color-border);
+  color:var(--color-text-muted);transition:color .25s ease,background .25s ease,border-color .25s ease}
+/* [hidden] must win over this rule's display. The UA sheet hides [hidden] elements
+   with `display:none`, but ANY author display declaration outranks it — so setting
+   pop.hidden = true flipped the property while `display:grid` kept the panel on
+   screen, and it could not be dismissed by any route. */
+.post-rail__pop[hidden]{display:none}
 .post-rail__pop{position:absolute;left:52px;top:84px;display:grid;
   grid-template-columns:repeat(2,40px);gap:10px;padding:14px;border-radius:16px;
   background:var(--color-bg);border:1px solid var(--color-border);
@@ -1845,4 +1853,30 @@ html.boot-active #boot-loader{display:flex}
 .blog-body .post-rail__pop{background:rgba(255,255,255,.95);border-color:rgba(5,4,25,.1)}
 .blog-body .share-btn,.blog-body .article .share-btn{background:rgba(255,255,255,.62);
   border-color:rgba(5,4,25,.08)}
+/* SHARE MARK HOVER — the byline row (.share-btn) and the rail popover's clones
+   (.post-rail__pop-btn). The mark FILLS with its destination's brand colour and the
+   glyph goes white. Blue (--color-highlight) is the default, so email / Facebook /
+   LinkedIn / Copy link need no rule of their own; only the three whose brand is not
+   blue are named. Matched on aria-label rather than an extra class, so the clones
+   inherit the behaviour for free.
+   Placed HERE, after `.blog-body .article .share-btn`, and carrying that selector's
+   qualifiers: that rule sets a resting background at (0,3,0), so a bare
+   `.share-btn:hover` (0,2,0) lost the background outright — the glyph turned white
+   while the fill stayed put, which is the "turns white without the background" bug. */
+.share-btn:hover,.share-btn:focus-visible,
+.blog-body .share-btn:hover,.blog-body .share-btn:focus-visible,
+.blog-body .article .share-btn:hover,.blog-body .article .share-btn:focus-visible,
+.post-rail__pop-btn:hover,.post-rail__pop-btn:focus-visible{
+  color:var(--color-text-light);background:var(--color-highlight);border-color:var(--color-highlight)}
+.blog-body .share-btn[aria-label*="WhatsApp"]:hover,.blog-body .article .share-btn[aria-label*="WhatsApp"]:hover,
+.share-btn[aria-label*="WhatsApp"]:hover,.post-rail__pop-btn[aria-label*="WhatsApp"]:hover{
+  background:#25d366;border-color:#25d366}
+.blog-body .share-btn[aria-label*="Reddit"]:hover,.blog-body .article .share-btn[aria-label*="Reddit"]:hover,
+.share-btn[aria-label*="Reddit"]:hover,.post-rail__pop-btn[aria-label*="Reddit"]:hover{
+  background:#ff4500;border-color:#ff4500}
+.blog-body .share-btn[aria-label*="on X"]:hover,.blog-body .article .share-btn[aria-label*="on X"]:hover,
+.share-btn[aria-label*="on X"]:hover,.post-rail__pop-btn[aria-label*="on X"]:hover{
+  background:#000;border-color:#000}
+/* stroke- and fill-based glyphs alike follow currentColor, set to white above */
+.share-btn:hover svg,.post-rail__pop-btn:hover svg{color:var(--color-text-light)}
 .blog-body .keep-reading{border-top-color:rgba(5,4,25,.1)}
