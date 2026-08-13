@@ -41,9 +41,14 @@
 <meta name="twitter:title" content="Vishnujan Narayanan | Data Engineer — Ingestion &amp; Market Data">
 <meta name="twitter:description" content="Data pipelines, from crawlers to APIs — ingestion, data validity, and the services that run on it.">
 <meta name="twitter:image" content="https://vishnujan.dev/og-card.jpg">
+<!-- Roboto Flex is the nav reel's font (styles.css @font-face). Preloaded so it is in
+     flight before the stylesheet finishes parsing and is ready for the FIRST paint —
+     no fallback render to swap out, which is what made the header snap. crossorigin is
+     required even same-origin: fonts are always fetched in CORS mode. -->
+<link rel="preload" href="/fonts/roboto-flex-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&family=Roboto+Flex:wght@100..900&family=Bodoni+Moda:ital,wght@0,700;0,900;1,700;1,900&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&family=Bodoni+Moda:ital,wght@0,700;0,900;1,700;1,900&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script>document.documentElement.classList.remove("no-js");</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Person","@id":"https://vishnujan.dev/#person","name":"Vishnujan Narayanan","jobTitle":"Data Engineer — Ingestion & Market Data","url":"https://vishnujan.dev/","email":"narayanan.vishnujan@gmail.com","address":{"@type":"PostalAddress","addressLocality":"Kochi","addressRegion":"Kerala","addressCountry":"IN"},"sameAs":["https://github.com/VishnujanNarayanan","https://www.linkedin.com/in/vishnujan-narayanan","https://substack.com/@vishnujannarayanan","https://www.instagram.com/___vi5hnu___/"]}</script>
@@ -77,16 +82,13 @@
 <header class="show">
   <nav class="header__nav-left" aria-label="Primary navigation">
     <a href="#projects">Projects</a>
-    <a href="#skills">Skills</a>
     <a href="#contact">Contact</a>
     <a href="/blog/">Blog</a>
-  </nav>
-  <nav class="header__nav-left header__nav-centre" aria-label="Home">
     <a href="#top">Home</a>
   </nav>
   <nav class="header__nav-right" aria-label="Header actions">
     <div class="header__ctas">
-      <a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Hire Me</span></a>
+      <a href="#socials" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Socials</span></a>
       <button type="button" class="pill-btn pill-btn--dark" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button>
     </div>
     <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
@@ -109,12 +111,11 @@
       <ul class="mobile-nav__list">
         <li class="mobile-nav__item"><a href="#top">Home</a></li>
         <li class="mobile-nav__item"><a href="#projects">Projects</a></li>
-        <li class="mobile-nav__item"><a href="#skills">Skills</a></li>
         <li class="mobile-nav__item"><a href="#contact">Contact</a></li>
         <li class="mobile-nav__item"><a href="/blog/">Blog</a></li>
       </ul>
       <div class="mobile-nav__ctas">
-        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Hire Me</span></a></div>
+        <div class="mncta"><a href="#socials" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Socials</span></a></div>
         <div class="mncta"><button type="button" class="pill-btn pill-btn--dark mobile-nav__cta" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button></div>
       </div>
     </div>
@@ -144,7 +145,7 @@
       <button class="subform__btn" type="submit">Subscribe</button>
     </div>
   </form>
-  <p class="submodal__note">No account needed, and you can unsubscribe from this email.</p>
+  <p class="submodal__note">It's <strong>completely free</strong>, and you can <strong>unsubscribe anytime</strong>.</p>
   <p class="submodal__terms">By subscribing you agree to Substack's <a href="https://substack.com/tos" target="_blank" rel="noopener">Terms of Use</a>, its <a href="https://substack.com/privacy" target="_blank" rel="noopener">Privacy Policy</a> and its <a href="https://substack.com/ccpa#personal-data-collected" target="_blank" rel="noopener">Information collection notice</a>.</p>
   <a class="substack-badge" href="https://vishnujannarayanan.substack.com/" target="_blank" rel="me noopener">
     <svg viewBox="0 0 21 24" width="13" height="15" aria-hidden="true" focusable="false"><path d="M20.999 0H0v2.836h20.999V0Z" fill="currentColor"></path><path d="M20.999 5.406H0v2.836h20.999V5.406Z" fill="currentColor"></path><path d="M0 10.813V24l10.499-5.887L21 24V10.813H0Z" fill="currentColor"></path></svg>
@@ -719,7 +720,11 @@
                   <img class="soc-card__ss-avatar" src="https://github.com/VishnujanNarayanan.png" alt="Vishnujan Narayanan" width="72" height="72" loading="lazy" decoding="async">
                   <span class="soc-card__handle">Vishnujan Narayanan</span>
                   <span class="soc-card__ss-handle">@vishnujannarayanan</span>
-                  <p class="soc-card__desc">Curious about data, growth &amp; discipline — sharing experiments and insights as I figure things out.</p>
+                  <!-- Mirrors the live Substack tagline (og:description on
+                       vishnujannarayanan.substack.com). Update here when it changes there.
+                       The trailing "website- https://vishnujan.dev" of that tagline is
+                       dropped: this card already sits on that site. -->
+                  <p class="soc-card__desc">Notes from the build — data pipelines, scraping, and the reliability work in between.</p>
                   <span class="soc-card__cta">Subscribe <span aria-hidden="true">&#8599;</span></span>
                 </div>
               </a>
@@ -733,7 +738,7 @@
             <div class="callout-socials-links-layout">
               <a href="https://github.com/VishnujanNarayanan" target="_blank" rel="me noopener" class="callout-socials-link">GitHub</a>
               <a href="https://www.linkedin.com/in/vishnujan-narayanan" target="_blank" rel="me noopener" class="callout-socials-link">LinkedIn</a>
-              <a href="mailto:narayanan.vishnujan@gmail.com" class="callout-socials-link">Email</a>
+              <a href="https://substack.com/@vishnujannarayanan" target="_blank" rel="me noopener" class="callout-socials-link">Substack</a>
             </div>
           </div>
         </div>
@@ -763,7 +768,7 @@
             <span class="lfooter__col-label">Pages</span>
             <a href="#top" class="lfooter__navlink">Home</a>
             <a href="#projects" class="lfooter__navlink">Projects</a>
-            <a href="#skills" class="lfooter__navlink">Skills</a>
+            <a href="#socials" class="lfooter__navlink">Socials</a>
             <a href="/blog/" class="lfooter__navlink">Blog</a>
           </nav>
           <nav class="lfooter__col lfooter__col--right" aria-label="Social links">
@@ -866,7 +871,9 @@
     </div>
 
     <!-- Pill in the bottom-centre tab of the notched box -->
-    <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me <span aria-hidden="true">&#8599;</span></a>
+    <!-- No trailing arrow: main.js splits this into per-letter reel clips on load, and a
+         glyph that is not a letter reels along with them. -->
+    <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me</a>
 
     <!-- Legal row sits in the gradient shelves either side of the bottom tab -->
     <div class="lfooter__bottom">

@@ -8,6 +8,41 @@
    sub-page (hover reel only) need it — it used to be defined inside the `if
    (hero)` block, so on sub-pages the pills were plain text and hovering them did
    nothing. The roll itself is CSS on :hover; this only builds the markup. */
+/* The same reel for a PLAIN text link or button — one that has no .pill-btn-span
+   wrapper and no colour world to flip, so each letter needs only the hover roller
+   (__col) and the identical clone (__c) rising from below. The cert gallery's Back
+   button grew this inline first; the footer email link and the socials links want
+   the identical effect, so it lives here once. CSS does the roll on :hover — see the
+   .cert-gallery__back / .lfooter__email / .callout-socials-link block in styles.css.
+   An aria-label already on the element is left alone (Back to home says something
+   different from its visible text); otherwise the visible text becomes the label,
+   because the letters themselves are split into aria-hidden spans. */
+function buildLinkReel(el) {
+  if (!el || el.querySelector(".pill-char")) return el;   // missing or already built
+  var txt = el.textContent.trim();
+  if (!txt) return el;
+  if (!el.getAttribute("aria-label")) el.setAttribute("aria-label", txt);
+  el.textContent = "";
+  for (var i = 0; i < txt.length; i++) {
+    var clip = document.createElement("span");
+    clip.className = "pill-char"; clip.setAttribute("aria-hidden", "true");
+    clip.style.setProperty("--hd", (i * 0.022).toFixed(3) + "s");   // left→right stagger
+    var col  = document.createElement("span"); col.className  = "pill-char__col";
+    var face = document.createElement("span"); face.className = "pill-char__face"; face.textContent = txt[i];
+    var c    = document.createElement("span"); c.className    = "pill-char__c";    c.textContent    = txt[i];
+    col.appendChild(face); col.appendChild(c); clip.appendChild(col); el.appendChild(clip);
+  }
+  return el;
+}
+
+/* Footer email link + the three links under the socials cards get that reel. Both are
+   plain <a>s, present on every page (the email) or the homepage only (the socials),
+   so this runs unconditionally and no-ops on whatever is absent. */
+(function buildTextLinkReels() {
+  buildLinkReel(document.querySelector(".lfooter__email"));
+  Array.prototype.forEach.call(document.querySelectorAll(".callout-socials-link"), buildLinkReel);
+})();
+
 function buildPillReel(pill) {
   if (!pill) return null;
   var span = pill.querySelector(".pill-btn-span"); if (!span) return null;
@@ -70,10 +105,26 @@ function buildPillReel(pill) {
      flow.js WebGL, Lenis, scroll listeners) finish. Resolves window.__bootReady
      when it lifts, which drives the hero entrance below. A quick minimum display
      time keeps the animation readable when assets are already cached; if assets
-     are still loading it EXTENDS past the minimum until they resolve. */
+     are still loading it EXTENDS past the minimum until they resolve.
+
+     ONCE PER SESSION. The loader is an intro, so it earns ~3.5s the first time a
+     visitor reaches the homepage and never again: the assets it waits on are in the
+     HTTP cache from then on, so replaying it on every return from /blog/ is pure
+     delay. A sessionStorage flag records that it has run, which covers both routes
+     in — landing on the homepage first, or arriving from an external link straight
+     to a blog post and only meeting the homepage later (they still get it once, on
+     that first homepage view). An explicit reload replays it, since that reads as
+     asking for the page from scratch; back/forward and in-site links do not.
+
+     HASH ON ENTRY. html.boot-active sets overflow:hidden AND height:100%, so while
+     the loader is up the document cannot scroll and the browser's own jump to
+     location.hash is impossible — which is why arriving from a sub-page at
+     /#contact or /#socials used to dump you on the hero. The hash is re-applied
+     here once the page is scrollable again (both paths, loader or not). */
   (function () {
     var bootResolve;
     window.__bootReady = new Promise(function (res) { bootResolve = res; });
+    var docEl = document.documentElement;
 
     var boot = document.getElementById("boot-loader");
     if (!boot) { bootResolve(); return; }
@@ -81,11 +132,91 @@ function buildPillReel(pill) {
     var out    = document.getElementById("boot-out");
     var fill   = boot.querySelector(".boot-bar__fill");
     var pctEl  = boot.querySelector(".boot-bar__pct");
-    var docEl  = document.documentElement;
     var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
     var MIN_MS = reduce ? 600 : 3200;
     var start  = (window.performance && performance.now) ? performance.now() : Date.now();
     var now    = function () { return (window.performance && performance.now) ? performance.now() : Date.now(); };
+
+    var SEEN_KEY = "vj:boot-seen";
+    function seen(v) {
+      try { if (v === undefined) return sessionStorage.getItem(SEEN_KEY) === "1"; sessionStorage.setItem(SEEN_KEY, "1"); }
+      catch (e) { return false; }                        // private mode / storage blocked → always show
+    }
+    function isReload() {
+      try {
+        var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+        if (nav) return nav.type === "reload";
+        return !!(performance.navigation && performance.navigation.type === 1);
+      } catch (e) { return false; }
+    }
+    // Scroll to location.hash once the document can actually scroll.
+    //
+    // Arriving from a sub-page (/#contact, /#socials) is NOT the same as clicking the
+    // same link on the homepage. The in-page case is a plain fragment scroll and always
+    // worked; the cross-document case has to survive a page load, and several things
+    // there will happily put you back at 0 — html.boot-active makes the document
+    // unscrollable while the loader is up, so the browser's own jump to the fragment is
+    // silently dropped, and Lenis keeps its own scroll value that it re-asserts every
+    // frame from whatever it captured at startup.
+    //
+    // So this does not trust a single well-timed scroll. The hash is read ONCE at script
+    // start (in case it is cleared later) and then re-asserted on a few retries until the
+    // target is actually at the top — giving up the moment the visitor scrolls themselves,
+    // so it can never fight a real gesture. '#top' is the spec's "top of document"
+    // fragment and has no element, so it is skipped along with an empty hash.
+    // The target is carried EITHER as a fragment (same-page links on the homepage) or
+    // as ?go=<id> (links from a sub-page — see {{TO}} in scripts/gen-partials.mjs;
+    // a fragment does not survive that cross-document trip). Read once, at script
+    // start, before anything can clear it.
+    var wantHash = (function () {
+      var m = /[?&]go=([\w-]+)/.exec(location.search);
+      return m ? "#" + m[1] : location.hash;
+    })();
+    var userScrolled = false;
+    ["wheel", "touchstart", "keydown"].forEach(function (t) {
+      addEventListener(t, function () { userScrolled = true; }, { passive: true, once: true });
+    });
+    function applyHash() {
+      if (!wantHash || wantHash === "#" || wantHash === "#top") return;
+      var el = null;
+      try { el = document.querySelector(wantHash); } catch (e) { return; }  // malformed selector
+      if (!el) return;
+      // Swap ?go=<id> out of the address bar for the clean /#<id> form. replaceState
+      // does not scroll and leaves no extra history entry, so this is cosmetic only —
+      // but it means the URL a visitor copies is the shareable one.
+      if (location.search.indexOf("go=") > -1 && history.replaceState) {
+        try {
+          history.replaceState(null, "", location.pathname + location.search.replace(/[?&]go=[\w-]+/, "").replace(/^&/, "?") + wantHash);
+        } catch (e) {}
+      }
+      var tries = 0;
+      (function attempt() {
+        if (userScrolled || tries++ > 8) return;
+        var top = el.getBoundingClientRect().top;
+        if (Math.abs(top) > 2) {
+          var y = top + (window.scrollY || 0);
+          if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { immediate: true, force: true });
+          window.scrollTo(0, y);                       // also move the real scroller, in case Lenis is absent
+        }
+        setTimeout(attempt, tries < 3 ? 60 : 220);     // quick at first, then slower while assets settle
+      })();
+    }
+    // Late layout shifts (fonts, images, the JS-sized projects section) move the target
+    // after the first attempts, so re-run once everything has actually loaded.
+    addEventListener("load", function () { applyHash(); });
+
+    // Repeat visit in this session (and not an explicit reload) → no loader at all.
+    // The critical assets are cached, so the only thing still worth doing is priming
+    // the hero video's decoder; that runs in the background instead of gating.
+    if (seen() && !isReload()) {
+      // Nothing to hide: #boot-loader is display:none until html.boot-active says
+      // otherwise, which this path never sets. Hiding it from JS was too late — the
+      // first frame had already painted it black.
+      warmCritical();
+      bootResolve();
+      applyHash();
+      return;
+    }
 
     docEl.classList.add("boot-active");
     if (window.__lenis && window.__lenis.stop) window.__lenis.stop();
@@ -138,6 +269,12 @@ function buildPillReel(pill) {
         setTimeout(done, 8000);
       });
     }
+    // Skip path only: no loader to hide behind, so nothing here may gate the reveal.
+    // The images are already in the HTTP cache on a repeat visit, but the video's
+    // DECODER is not — that is per-document — so it still needs priming or the hero
+    // pays the spin-up at the first scroll. Fire and forget. (Both this and loadVideo
+    // are function declarations, so this is callable from the early return above.)
+    function warmCritical() { loadVideo("videos/interview_office.mp4", true); }
 
     // Ordered typing queue: [label, promise]. Labels drive the "Collecting …" lines.
     var tasks = [];
@@ -265,7 +402,9 @@ function buildPillReel(pill) {
             // Warm a layout pass so the first scroll pays no reflow cost.
             var f = document.querySelector(".flow");     if (f)  void f.offsetHeight;
             var ft = document.querySelector(".features"); if (ft) void ft.offsetHeight;
+            seen(true);            // this session has now watched the intro — don't replay it
             bootResolve();
+            applyHash();           // the page is scrollable again; honour /#contact, /#socials
           }, 480);
         });
       }, wait);
@@ -383,7 +522,7 @@ function buildPillReel(pill) {
     // current world, colour inherited from the span) and __b (the alt-world colour, fixed in CSS).
     // Letters stagger left→right (--d = i·step) like the nav, but with NO word gap, and BOTH pills
     // roll together (.is-rolled toggled on both at once) so the two buttons reel in unison.
-    var hireSpan = buildPillReel(glassPill);   // Hire Me letters (__a inherits white in the dark world)
+    var glassSpan = buildPillReel(glassPill);  // Socials letters (__a inherits white in the dark world)
     var giSpan   = buildPillReel(darkPill);    // Get In Touch letters (__a inherits black in the dark world)
     var EXIT_MIN_SCALE = 0.35;      // IMAGE size: how far the page-rectangle recedes on zoom-out. The frozen
                                     // collapse frame uses this same rectangle, so the image is equal before/after.
@@ -407,12 +546,20 @@ function buildPillReel(pill) {
       if (!ease || !rolled) {
         var rgb = "rgb(" + c + "," + c + "," + c + ")";
         navLinks.forEach(function (a) { a.style.transition = trans; a.style.color = rgb; });
-        if (hireSpan) { hireSpan.style.transition = trans; hireSpan.style.color = rgb; }
+        if (glassSpan) { glassSpan.style.transition = trans; glassSpan.style.color = rgb; }
         if (giSpan) { giSpan.style.transition = trans; giSpan.style.color = "rgb(" + c2 + "," + c2 + "," + c2 + ")"; }
       }
       if (darkPill) {                                     // Get In Touch pill bg: dark #050419 → light #d0e1eb
         var dr = Math.round(5 + (208 - 5) * he), dg = Math.round(4 + (225 - 4) * he), db = Math.round(25 + (235 - 25) * he);
         darkPill.style.transition = trans; darkPill.style.backgroundColor = "rgb(" + dr + "," + dg + "," + db + ")";
+      }
+      if (glassPill) {                                    // Socials pill bg: the INVERSE of the above
+        // Opaque, and travelling the opposite way so the two CTAs always read as a
+        // light/dark pair: near-white #fcfcfc in the light world → #050419 over the
+        // dark projects run. Matches the letter channel `c` (black at he 0, white at
+        // he 1), so the label stays legible at both ends without its own ramp.
+        var gr = Math.round(252 + (5 - 252) * he), gg = Math.round(252 + (4 - 252) * he), gb = Math.round(252 + (25 - 252) * he);
+        glassPill.style.transition = trans; glassPill.style.backgroundColor = "rgb(" + gr + "," + gg + "," + gb + ")";
       }
       // Reel roll — only on the discrete threshold flips (ease): the LIGHT world rolls both pills up
       // to their __b copy, in unison. During the hero zoom (no ease) stay unrolled so __a's colour
@@ -428,9 +575,9 @@ function buildPillReel(pill) {
       // while it's on), toggled in updateHeroExit — so --hc is set unconditionally, and the moment
       // you scroll off the hero the clone already carries the flip colour (no wait for a threshold).
       var WHITE = "#fcfcfc", BLACK = "#050419";
-      var hireVis = rolled ? 0   : c;    // visible channel: glass __b is black(0)
+      var glassVis = rolled ? 0   : c;    // visible channel: glass __b is black(0)
       var giVis   = rolled ? 255 : c2;   // dark-pill __b is white(255)
-      if (hireSpan) hireSpan.style.setProperty("--hc", hireVis >= 128 ? BLACK : WHITE);   // opposite of current
+      if (glassSpan) glassSpan.style.setProperty("--hc", glassVis >= 128 ? BLACK : WHITE);   // opposite of current
       if (giSpan)   giSpan.style.setProperty("--hc",   giVis   >= 128 ? BLACK : WHITE);
       if (!ease) navLinks.forEach(function (a) { a.style.setProperty("--hc", c >= 128 ? "#4d8bff" : "#231d7a"); });
     }
@@ -964,21 +1111,11 @@ function buildPillReel(pill) {
 
     // ---- Close triggers: back button, Esc, and reaching the end of the gallery scroll. ----
     var backBtn = gallery && gallery.querySelector(".cert-gallery__back");
-    // Give the back button the nav-pill REEL: wrap each letter in a clip whose __col rolls up on
-    // hover to reveal an identical __c clone rising from below (staggered left→right via --hd).
-    if (backBtn) {
-      var backTxt = backBtn.textContent;
-      backBtn.setAttribute("aria-label", "Back to home");
-      backBtn.textContent = "";
-      for (var bi = 0; bi < backTxt.length; bi++) {
-        var bclip = document.createElement("span"); bclip.className = "pill-char"; bclip.setAttribute("aria-hidden", "true");
-        bclip.style.setProperty("--hd", (bi * 0.022).toFixed(3) + "s");
-        var bcol = document.createElement("span"); bcol.className = "pill-char__col";
-        var bface = document.createElement("span"); bface.className = "pill-char__face"; bface.textContent = backTxt[bi];
-        var bc = document.createElement("span"); bc.className = "pill-char__c"; bc.textContent = backTxt[bi];
-        bcol.appendChild(bface); bcol.appendChild(bc); bclip.appendChild(bcol); backBtn.appendChild(bclip);
-      }
-    }
+    // Give the back button the nav-pill REEL (see buildLinkReel at the top of this file):
+    // each letter becomes a clip whose __col rolls up on hover to reveal an identical __c
+    // clone rising from below, staggered left→right. Its markup already carries
+    // aria-label="Back to home", which the builder leaves alone.
+    buildLinkReel(backBtn);
     if (backBtn) backBtn.addEventListener("click", closeCertGallery);
     // "Scroll to see more" hint: hide it once the last certificate is reached (nothing more below).
     var hintEl = gallery && gallery.querySelector(".cert-gallery__hint");
@@ -1724,7 +1861,11 @@ function buildPillReel(pill) {
     window.__remeasureContours = measureSecs;   // sizeSection() calls this after resizing .features
     var featuresGeo = null;
     for (var fg = 0; fg < darkSecs.length; fg++) if (darkSecs[fg].el === featuresEl) featuresGeo = darkSecs[fg];
-    var t = 0, last = 0, navDark = false, ctaDark = false;   // nav reel + CTA pills now flip TOGETHER at the features-hit threshold
+    // First LIGHT section below the dark projects run — .brand-teaser (#skills). Its top
+    // is where the header has to reel back to black; see the world flip in frame().
+    var lightEl = document.querySelector(".brand-teaser"), lightGeo = null;
+    for (var lg = 0; lg < darkSecs.length; lg++) if (darkSecs[lg].el === lightEl) lightGeo = darkSecs[lg];
+    var t = 0, last = 0, navDark = false, ctaDark = false;   // nav reel + CTA pills flip TOGETHER, on at .features and off at .brand-teaser
     // Perf: the field resample (rows×cols cells, noise+exp each) dominates frame cost.
     // The field is time-driven only (scroll alignment happens at draw time via translate),
     // and it drifts slowly — so when the cursor repel is idle it's resampled every OTHER
@@ -1814,12 +1955,30 @@ function buildPillReel(pill) {
       // at). Previously nav flipped at blogProg 0.60 and CTA at 0.07 — two separate,
       // later points; now they're unified to this single features-hit threshold.
       var fTop = featuresGeo ? (featuresGeo.docTop - scrollY0()) : (H || 1);
+      // ...and handed BACK to the light world at the far edge of the dark run. The dark
+      // region is .features plus the .projects-tail spacer below it (#0f1628); from
+      // .brand-teaser (#skills) onward everything is light — the teaser and manifesto
+      // draw the blog's light field, and socials and the footer are both rgb(208,225,235).
+      // Keying the flip off the features top ALONE latched dark forever, since fTop only
+      // goes more negative as you scroll on, so the white nav carried straight over the
+      // light Skills background. Closing the range on the light section's own top means
+      // the reel plays in reverse to black exactly as Skills reaches the header — and,
+      // being a plain range test rather than a latch, it flips back on the way up too.
+      // LIGHT_LEAD: fire the reel slightly BEFORE the light section's top actually
+      // reaches the header, rather than exactly on it. The .skills-curve seam bulges up
+      // out of .brand-teaser, so the light world starts arriving under the bar a little
+      // above the section's own top edge — waiting for the exact edge reads as late.
+      // Raise it to flip earlier, lower it (to 1) to flip right on the boundary.
+      // Landed at 0.02 by eye: on the boundary (1) read late, H*0.1 clearly early,
+      // and 0.05 / 0.04 / 0.025 each still a touch early.
+      var LIGHT_LEAD = H * 0.02;
+      var lTop = lightGeo ? (lightGeo.docTop - scrollY0()) : Infinity;
       // Snap/lock lands the page at rect.top = 0, but browsers round scrollY to an
       // integer while layout is sub-pixel — so the section settles a fraction of a px
       // SHORT (rect.top ≈ +0.4), which a strict `<= 0` reads as "not covered", leaving
       // the nav light until a manual scroll nudges it negative. A 1px tolerance treats
       // that sub-pixel landing as covered so the flip fires on the snap itself.
-      var wantDark = fTop <= 1;
+      var wantDark = fTop <= 1 && lTop > LIGHT_LEAD;
       if (wantDark !== navDark) {
         navDark = wantDark;
         if (window.__navLight) window.__navLight(!navDark, true);
@@ -2310,8 +2469,9 @@ function buildPillReel(pill) {
      Each letter is a clipped .nav-char holding two stacked copies: __a (current
      colour, on top) and __b (black, waiting just below). At the flow bg threshold
      At the flow bg threshold flow.js calls window.__navLight(true), which rolls each
-     letter up (translateY -100%) so the black copy takes its place. Hire Me / Get In
-     Touch are excluded (they get a different animation). */
+     letter up (translateY -100%) so the black copy takes its place. The two header
+     pills (Socials / Subscribe) are excluded — they get their own reel, see
+     buildPillReel. */
   (function buildNavReel() {
     var LETTER_STEP = 0.015;    // per-letter stagger
     var WORD_GAP = 0.06;        // extra delay so each word starts after the one to its left
@@ -3206,7 +3366,16 @@ function buildPillReel(pill) {
       if (atTop) { panCards(); return; }                  // latched: cards stay; pan to reveal all rows
       if (r.top <= 0) {                                   // threshold reached → fire the reveal once
         atTop = true; term.classList.add("is-revealing");
-        renderText(total); lastR = total; engageStick();
+        renderText(total); lastR = total;
+        // Stick ONLY when the threshold was crossed by scrolling INTO the section.
+        // In-page anchors are native jumps (Lenis is not configured to intercept them),
+        // so clicking Contact / Socials — or loading the homepage with a hash, which is
+        // what the sub-page nav links do — lands far past this section in a single step.
+        // engageStick() would then scrollTo(lockY) BACK to projects and freeze the page
+        // for STICK_MS: the click looks like it gets stuck at projects instead of going
+        // where it was aimed. A real scroll can only ever cross this line a few px at a
+        // time, so "more than a viewport past the cover line" means it was a jump.
+        if (r.top > -vh) engageStick();
         // The scroll typing is done with the line — from here the facet clicks own it.
         sqlOwned = true; renderSel(sqlShown, sqlCur, true);
         // The pin length was sized at init while .term-pre was still expanded, so the
@@ -3672,6 +3841,61 @@ function buildPillReel(pill) {
   buildPillReel(hdr.querySelector(".pill-btn--dark"));
 })();
 
+/* ---- Nav scale handed across a page hop (2026-08-13) --------------------------
+   updateHeroExit shrinks the two nav groups to .88 once you scroll off the hero, as
+   an inline transform with a .3s transition. That is homepage-only state living in
+   one document, so arriving on a sub-page the nav is simply at scale 1 from its very
+   first frame — there is nothing to animate FROM, and the size change reads as a snap.
+   (Leaving a sub-page is fine: the homepage's own scroll handler drives the shrink.)
+   So the outgoing scale is recorded on the way out and replayed on arrival: apply it
+   instantly, then transition to 1 on the next frame, which is the expansion.
+   RESTORE IS SUB-PAGE ONLY — deliberately. On the homepage updateHeroExit owns this
+   transform and sets it from real scroll position every frame; touching it there would
+   fight that, and the ask was to leave the leaving-the-blog direction alone. */
+(function navScaleHandoff() {
+  var KEY = "vj:nav-scale";
+  var groups = [
+    [document.querySelector(".header__nav-left"), "left center"],
+    [document.querySelector(".header__nav-right"), "right center"]
+  ].filter(function (g) { return g[0]; });
+  if (!groups.length) return;
+
+  function scaleOf(el) {
+    var t = getComputedStyle(el).transform;
+    if (!t || t === "none") return 1;
+    var m = /matrix\(([^,]+),/.exec(t);            // matrix(a, b, c, d, e, f) → a is scaleX
+    return m ? parseFloat(m[1]) || 1 : 1;
+  }
+  // Record on the way out. pagehide (not beforeunload) so it also fires when the page
+  // goes into the back/forward cache.
+  addEventListener("pagehide", function () {
+    try { sessionStorage.setItem(KEY, String(scaleOf(groups[0][0]))); } catch (e) {}
+  });
+
+  if (document.querySelector(".hero")) return;     // homepage: updateHeroExit owns it
+  var from = 1;
+  try { from = parseFloat(sessionStorage.getItem(KEY)); } catch (e) {}
+  // Consume it either way, so a later plain load does not replay a stale expansion.
+  try { sessionStorage.removeItem(KEY); } catch (e) {}
+  if (!(from > 0) || from > 0.999) return;         // arrived from an already-expanded nav
+
+  groups.forEach(function (g) {
+    g[0].style.transition = "none";
+    g[0].style.transformOrigin = g[1];
+    g[0].style.transform = "scale(" + from + ")";
+  });
+  // Two frames: the first commits the shrunk pose, the second starts the transition
+  // (setting both in one frame would be coalesced into no animation at all).
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      groups.forEach(function (g) {
+        g[0].style.transition = "transform .3s var(--ease-default)";   // matches updateHeroExit
+        g[0].style.transform = "scale(1)";
+      });
+    });
+  });
+})();
+
 /* ---- Post action rail (2026-08-11) --------------------------------------------
    Back is a plain link. Like is stored in localStorage and is per-browser only:
    this site is static, so there is nowhere to keep a shared count — showing a
@@ -3720,6 +3944,10 @@ function buildPillReel(pill) {
       Array.prototype.forEach.call(row.querySelectorAll(".share-btn"), function (a) {
         var c = a.cloneNode(true);
         c.className = "post-rail__pop-btn";
+        // Choosing a target closes the panel. The outside-click handler below cannot do
+        // it — these live INSIDE the rail — and they open in a new tab, so the page never
+        // navigates away either; the panel just sat there open over the article.
+        c.addEventListener("click", close);
         pop.appendChild(c);
       });
     }
@@ -3755,12 +3983,19 @@ function buildPillReel(pill) {
 
   if (share) {
     share.setAttribute("aria-expanded", "false");
+    // Toggle. No stopPropagation: the document handler below decides for itself whether
+    // a click concerns it, which is sturdier than relying on this one click never
+    // reaching it. (Anything else on the page calling stopPropagation on the way up
+    // would silently disable the outside-click close under the old arrangement.)
     share.addEventListener("click", function (e) {
-      e.stopPropagation();
+      e.preventDefault();
       if (pop && !pop.hidden) close(); else open();
     });
     document.addEventListener("click", function (e) {
-      if (pop && !pop.hidden && !rail.contains(e.target)) close();
+      if (!pop || pop.hidden) return;
+      if (share.contains(e.target)) return;   // the toggle handles its own click
+      if (pop.contains(e.target)) return;     // a share target closes via its own handler
+      close();                                // anywhere else dismisses the panel
     });
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") close();
