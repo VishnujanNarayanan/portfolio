@@ -9,9 +9,13 @@
   Tokens:
     {{CONTACT_ID}}  ' id="contact"' on the homepage, empty elsewhere (the id must
                     stay unique, and the homepage nav's Contact link targets it).
-    {{HOME}}        '' on the homepage so its in-page anchors keep working exactly
-                    as they do now; '/' on sub-pages so #projects lands on the
-                    homepage instead of doing nothing.
+    {{TO}}<id>      a homepage SECTION link: '#<id>' on the homepage, '/?go=<id>'
+                    elsewhere. NOT '/#<id>' — a fragment does not survive a
+                    cross-document navigation here, so those links silently landed
+                    on the hero instead of the section. See {{TO}} in
+                    scripts/gen-partials.mjs; main.js reads ?go= on arrival.
+    {{HOME_HREF}}   '#top' on the homepage (top of document), '/' elsewhere.
+    {{HOME}}        '' on the homepage, '/' elsewhere (non-section links).
 -->
 <footer class="lfooter"{{CONTACT_ID}}>
 
@@ -28,9 +32,9 @@
         <div class="lfooter__cols">
           <nav class="lfooter__col lfooter__col--left" aria-label="Pages">
             <span class="lfooter__col-label">Pages</span>
-            <a href="{{HOME}}#top" class="lfooter__navlink">Home</a>
-            <a href="{{HOME}}#projects" class="lfooter__navlink">Projects</a>
-            <a href="{{HOME}}#skills" class="lfooter__navlink">Skills</a>
+            <a href="{{HOME_HREF}}" class="lfooter__navlink">Home</a>
+            <a href="{{TO}}projects" class="lfooter__navlink">Projects</a>
+            <a href="{{TO}}socials" class="lfooter__navlink">Socials</a>
             <a href="/blog/" class="lfooter__navlink">Blog</a>
           </nav>
           <nav class="lfooter__col lfooter__col--right" aria-label="Social links">
@@ -58,7 +62,9 @@
     </div>
 
     <!-- Pill in the bottom-centre tab of the notched box -->
-    <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me <span aria-hidden="true">&#8599;</span></a>
+    <!-- No trailing arrow: main.js splits this into per-letter reel clips on load, and a
+         glyph that is not a letter reels along with them. -->
+    <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me</a>
 
     <!-- Legal row sits in the gradient shelves either side of the bottom tab -->
     <div class="lfooter__bottom">

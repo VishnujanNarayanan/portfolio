@@ -819,11 +819,23 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 @media (pointer:fine){.cert-gallery__back:hover{background:var(--color-highlight);color:var(--color-text-light);box-shadow:0 6px 22px rgba(57,50,220,.38)}}
 /* Per-letter vertical REEL on the back button (same roller the nav pills use): each letter is a
    clip whose __col rolls up on hover to reveal an identical __c clone rising from below. */
-.cert-gallery__back .pill-char{display:inline-block;position:relative;overflow:hidden;vertical-align:bottom;white-space:pre}
-.cert-gallery__back .pill-char__col{display:block;position:relative;transition:transform .42s var(--ease-default);transition-delay:var(--hd,0s);will-change:transform}
-.cert-gallery__back .pill-char__face{display:block;position:relative}
-.cert-gallery__back .pill-char__c{display:block;position:absolute;left:0;top:100%;color:inherit}
-.cert-gallery__back:hover .pill-char__col,.cert-gallery__back:focus-visible .pill-char__col{transform:translateY(-100%)}
+/* The CLIP itself. The base .pill-char rule is scoped to `header`, so anything using this
+   reel outside the header needs its own copy — without it the letters lose their
+   inline-block box and, with no overflow:hidden, the __c clone (absolutely positioned
+   at top:100%) shows BELOW the text: the word appears duplicated and stacked. */
+.cert-gallery__back .pill-char,.lfooter__email .pill-char,.callout-socials-link .pill-char{display:inline-block;position:relative;overflow:hidden;vertical-align:bottom;white-space:pre}
+/* Plain-text reel — the cert gallery Back button, the footer email link and the three
+   links under the socials cards. Same structure as the header pills but without the
+   colour world flip: only the hover roller (__col) and the clone (__c) below it.
+   Built by buildLinkReel() in main.js. Kept as one selector list so the three can
+   never drift apart. */
+.cert-gallery__back .pill-char__col,.lfooter__email .pill-char__col,.callout-socials-link .pill-char__col{display:block;position:relative;transition:transform .42s var(--ease-default);transition-delay:var(--hd,0s);will-change:transform}
+.cert-gallery__back .pill-char__face,.lfooter__email .pill-char__face,.callout-socials-link .pill-char__face{display:block;position:relative}
+.cert-gallery__back .pill-char__c,.lfooter__email .pill-char__c,.callout-socials-link .pill-char__c{display:block;position:absolute;left:0;top:100%;color:inherit}
+.cert-gallery__back:hover .pill-char__col,.cert-gallery__back:focus-visible .pill-char__col,
+.lfooter__email:hover .pill-char__col,.lfooter__email:focus-visible .pill-char__col,
+.callout-socials-link:hover .pill-char__col,.callout-socials-link:focus-visible .pill-char__col{transform:translateY(-100%)}
+.callout-socials-link{display:inline-block;white-space:nowrap;text-transform:uppercase}
 /* "Scroll to see more" prompt, bottom-right; fades out once you reach the last certificate. */
 .cert-gallery__hint{position:absolute;bottom:24px;right:24px;z-index:2;display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:var(--radius-full);background:rgba(5,4,25,.72);backdrop-filter:blur(8px);font-family:var(--font-ui);font-size:var(--text-xs);letter-spacing:var(--tracking-wide);text-transform:uppercase;color:var(--color-text-light);pointer-events:none;opacity:0;transform:translateY(8px);transition:opacity .4s var(--ease-default),transform .4s var(--ease-default)}
 .cert-gallery.is-open .cert-gallery__hint{opacity:.9;transform:translateY(0)}
@@ -1278,7 +1290,16 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 }
 
 html.boot-active{overflow:hidden;height:100%}
-#boot-loader{position:fixed;inset:0;z-index:100001;display:flex;background:#0c0c0c;font-family:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;transition:opacity .5s ease}
+/* HIDDEN BY DEFAULT, shown only once main.js decides the loader should play.
+   It used to default to display:flex, and it is a #0c0c0c full-viewport fixed layer
+   at z-index 100001 sitting in the static HTML — so it painted BLACK on the very
+   first frame of every homepage load, and only the deferred script could take it
+   away again. Invisible while the loader was always playing; a one-frame black blip
+   the moment it started being skipped. Inverting the default also fixes a no-JS
+   visitor being left staring at a black screen forever, since nothing would ever
+   have run to dismiss it. */
+#boot-loader{position:fixed;inset:0;z-index:100001;display:none;background:#0c0c0c;font-family:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;transition:opacity .5s ease}
+html.boot-active #boot-loader{display:flex}
 #boot-loader.is-done{opacity:0;visibility:hidden;pointer-events:none}
 .boot-term{flex:1;display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden;background:#0c0c0c}
 .boot-term__bar{display:flex;align-items:center;gap:8px;height:42px;padding:0 18px;background:#000}
@@ -1468,9 +1489,13 @@ html.boot-active{overflow:hidden;height:100%}
 .lfooter__email{
   position:absolute;left:50%;bottom:20px;transform:translateX(-50%);
   z-index:3;
-  display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:0;white-space:nowrap;
   background:var(--lf-sky-bright);color:var(--lf-box);
-  font-weight:700;text-transform:uppercase;letter-spacing:.4px;font-size:14px;
+  /* Typography matched to the rest of the site's UI text (nav links, socials links,
+     pill buttons): --font-ui at weight 500 and --tracking-wide. It was the only one
+     at weight 700 / .4px tracking, which read as a different family next to them. */
+  font-family:var(--font-ui),sans-serif;
+  font-weight:500;text-transform:uppercase;letter-spacing:var(--tracking-wide);font-size:var(--text-sm);
   padding:14px 26px;border-radius:999px;
   transition:background .25s ease,transform .25s ease;
 }

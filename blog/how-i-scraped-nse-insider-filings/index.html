@@ -319,9 +319,9 @@ return parts[0].str.cat(parts[1:], sep='|')</code></pre>
         <div class="lfooter__cols">
           <nav class="lfooter__col lfooter__col--left" aria-label="Pages">
             <span class="lfooter__col-label">Pages</span>
-            <a href="/#top" class="lfooter__navlink">Home</a>
-            <a href="/#projects" class="lfooter__navlink">Projects</a>
-            <a href="/#skills" class="lfooter__navlink">Skills</a>
+            <a href="/" class="lfooter__navlink">Home</a>
+            <a href="/?go=projects" class="lfooter__navlink">Projects</a>
+            <a href="/?go=socials" class="lfooter__navlink">Socials</a>
             <a href="/blog/" class="lfooter__navlink">Blog</a>
           </nav>
           <nav class="lfooter__col lfooter__col--right" aria-label="Social links">
@@ -439,7 +439,9 @@ return parts[0].str.cat(parts[1:], sep='|')</code></pre>
     </div>
 
     <!-- Pill in the bottom-centre tab of the notched box -->
-    <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me <span aria-hidden="true">&#8599;</span></a>
+    <!-- No trailing arrow: main.js splits this into per-letter reel clips on load, and a
+         glyph that is not a letter reels along with them. -->
+    <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me</a>
 
     <!-- Legal row sits in the gradient shelves either side of the bottom tab -->
     <div class="lfooter__bottom">

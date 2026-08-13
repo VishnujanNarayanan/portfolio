@@ -117,7 +117,7 @@
 </dialog>
 <!-- END generated: header -->
 <main>
-<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/#projects">Projects</a><span>›</span>Market Data Platform</nav>
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/?go=projects">Projects</a><span>›</span>Market Data Platform</nav>
 <article class="article">
   <h1>Market Data Platform</h1>
   <div class="meta"><span>Role: AI Quant Researcher · CiteSert</span><span>Python · pandas · yfinance · SQL</span></div>
@@ -158,7 +158,7 @@
   </ul>
 
   <p><em>Built at CiteSert — source is private.</em></p>
-  <a class="back" href="/#projects">← Back to projects</a>
+  <a class="back" href="/?go=projects">← Back to projects</a>
 </article>
 </main>
 <!-- BEGIN generated: footer (source: partials/footer.html — run scripts/gen-partials.mjs) -->
@@ -178,9 +178,9 @@
         <div class="lfooter__cols">
           <nav class="lfooter__col lfooter__col--left" aria-label="Pages">
             <span class="lfooter__col-label">Pages</span>
-            <a href="/#top" class="lfooter__navlink">Home</a>
-            <a href="/#projects" class="lfooter__navlink">Projects</a>
-            <a href="/#skills" class="lfooter__navlink">Skills</a>
+            <a href="/" class="lfooter__navlink">Home</a>
+            <a href="/?go=projects" class="lfooter__navlink">Projects</a>
+            <a href="/?go=socials" class="lfooter__navlink">Socials</a>
             <a href="/blog/" class="lfooter__navlink">Blog</a>
           </nav>
           <nav class="lfooter__col lfooter__col--right" aria-label="Social links">
@@ -283,7 +283,9 @@
     </div>
 
     <!-- Pill in the bottom-centre tab of the notched box -->
-    <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me <span aria-hidden="true">&#8599;</span></a>
+    <!-- No trailing arrow: main.js splits this into per-letter reel clips on load, and a
+         glyph that is not a letter reels along with them. -->
+    <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me</a>
 
     <!-- Legal row sits in the gradient shelves either side of the bottom tab -->
     <div class="lfooter__bottom">
