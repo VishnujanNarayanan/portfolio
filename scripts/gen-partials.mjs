@@ -130,6 +130,16 @@ for (const file of pages) {
       "\n" +
       part.body
         .replaceAll("{{HOME}}", isHome ? "" : "/")
+        // {{TO}}<id> — a link to a homepage SECTION, written so it survives the trip.
+        // On the homepage that is an ordinary in-page fragment. From a sub-page it is
+        // NOT "/#<id>": a cross-document navigation to a fragment arrives here with the
+        // fragment stripped (verified in both Chrome and Firefox, and with every script
+        // on the page blocked, so it is not ours) — which is why Contact and Socials
+        // used to dump you on the hero when clicked from a blog page. A query survives
+        // that trip intact, so sub-pages carry the target as ?go=<id>; main.js reads it
+        // on arrival, scrolls there, and rewrites the URL back to /#<id> so what ends up
+        // in the address bar is still the clean, shareable form.
+        .replaceAll("{{TO}}", isHome ? "#" : "/?go=")
         // Always the blog PAGE, never the homepage's in-page writing section: the
         // nav item promises a blog and the section is only a teaser for it.
         .replaceAll("{{BLOG}}", "/blog/")

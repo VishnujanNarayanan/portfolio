@@ -70,10 +70,26 @@ function buildPillReel(pill) {
      flow.js WebGL, Lenis, scroll listeners) finish. Resolves window.__bootReady
      when it lifts, which drives the hero entrance below. A quick minimum display
      time keeps the animation readable when assets are already cached; if assets
-     are still loading it EXTENDS past the minimum until they resolve. */
+     are still loading it EXTENDS past the minimum until they resolve.
+
+     ONCE PER SESSION. The loader is an intro, so it earns ~3.5s the first time a
+     visitor reaches the homepage and never again: the assets it waits on are in the
+     HTTP cache from then on, so replaying it on every return from /blog/ is pure
+     delay. A sessionStorage flag records that it has run, which covers both routes
+     in — landing on the homepage first, or arriving from an external link straight
+     to a blog post and only meeting the homepage later (they still get it once, on
+     that first homepage view). An explicit reload replays it, since that reads as
+     asking for the page from scratch; back/forward and in-site links do not.
+
+     HASH ON ENTRY. html.boot-active sets overflow:hidden AND height:100%, so while
+     the loader is up the document cannot scroll and the browser's own jump to
+     location.hash is impossible — which is why arriving from a sub-page at
+     /#contact or /#socials used to dump you on the hero. The hash is re-applied
+     here once the page is scrollable again (both paths, loader or not). */
   (function () {
     var bootResolve;
     window.__bootReady = new Promise(function (res) { bootResolve = res; });
+    var docEl = document.documentElement;
 
     var boot = document.getElementById("boot-loader");
     if (!boot) { bootResolve(); return; }
@@ -81,11 +97,89 @@ function buildPillReel(pill) {
     var out    = document.getElementById("boot-out");
     var fill   = boot.querySelector(".boot-bar__fill");
     var pctEl  = boot.querySelector(".boot-bar__pct");
-    var docEl  = document.documentElement;
     var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
     var MIN_MS = reduce ? 600 : 3200;
     var start  = (window.performance && performance.now) ? performance.now() : Date.now();
     var now    = function () { return (window.performance && performance.now) ? performance.now() : Date.now(); };
+
+    var SEEN_KEY = "vj:boot-seen";
+    function seen(v) {
+      try { if (v === undefined) return sessionStorage.getItem(SEEN_KEY) === "1"; sessionStorage.setItem(SEEN_KEY, "1"); }
+      catch (e) { return false; }                        // private mode / storage blocked → always show
+    }
+    function isReload() {
+      try {
+        var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+        if (nav) return nav.type === "reload";
+        return !!(performance.navigation && performance.navigation.type === 1);
+      } catch (e) { return false; }
+    }
+    // Scroll to location.hash once the document can actually scroll.
+    //
+    // Arriving from a sub-page (/#contact, /#socials) is NOT the same as clicking the
+    // same link on the homepage. The in-page case is a plain fragment scroll and always
+    // worked; the cross-document case has to survive a page load, and several things
+    // there will happily put you back at 0 — html.boot-active makes the document
+    // unscrollable while the loader is up, so the browser's own jump to the fragment is
+    // silently dropped, and Lenis keeps its own scroll value that it re-asserts every
+    // frame from whatever it captured at startup.
+    //
+    // So this does not trust a single well-timed scroll. The hash is read ONCE at script
+    // start (in case it is cleared later) and then re-asserted on a few retries until the
+    // target is actually at the top — giving up the moment the visitor scrolls themselves,
+    // so it can never fight a real gesture. '#top' is the spec's "top of document"
+    // fragment and has no element, so it is skipped along with an empty hash.
+    // The target is carried EITHER as a fragment (same-page links on the homepage) or
+    // as ?go=<id> (links from a sub-page — see {{TO}} in scripts/gen-partials.mjs;
+    // a fragment does not survive that cross-document trip). Read once, at script
+    // start, before anything can clear it.
+    var wantHash = (function () {
+      var m = /[?&]go=([\w-]+)/.exec(location.search);
+      return m ? "#" + m[1] : location.hash;
+    })();
+    var userScrolled = false;
+    ["wheel", "touchstart", "keydown"].forEach(function (t) {
+      addEventListener(t, function () { userScrolled = true; }, { passive: true, once: true });
+    });
+    function applyHash() {
+      if (!wantHash || wantHash === "#" || wantHash === "#top") return;
+      var el = null;
+      try { el = document.querySelector(wantHash); } catch (e) { return; }  // malformed selector
+      if (!el) return;
+      // Swap ?go=<id> out of the address bar for the clean /#<id> form. replaceState
+      // does not scroll and leaves no extra history entry, so this is cosmetic only —
+      // but it means the URL a visitor copies is the shareable one.
+      if (location.search.indexOf("go=") > -1 && history.replaceState) {
+        try {
+          history.replaceState(null, "", location.pathname + location.search.replace(/[?&]go=[\w-]+/, "").replace(/^&/, "?") + wantHash);
+        } catch (e) {}
+      }
+      var tries = 0;
+      (function attempt() {
+        if (userScrolled || tries++ > 8) return;
+        var top = el.getBoundingClientRect().top;
+        if (Math.abs(top) > 2) {
+          var y = top + (window.scrollY || 0);
+          if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { immediate: true, force: true });
+          window.scrollTo(0, y);                       // also move the real scroller, in case Lenis is absent
+        }
+        setTimeout(attempt, tries < 3 ? 60 : 220);     // quick at first, then slower while assets settle
+      })();
+    }
+    // Late layout shifts (fonts, images, the JS-sized projects section) move the target
+    // after the first attempts, so re-run once everything has actually loaded.
+    addEventListener("load", function () { applyHash(); });
+
+    // Repeat visit in this session (and not an explicit reload) → no loader at all.
+    // The critical assets are cached, so the only thing still worth doing is priming
+    // the hero video's decoder; that runs in the background instead of gating.
+    if (seen() && !isReload()) {
+      boot.style.display = "none";
+      warmCritical();
+      bootResolve();
+      applyHash();
+      return;
+    }
 
     docEl.classList.add("boot-active");
     if (window.__lenis && window.__lenis.stop) window.__lenis.stop();
@@ -138,6 +232,12 @@ function buildPillReel(pill) {
         setTimeout(done, 8000);
       });
     }
+    // Skip path only: no loader to hide behind, so nothing here may gate the reveal.
+    // The images are already in the HTTP cache on a repeat visit, but the video's
+    // DECODER is not — that is per-document — so it still needs priming or the hero
+    // pays the spin-up at the first scroll. Fire and forget. (Both this and loadVideo
+    // are function declarations, so this is callable from the early return above.)
+    function warmCritical() { loadVideo("videos/interview_office.mp4", true); }
 
     // Ordered typing queue: [label, promise]. Labels drive the "Collecting …" lines.
     var tasks = [];
@@ -265,7 +365,9 @@ function buildPillReel(pill) {
             // Warm a layout pass so the first scroll pays no reflow cost.
             var f = document.querySelector(".flow");     if (f)  void f.offsetHeight;
             var ft = document.querySelector(".features"); if (ft) void ft.offsetHeight;
+            seen(true);            // this session has now watched the intro — don't replay it
             bootResolve();
+            applyHash();           // the page is scrollable again; honour /#contact, /#socials
           }, 480);
         });
       }, wait);
@@ -413,6 +515,14 @@ function buildPillReel(pill) {
       if (darkPill) {                                     // Get In Touch pill bg: dark #050419 → light #d0e1eb
         var dr = Math.round(5 + (208 - 5) * he), dg = Math.round(4 + (225 - 4) * he), db = Math.round(25 + (235 - 25) * he);
         darkPill.style.transition = trans; darkPill.style.backgroundColor = "rgb(" + dr + "," + dg + "," + db + ")";
+      }
+      if (glassPill) {                                    // Socials pill bg: the INVERSE of the above
+        // Opaque, and travelling the opposite way so the two CTAs always read as a
+        // light/dark pair: near-white #fcfcfc in the light world → #050419 over the
+        // dark projects run. Matches the letter channel `c` (black at he 0, white at
+        // he 1), so the label stays legible at both ends without its own ramp.
+        var gr = Math.round(252 + (5 - 252) * he), gg = Math.round(252 + (4 - 252) * he), gb = Math.round(252 + (25 - 252) * he);
+        glassPill.style.transition = trans; glassPill.style.backgroundColor = "rgb(" + gr + "," + gg + "," + gb + ")";
       }
       // Reel roll — only on the discrete threshold flips (ease): the LIGHT world rolls both pills up
       // to their __b copy, in unison. During the hero zoom (no ease) stay unrolled so __a's colour
