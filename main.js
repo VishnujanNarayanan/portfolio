@@ -39,7 +39,14 @@ function buildPillReel(pill) {
 
   /* ---------- Lenis smooth scroll (CDN global: Lenis) ---------- */
   var lenis = null;
-  if (typeof Lenis !== "undefined" && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  // ?nolenis — dev switch to measure what smooth scroll costs on this page. Lenis
+  // applies the scroll itself every rAF, and on a document this tall with this many
+  // sticky/composited layers that work is charged to its raf callback. Loading with
+  // ?nolenis falls back to native scrolling so the two can be compared directly;
+  // nothing else changes, since every handler is driven by scroll position, not by
+  // Lenis events.
+  var noLenis = /[?&]nolenis\b/.test(location.search);
+  if (typeof Lenis !== "undefined" && !noLenis && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     lenis = new Lenis({ duration: 1.1, smoothWheel: true });
     window.__lenis = lenis; // exposed so flow.js can drive click-to-jump
     function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
@@ -975,6 +982,26 @@ function buildPillReel(pill) {
     var THRESH_I = 23;                        // "thin24" — first stroke of the timed completion
     var POP_W = "26";                         // strokes snap to this width at the pop...
     var POP_KEEP = ["25", "26", "27"];        // ...except thick26/thick27/thick28, which keep their own pen width
+    /* render() runs on EVERY scroll frame, anywhere on the page, and used to do a
+       getAttribute plus three inline style writes for each of the 55 strokes — 55 DOM
+       reads and up to 165 writes per frame. Two things make almost all of it dead work:
+       the per-stroke data-i and pen width never change, and once the writing has popped
+       (written) every stroke's values are CONSTANT, so the same strings were being
+       rewritten forever. Precompute the constants and change-gate the writes. */
+    var segI = [], segPopW = [], segLast = [];
+    for (var _si = 0; _si < segs.length; _si++) {
+      var _di = segs[_si].getAttribute("data-i");
+      segI.push(+_di);
+      segPopW.push(POP_KEEP.indexOf(_di) >= 0 ? "" : POP_W);
+      segLast.push({ v: null, o: null, w: null });
+    }
+    function setSeg(i, vis, off, w) {
+      var st = segs[i].style, L = segLast[i];
+      if (L.v !== vis) { L.v = vis; st.visibility = vis; }
+      if (L.o !== off) { L.o = off; st.strokeDashoffset = off; }
+      if (L.w !== w) { L.w = w; st.strokeWidth = w; }
+    }
+    var lastLayerTf = null, lastLayerOp = null, lastWritten = null;
     function measure() {
       total = 0; thrLen = 0;
       segs.forEach(function (s, i) {
@@ -1015,32 +1042,36 @@ function buildPillReel(pill) {
       var y = window.scrollY, vh = window.innerHeight;
       // The CTA rides UP with the video (phase C, >2vh) at its constant TEXT_SCALE size (layerTransform),
       // so the text is the SAME size before and after collapse.
-      layer.style.transform = layerTransform();
+      var _tf = layerTransform();
+      if (_tf !== lastLayerTf) { lastLayerTf = _tf; layer.style.transform = _tf; }
       var written = cT >= 0.999;
       // Hand the threshold state to the video (read by updateHeroExit each frame).
       window.__certWrite = { crossed: crossed, t: cT, pBThr: pBThreshold() };
       var inkedTimed = thrLen + cT * (total - thrLen);   // strokes 23..45 reveal on the timer
-      var acc = 0;
-      segs.forEach(function (s, i) {
-        var di = s.getAttribute("data-i");
-        if (written) {
-          // Popped: every stroke fully inked and snapped to one WIDE band (26) so the calligraphy
-          // fills solidly — except thick27/thick28, which keep their own pen width (26 spills there).
-          s.style.visibility = "visible";
-          s.style.strokeDashoffset = 0;
-          s.style.strokeWidth = POP_KEEP.indexOf(di) >= 0 ? "" : POP_W;
-        } else {
-          // Strokes before thin24 scrub with scroll; thin24 onward reveal on the timer (inkedTimed).
-          var ref = (+di < THRESH_I) ? inkedScroll : inkedTimed;
-          var lp = Math.max(0, Math.min((ref - acc) / lens[i], 1));
-          // Hide a stroke until its ink reaches it (avoids round-cap dots on un-started strokes).
-          s.style.visibility = lp > 0 ? "visible" : "hidden";
-          s.style.strokeDashoffset = (lens[i] * (1 - lp)).toFixed(2);
-          s.style.strokeWidth = "";   // restore the per-stroke pen widths on scroll-up
+      var showing = (inkedScroll > 0.001 || cT > 0.001);
+      // Nothing inked and nothing timed → the layer is fully transparent. Once it has
+      // settled there (and the strokes were reset on the frame it became invisible)
+      // there is nothing for the loop to say, so skip all 55 strokes.
+      if (showing || lastLayerOp !== 0 || lastWritten !== written) {
+        var acc = 0;
+        for (var i = 0; i < segs.length; i++) {
+          if (written) {
+            // Popped: every stroke fully inked and snapped to one WIDE band (26) so the calligraphy
+            // fills solidly — except thick27/thick28, which keep their own pen width (26 spills there).
+            setSeg(i, "visible", "0", segPopW[i]);
+          } else {
+            // Strokes before thin24 scrub with scroll; thin24 onward reveal on the timer (inkedTimed).
+            var ref = (segI[i] < THRESH_I) ? inkedScroll : inkedTimed;
+            var lp = Math.max(0, Math.min((ref - acc) / lens[i], 1));
+            // Hide a stroke until its ink reaches it (avoids round-cap dots on un-started strokes).
+            setSeg(i, lp > 0 ? "visible" : "hidden", (lens[i] * (1 - lp)).toFixed(2), "");
+          }
+          acc += lens[i];
         }
-        acc += lens[i];
-      });
-      layer.style.opacity = (inkedScroll > 0.001 || cT > 0.001) ? 1 : 0;
+        lastWritten = written;
+      }
+      var _op = showing ? 1 : 0;
+      if (_op !== lastLayerOp) { lastLayerOp = _op; layer.style.opacity = _op; }
       layer.classList.toggle("is-written", written);
       // Clickable + hoverable from the moment the THRESHOLD is hit (crossed) — both directions:
       // it activates as the pen reaches thin24 on the way down, and stays active on scroll-up until
@@ -1619,6 +1650,43 @@ function buildPillReel(pill) {
       strokeIso(g);
       g.restore();
     }
+    /* ---------- Geometry cache ----------
+       This loop read a getBoundingClientRect (and an offsetHeight) per dark section
+       EVERY frame. Each of those flushes style+layout, and on a ~17,000px document a
+       single flush measured in the multiple-milliseconds — dwarfing the field maths.
+       A section's position in the DOCUMENT and its height do not change while
+       scrolling, so they are measured once and the viewport rect is derived as
+       (documentTop - scrollY). Reading scrollY does not flush.
+       Invalidated on resize, after load/fonts, and by sizeSection() — which is the one
+       thing that legitimately changes a section's height at runtime (the projects
+       filter re-sizes .features). */
+    // NOTE: .writing__pin is position:sticky, so its viewport rect CANNOT be derived as
+    // (documentTop - scrollY) — once it sticks, the real rect.top clamps to 0 while the
+    // derived value keeps going negative, and that wrong offset shifts the blog's
+    // contour lines off their canvas (they appear cut off / sliding). Only its STATIC
+    // parent section is cached, purely as a cheap on-screen test; the sticky pin itself
+    // is read live, and only on the frames the blog is actually visible.
+    var wsTop = 0, wsH = 0;
+    var writingSec = writingPin ? (writingPin.closest(".writing") || writingPin.parentNode) : null;
+    function scrollY0() { return window.scrollY || window.pageYOffset || 0; }
+    function measureSecs() {
+      var sy = scrollY0(), i, r;
+      for (i = 0; i < darkSecs.length; i++) {
+        r = darkSecs[i].el.getBoundingClientRect();
+        darkSecs[i].docTop = r.top + sy;
+        darkSecs[i].docH = r.height;
+      }
+      if (writingSec) { r = writingSec.getBoundingClientRect(); wsTop = r.top + sy; wsH = r.height; }
+    }
+    // Same fields this loop reads off a DOMRect.
+    function rectOf(top, h) { var t = top - scrollY0(); return { top: t, bottom: t + h, height: h }; }
+    measureSecs();
+    window.addEventListener("resize", measureSecs, { passive: true });
+    window.addEventListener("load", measureSecs);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureSecs);
+    window.__remeasureContours = measureSecs;   // sizeSection() calls this after resizing .features
+    var featuresGeo = null;
+    for (var fg = 0; fg < darkSecs.length; fg++) if (darkSecs[fg].el === featuresEl) featuresGeo = darkSecs[fg];
     var t = 0, last = 0, navDark = false, ctaDark = false;   // nav reel + CTA pills now flip TOGETHER at the features-hit threshold
     // Perf: the field resample (rows×cols cells, noise+exp each) dominates frame cost.
     // The field is time-driven only (scroll alignment happens at draw time via translate),
@@ -1708,7 +1776,7 @@ function buildPillReel(pill) {
       // bg reaches/covers the fixed header (the same threshold the terminal reveals
       // at). Previously nav flipped at blogProg 0.60 and CTA at 0.07 — two separate,
       // later points; now they're unified to this single features-hit threshold.
-      var fTop = featuresEl ? featuresEl.getBoundingClientRect().top : (H || 1);
+      var fTop = featuresGeo ? (featuresGeo.docTop - scrollY0()) : (H || 1);
       // Snap/lock lands the page at rect.top = 0, but browsers round scrollY to an
       // integer while layout is sub-pixel — so the section settles a fraction of a px
       // SHORT (rect.top ≈ +0.4), which a strict `<= 0` reads as "not covered", leaving
@@ -1725,15 +1793,18 @@ function buildPillReel(pill) {
       }
       // Blog canvas: solid light blue (end-of-zone-4) + dark indigo lines (no gradient).
       if (wctx && writingPin) {
-        var wr = writingPin.getBoundingClientRect();
-        if (wr.bottom > 0 && wr.top < H)                 // skip while the blog pin is off-screen
-          drawContours(wctx, "rgba(57,50,220,0.5)", "rgb(208,225,235)", -wr.top);
+        var ws = rectOf(wsTop, wsH);                     // static parent: cheap visibility test
+        if (ws.bottom > 0 && ws.top < H) {                // blog off-screen → no read at all
+          var wr = writingPin.getBoundingClientRect();    // sticky → must be measured live
+          if (wr.bottom > 0 && wr.top < H)
+            drawContours(wctx, "rgba(57,50,220,0.5)", "rgb(208,225,235)", -wr.top);
+        }
       }
       // Dark content sections (Selected work / Skills / Services): solid dark navy + light-blue lines.
       for (var ds = 0; ds < darkSecs.length; ds++) {
-        var sec = darkSecs[ds], sr = sec.el.getBoundingClientRect();
+        var sec = darkSecs[ds], sr = rectOf(sec.docTop, sec.docH);
         if (sr.bottom <= 0 || sr.top >= H) continue;
-        var sh = sec.el.offsetHeight;
+        var sh = sec.docH;
         // The canvas is VIEWPORT-sized (capped at the section height), not section-
         // tall, and slides down the section each frame to cover the visible window.
         // Section-tall bitmaps meant .features alone carried 1920x2160 — 66MB at
@@ -1793,7 +1864,7 @@ function buildPillReel(pill) {
           sideCv.getContext("2d").setTransform(DPR, 0, 0, DPR, 0, 0);
         }
         if (cw && ch) {
-          var scg = sideCv.getContext("2d"), srect = sideCv.getBoundingClientRect();
+          var scg = sideCv.getContext("2d");   // (was also calling getBoundingClientRect here — result unused, pure forced reflow)
           scg.clearRect(0, 0, cw, ch);
           scg.fillStyle = "rgb(27,34,54)"; scg.fillRect(0, 0, cw, ch);
         }
@@ -1847,6 +1918,22 @@ function buildPillReel(pill) {
      live sticky-hover accordion — everything the panels do AFTER they're in place is untouched. */
   (function () {
     var section = document.querySelector(".writing");
+    // Per-frame getBoundingClientRect -> cached document geometry (see the other loops).
+    var wDocTop = 0, wH = 0;
+    function measureWriting() {
+      if (!section) return;
+      var r = section.getBoundingClientRect();
+      wDocTop = r.top + (window.scrollY || window.pageYOffset || 0);
+      wH = r.height;
+    }
+    function writingViewRect() {
+      var t = wDocTop - (window.scrollY || window.pageYOffset || 0);
+      return { top: t, bottom: t + wH, height: wH };
+    }
+    measureWriting();
+    window.addEventListener("resize", measureWriting, { passive: true });
+    window.addEventListener("load", measureWriting);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureWriting);
     var wstack = section && section.querySelector(".wstack");
     var pin = section && section.querySelector(".writing__pin");
     var pad = section && section.querySelector(".writing__pad");   // left intro (Writing / Blogs / desc)
@@ -2059,7 +2146,15 @@ function buildPillReel(pill) {
         return;
       }
       var vh = window.innerHeight;
-      var rect = section.getBoundingClientRect();
+      var rect = writingViewRect();
+      // This loop is unconditional — requestAnimationFrame(frame) re-arms forever — so
+      // the whole blog state machine ran every frame for the life of the page, including
+      // while you are in projects or the footer with nothing it drives on screen
+      // (measured ~6.7ms/frame there). Skip when the section is far outside the viewport.
+      // The margin is a full viewport on each side, and every zoneOf threshold sits
+      // within one viewport of the section, so no crossing can happen while skipped;
+      // lastT is cleared so easings resume from rest instead of jumping on a big dt.
+      if (rect.bottom < -vh || rect.top > vh * 2) { lastT = 0; return; }
       updatePinDwell(rect, vh);                          // drift + vanish run every frame (even after the fan settles)
       if (reduceMo) { setSettled(true); return; }        // no fan: land in place immediately
       // Drive the open state off the threshold-crossing state machine (see zoneOf above),
@@ -2289,6 +2384,24 @@ function buildPillReel(pill) {
     var body = document.getElementById("term-body");
     var sec = document.querySelector(".features");
     if (!body || !sec) return;
+    /* Geometry cache. update() and panCards() run every frame and each called
+       sec.getBoundingClientRect(), which flushes style+layout for the whole document —
+       measured at ~10ms per call on this page. The section's DOCUMENT position and
+       height do not change while scrolling, so measure once and derive the viewport
+       top as (documentTop - scrollY); reading scrollY does not flush.
+       sizeSection() is the exception — it sets sec.style.height at runtime — so it
+       re-measures itself at the end. */
+    var secDocTop = 0, secH = 0;
+    function measureSec() {
+      var r = sec.getBoundingClientRect();
+      secDocTop = r.top + (window.scrollY || window.pageYOffset || 0);
+      secH = r.height;
+    }
+    function secTop() { return secDocTop - (window.scrollY || window.pageYOffset || 0); }
+    measureSec();
+    window.addEventListener("resize", measureSec, { passive: true });
+    window.addEventListener("load", measureSec);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureSec);
     var PROMPT =
       '<span class="term-user">vishnu@ASUS-TUF-F16-Vishnu</span>' +
       '<span class="term-path">:~</span>$ ';
@@ -2554,7 +2667,7 @@ function buildPillReel(pill) {
       // internal scroll state stops its own rAF from restoring the previous position
       // on the very next frame.
       function alignToThreshold() {
-        var target = window.scrollY + sec.getBoundingClientRect().top + ALIGN_EPS;
+        var target = window.scrollY + secTop() + ALIGN_EPS;
         var L = window.__lenis;
         if (L && L.scrollTo) L.scrollTo(target, { immediate: true, force: true });
         window.scrollTo(0, target);
@@ -2702,9 +2815,31 @@ function buildPillReel(pill) {
         (sql ? sqlHtml(text, -1, "") : escapeHtml(text)) + (cursor || "") + "</div>";
     }
     // Build the typed text at `reveal` chars into preEl (pre-SELECT) + selEl (SELECT).
+    /* Incremental cache for the typed script.
+       renderText used to rebuild EVERY line from scratch and assign innerHTML twice,
+       on every frame the reveal count moved — i.e. every frame you scroll through the
+       typing. innerHTML is a parse plus a teardown/rebuild of the whole subtree, and
+       the cost grows as more script is revealed, so it was worst exactly where the
+       section is busiest (measured ~14ms/frame, the largest single cost on the page).
+       Lines that are FULLY typed and no longer carry the cursor can never change, so
+       their HTML is accumulated once here and only the live line is rebuilt per frame.
+       The cache is dropped whenever the reveal moves backwards (scrolling up). */
+    var cPre = "", cSel = "", cK = 0, cUsed = 0;
+    function resetTextCache() { cPre = ""; cSel = ""; cK = 0; cUsed = 0; }
     function renderText(reveal) {
-      var pre = "", sel = "", used = 0, done = reveal >= total, k;
-      for (k = 0; k < script.length; k++) {
+      if (reveal < cUsed) resetTextCache();               // scrolled back — cache invalid
+      // Advance the cache over lines that are complete AND past their newline gap,
+      // so the cursor can never be sitting in one of them.
+      while (cK < script.length) {
+        var cs = script[cK], clen = cs.x.length;
+        if (cUsed + clen + 1 > reveal) break;
+        var chtml = lineHtml(prefixOf(cs), cs.x,
+          cK === selIdx ? '<span class="term-cursor is-blink"></span>' : "", cs.t === "sql");
+        if (cK === selIdx) cSel += chtml; else cPre += chtml;
+        cUsed += clen + 1; cK++;
+      }
+      var pre = cPre, sel = cSel, used = cUsed, done = reveal >= total, k;
+      for (k = cK; k < script.length; k++) {
         var s = script[k], len = s.x.length, pfx = prefixOf(s), into;
         if (used + len <= reveal) {                       // whole line shown
           var cur = "";
@@ -2720,9 +2855,10 @@ function buildPillReel(pill) {
           break;
         }
       }
-      preEl.innerHTML = pre;
-      selEl.innerHTML = sel;
+      if (pre !== lastPreHtml) { lastPreHtml = pre; preEl.innerHTML = pre; }
+      if (sel !== lastSelHtml) { lastSelHtml = sel; selEl.innerHTML = sel; }
     }
+    var lastPreHtml = null, lastSelHtml = null;
 
     /* ---- Live SQL: the SELECT line rewrites itself as the facets are toggled ----
        Clicking a tool/domain doesn't just filter the cards — the query above them is
@@ -2870,7 +3006,7 @@ function buildPillReel(pill) {
       // Land EXACTLY at the cover line (rect.top = 0) so the base pan is 0 — the cards
       // appear un-panned with full top clearance regardless of scroll overshoot/momentum.
       var vel = (lenis && typeof lenis.velocity === "number") ? lenis.velocity : scrollVel;
-      lockY = window.scrollY + sec.getBoundingClientRect().top; // scrollY where rect.top = 0
+      lockY = window.scrollY + secTop(); // scrollY where rect.top = 0
       locked = true;
       if (lenis) { lenis.scrollTo(lockY, { immediate: true }); lenis.stop(); }
       else window.scrollTo(0, lockY);
@@ -2917,6 +3053,9 @@ function buildPillReel(pill) {
     function sizeSection() {
       if (window.innerWidth <= 820) { sec.style.height = ""; return; } // mobile: natural flow
       sec.style.height = (window.innerHeight + cardOverflow()) + "px";
+      measureSec();                                      // height just changed
+      // .features just changed height — the contour loop caches section geometry.
+      if (window.__remeasureContours) window.__remeasureContours();
     }
     // ---- Column stagger ----
     // The EVEN columns (2 and 4, i.e. zero-based index 1 and 3) sit half a card lower
@@ -2940,13 +3079,18 @@ function buildPillReel(pill) {
     // regardless of the pin length (which changes with every filter), so this also
     // covers a filtered 1–2 card result that has no pinned scroll at all.
     var BULGE_RANGE = 0.6, BULGE_MID = 0.5;              // mirror the seam's own constants
+    var brandGap = null;                                 // doc-space terminal-top -> seam distance
+    window.addEventListener("resize", function () { brandGap = null; }, { passive: true });
     function colOffsetProgress() {
-      var top = sec.getBoundingClientRect().top;
-      if (!brandEl) return Math.min(1, Math.max(0, -top / Math.max(1, sec.offsetHeight - window.innerHeight)));
+      var top = secTop();
+      if (!brandEl) return Math.min(1, Math.max(0, -top / Math.max(1, secH - window.innerHeight)));
       var vh = window.innerHeight;
-      // Layout distance from the terminal's top to the seam — constant, so measuring it
-      // live each frame costs nothing and survives resizes/filters.
-      var gap = brandEl.getBoundingClientRect().top - top;
+      // Layout distance from the terminal's top to the seam. It IS constant — which is
+      // exactly why it must not be measured live: both terms shift with scroll by the
+      // same amount, so the difference never changes, but getBoundingClientRect flushed
+      // style+layout every frame to rediscover it. Cached as a document-space delta.
+      if (brandGap === null) brandGap = (brandEl.getBoundingClientRect().top + (window.scrollY || 0)) - (secDocTop);
+      var gap = brandGap;
       var span = gap - vh * (1 - BULGE_RANGE * BULGE_MID);  // threshold → bulge half-drawn
       if (span <= 0) return 1;
       // NOT clamped below 0: scrolling back up past the threshold (toward the blog)
@@ -2998,7 +3142,7 @@ function buildPillReel(pill) {
     // lands exactly as the pin releases to Skills. The side panel doesn't move.
     function panCards() {
       if (window.innerWidth <= 820) { panEl.style.transform = ""; clearColumnOffset(); return; }
-      var pinScroll = sec.offsetHeight - window.innerHeight; // == cardOverflow()
+      var pinScroll = secH - window.innerHeight;            // == cardOverflow() (cached; was sec.offsetHeight)
       applyColumnOffset(colOffsetProgress());
       // momOff (≥0) coasts the cards DOWN then eases to 0 — the reveal's momentum carry.
       // `|| 0`: layoutCardStagger() calls this during setup, before momOff is assigned.
@@ -3010,14 +3154,14 @@ function buildPillReel(pill) {
       // because the pan maps scroll 1:1, those 2px became 2px of pan and sliced the top
       // border off the first row of the non-offset columns. Absorbing the same epsilon
       // here keeps the first row flush; over a several-hundred-px pin it's invisible.
-      var travel = -sec.getBoundingClientRect().top - ALIGN_EPS;
+      var travel = -secTop() - ALIGN_EPS;
       var range = Math.max(1, pinScroll - ALIGN_EPS);
       var past = Math.min(1, Math.max(0, travel / range));
       panEl.style.transform = "translateY(" + (-(past * range) + mom).toFixed(1) + "px)";
     }
     function update() {
       raf = 0;
-      var r = sec.getBoundingClientRect(), vh = window.innerHeight;
+      var r = { top: secTop() }, vh = window.innerHeight;
       // Top bar: reversible at the threshold — hidden while the terminal covers the
       // top (r.top ≤ 0), back the moment you scroll up past it. Toggled every frame
       // (independent of the latched card reveal below).
@@ -3082,11 +3226,18 @@ function buildPillReel(pill) {
     var MAX_DEPTH = 100; // viewBox units (box is 140px tall)
     var RANGE = 0.6;     // fraction of viewport over which it curves out
     var ticking = false;
+    // Cached document geometry — see the other scroll loops; a live rect here flushed
+    // style+layout on every scroll frame.
+    var curveTop = null;
+    function measureCurve() { curveTop = sec.getBoundingClientRect().top + (window.scrollY || window.pageYOffset || 0); }
+    window.addEventListener("resize", measureCurve, { passive: true });
+    window.addEventListener("load", measureCurve);
     function render() {
       ticking = false;
       if (window.innerWidth <= 820) return;
       var vh = window.innerHeight;
-      var top = sec.getBoundingClientRect().top;
+      if (curveTop === null) measureCurve();
+      var top = curveTop - (window.scrollY || window.pageYOffset || 0);
       // p = 0 when the seam first appears at the bottom of the screen,
       // 1 once it has risen RANGE*vh — straight → fully curved.
       var p = (vh - top) / (RANGE * vh);
@@ -3167,9 +3318,19 @@ function buildPillReel(pill) {
   const SPREAD = 1.16;
   // Responsive: the captured values are at 20rem cards; scale offsets to the
   // actual rendered card width so the fan stays proportional on smaller screens.
+  // paint() runs every frame while the springs settle, and offsetWidth FLUSHES
+  // style+layout — a synchronous reflow of the whole document from an animation
+  // loop. The card's layout width only changes on resize (it is set in rem/vw and
+  // is explicitly independent of the transform), so measure it there instead and
+  // read the cached value per frame.
+  let _sf = 0;
+  function measureSizeFactor() {
+    const cw = (cards[0] && cards[0].offsetWidth) || 320; // layout width, ignores transform
+    _sf = (cw / (20 * rem())) * SPREAD;
+  }
   function sizeFactor() {
-    const cw = cards[0].offsetWidth || 320; // layout width, ignores transform
-    return (cw / (20 * rem())) * SPREAD;
+    if (!_sf) measureSizeFactor();
+    return _sf;
   }
 
   // ---- target pose (px, pre-sizeFactor) for the current hover state ----
@@ -3215,12 +3376,20 @@ function buildPillReel(pill) {
   }
 
   // fan out once the card layout is ~85% up the viewport; fold back when it leaves
+  // evalReveal runs on every scroll event; getBoundingClientRect there flushes
+  // style+layout for the whole document. The layout block's DOCUMENT position is
+  // static, so cache it and derive the viewport centre from scrollY.
+  let _layTop = 0, _layH = 0;
+  function measureLayout() {
+    const r = layout.getBoundingClientRect();
+    _layTop = r.top + (window.scrollY || window.pageYOffset || 0);
+    _layH = r.height;
+  }
   function evalReveal() {
     if (reduce) { pT = 1; return; }
-    const vh = window.innerHeight;
-    const rect = layout.getBoundingClientRect();
-    const center = rect.top + rect.height / 2;
-    pT = center < vh * 0.85 ? 1 : 0;
+    if (!_layH) measureLayout();
+    const center = (_layTop - (window.scrollY || window.pageYOffset || 0)) + _layH / 2;
+    pT = center < window.innerHeight * 0.85 ? 1 : 0;
   }
 
   function paint() {
@@ -3263,9 +3432,17 @@ function buildPillReel(pill) {
   }
 
   // scroll re-evaluates the reveal trigger, then springs (fan-out/fold bounce)
+  //
+  // Gated on the section being anywhere near the viewport. This fired on every scroll
+  // event for the WHOLE page — the socials fan sits thousands of pixels below the flow,
+  // where there is nothing for it to evaluate and nothing on screen to animate. The
+  // reveal is a pure function of scroll position, so re-entering the zone re-evaluates
+  // it correctly; the observer also pokes it on each transition so the pose is right the
+  // moment it matters.
+  let nearView = true;
   let ticking = false;
   function onScroll() {
-    if (ticking) return;
+    if (!nearView || ticking) return;
     ticking = true;
     requestAnimationFrame(() => {
       if (mq.matches) clearMobile();
@@ -3277,8 +3454,16 @@ function buildPillReel(pill) {
   cards.forEach((c, i) => c.addEventListener("pointerenter", () => setHover(i)));
   layout.addEventListener("pointerleave", () => setHover(-1));
   window.addEventListener("scroll", onScroll, { passive: true });
-  window.addEventListener("resize", () => { if (mq.matches) clearMobile(); else { evalReveal(); kick(); } });
+  window.addEventListener("resize", () => { measureSizeFactor(); measureLayout(); if (mq.matches) clearMobile(); else { evalReveal(); kick(); } });
+  window.addEventListener("load", () => { measureSizeFactor(); measureLayout(); });
   if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
+  if ("IntersectionObserver" in window) {
+    const host = layout.closest("section") || layout;
+    new IntersectionObserver((es) => {
+      nearView = es[0].isIntersecting;
+      if (nearView) onScroll();                    // settle the pose on the way in
+    }, { rootMargin: "700px 0px 700px 0px" }).observe(host);
+  }
   if (mq.matches) clearMobile(); else { evalReveal(); kick(); }
 })();
 
@@ -3305,9 +3490,18 @@ function buildPillReel(pill) {
     };
   });
   var ticking = false;
+  // Cached document geometry (see the other scroll loops).
+  var stackTop = null, stackH = 0;
+  function measureStack() {
+    var q = stack.getBoundingClientRect();
+    stackTop = q.top + (window.scrollY || window.pageYOffset || 0); stackH = q.height;
+  }
+  window.addEventListener("resize", measureStack, { passive: true });
+  window.addEventListener("load", measureStack);
   function render() {
     ticking = false;
-    var r = stack.getBoundingClientRect();
+    if (stackTop === null) measureStack();
+    var r = { top: stackTop - (window.scrollY || window.pageYOffset || 0), height: stackH };
     var vh = window.innerHeight || document.documentElement.clientHeight;
     // progress in px: 0 when the cluster centre sits at the viewport centre (mid-
     // scroll), growing positive as it scrolls up past that line → each logo (Linux
@@ -3337,12 +3531,25 @@ function buildPillReel(pill) {
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
   var ticking = false;
 
+  // Three layout reads per scroll frame (offsetHeight + clientHeight + rect) for a
+  // widget that is only on screen for one section. All three are static between
+  // resizes, so they are measured once; the observer switches the handler off entirely
+  // outside the section.
+  var feedH = 0, winH = 0, winTop = null, near = true;
+  function measureChat() {
+    feedH = feed.offsetHeight; winH = win.clientHeight;
+    winTop = win.getBoundingClientRect().top + (window.scrollY || window.pageYOffset || 0);
+  }
+  window.addEventListener("resize", measureChat, { passive: true });
+  window.addEventListener("load", measureChat);
   function render() {
     ticking = false;
     if (window.innerWidth <= 820) { feed.style.transform = ""; return; }
-    var maxShift = feed.offsetHeight - win.clientHeight;     // travel room
+    if (!near) return;
+    if (winTop === null) measureChat();
+    var maxShift = feedH - winH;                             // travel room
     if (maxShift <= 0) { feed.style.transform = "translateY(0)"; return; }
-    var r = win.getBoundingClientRect(), vh = window.innerHeight;
+    var r = { top: winTop - (window.scrollY || window.pageYOffset || 0) }, vh = window.innerHeight;
     // p: 0 when the window sits low in the viewport, 1 once it has risen near
     // the top — scrubs the feed up so we read down through the messages.
     var p = (vh * 1.0 - r.top) / (vh * 1.35);
@@ -3352,6 +3559,12 @@ function buildPillReel(pill) {
   function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(render); } }
 
   if (reduce) { render(); return; }
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (es) {
+      near = es[0].isIntersecting;
+      if (near) { measureChat(); onScroll(); }
+    }, { rootMargin: "600px 0px 600px 0px" }).observe(win);
+  }
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", render);
   if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
@@ -3569,8 +3782,21 @@ function buildPillReel(pill) {
   var FADE = 90;       // travel over which it fades out
   var ticking = false;
 
+  // This only has anything to say when the footer is close enough to push the rail.
+  // Ungated it ran two getBoundingClientRect calls on every scroll frame for the whole
+  // page — including the flow section, thousands of pixels away. An IntersectionObserver
+  // on the footer turns it off outside that zone; the correct pose out there is simply
+  // "unshifted", which is applied once on the way out.
+  var footerNear = true;
+  function resetRail() {
+    if (parseFloat(rail.dataset.shift || "0") !== 0) {
+      rail.dataset.shift = "0";
+      rail.style.transform = ""; rail.style.opacity = ""; rail.style.pointerEvents = "";
+    }
+  }
   function update() {
     ticking = false;
+    if (!footerNear) { resetRail(); return; }
     var r = rail.getBoundingClientRect();
     // Measured against the untranslated position, so the maths can't compound.
     var current = parseFloat(rail.dataset.shift || "0");
@@ -3593,5 +3819,11 @@ function buildPillReel(pill) {
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onScroll);
   if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (es) {
+      footerNear = es[0].isIntersecting;
+      onScroll();                                   // settle the pose on either transition
+    }, { rootMargin: "600px 0px 600px 0px" }).observe(footer);
+  }
   update();
 })();
