@@ -383,7 +383,7 @@ function buildPillReel(pill) {
     // current world, colour inherited from the span) and __b (the alt-world colour, fixed in CSS).
     // Letters stagger left→right (--d = i·step) like the nav, but with NO word gap, and BOTH pills
     // roll together (.is-rolled toggled on both at once) so the two buttons reel in unison.
-    var hireSpan = buildPillReel(glassPill);   // Hire Me letters (__a inherits white in the dark world)
+    var glassSpan = buildPillReel(glassPill);  // Socials letters (__a inherits white in the dark world)
     var giSpan   = buildPillReel(darkPill);    // Get In Touch letters (__a inherits black in the dark world)
     var EXIT_MIN_SCALE = 0.35;      // IMAGE size: how far the page-rectangle recedes on zoom-out. The frozen
                                     // collapse frame uses this same rectangle, so the image is equal before/after.
@@ -407,7 +407,7 @@ function buildPillReel(pill) {
       if (!ease || !rolled) {
         var rgb = "rgb(" + c + "," + c + "," + c + ")";
         navLinks.forEach(function (a) { a.style.transition = trans; a.style.color = rgb; });
-        if (hireSpan) { hireSpan.style.transition = trans; hireSpan.style.color = rgb; }
+        if (glassSpan) { glassSpan.style.transition = trans; glassSpan.style.color = rgb; }
         if (giSpan) { giSpan.style.transition = trans; giSpan.style.color = "rgb(" + c2 + "," + c2 + "," + c2 + ")"; }
       }
       if (darkPill) {                                     // Get In Touch pill bg: dark #050419 → light #d0e1eb
@@ -428,9 +428,9 @@ function buildPillReel(pill) {
       // while it's on), toggled in updateHeroExit — so --hc is set unconditionally, and the moment
       // you scroll off the hero the clone already carries the flip colour (no wait for a threshold).
       var WHITE = "#fcfcfc", BLACK = "#050419";
-      var hireVis = rolled ? 0   : c;    // visible channel: glass __b is black(0)
+      var glassVis = rolled ? 0   : c;    // visible channel: glass __b is black(0)
       var giVis   = rolled ? 255 : c2;   // dark-pill __b is white(255)
-      if (hireSpan) hireSpan.style.setProperty("--hc", hireVis >= 128 ? BLACK : WHITE);   // opposite of current
+      if (glassSpan) glassSpan.style.setProperty("--hc", glassVis >= 128 ? BLACK : WHITE);   // opposite of current
       if (giSpan)   giSpan.style.setProperty("--hc",   giVis   >= 128 ? BLACK : WHITE);
       if (!ease) navLinks.forEach(function (a) { a.style.setProperty("--hc", c >= 128 ? "#4d8bff" : "#231d7a"); });
     }
@@ -2310,8 +2310,9 @@ function buildPillReel(pill) {
      Each letter is a clipped .nav-char holding two stacked copies: __a (current
      colour, on top) and __b (black, waiting just below). At the flow bg threshold
      At the flow bg threshold flow.js calls window.__navLight(true), which rolls each
-     letter up (translateY -100%) so the black copy takes its place. Hire Me / Get In
-     Touch are excluded (they get a different animation). */
+     letter up (translateY -100%) so the black copy takes its place. The two header
+     pills (Socials / Subscribe) are excluded — they get their own reel, see
+     buildPillReel. */
   (function buildNavReel() {
     var LETTER_STEP = 0.015;    // per-letter stagger
     var WORD_GAP = 0.06;        // extra delay so each word starts after the one to its left
@@ -3206,7 +3207,16 @@ function buildPillReel(pill) {
       if (atTop) { panCards(); return; }                  // latched: cards stay; pan to reveal all rows
       if (r.top <= 0) {                                   // threshold reached → fire the reveal once
         atTop = true; term.classList.add("is-revealing");
-        renderText(total); lastR = total; engageStick();
+        renderText(total); lastR = total;
+        // Stick ONLY when the threshold was crossed by scrolling INTO the section.
+        // In-page anchors are native jumps (Lenis is not configured to intercept them),
+        // so clicking Contact / Socials — or loading the homepage with a hash, which is
+        // what the sub-page nav links do — lands far past this section in a single step.
+        // engageStick() would then scrollTo(lockY) BACK to projects and freeze the page
+        // for STICK_MS: the click looks like it gets stuck at projects instead of going
+        // where it was aimed. A real scroll can only ever cross this line a few px at a
+        // time, so "more than a viewport past the cover line" means it was a jump.
+        if (r.top > -vh) engageStick();
         // The scroll typing is done with the line — from here the facet clicks own it.
         sqlOwned = true; renderSel(sqlShown, sqlCur, true);
         // The pin length was sized at init while .term-pre was still expanded, so the

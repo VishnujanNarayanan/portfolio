@@ -42,17 +42,17 @@
 <!-- BEGIN generated: header (source: partials/header.html — run scripts/gen-partials.mjs) -->
 <header class="show">
   <nav class="header__nav-left" aria-label="Primary navigation">
-    <a href="/#projects">Projects</a>
-    <a href="/#skills">Skills</a>
+    <!-- Projects points at the Blog index for now: the projects write-ups will be
+         added to that page later, so it deliberately shares Blog's destination
+         rather than scrolling to the homepage's #projects terminal section. -->
+    <a href="/blog/">Projects</a>
     <a href="/#contact">Contact</a>
     <a href="/blog/">Blog</a>
-  </nav>
-  <nav class="header__nav-left header__nav-centre" aria-label="Home">
     <a href="/">Home</a>
   </nav>
   <nav class="header__nav-right" aria-label="Header actions">
     <div class="header__ctas">
-      <a href="mailto:narayanan.vishnujan@gmail.com?subject=Hire%20Me" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Hire Me</span></a>
+      <a href="/#socials" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Socials</span></a>
       <button type="button" class="pill-btn pill-btn--dark" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button>
     </div>
     <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
@@ -74,13 +74,12 @@
       </div>
       <ul class="mobile-nav__list">
         <li class="mobile-nav__item"><a href="/">Home</a></li>
-        <li class="mobile-nav__item"><a href="/#projects">Projects</a></li>
-        <li class="mobile-nav__item"><a href="/#skills">Skills</a></li>
+        <li class="mobile-nav__item"><a href="/blog/">Projects</a></li>
         <li class="mobile-nav__item"><a href="/#contact">Contact</a></li>
         <li class="mobile-nav__item"><a href="/blog/">Blog</a></li>
       </ul>
       <div class="mobile-nav__ctas">
-        <div class="mncta"><a href="mailto:narayanan.vishnujan@gmail.com" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Hire Me</span></a></div>
+        <div class="mncta"><a href="/#socials" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Socials</span></a></div>
         <div class="mncta"><button type="button" class="pill-btn pill-btn--dark mobile-nav__cta" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button></div>
       </div>
     </div>
@@ -110,7 +109,7 @@
       <button class="subform__btn" type="submit">Subscribe</button>
     </div>
   </form>
-  <p class="submodal__note">No account needed, and you can unsubscribe from this email.</p>
+  <p class="submodal__note">It's <strong>completely free</strong>, and you can <strong>unsubscribe anytime</strong>.</p>
   <p class="submodal__terms">By subscribing you agree to Substack's <a href="https://substack.com/tos" target="_blank" rel="noopener">Terms of Use</a>, its <a href="https://substack.com/privacy" target="_blank" rel="noopener">Privacy Policy</a> and its <a href="https://substack.com/ccpa#personal-data-collected" target="_blank" rel="noopener">Information collection notice</a>.</p>
   <a class="substack-badge" href="https://vishnujannarayanan.substack.com/" target="_blank" rel="me noopener">
     <svg viewBox="0 0 21 24" width="13" height="15" aria-hidden="true" focusable="false"><path d="M20.999 0H0v2.836h20.999V0Z" fill="currentColor"></path><path d="M20.999 5.406H0v2.836h20.999V5.406Z" fill="currentColor"></path><path d="M0 10.813V24l10.499-5.887L21 24V10.813H0Z" fill="currentColor"></path></svg>
