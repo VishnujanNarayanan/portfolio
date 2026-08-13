@@ -39,7 +39,14 @@ function buildPillReel(pill) {
 
   /* ---------- Lenis smooth scroll (CDN global: Lenis) ---------- */
   var lenis = null;
-  if (typeof Lenis !== "undefined" && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  // ?nolenis — dev switch to measure what smooth scroll costs on this page. Lenis
+  // applies the scroll itself every rAF, and on a document this tall with this many
+  // sticky/composited layers that work is charged to its raf callback. Loading with
+  // ?nolenis falls back to native scrolling so the two can be compared directly;
+  // nothing else changes, since every handler is driven by scroll position, not by
+  // Lenis events.
+  var noLenis = /[?&]nolenis\b/.test(location.search);
+  if (typeof Lenis !== "undefined" && !noLenis && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     lenis = new Lenis({ duration: 1.1, smoothWheel: true });
     window.__lenis = lenis; // exposed so flow.js can drive click-to-jump
     function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
@@ -2800,9 +2807,31 @@ function buildPillReel(pill) {
         (sql ? sqlHtml(text, -1, "") : escapeHtml(text)) + (cursor || "") + "</div>";
     }
     // Build the typed text at `reveal` chars into preEl (pre-SELECT) + selEl (SELECT).
+    /* Incremental cache for the typed script.
+       renderText used to rebuild EVERY line from scratch and assign innerHTML twice,
+       on every frame the reveal count moved — i.e. every frame you scroll through the
+       typing. innerHTML is a parse plus a teardown/rebuild of the whole subtree, and
+       the cost grows as more script is revealed, so it was worst exactly where the
+       section is busiest (measured ~14ms/frame, the largest single cost on the page).
+       Lines that are FULLY typed and no longer carry the cursor can never change, so
+       their HTML is accumulated once here and only the live line is rebuilt per frame.
+       The cache is dropped whenever the reveal moves backwards (scrolling up). */
+    var cPre = "", cSel = "", cK = 0, cUsed = 0;
+    function resetTextCache() { cPre = ""; cSel = ""; cK = 0; cUsed = 0; }
     function renderText(reveal) {
-      var pre = "", sel = "", used = 0, done = reveal >= total, k;
-      for (k = 0; k < script.length; k++) {
+      if (reveal < cUsed) resetTextCache();               // scrolled back — cache invalid
+      // Advance the cache over lines that are complete AND past their newline gap,
+      // so the cursor can never be sitting in one of them.
+      while (cK < script.length) {
+        var cs = script[cK], clen = cs.x.length;
+        if (cUsed + clen + 1 > reveal) break;
+        var chtml = lineHtml(prefixOf(cs), cs.x,
+          cK === selIdx ? '<span class="term-cursor is-blink"></span>' : "", cs.t === "sql");
+        if (cK === selIdx) cSel += chtml; else cPre += chtml;
+        cUsed += clen + 1; cK++;
+      }
+      var pre = cPre, sel = cSel, used = cUsed, done = reveal >= total, k;
+      for (k = cK; k < script.length; k++) {
         var s = script[k], len = s.x.length, pfx = prefixOf(s), into;
         if (used + len <= reveal) {                       // whole line shown
           var cur = "";
@@ -2818,9 +2847,10 @@ function buildPillReel(pill) {
           break;
         }
       }
-      preEl.innerHTML = pre;
-      selEl.innerHTML = sel;
+      if (pre !== lastPreHtml) { lastPreHtml = pre; preEl.innerHTML = pre; }
+      if (sel !== lastSelHtml) { lastSelHtml = sel; selEl.innerHTML = sel; }
     }
+    var lastPreHtml = null, lastSelHtml = null;
 
     /* ---- Live SQL: the SELECT line rewrites itself as the facets are toggled ----
        Clicking a tool/domain doesn't just filter the cards — the query above them is
