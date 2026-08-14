@@ -533,6 +533,7 @@ function buildPillReel(pill) {
     var EXIT_MIN_SCALE = 0.35;      // IMAGE size: how far the page-rectangle recedes on zoom-out. The frozen
                                     // collapse frame uses this same rectangle, so the image is equal before/after.
     var hdrFlipped = null;          // header flip state — THRESHOLD-fired (not scroll-scrubbed); null so it inits
+    var lastFlipY = window.scrollY; // previous scroll position, to tell a real scroll from an anchor jump
     // Header THEME for a light(he=0) → dark(he=1) world: nav + Hire-Me text black→white and the
     // dark "Get In Touch" pill inverting (bg #050419→#d0e1eb, text white→black) so it stays legible.
     // Shared so the reel thresholds (flow + blog, via __navLight) can flip the SAME two pills the
@@ -685,12 +686,20 @@ function buildPillReel(pill) {
       // so we only assert it up to the end of the edge zoom.
       var wantFlip = y >= HDR_FLIP;
       if (wantFlip !== hdrFlipped) {
+        // JUMPED here (an in-page anchor — Home is #top — is a native instant jump, not a
+        // scroll), so this crossing was never scrubbed: take the REEL form of the flip
+        // instead of the snappy one. The difference that matters is that the eased form
+        // leaves the __a letters at the colour they arrived in, so the nav can reel white
+        // → black over its black __b copy; the plain form repaints __a first, which is
+        // why clicking Home from the projects run went black and only then reeled.
+        var jumped = Math.abs(y - lastFlipY) > vh * 0.5;
         hdrFlipped = wantFlip;
-        if (ye <= 2 * vh) setHeaderTheme(wantFlip ? 1 : 0);   // timed (.3s), not scrubbed
+        if (ye <= 2 * vh) setHeaderTheme(wantFlip ? 1 : 0, jumped);   // timed (.3s), not scrubbed
         var hs = wantFlip ? 0.88 : 1;                        // shrink 1 ↔ 0.88 (subtle)
         if (navLeft)  { navLeft.style.transition  = "transform .3s var(--ease-default)"; navLeft.style.transformOrigin  = "left center";  navLeft.style.transform  = "scale(" + hs + ")"; }
         if (navRight) { navRight.style.transition = "transform .3s var(--ease-default)"; navRight.style.transformOrigin = "right center"; navRight.style.transform = "scale(" + hs + ")"; }
       }
+      lastFlipY = y;                              // for the jump test on the next crossing
     }
     window.__updateHeroExit = updateHeroExit;   // cert IIFE drives this during its timed completion
     window.addEventListener("scroll", updateHeroExit, { passive: true });
@@ -4033,63 +4042,106 @@ function buildPillReel(pill) {
     var m = /rgba?\(([^,]+),([^,]+),([^,)]+)/.exec(getComputedStyle(el).color);
     return m ? (+m[1] + +m[2] + +m[3]) / 3 >= 128 : false;
   }
+  // The dark world is white letters AND no header--on-light: setHeaderTheme leaves __a at
+  // its old colour while rolling to light, so colour alone cannot tell the worlds apart,
+  // and the class alone would read a sub-page (black text, no class) as dark.
+  function isDarkWorld() { return isLight(link) && !hdr.classList.contains("header--on-light"); }
+
   addEventListener("pagehide", function () {
-    var wasDark = isLight(link) && !hdr.classList.contains("header--on-light");
-    try { sessionStorage.setItem(KEY, wasDark ? "dark" : "light"); } catch (e) {}
+    try { sessionStorage.setItem(KEY, isDarkWorld() ? "dark" : "light"); } catch (e) {}
   });
 
-  if (document.querySelector(".hero")) return;    // homepage: scroll owns the world
   var was = "light";
   try { was = sessionStorage.getItem(KEY) || "light"; } catch (e) {}
   try { sessionStorage.removeItem(KEY); } catch (e) {}   // consume, so a later plain load is clean
-  if (was !== "dark" || !window.__navLight) return;
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (!window.__navLight || window.__bootShown) return;  // the intro reel-in owns the header instead
 
   var links = Array.prototype.slice.call(hdr.querySelectorAll(".header__nav-left a"));
   var glass = hdr.querySelector(".header__ctas .pill-btn--glass");
   var dpill = hdr.querySelector(".header__ctas .pill-btn--dark");
   var pills = [glass, dpill].filter(Boolean);
   var spans = pills.map(function (p) { return p.querySelector(".pill-btn-span"); });
-  // Every leaf the two reels transform: their transitions have to be muted while the
-  // classes come back off at the end, or the removal itself animates (a second reel).
+  // Every leaf the two reels transform. Their transitions are muted whenever a world is
+  // PAINTED (it must appear instantly, with no reel of its own) and released again before
+  // the roll that follows.
   var leaves = Array.prototype.slice.call(
     hdr.querySelectorAll(".header__nav-left a .nav-char__a,.header__nav-left a .nav-char__b," +
                          ".header__ctas .pill-char__a,.header__ctas .pill-char__b"));
+  function mute(on) {
+    var v = on ? "none" : "";
+    leaves.forEach(function (el) { el.style.transition = v; });
+    links.forEach(function (a) { a.style.transition = v; });
+    pills.forEach(function (p) { p.style.transition = v; });
+  }
+  // Commit whatever was just painted, then run `then` — two frames, because setting the
+  // start and end poses in one frame is coalesced into no animation at all.
+  function commit(then) {
+    void hdr.offsetWidth;
+    requestAnimationFrame(function () { requestAnimationFrame(then); });
+  }
 
-  // 1. Paint the world we arrived FROM, instantly (matches setHeaderTheme's he = 1).
-  links.forEach(function (a) { a.style.transition = "none"; a.style.color = "#fcfcfc"; });
-  if (glass) { glass.style.transition = "none"; glass.style.backgroundColor = "#050419"; }
-  if (dpill) { dpill.style.transition = "none"; dpill.style.backgroundColor = "#d0e1eb"; }
-  if (spans[0]) spans[0].style.color = "#fcfcfc";
-  if (spans[1]) spans[1].style.color = "#050419";
-
-  // 2. Two frames later (one frame would coalesce into no animation at all), roll to
-  //    the light world: letters reel, pill backgrounds ride across in .5s.
-  requestAnimationFrame(function () {
-    requestAnimationFrame(function () {
+  /* ---- Sub-page arrival: we left the projects run (dark) and landed on a page that is
+     black from its first frame, so the white → black reel never played. Paint the dark
+     world, then roll to light with the header's own reel. */
+  if (!document.querySelector(".hero")) {
+    if (was !== "dark") return;
+    mute(true);
+    links.forEach(function (a) { a.style.color = "#fcfcfc"; });   // matches setHeaderTheme's he = 1
+    if (glass) glass.style.backgroundColor = "#050419";
+    if (dpill) dpill.style.backgroundColor = "#d0e1eb";
+    if (spans[0]) spans[0].style.color = "#fcfcfc";
+    if (spans[1]) spans[1].style.color = "#050419";
+    commit(function () {
       var t = "color .5s var(--ease-default),background-color .5s var(--ease-default)";
+      mute(false);
       links.forEach(function (a) { a.style.transition = t; });
       pills.forEach(function (p) { p.style.transition = t; p.classList.add("is-rolled"); });
       if (glass) glass.style.backgroundColor = "#fcfcfc";
       if (dpill) dpill.style.backgroundColor = "#050419";
       window.__navLight(true, true);              // the nav's own reel (skipTheme: no homepage pills here)
 
-      // 3. Hand back to CSS once the reel has landed. Same trick as reelHeaderIn:
-      //    mute, drop the classes and inline overrides, commit, un-mute a frame later.
-      //    Both worlds end on the same painted colours, so nothing moves visually.
+      // Hand back to CSS once the reel has landed: mute, drop the classes and the inline
+      // overrides, commit, release. Both worlds end on the same painted colours here, so
+      // nothing moves — without the mute, dropping the classes would reel a second time.
       setTimeout(function () {
-        leaves.forEach(function (el) { el.style.transition = "none"; });
+        mute(true);
         hdr.classList.remove("header--on-light");
-        pills.forEach(function (p) { p.classList.remove("is-rolled"); p.style.transition = ""; p.style.backgroundColor = ""; });
-        links.forEach(function (a) { a.style.transition = ""; a.style.color = ""; });
+        pills.forEach(function (p) { p.classList.remove("is-rolled"); p.style.backgroundColor = ""; });
+        links.forEach(function (a) { a.style.color = ""; });
         spans.forEach(function (s) { if (s) s.style.color = ""; });
         void hdr.offsetWidth;
-        requestAnimationFrame(function () {
-          leaves.forEach(function (el) { el.style.transition = ""; });
-        });
+        requestAnimationFrame(function () { mute(false); });
       }, 1200);
     });
-  });
+    return;
+  }
+
+  /* ---- Homepage arrival: the other direction. A sub-page's nav links carry ?go=<id>, so
+     coming back to Projects lands the page deep in the DARK run in one jump — flow.js's
+     reel thresholds never see the crossing (it scrolls past them in a single step) and the
+     header is simply white on arrival. Once the jump has settled into the dark world, paint
+     the light world we came from and roll DOWN to the white __a copy, which is the same
+     reel that crossing plays when it is scrolled.
+     __a is already white by then (the projects watcher ran __headerTheme(1, true)), so this
+     only has to put the black __b copy in front of it and take it away again. */
+  if (was !== "light") return;
+  var tries = 0;
+  (function settle() {
+    if (tries++ > 14) return;                     // never went dark (landed at the top) → nothing to do
+    if (!isDarkWorld()) { setTimeout(settle, 60); return; }
+    mute(true);
+    hdr.classList.add("header--on-light");        // black letters, instantly: the world we came from
+    pills.forEach(function (p) { p.classList.add("is-rolled"); });
+    if (glass) glass.style.backgroundColor = "#fcfcfc";
+    if (dpill) dpill.style.backgroundColor = "#050419";
+    commit(function () {
+      mute(false);
+      window.__navLight(false, true);             // roll down to the white __a — the dark world
+      if (window.__headerTheme) window.__headerTheme(1, true);   // pills unroll + ride their bg across
+      else pills.forEach(function (p) { p.classList.remove("is-rolled"); });
+    });
+  })();
 })();
 
 /* ---- Post action rail (2026-08-11) --------------------------------------------
