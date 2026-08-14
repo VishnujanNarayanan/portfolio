@@ -952,8 +952,8 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .callout-socials-heading__line{display:inline-block;padding:.02em .18em}
 .callout-socials-heading__line.is-hl{background-color:var(--color-highlight);color:var(--color-text-light)}
 /* card spread — exact reference dimensions */
-.callout-socials-card-layout{justify-content:center;align-items:center;width:100%;max-width:80rem;height:32.5rem;display:flex;position:relative}
-.callout-socials-card-w{z-index:0;backface-visibility:hidden;will-change:transform;border-radius:2.985rem;flex:none;width:18rem;height:31.5rem;position:absolute;overflow:clip;transform-origin:50% 50%;box-shadow:0 1.44rem 2.7rem rgba(5,4,25,.22)}
+.callout-socials-card-layout{justify-content:center;align-items:center;width:100%;max-width:80rem;height:29.3rem;display:flex;position:relative}
+.callout-socials-card-w{z-index:0;backface-visibility:hidden;will-change:transform;border-radius:2.84rem;flex:none;width:17.1rem;height:28.4rem;position:absolute;overflow:clip;transform-origin:50% 50%;box-shadow:0 1.44rem 2.7rem rgba(5,4,25,.22)}
 .image.is-social-card{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 
 /* Branded social cards — fill a .callout-socials-card-w (18rem x 31.5rem, overflow:clip).
@@ -1944,8 +1944,14 @@ header.is-hero .header__nav-left a .nav-char__c{color:#050419}
   background-repeat:no-repeat;background-position:0 0;background-size:0 100%;
   color:var(--color-text);
   transition:background-size .75s var(--ease-default),color .2s linear .24s}
+/* typed lines flip per CHARACTER instead, each one as the blue edge reaches it (the
+   delay is set in JS from the glyph's position across the line) */
+.callout-socials-heading__line.is-hl.hl-sweep .wtype-c,.callout-socials-follow.hl-sweep .wtype-c{
+  transition:color .12s linear}
+.callout-socials-heading__line.is-hl.hl-sweep.is-lit .wtype-c,.callout-socials-follow.hl-sweep.is-lit .wtype-c{
+  color:var(--color-text-light)}
 .callout-socials-heading__line.is-hl.hl-sweep.is-lit,.callout-socials-follow.hl-sweep.is-lit{
-  background-size:100% 100%;color:var(--color-text-light)}
+  background-size:100% 100%;color:var(--color-text-light);transition-delay:0s,.6s}
 /* the three links start EMPTY: every letter column parked below its clip until the
    reel rolls it up (same shape as the header's reel-in) */
 .callout-socials-links-layout.is-reeling .pill-char__col{transform:translateY(100%)}
