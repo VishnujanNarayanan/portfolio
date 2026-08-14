@@ -538,23 +538,55 @@ function buildPillReel(pill) {
     // dark "Get In Touch" pill inverting (bg #050419→#d0e1eb, text white→black) so it stays legible.
     // Shared so the reel thresholds (flow + blog, via __navLight) can flip the SAME two pills the
     // hero zoom does — exposed on window so the nav-reel IIFE can reach it.
+    var reelSettleT = 0;            // pending post-reel __a repaint (see setHeaderTheme)
     function setHeaderTheme(he, ease) {
       // ease = reel-threshold flip (discrete) → animate colour + pill bg over ~.5s to match the
       // nav reel. Default (hero zoom) keeps the reference's snappy .3s colour (bg tracks scroll).
       var trans = ease ? "color .5s var(--ease-default),background-color .5s var(--ease-default)"
                        : "color .3s var(--ease-default)";
       var rolled = ease ? (he < 0.5) : false;
+      clearTimeout(reelSettleT);                           // a new flip supersedes any pending repaint
       var c = Math.round(255 * he);                         // current text channel: 0 (black) → 255 (white)
       var c2 = Math.round(255 * (1 - he));                  // Get In Touch is inverted
       // When rolling TO the light world (ease + rolled), do NOT update __a letter colours — __a
       // must stay at its current (source) colour so the reel shows old→new, not new→new.
       // Only update __a when unrolling back to the dark world, so the returning letter arrives
       // in the correct dark-world colour.
+      var rgb = "rgb(" + c + "," + c + "," + c + ")";
       if (!ease || !rolled) {
-        var rgb = "rgb(" + c + "," + c + "," + c + ")";
         navLinks.forEach(function (a) { a.style.transition = trans; a.style.color = rgb; });
         if (glassSpan) { glassSpan.style.transition = trans; glassSpan.style.color = rgb; }
         if (giSpan) { giSpan.style.transition = trans; giSpan.style.color = "rgb(" + c2 + "," + c2 + "," + c2 + ")"; }
+      } else {
+        // …EXCEPT the link under the cursor. It is rolled to its __c clone, and at the
+        // top of the page header.is-hero forces that clone to currentColor — so leaving
+        // the link's colour alone leaves that one word in the world we came FROM (white
+        // on a black-lettered nav). It has no __a to reel anyway while it is hovered, so
+        // it takes the new colour directly; that is the hovered word snapping, which is
+        // what it does at every other crossing.
+        navLinks.forEach(function (a) {
+          if (a.matches(":hover")) { a.style.transition = trans; a.style.color = rgb; }
+        });
+        // …and once the reel has LANDED, the rolled-away __a copies are repainted to the
+        // world we are now in. They are hidden behind __b at that point, so this is
+        // invisible (transitions muted so it cannot animate) — but currentColor is what
+        // header.is-hero hands the __c hover clone, so without it every word hovered
+        // AFTER the reel comes up in the colour of the world we left. Hero only: below it
+        // --hc owns the clone's colour and __a must keep the source colour for the reel back.
+        if (hdr && hdr.classList.contains("is-hero")) {
+          clearTimeout(reelSettleT);
+          reelSettleT = setTimeout(function () {
+            var els = Array.prototype.slice.call(navLinks);
+            if (glassSpan) els.push(glassSpan);
+            if (giSpan) els.push(giSpan);
+            els.forEach(function (el) { el.style.transition = "none"; });
+            navLinks.forEach(function (a) { a.style.color = rgb; });
+            if (glassSpan) glassSpan.style.color = rgb;
+            if (giSpan) giSpan.style.color = "rgb(" + c2 + "," + c2 + "," + c2 + ")";
+            void hdr.offsetWidth;
+            requestAnimationFrame(function () { els.forEach(function (el) { el.style.transition = ""; }); });
+          }, 900);   // .5s roll + the letter stagger
+        }
       }
       if (darkPill) {                                     // Get In Touch pill bg: dark #050419 → light #d0e1eb
         var dr = Math.round(5 + (208 - 5) * he), dg = Math.round(4 + (225 - 4) * he), db = Math.round(25 + (235 - 25) * he);
