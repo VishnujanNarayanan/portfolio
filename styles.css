@@ -1915,18 +1915,37 @@ header .header__nav-left a.is-reflip:hover .nav-char__col{transform:translateY(0
 header.is-hero .header__nav-left a .nav-char__c{color:#050419}
 
 /* ============================================================
-   Blog intro TYPE-IN (see startIntroType in main.js)
-   Writing / Blogs / the description type in on the panels'
-   arrival threshold. Every glyph is already in its final box —
-   only opacity moves — so the paragraph never reflows as it
-   arrives, and the caret is a box-shadow (outside the glyph box)
-   so it cannot widen the character it sits on.
+   TYPE-IN (see makeTypeIn in main.js) — blog intro + socials
+   heading. Typed on their section's own arrival threshold.
+   Every glyph is already in its final box — only opacity moves —
+   so the text never reflows as it arrives.
    ============================================================ */
-.writing__pad.is-typing .wtype-c{position:relative;opacity:0}
-.writing__pad.is-typing .wtype-c.is-typed{opacity:1}
+.is-typing .wtype-c{position:relative;opacity:0}
+.is-typing .wtype-c.is-typed{opacity:1}
 /* the terminal's own cursor: a solid block sitting where the next character will
    land, blinking on the same 1.05s steps(1) rhythm as .term-cursor. Absolutely
    positioned off the (inline) character, so it takes no space of its own and the
    letter it trails cannot be widened by it. */
-.writing__pad.is-typing .wtype-c.is-cursor:after{content:"";position:absolute;left:100%;top:.06em;
+.is-typing .wtype-c.is-cursor:after{content:"";position:absolute;left:100%;top:.06em;
   width:.5em;height:1.05em;margin-left:2px;background:currentColor;animation:termblink 1.05s steps(1) infinite}
+
+/* ============================================================
+   Socials copy: highlight sweep + link reel-in (main.js socialsFan)
+   The blue behind "On Socials" and the follow line is NOT there to
+   begin with. It is painted as a gradient sized 0 → 100% wide, so
+   it wipes across left to right like a selection being dragged over
+   the words, and the text flips to white partway through the wipe.
+   .hl-sweep is added by JS, so with no JS (or on mobile / reduced
+   motion) both lines keep their plain solid background above.
+   ============================================================ */
+.callout-socials-heading__line.is-hl.hl-sweep,.callout-socials-follow.hl-sweep{
+  background-color:transparent;
+  background-image:linear-gradient(var(--color-highlight),var(--color-highlight));
+  background-repeat:no-repeat;background-position:0 0;background-size:0 100%;
+  color:var(--color-text);
+  transition:background-size .85s var(--ease-default),color .2s linear .28s}
+.callout-socials-heading__line.is-hl.hl-sweep.is-lit,.callout-socials-follow.hl-sweep.is-lit{
+  background-size:100% 100%;color:var(--color-text-light)}
+/* the three links start EMPTY: every letter column parked below its clip until the
+   reel rolls it up (same shape as the header's reel-in) */
+.callout-socials-links-layout.is-reeling .pill-char__col{transform:translateY(100%)}

@@ -69,6 +69,65 @@ function buildPillReel(pill) {
   return span;   // colour is driven on the span; the __a letters inherit it
 }
 
+/* ---------- Shared TYPE-IN builder (blog intro, socials heading) ----------------
+   Splits each element into per-character spans — SPACES stay plain text nodes, so the
+   text still breaks across lines exactly where it did — and hides them behind
+   `host.is-typing`. start() then reveals them one at a time, carrying the terminal
+   block cursor along, and drops every class at the end so the markup goes back to
+   plain text. Every glyph keeps its final box throughout (the reveal is opacity-only),
+   so nothing reflows as the text arrives.
+   runs: [{ el, step }] in typing order; opts: { gap } between runs, { hold } for how
+   long the cursor keeps blinking at the end. Returns null when there is nothing to
+   type, so callers can treat "no type-in" as a plain absence. */
+function makeTypeIn(host, runs, opts) {
+  if (!host || !runs || !runs.length) return null;
+  opts = opts || {};
+  var gap = opts.gap == null ? 160 : opts.gap;
+  var hold = opts.hold == null ? 1400 : opts.hold;
+  var seq = [], at = 0, any = false;
+  runs.forEach(function (r) {
+    if (!r.el) return;
+    var text = r.el.textContent, frag = document.createDocumentFragment();
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (ch === " " || ch === "\n" || ch === "\t" || ch === "\u00a0") { frag.appendChild(document.createTextNode(ch)); continue; }
+      var sp = document.createElement("span");
+      sp.className = "wtype-c"; sp.textContent = ch;
+      frag.appendChild(sp);
+      seq.push({ c: sp, at: at });
+      at += r.step;
+    }
+    r.el.textContent = ""; r.el.appendChild(frag);
+    at += gap; any = true;
+  });
+  if (!any) return null;
+  var runMs = seq.length ? seq[seq.length - 1].at : 0;
+  host.classList.add("is-typing");
+  var started = false, done = false;
+  function finish() {
+    if (done) return;
+    done = true;
+    host.classList.remove("is-typing");
+    seq.forEach(function (t) { t.c.classList.remove("is-typed", "is-cursor"); });
+  }
+  return {
+    start: function () {
+      if (started || done) return;
+      started = true;
+      seq.forEach(function (t, i) {
+        setTimeout(function () {
+          if (i) seq[i - 1].c.classList.remove("is-cursor");
+          t.c.classList.add("is-typed", "is-cursor");
+        }, t.at);
+      });
+      setTimeout(finish, runMs + hold);
+    },
+    ms: runMs,                                      // when the last letter lands, for chaining
+    reveal: finish,                                 // give up and show the text as it is
+    ran: function () { return started; }
+  };
+}
+
 (function () {
   "use strict";
 
@@ -2261,54 +2320,16 @@ function buildPillReel(pill) {
        One-shot: unlike the panels, this does not fold back and re-type on the way out.
        Desktop only — mobile is not pinned and never crosses this threshold — and static
        under prefers-reduced-motion. */
-    var EYE_STEP = 55, DESC_STEP = 14, LINE_GAP = 160;   // ms per letter (headings / body), pause between lines
-    var typeSeq = null, typeStarted = false;
-    (function buildIntroType() {
-      if (!pad || reduceMo || window.innerWidth <= 820) return;
-      var els = [".writing__eyebrow", ".writing__title", ".writing__desc"]
-        .map(function (s) { return pad.querySelector(s); }).filter(Boolean);
-      if (!els.length) return;
-      typeSeq = [];
-      var at = 0;
-      els.forEach(function (el) {
-        var text = el.textContent, frag = document.createDocumentFragment();
-        var step = el.classList.contains("writing__desc") ? DESC_STEP : EYE_STEP;
-        for (var i = 0; i < text.length; i++) {
-          var ch = text[i];
-          if (ch === " " || ch === "\n" || ch === "\t") { frag.appendChild(document.createTextNode(ch)); continue; }
-          var s = document.createElement("span");
-          s.className = "wtype-c"; s.textContent = ch;
-          frag.appendChild(s);
-          typeSeq.push({ c: s, at: at });
-          at += step;
-        }
-        el.textContent = "";
-        el.appendChild(frag);
-        at += LINE_GAP;
-      });
-      pad.classList.add("is-typing");
-      // Resized down to mobile before it ever ran → nothing will trigger it, so show the text.
-      window.addEventListener("resize", function () {
-        if (!typeStarted && window.innerWidth <= 820) { typeStarted = true; pad.classList.remove("is-typing"); }
-      }, { passive: true });
-    })();
-    function startIntroType() {
-      if (typeStarted || !typeSeq) return;
-      typeStarted = true;
-      typeSeq.forEach(function (t, i) {
-        setTimeout(function () {
-          if (i) typeSeq[i - 1].c.classList.remove("is-cursor");
-          t.c.classList.add("is-typed", "is-cursor");
-        }, t.at);
-      });
-      // The cursor stays on after the last letter and blinks for a beat, the way a
-      // terminal sits at the end of its output, before the whole thing goes plain.
-      var end = typeSeq.length ? typeSeq[typeSeq.length - 1].at + 1400 : 0;
-      setTimeout(function () {
-        pad.classList.remove("is-typing");
-        typeSeq.forEach(function (t) { t.c.classList.remove("is-typed", "is-cursor"); });
-      }, end);
-    }
+    var EYE_STEP = 55, DESC_STEP = 10;                 // ms per letter: headings / body
+    var introType = (!pad || reduceMo || window.innerWidth <= 820) ? null : makeTypeIn(pad, [
+      { el: pad.querySelector(".writing__eyebrow"), step: EYE_STEP },
+      { el: pad.querySelector(".writing__title"),   step: EYE_STEP },
+      { el: pad.querySelector(".writing__desc"),    step: DESC_STEP }
+    ]);
+    // Resized down to mobile before it ever ran → nothing will trigger it, so show the text.
+    if (introType) window.addEventListener("resize", function () {
+      if (!introType.ran() && window.innerWidth <= 820) introType.reveal();
+    }, { passive: true });
 
     // Arrival positions: ALL panels are the SAME (equal) width while fanning in — none is open
     // yet. The per-panel offset stacks each panel onto the rightmost one.
@@ -2489,7 +2510,7 @@ function buildPillReel(pill) {
         }
         prevZone = zone;
       }
-      if (blogOpen) startIntroType();                    // same threshold as the panels' arrival
+      if (blogOpen && introType) introType.start();       // same threshold as the panels' arrival
       if (!lastT) lastT = now;
       var dt = Math.min((now - lastT) / 1000, 0.05); lastT = now;  // clamp dt (tab-switch safety)
 
@@ -2704,8 +2725,8 @@ function buildPillReel(pill) {
     // capsules sitting in the corner for most of it; they now hold off until this far
     // through the nav (0 = with the first letter, 1 = not at all) and still land together
     // on the last one, right before their own labels reel in.
-    var PILL_IN = 0.72;
-    var PILL_LAG = 160;                                            // …and settle this much AFTER it
+    var PILL_IN = 0.86;
+    var PILL_LAG = 220;                                            // …and settle this much AFTER it
     var anims = [];
     hdr.classList.add("is-reeling");                               // park the letters BEFORE the first paint
 
@@ -3808,11 +3829,79 @@ function buildPillReel(pill) {
     _layTop = r.top + (window.scrollY || window.pageYOffset || 0);
     _layH = r.height;
   }
+  /* ---- Socials copy: type, then reel, then highlight -----------------------------
+     Three beats, each on its own line of scroll:
+       1. the HEADING ("What's Up" / "On Socials") types in, a beat EARLIER than the
+          cards fan out, so the words are already being written as the spread starts;
+       2. scrolling on, the FOLLOW line types;
+       3. the moment that line finishes, the three social LINKS reel in from nothing —
+          the same per-letter roll the nav does on load — and the blue highlight sweeps
+          across "On Socials" and the follow line, left to right, like a text selection
+          being dragged over them. Until then there is NO blue behind either line.
+     Skipped on mobile and under reduced motion, where the fan does not run either:
+     the two lines keep their plain CSS background and the links are simply there. */
+  const HEAD_STEP = 55, FOLLOW_STEP = 18;
+  const LINK_STEP = 55, LINK_ROLL = 620, LINK_EASE = "cubic-bezier(.19,1,.22,1)";
+  const socialsInner = document.querySelector(".callout-socials-layout");
+  const linksWrap = document.querySelector(".callout-socials-links-layout");
+  const hlEls = [document.querySelector(".callout-socials-heading__line.is-hl"),
+                 document.querySelector(".callout-socials-follow")].filter(Boolean);
+  const staged = !reduce && !mq.matches && !!socialsInner;
+  const headType = !staged ? null : makeTypeIn(socialsInner, [
+    { el: document.querySelector(".callout-socials-heading__line:not(.is-hl)"), step: HEAD_STEP },
+    { el: document.querySelector(".callout-socials-heading__line.is-hl"),       step: HEAD_STEP }
+  ]);
+  const followType = !staged ? null : makeTypeIn(socialsInner, [
+    { el: document.querySelector(".callout-socials-follow"), step: FOLLOW_STEP }
+  ], { hold: 600 });
+  const linkCols = staged && linksWrap
+    ? Array.from(linksWrap.querySelectorAll(".pill-char__col")) : [];
+  if (staged) {
+    hlEls.forEach(function (el) { el.classList.add("hl-sweep"); });   // background off until beat 3
+    if (linkCols.length) linksWrap.classList.add("is-reeling");       // letters parked below their clips
+  }
+  // Beat 3. The links roll up staggered; the highlight rides across at the same time.
+  // Handing the letters back to CSS is the delicate step: .pill-char__col carries the
+  // hover reel's own transition, so dropping is-reeling while the animations are
+  // cancelled would start a transition and reel every word a second time. Mute it,
+  // drop class and animations together, commit, release a frame later.
+  let lit = false;
+  function lightUp() {
+    if (lit) return;
+    lit = true;
+    hlEls.forEach(function (el) { el.classList.add("is-lit"); });
+    if (!linkCols.length) return;
+    const anims = linkCols.map(function (c, i) {
+      return c.animate([{ transform: "translateY(100%)" }, { transform: "translateY(0)" }],
+                       { duration: LINK_ROLL, delay: i * LINK_STEP, easing: LINK_EASE, fill: "both" });
+    });
+    setTimeout(function () {
+      linkCols.forEach(function (c) { c.style.transition = "none"; });
+      linksWrap.classList.remove("is-reeling");
+      anims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+      void linksWrap.offsetWidth;
+      requestAnimationFrame(function () { linkCols.forEach(function (c) { c.style.transition = ""; }); });
+    }, linkCols.length * LINK_STEP + LINK_ROLL + 60);
+  }
+  // Resized down to mobile before any of it ran → show the copy as it is.
+  window.addEventListener("resize", function () {
+    if (!mq.matches || lit) return;
+    if (headType && !headType.ran()) headType.reveal();
+    if (followType && !followType.ran()) followType.reveal();
+    lightUp();
+  }, { passive: true });
+
   function evalReveal() {
     if (reduce) { pT = 1; return; }
     if (!_layH) measureLayout();
     const center = (_layTop - (window.scrollY || window.pageYOffset || 0)) + _layH / 2;
-    pT = center < window.innerHeight * 0.85 ? 1 : 0;
+    const vh = window.innerHeight;
+    if (headType && center < vh * 1.02) headType.start();       // a beat BEFORE the fan
+    if (followType && !followType.ran() && center < vh * 0.70) {    // …and this one after it
+      followType.start();
+      setTimeout(lightUp, followType.ms + 120);                 // links + highlight on its last letter
+    }
+    pT = center < vh * 0.85 ? 1 : 0;
   }
 
   function paint() {
