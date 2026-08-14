@@ -1901,3 +1901,15 @@ header.is-reeling .header__ctas .pill-btn{opacity:0}
    the letters can reel in the world flip where they are visible, then the clone rolls back
    in with the new --hc. Outranks the :hover roll rule ((0,4,2) vs (0,3,1)). */
 header .header__nav-left a.is-reflip:hover .nav-char__col{transform:translateY(0)}
+
+/* Hero nav hover clone: ALWAYS the light world's black, for the whole hero run
+   (header.is-hero = up to the flip threshold at .955vh). The nav is black
+   throughout that range, so this is what currentColor already resolved to on a
+   normal scroll — but the inline colour is deliberately left in the world it
+   came FROM after a reeled flip (setHeaderTheme keeps __a's source colour so the
+   reel can read old→new), and clicking Home from the projects run is exactly
+   that case: the letters land black while currentColor is still white, so every
+   word hovered afterwards came up white. Pinning the clone here settles it for
+   good, with no timing involved. The pill clones are NOT included — the dark
+   pill's letters are white on the hero, so black would erase them. */
+header.is-hero .header__nav-left a .nav-char__c{color:#050419}
