@@ -51,6 +51,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://vishnujan.dev/blog/http-429-retry-logic/</loc>
+    <lastmod>2026-08-14</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://vishnujan.dev/blog/local-llm-vs-api/</loc>
     <lastmod>2026-08-14</lastmod>
     <priority>0.8</priority>
@@ -62,11 +67,6 @@
   </url>
   <url>
     <loc>https://vishnujan.dev/blog/playwright-vs-selenium/</loc>
-    <lastmod>2026-08-14</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://vishnujan.dev/blog/what-429-really-means/</loc>
     <lastmod>2026-08-14</lastmod>
     <priority>0.8</priority>
   </url>
