@@ -78,7 +78,7 @@ Object.defineProperty(navigator, 'hardwareConcurrency', {get: () => 8});</code><
 
   <p>Two more failures look like blocking and are not.</p>
 
-  <p><strong>Rate limiting.</strong> A <code>429</code> usually means slow down, and it clears on its own. It is not a verdict on you, and responding to it by rotating addresses converts a two-minute pause into a real block. It also has more than one meaning, which is its own post: <a href="/blog/what-429-really-means/">what a 429 really means</a>.</p>
+  <p><strong>Rate limiting.</strong> A <code>429</code> usually means slow down, and it clears on its own. It is not a verdict on you, and responding to it by rotating addresses converts a two-minute pause into a real block. It also has more than one meaning, which is its own post: <a href="/blog/http-429-retry-logic/">what a 429 really means</a>.</p>
 
   <p><strong>A cap you were never told about.</strong> The same supplement source silently truncates any response at 200 rows for non-subscribers. No error, no flag, no indication that anything was withheld — a wide date window simply returns fewer records than it contains. The fix was to request one day at a time so no window can reach the cap. Nothing in the response would ever have told me; it was findable only by pulling a range twice with different window sizes and noticing the totals disagreed.</p>
 
@@ -131,7 +131,7 @@ Object.defineProperty(navigator, 'hardwareConcurrency', {get: () => 8});</code><
 
   <ul>
     <li><a href="/blog/playwright-vs-selenium/">Playwright vs Selenium</a> — whether you need a browser at all, and what changes between the two.</li>
-    <li><a href="/blog/what-429-really-means/">What a 429 really means</a> — the refusal that clears by itself, and the retry logic that makes it worse.</li>
+    <li><a href="/blog/http-429-retry-logic/">What a 429 really means</a> — the refusal that clears by itself, and the retry logic that makes it worse.</li>
     <li><a href="/blog/how-i-scraped-nse-insider-filings/">Scraping 20 years from a date-windowed endpoint</a> — these defences met on a real public archive, including a row cap that returns success while quietly hiding data.</li>
     <li><a href="/projects/market-data-pipeline/">Market data platform</a> and <a href="/projects/product-explorer/">Product Explorer</a> — the project pages for the two systems the examples come from.</li>
   </ul>

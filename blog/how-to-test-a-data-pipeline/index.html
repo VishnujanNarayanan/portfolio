@@ -328,7 +328,7 @@ assert f.requests_made &lt;= expected_max, f"refetched too much: {f.requests_mad
   <ul>
     <li><a href="/blog/a-year-of-ingestion-bugs/">A year of ingestion bugs</a> — a year of real pipeline failures sorted by cause, useful for deciding what your tests should be looking for.</li>
     <li><a href="/blog/building-resumable-etl-pipelines/">Why rerunning a pipeline should fix data</a> — the design these stop-and-resume tests are written against: rerunning repairs data instead of duplicating it.</li>
-    <li><a href="/blog/what-429-really-means/">What a 429 really means</a> — how to tell apart a rate limit that clears on its own, one that never will, and a quota that is simply spent: the distinction a retry loop needs.</li>
+    <li><a href="/blog/http-429-retry-logic/">What a 429 really means</a> — how to tell apart a rate limit that clears on its own, one that never will, and a quota that is simply spent: the distinction a retry loop needs.</li>
     <li><a href="https://github.com/VishnujanNarayanan/Job_Application_Bot" target="_blank" rel="noopener">Job_Application_Bot</a> (source) — the repository behind the examples here, including the test suite and the rewritten smoke test.</li>
   </ul>
 </article>
