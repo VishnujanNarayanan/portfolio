@@ -126,6 +126,11 @@ function buildPillReel(pill) {
     window.__bootReady = new Promise(function (res) { bootResolve = res; });
     var docEl = document.documentElement;
 
+    // Did the loader actually play this load? The header type-in below rides on the
+    // loader's coat-tails (it is the first thing you see once it lifts), so it plays
+    // exactly when the loader plays — once per session, not on every return from /blog/.
+    window.__bootShown = false;
+
     var boot = document.getElementById("boot-loader");
     if (!boot) { bootResolve(); return; }
 
@@ -219,6 +224,7 @@ function buildPillReel(pill) {
     }
 
     docEl.classList.add("boot-active");
+    window.__bootShown = true;
     if (window.__lenis && window.__lenis.stop) window.__lenis.stop();
 
     /* ----- critical assets (gate the reveal) ----- */
@@ -2549,6 +2555,93 @@ function buildPillReel(pill) {
     };
   })();
 
+  /* ---------- Header REEL-IN (once, right after the boot loader lifts) ----------
+     The header arrives EMPTY — no nav words, no CTA labels — and the letters REEL
+     into existence: each letter rolls up into its clip from below, staggered left
+     to right through Projects → Contact → Blog → Home, then Socials, then
+     Subscribe. It is the same vertical reel the header already uses for the
+     world-flip and the hover roll — the only difference is that it rolls in from
+     nothing rather than from another copy of the letter.
+
+     Mechanics: buildNavReel/buildPillReel have already split every label into
+     per-letter clips (.nav-char / .pill-char, each holding a .__col roller), so
+     this only has to roll those columns in; no text is removed or re-inserted, so
+     the header holds its final layout throughout (nothing reflows) and the reel /
+     hover / theme machinery on top of it is untouched. `header.is-reeling` parks
+     every column below its clip (the empty state, in place before the first paint)
+     and each column is then rolled up by a WAAPI animation — WAAPI rather than a
+     CSS transition because .__col's transition and transform are owned by the hover
+     reel, and because setHeaderTheme writes an inline `transition` on the pills.
+     The class and the animations are all gone by the end, leaving the plain markup.
+
+     Plays only when the boot loader played (homepage, once per session — see
+     __bootShown) and never under prefers-reduced-motion. */
+  (function reelHeaderIn() {
+    var hdr = document.querySelector("header");
+    if (!hdr || !window.__bootShown) return;                       // sub-pages / repeat visit
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    var navCols   = Array.prototype.slice.call(hdr.querySelectorAll(".header__nav-left a .nav-char__col"));
+    var pills     = Array.prototype.slice.call(hdr.querySelectorAll(".header__ctas .pill-btn"));
+    var pillCols  = pills.map(function (p) { return Array.prototype.slice.call(p.querySelectorAll(".pill-char__col")); });
+    if (!navCols.length) return;
+
+    var STEP = 38;                                                 // per-letter stagger
+    var ROLL = 460;                                                // how long one letter takes to roll up
+    var EASE = "cubic-bezier(.19,1,.22,1)";
+    var NAV_MS = navCols.length * STEP;                            // the pills' shells land on this beat
+    var anims = [];
+    hdr.classList.add("is-reeling");                               // park the letters BEFORE the first paint
+
+    // Roll `cols` up into place one after another from `from`; returns when the last
+    // one STARTS, so the runs chain: nav → Socials → Subscribe.
+    function reel(cols, from) {
+      cols.forEach(function (c, i) {
+        anims.push(c.animate([{ transform: "translateY(100%)" }, { transform: "translateY(0)" }],
+                             { duration: ROLL, delay: from + i * STEP, easing: EASE, fill: "both" }));
+      });
+      return from + cols.length * STEP;
+    }
+
+    // Handing the letters back to CSS is the one delicate step. Dropping `is-reeling`
+    // flips the column transform from translateY(100%) to none — and .__col carries the
+    // hover reel's own .42s transition (staggered by --hd), so that flip STARTS A
+    // TRANSITION and every word reels a second time, in unison, the moment the WAAPI
+    // animations are cancelled. So the transition is switched off inline, the class and
+    // the animations are dropped and committed in that state, and the inline override is
+    // only released a frame later — by which point there is no property change left to
+    // animate and the hover reel gets its transition back untouched.
+    var allCols = navCols.concat.apply(navCols, pillCols);
+    function finish() {
+      allCols.forEach(function (c) { c.style.transition = "none"; });
+      hdr.classList.remove("is-reeling");
+      anims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+      void hdr.offsetWidth;                                        // commit the rest state, transitions off
+      requestAnimationFrame(function () {
+        allCols.forEach(function (c) { c.style.transition = ""; });
+      });
+    }
+
+    var TOTAL = NAV_MS;
+    function run() {
+      // The pill SHELLS fade in TOGETHER over the nav's run, so both are fully there
+      // as the last nav letter lands — and only then do their labels reel in, one
+      // pill after the other.
+      pills.forEach(function (p) {
+        anims.push(p.animate([{ opacity: 0, transform: "scale(.94)" }, { opacity: 1, transform: "none" }],
+                             { duration: NAV_MS, easing: EASE, fill: "both" }));
+      });
+      TOTAL = reel(navCols, 0);
+      pillCols.forEach(function (cols) { TOTAL = reel(cols, TOTAL); });
+      setTimeout(finish, TOTAL + ROLL + 60);
+    }
+
+    var started = false;
+    var start = function () { if (!started) { started = true; requestAnimationFrame(run); } };
+    window.__bootReady.then(start);
+    setTimeout(start, 20000);   // safety: never leave the header blank if the loader stalls
+  })();
+
   /* ---------- Mobile nav toggle ---------- */
   var menuBtn = document.querySelector(".menu-btn");
   var mobileNav = document.querySelector(".mobile-nav");
@@ -3906,6 +3999,95 @@ function buildPillReel(pill) {
         g[0].style.transition = "transform .3s var(--ease-default)";   // matches updateHeroExit
         g[0].style.transform = "scale(1)";
       });
+    });
+  });
+})();
+
+/* ---- Nav WORLD handed across a page hop (2026-08-14) --------------------------
+   Clicking Blog from the projects run leaves a header in the DARK world (white nav,
+   inverted pills) and lands on a sub-page whose header is black from its very first
+   frame — the white→black reel that the same crossing plays while scrolling never
+   happens, so the colour just snaps. Same shape of problem as navScaleHandoff above,
+   and the same shape of fix: record the outgoing world, and on arrival start in it
+   and roll to the arriving one.
+
+   The reel itself is the header's existing one — __navLight(true) rolls each nav
+   letter up to its black __b copy with the usual left-to-right stagger, and
+   `is-rolled` does the same inside the pills — so this only has to paint the dark
+   world first and hand the CTA backgrounds their .5s colour ride. Sub-page only:
+   the homepage drives its own world from scroll position every frame.
+
+   "Was dark" is NOT read off the nav's colour alone: setHeaderTheme deliberately
+   leaves the __a letters at their old colour while rolling to the light world, so a
+   homepage header can be white-lettered in either world. It is white letters AND no
+   header--on-light — which is also what keeps a sub-page → sub-page hop (black text,
+   no class) from being mistaken for a dark-world exit. */
+(function navWorldHandoff() {
+  var KEY = "vj:nav-world";
+  var hdr = document.querySelector("header");
+  if (!hdr) return;
+  var link = hdr.querySelector(".header__nav-left a");
+  if (!link) return;
+
+  function isLight(el) {                          // is this element's text a light colour?
+    var m = /rgba?\(([^,]+),([^,]+),([^,)]+)/.exec(getComputedStyle(el).color);
+    return m ? (+m[1] + +m[2] + +m[3]) / 3 >= 128 : false;
+  }
+  addEventListener("pagehide", function () {
+    var wasDark = isLight(link) && !hdr.classList.contains("header--on-light");
+    try { sessionStorage.setItem(KEY, wasDark ? "dark" : "light"); } catch (e) {}
+  });
+
+  if (document.querySelector(".hero")) return;    // homepage: scroll owns the world
+  var was = "light";
+  try { was = sessionStorage.getItem(KEY) || "light"; } catch (e) {}
+  try { sessionStorage.removeItem(KEY); } catch (e) {}   // consume, so a later plain load is clean
+  if (was !== "dark" || !window.__navLight) return;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  var links = Array.prototype.slice.call(hdr.querySelectorAll(".header__nav-left a"));
+  var glass = hdr.querySelector(".header__ctas .pill-btn--glass");
+  var dpill = hdr.querySelector(".header__ctas .pill-btn--dark");
+  var pills = [glass, dpill].filter(Boolean);
+  var spans = pills.map(function (p) { return p.querySelector(".pill-btn-span"); });
+  // Every leaf the two reels transform: their transitions have to be muted while the
+  // classes come back off at the end, or the removal itself animates (a second reel).
+  var leaves = Array.prototype.slice.call(
+    hdr.querySelectorAll(".header__nav-left a .nav-char__a,.header__nav-left a .nav-char__b," +
+                         ".header__ctas .pill-char__a,.header__ctas .pill-char__b"));
+
+  // 1. Paint the world we arrived FROM, instantly (matches setHeaderTheme's he = 1).
+  links.forEach(function (a) { a.style.transition = "none"; a.style.color = "#fcfcfc"; });
+  if (glass) { glass.style.transition = "none"; glass.style.backgroundColor = "#050419"; }
+  if (dpill) { dpill.style.transition = "none"; dpill.style.backgroundColor = "#d0e1eb"; }
+  if (spans[0]) spans[0].style.color = "#fcfcfc";
+  if (spans[1]) spans[1].style.color = "#050419";
+
+  // 2. Two frames later (one frame would coalesce into no animation at all), roll to
+  //    the light world: letters reel, pill backgrounds ride across in .5s.
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      var t = "color .5s var(--ease-default),background-color .5s var(--ease-default)";
+      links.forEach(function (a) { a.style.transition = t; });
+      pills.forEach(function (p) { p.style.transition = t; p.classList.add("is-rolled"); });
+      if (glass) glass.style.backgroundColor = "#fcfcfc";
+      if (dpill) dpill.style.backgroundColor = "#050419";
+      window.__navLight(true, true);              // the nav's own reel (skipTheme: no homepage pills here)
+
+      // 3. Hand back to CSS once the reel has landed. Same trick as reelHeaderIn:
+      //    mute, drop the classes and inline overrides, commit, un-mute a frame later.
+      //    Both worlds end on the same painted colours, so nothing moves visually.
+      setTimeout(function () {
+        leaves.forEach(function (el) { el.style.transition = "none"; });
+        hdr.classList.remove("header--on-light");
+        pills.forEach(function (p) { p.classList.remove("is-rolled"); p.style.transition = ""; p.style.backgroundColor = ""; });
+        links.forEach(function (a) { a.style.transition = ""; a.style.color = ""; });
+        spans.forEach(function (s) { if (s) s.style.color = ""; });
+        void hdr.offsetWidth;
+        requestAnimationFrame(function () {
+          leaves.forEach(function (el) { el.style.transition = ""; });
+        });
+      }, 1200);
     });
   });
 })();
