@@ -1952,3 +1952,10 @@ header.is-hero .header__nav-left a .nav-char__c{color:#050419}
 /* the eight footer column links start EMPTY: each letter column parked below its
    clip until the reel-in rolls it up (see footerHeadlineType in main.js) */
 .lfooter__cols.is-reeling .lreel__col{transform:translateY(100%)}
+/* the column labels wait for the links beneath them, then fade in */
+.lfooter__cols .lfooter__col-label{transition:opacity .55s var(--ease-default)}
+.lfooter__cols.labels-wait .lfooter__col-label{opacity:0}
+/* "Email me" is last: held back until the columns have reeled, then it pops in
+   (shell, then its own letters rolling up) the way the header CTA pills do on load */
+.lfooter__email.is-waiting{opacity:0}
+.lfooter__email.is-reeling .pill-char__col{transform:translateY(100%)}
