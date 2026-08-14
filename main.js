@@ -2247,6 +2247,69 @@ function buildPillReel(pill) {
       return { vert: p.querySelector(".wpanel__vert"), num: p.querySelector(".wpanel__num") };
     });
 
+    /* ---- Intro TYPE-IN: Writing / Blogs / the description ------------------------------
+       Typed on the SAME threshold the panels arrive on — the frame blogOpen first turns
+       true (see the zone state machine in render) — and typed straight through, eyebrow
+       into title into description, with a caret at the writing position.
+
+       Each character becomes its own span while SPACES stay plain text nodes, so the
+       paragraph still breaks across lines exactly where it did and every glyph keeps its
+       final box: the reveal is opacity-only, so nothing reflows as the text arrives. The
+       caret is a box-shadow (drawn outside the glyph's box) rather than a border, for the
+       same reason. Classes are all dropped at the end, leaving the plain text.
+
+       One-shot: unlike the panels, this does not fold back and re-type on the way out.
+       Desktop only — mobile is not pinned and never crosses this threshold — and static
+       under prefers-reduced-motion. */
+    var EYE_STEP = 55, DESC_STEP = 14, LINE_GAP = 160;   // ms per letter (headings / body), pause between lines
+    var typeSeq = null, typeStarted = false;
+    (function buildIntroType() {
+      if (!pad || reduceMo || window.innerWidth <= 820) return;
+      var els = [".writing__eyebrow", ".writing__title", ".writing__desc"]
+        .map(function (s) { return pad.querySelector(s); }).filter(Boolean);
+      if (!els.length) return;
+      typeSeq = [];
+      var at = 0;
+      els.forEach(function (el) {
+        var text = el.textContent, frag = document.createDocumentFragment();
+        var step = el.classList.contains("writing__desc") ? DESC_STEP : EYE_STEP;
+        for (var i = 0; i < text.length; i++) {
+          var ch = text[i];
+          if (ch === " " || ch === "\n" || ch === "\t") { frag.appendChild(document.createTextNode(ch)); continue; }
+          var s = document.createElement("span");
+          s.className = "wtype-c"; s.textContent = ch;
+          frag.appendChild(s);
+          typeSeq.push({ c: s, at: at });
+          at += step;
+        }
+        el.textContent = "";
+        el.appendChild(frag);
+        at += LINE_GAP;
+      });
+      pad.classList.add("is-typing");
+      // Resized down to mobile before it ever ran → nothing will trigger it, so show the text.
+      window.addEventListener("resize", function () {
+        if (!typeStarted && window.innerWidth <= 820) { typeStarted = true; pad.classList.remove("is-typing"); }
+      }, { passive: true });
+    })();
+    function startIntroType() {
+      if (typeStarted || !typeSeq) return;
+      typeStarted = true;
+      typeSeq.forEach(function (t, i) {
+        setTimeout(function () {
+          if (i) typeSeq[i - 1].c.classList.remove("is-cursor");
+          t.c.classList.add("is-typed", "is-cursor");
+        }, t.at);
+      });
+      // The cursor stays on after the last letter and blinks for a beat, the way a
+      // terminal sits at the end of its output, before the whole thing goes plain.
+      var end = typeSeq.length ? typeSeq[typeSeq.length - 1].at + 1400 : 0;
+      setTimeout(function () {
+        pad.classList.remove("is-typing");
+        typeSeq.forEach(function (t) { t.c.classList.remove("is-typed", "is-cursor"); });
+      }, end);
+    }
+
     // Arrival positions: ALL panels are the SAME (equal) width while fanning in — none is open
     // yet. The per-panel offset stacks each panel onto the rightmost one.
     function leftPos(i) { return i * G.per; }                     // equal-width slots (W/N each)
@@ -2426,6 +2489,7 @@ function buildPillReel(pill) {
         }
         prevZone = zone;
       }
+      if (blogOpen) startIntroType();                    // same threshold as the panels' arrival
       if (!lastT) lastT = now;
       var dt = Math.min((now - lastT) / 1000, 0.05); lastT = now;  // clamp dt (tab-switch safety)
 
