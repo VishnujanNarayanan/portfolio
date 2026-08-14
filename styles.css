@@ -1913,3 +1913,20 @@ header .header__nav-left a.is-reflip:hover .nav-char__col{transform:translateY(0
    good, with no timing involved. The pill clones are NOT included — the dark
    pill's letters are white on the hero, so black would erase them. */
 header.is-hero .header__nav-left a .nav-char__c{color:#050419}
+
+/* ============================================================
+   Blog intro TYPE-IN (see startIntroType in main.js)
+   Writing / Blogs / the description type in on the panels'
+   arrival threshold. Every glyph is already in its final box —
+   only opacity moves — so the paragraph never reflows as it
+   arrives, and the caret is a box-shadow (outside the glyph box)
+   so it cannot widen the character it sits on.
+   ============================================================ */
+.writing__pad.is-typing .wtype-c{position:relative;opacity:0}
+.writing__pad.is-typing .wtype-c.is-typed{opacity:1}
+/* the terminal's own cursor: a solid block sitting where the next character will
+   land, blinking on the same 1.05s steps(1) rhythm as .term-cursor. Absolutely
+   positioned off the (inline) character, so it takes no space of its own and the
+   letter it trails cannot be widened by it. */
+.writing__pad.is-typing .wtype-c.is-cursor:after{content:"";position:absolute;left:100%;top:.06em;
+  width:.5em;height:1.05em;margin-left:2px;background:currentColor;animation:termblink 1.05s steps(1) infinite}
