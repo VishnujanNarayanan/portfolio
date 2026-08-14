@@ -69,6 +69,76 @@ function buildPillReel(pill) {
   return span;   // colour is driven on the span; the __a letters inherit it
 }
 
+/* ---------- Shared TYPE-IN builder (blog intro, socials heading) ----------------
+   Splits each element into per-character spans — SPACES stay plain text nodes, so the
+   text still breaks across lines exactly where it did — and hides them behind
+   `host.is-typing`. start() then reveals them one at a time, carrying the terminal
+   block cursor along, and drops every class at the end so the markup goes back to
+   plain text. Every glyph keeps its final box throughout (the reveal is opacity-only),
+   so nothing reflows as the text arrives.
+   runs: [{ el, step }] in typing order; opts: { gap } between runs, { hold } for how
+   long the cursor keeps blinking at the end, or { keep: true } to leave it blinking at
+   the end of the last line for good — a terminal sitting at its prompt. Returns null
+   when there is nothing to type, so callers can treat "no type-in" as a plain absence. */
+function makeTypeIn(host, runs, opts) {
+  if (!host || !runs || !runs.length) return null;
+  opts = opts || {};
+  var gap = opts.gap == null ? 160 : opts.gap;
+  var hold = opts.hold == null ? 1400 : opts.hold;
+  var seq = [], at = 0, any = false;
+  // Walk the element's own child NODES rather than flattening textContent: a run may
+  // wrap part of itself in markup (the footer's highlighted word, a link) and that
+  // wrapper has to survive with its characters still inside it.
+  function split(node, step) {
+    Array.prototype.slice.call(node.childNodes).forEach(function (n) {
+      if (n.nodeType === 3) {
+        var text = n.nodeValue, frag = document.createDocumentFragment();
+        for (var i = 0; i < text.length; i++) {
+          var ch = text[i];
+          if (ch === " " || ch === "\n" || ch === "\t" || ch === "\u00a0") { frag.appendChild(document.createTextNode(ch)); continue; }
+          var sp = document.createElement("span");
+          sp.className = "wtype-c"; sp.textContent = ch;
+          frag.appendChild(sp);
+          seq.push({ c: sp, at: at });
+          at += step;
+        }
+        node.replaceChild(frag, n);
+      } else if (n.nodeType === 1) split(n, step);
+    });
+  }
+  runs.forEach(function (r) {
+    if (!r.el) return;
+    split(r.el, r.step);
+    at += gap; any = true;
+  });
+  if (!any) return null;
+  var runMs = seq.length ? seq[seq.length - 1].at : 0;
+  host.classList.add("is-typing");
+  var started = false, done = false;
+  function finish() {
+    if (done) return;
+    done = true;
+    host.classList.remove("is-typing");
+    seq.forEach(function (t) { t.c.classList.remove("is-typed", "is-cursor"); });
+  }
+  return {
+    start: function () {
+      if (started || done) return;
+      started = true;
+      seq.forEach(function (t, i) {
+        setTimeout(function () {
+          if (i) seq[i - 1].c.classList.remove("is-cursor");
+          t.c.classList.add("is-typed", "is-cursor");
+        }, t.at);
+      });
+      if (!opts.keep) setTimeout(finish, runMs + hold);   // keep → the cursor stays, blinking
+    },
+    ms: runMs,                                      // when the last letter lands, for chaining
+    reveal: finish,                                 // give up and show the text as it is
+    ran: function () { return started; }
+  };
+}
+
 (function () {
   "use strict";
 
@@ -202,7 +272,12 @@ function buildPillReel(pill) {
       var tries = 0;
       (function attempt() {
         if (userScrolled || tries++ > 8) return;
-        var top = el.getBoundingClientRect().top;
+        // #contact IS the footer, and the footer is the last thing on the page: putting its
+        // TOP at the top of the viewport leaves the email pill and the legal row below the
+        // fold, which reads as "not quite there". Contact goes to the very bottom instead.
+        var top = wantHash === "#contact"
+          ? Math.max(0, document.documentElement.scrollHeight - window.innerHeight) - (window.scrollY || 0)
+          : el.getBoundingClientRect().top;
         if (Math.abs(top) > 2) {
           var y = top + (window.scrollY || 0);
           if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { immediate: true, force: true });
@@ -2247,6 +2322,31 @@ function buildPillReel(pill) {
       return { vert: p.querySelector(".wpanel__vert"), num: p.querySelector(".wpanel__num") };
     });
 
+    /* ---- Intro TYPE-IN: Writing / Blogs / the description ------------------------------
+       Typed on the SAME threshold the panels arrive on — the frame blogOpen first turns
+       true (see the zone state machine in render) — and typed straight through, eyebrow
+       into title into description, with a caret at the writing position.
+
+       Each character becomes its own span while SPACES stay plain text nodes, so the
+       paragraph still breaks across lines exactly where it did and every glyph keeps its
+       final box: the reveal is opacity-only, so nothing reflows as the text arrives. The
+       caret is a box-shadow (drawn outside the glyph's box) rather than a border, for the
+       same reason. Classes are all dropped at the end, leaving the plain text.
+
+       One-shot: unlike the panels, this does not fold back and re-type on the way out.
+       Desktop only — mobile is not pinned and never crosses this threshold — and static
+       under prefers-reduced-motion. */
+    var EYE_STEP = 55, DESC_STEP = 10;                 // ms per letter: headings / body
+    var introType = (!pad || reduceMo || window.innerWidth <= 820) ? null : makeTypeIn(pad, [
+      { el: pad.querySelector(".writing__eyebrow"), step: EYE_STEP },
+      { el: pad.querySelector(".writing__title"),   step: EYE_STEP },
+      { el: pad.querySelector(".writing__desc"),    step: DESC_STEP }
+    ], { keep: true });          // cursor stays blinking at the end of the description
+    // Resized down to mobile before it ever ran → nothing will trigger it, so show the text.
+    if (introType) window.addEventListener("resize", function () {
+      if (!introType.ran() && window.innerWidth <= 820) introType.reveal();
+    }, { passive: true });
+
     // Arrival positions: ALL panels are the SAME (equal) width while fanning in — none is open
     // yet. The per-panel offset stacks each panel onto the rightmost one.
     function leftPos(i) { return i * G.per; }                     // equal-width slots (W/N each)
@@ -2426,6 +2526,7 @@ function buildPillReel(pill) {
         }
         prevZone = zone;
       }
+      if (blogOpen && introType) introType.start();       // same threshold as the panels' arrival
       if (!lastT) lastT = now;
       var dt = Math.min((now - lastT) / 1000, 0.05); lastT = now;  // clamp dt (tab-switch safety)
 
@@ -2640,8 +2741,8 @@ function buildPillReel(pill) {
     // capsules sitting in the corner for most of it; they now hold off until this far
     // through the nav (0 = with the first letter, 1 = not at all) and still land together
     // on the last one, right before their own labels reel in.
-    var PILL_IN = 0.72;
-    var PILL_LAG = 160;                                            // …and settle this much AFTER it
+    var PILL_IN = 0.86;
+    var PILL_LAG = 220;                                            // …and settle this much AFTER it
     var anims = [];
     hdr.classList.add("is-reeling");                               // park the letters BEFORE the first paint
 
@@ -3744,11 +3845,82 @@ function buildPillReel(pill) {
     _layTop = r.top + (window.scrollY || window.pageYOffset || 0);
     _layH = r.height;
   }
+  /* ---- Socials copy: type, then reel, then highlight -----------------------------
+     Three beats, each on its own line of scroll:
+       1. the HEADING ("What's Up" / "On Socials") types in, a beat EARLIER than the
+          cards fan out, so the words are already being written as the spread starts;
+       2. scrolling on, the FOLLOW line types;
+       3. the moment that line finishes, the three social LINKS reel in from nothing —
+          the same per-letter roll the nav does on load — and the blue highlight sweeps
+          across "On Socials" and the follow line, left to right, like a text selection
+          being dragged over them. Until then there is NO blue behind either line.
+     Skipped on mobile and under reduced motion, where the fan does not run either:
+     the two lines keep their plain CSS background and the links are simply there. */
+  const HEAD_STEP = 32, FOLLOW_STEP = 18;
+  const LINK_STEP = 49, LINK_ROLL = 565, LINK_EASE = "cubic-bezier(.19,1,.22,1)";
+  const socialsInner = document.querySelector(".callout-socials-layout");
+  const linksWrap = document.querySelector(".callout-socials-links-layout");
+  const hlEls = [document.querySelector(".callout-socials-heading__line.is-hl"),
+                 document.querySelector(".callout-socials-follow")].filter(Boolean);
+  const staged = !reduce && !mq.matches && !!socialsInner;
+  const headType = !staged ? null : makeTypeIn(socialsInner, [
+    { el: document.querySelector(".callout-socials-heading__line:not(.is-hl)"), step: HEAD_STEP },
+    { el: document.querySelector(".callout-socials-heading__line.is-hl"),       step: HEAD_STEP }
+  ]);
+  const followType = !staged ? null : makeTypeIn(socialsInner, [
+    { el: document.querySelector(".callout-socials-follow"), step: FOLLOW_STEP }
+  ], { keep: true });            // cursor stays blinking after "…social media"
+  const linkCols = staged && linksWrap
+    ? Array.from(linksWrap.querySelectorAll(".pill-char__col")) : [];
+  if (staged) {
+    hlEls.forEach(function (el) { el.classList.add("hl-sweep"); });   // background off until beat 3
+    if (linkCols.length) linksWrap.classList.add("is-reeling");       // letters parked below their clips
+  }
+  // Beat 3. The links roll up staggered; the highlight rides across at the same time.
+  // Handing the letters back to CSS is the delicate step: .pill-char__col carries the
+  // hover reel's own transition, so dropping is-reeling while the animations are
+  // cancelled would start a transition and reel every word a second time. Mute it,
+  // drop class and animations together, commit, release a frame later.
+  let lit = false;
+  function highlight() { hlEls.forEach(function (el) { el.classList.add("is-lit"); }); }
+  function lightUp() {
+    if (lit) return;
+    lit = true;
+    highlight();                                              // the blue rides in WITH the links
+    if (!linkCols.length) return;
+    const anims = linkCols.map(function (c, i) {
+      return c.animate([{ transform: "translateY(100%)" }, { transform: "translateY(0)" }],
+                       { duration: LINK_ROLL, delay: i * LINK_STEP, easing: LINK_EASE, fill: "both" });
+    });
+    setTimeout(function () {
+      linkCols.forEach(function (c) { c.style.transition = "none"; });
+      linksWrap.classList.remove("is-reeling");
+      anims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+      void linksWrap.offsetWidth;
+      requestAnimationFrame(function () { linkCols.forEach(function (c) { c.style.transition = ""; }); });
+    }, linkCols.length * LINK_STEP + LINK_ROLL + 60);
+  }
+  // Resized down to mobile before any of it ran → show the copy as it is.
+  window.addEventListener("resize", function () {
+    if (!mq.matches || lit) return;
+    if (headType && !headType.ran()) headType.reveal();
+    if (followType && !followType.ran()) followType.reveal();
+    lightUp(); highlight();
+  }, { passive: true });
+
   function evalReveal() {
     if (reduce) { pT = 1; return; }
     if (!_layH) measureLayout();
     const center = (_layTop - (window.scrollY || window.pageYOffset || 0)) + _layH / 2;
-    pT = center < window.innerHeight * 0.85 ? 1 : 0;
+    const vh = window.innerHeight;
+    if (headType && center < vh * 1.02) headType.start();       // a beat BEFORE the fan
+    if (followType && !followType.ran() && center < vh * 0.50) {    // …and this one later, on its own line
+      followType.start();
+      // A short beat after the line lands, the links roll in and the blue is dragged
+      // across the two lines — together, one gesture.
+      setTimeout(lightUp, followType.ms + 180);
+    }
+    pT = center < vh * 0.85 ? 1 : 0;
   }
 
   function paint() {
@@ -4185,6 +4357,170 @@ function buildPillReel(pill) {
       else pills.forEach(function (p) { p.classList.remove("is-rolled"); });
     });
   })();
+})();
+
+/* ---- Footer headline TYPE-IN (2026-08-14) -------------------------------------
+   "Data in. / Products out." types itself in the same way the blog intro and the
+   socials heading do, on the footer's own arrival — an IntersectionObserver here
+   rather than a scroll threshold, because the footer is not pinned and has no
+   state machine of its own to hang off. Runs on every page (the footer is shared),
+   so the blog pages' variant of the headline types too.
+
+   The highlighted word keeps its markup: makeTypeIn walks child nodes, so the
+   .is-hl span survives with its letters inside it and simply types in its colour. */
+(function footerHeadlineType() {
+  var h = document.querySelector(".lfooter__headline");
+  if (!h || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  var rows = Array.prototype.slice.call(h.querySelectorAll(".lfooter__hl-row"));
+  if (!rows.length) return;
+  var HEAD_STEP = 45;
+
+  // ONCE PER FOOTER, PER SESSION. The footer is shared by all ten pages, so without this
+  // it replayed on every single navigation. There are exactly two headlines — the default
+  // one and the blog pages' variant — and each earns its entrance once: the key is derived
+  // from the headline's own text, so the two are tracked separately and no third can appear.
+  // A visitor who bounces between home and a post sees it twice at most. Already seen →
+  // return before anything is hidden, so the footer simply renders as plain markup.
+  // An explicit RELOAD resets the whole set, not just this page's entry: refreshing the
+  // homepage means the homepage footer types again AND the blog one does when you next
+  // reach it. sessionStorage survives a refresh (it lives as long as the tab), so without
+  // this a hard refresh could never show the entrance again. Back/forward and in-site
+  // links do not reset anything.
+  var PREFIX = "vj:footer-in:";
+  var KEY = PREFIX + (rows[0].textContent || "").trim().toLowerCase().replace(/[^a-z]+/g, "-").slice(0, 32);
+  var reloaded = (function () {
+    try {
+      var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+      if (nav) return nav.type === "reload";
+      return !!(performance.navigation && performance.navigation.type === 1);
+    } catch (e) { return false; }
+  })();
+  try {
+    if (reloaded) {
+      Object.keys(sessionStorage).forEach(function (k) {
+        if (k.indexOf(PREFIX) === 0) sessionStorage.removeItem(k);
+      });
+    } else if (sessionStorage.getItem(KEY) === "1") return;
+  } catch (e) {}
+  function markSeen() { try { sessionStorage.setItem(KEY, "1"); } catch (e) {} }
+  // Spent when you LEAVE the page, even if the footer never came into view. Marking it
+  // only when the entrance plays left a hole big enough to drive through: the homepage
+  // footer is a long scroll away, so leaving before reaching it recorded nothing and the
+  // entrance played again on the next visit — which is the "it runs every time" symptom.
+  // pagehide (not beforeunload) so it also fires on the way into the back/forward cache.
+  addEventListener("pagehide", markSeen);
+
+  // No lingering cursor here — it clears shortly after the last letter (the resting
+  // cursor lives on the socials follow line and the blog description).
+  var typer = makeTypeIn(h, rows.map(function (el) { return { el: el, step: HEAD_STEP }; }), { gap: 120, hold: 420 });
+  if (!typer) return;
+
+  // …and once it lands, the eight column links reel in from nothing. They already carry
+  // the per-letter .lreel clips (footerLinkReel builds them for the hover roll, further
+  // down this file — so the columns are only READ at reel time, not now), which means
+  // this only has to park the letter columns below their clips and roll them up.
+  var cols = document.querySelector(".lfooter__cols");
+  var LETTER_STEP = 26, LINK_GAP = 72, LINK_ROLL = 560, EASE = "cubic-bezier(.19,1,.22,1)";
+  // The column LABELS ("Pages" / "Follow On") wait for the links under them and simply
+  // fade in once the reel is done; the "Email me" pill POPS in after it the way the
+  // header CTAs do on load — shell first, its own letters reeling up inside it.
+  if (cols) cols.classList.add("is-reeling", "labels-wait");
+  var mail = document.querySelector(".lfooter__email");
+  var mailCols = mail ? Array.prototype.slice.call(mail.querySelectorAll(".pill-char__col")) : [];
+  if (mail) mail.classList.add("is-waiting", "is-reeling");
+  function popEmail() {
+    if (!mail) return;
+    mail.classList.remove("is-waiting");
+    // The pill is CENTRED with its own transform (translateX(-50%) in the bottom tab), so
+    // a bare scale() keyframe would replace that and shove it to the right. Compose the
+    // pop onto whatever transform it is already resting at.
+    var base = getComputedStyle(mail).transform;
+    if (base === "none") base = "";
+    var anims = [mail.animate([{ opacity: 0, transform: (base + " scale(.94)").trim() },
+                               { opacity: 1, transform: base || "none" }],
+                              { duration: 420, easing: EASE, fill: "both" })];
+    mailCols.forEach(function (c, i) {
+      anims.push(c.animate([{ transform: "translateY(100%)" }, { transform: "translateY(0)" }],
+                           { duration: LINK_ROLL, delay: 180 + i * LETTER_STEP, easing: EASE, fill: "both" }));
+    });
+    setTimeout(function () {
+      mailCols.forEach(function (c) { c.style.transition = "none"; });
+      mail.classList.remove("is-reeling");
+      anims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+      void mail.offsetWidth;
+      requestAnimationFrame(function () { mailCols.forEach(function (c) { c.style.transition = ""; }); });
+    }, 180 + mailCols.length * LETTER_STEP + LINK_ROLL + 60);
+  }
+  function reelLinks() {
+    if (!cols) return;
+    var cs = Array.prototype.slice.call(cols.querySelectorAll(".lreel__col"));
+    if (!cs.length) { cols.classList.remove("is-reeling", "labels-wait"); popEmail(); return; }
+    // BOTTOM UP: the links arrive from the last row upward (both columns together,
+    // since the two sit at the same heights), each one's letters still rolling up
+    // left to right within it. Ordered by where they actually are on screen rather
+    // than by DOM order, so the two columns interleave by row.
+    var links = Array.prototype.slice.call(cols.querySelectorAll(".lfooter__navlink"))
+      .map(function (a) { return { a: a, top: a.getBoundingClientRect().top }; })
+      .sort(function (x, y) { return y.top - x.top; });
+    var anims = [], last = 0;
+    links.forEach(function (L, li) {
+      Array.prototype.forEach.call(L.a.querySelectorAll(".lreel__col"), function (c, i) {
+        var delay = li * LINK_GAP + i * LETTER_STEP;
+        if (delay > last) last = delay;
+        anims.push(c.animate([{ transform: "translateY(100%)" }, { transform: "translateY(0)" }],
+                             { duration: LINK_ROLL, delay: delay, easing: EASE, fill: "both" }));
+      });
+    });
+    // Same handoff as the other reels: .lreel__col carries the hover roll's own
+    // transition, so dropping is-reeling while the animations are cancelled would
+    // start a transition and reel all eight a second time.
+    // The labels and the pill come in while the LAST links are still rolling, rather than
+    // waiting for the reel to be completely over — the tail of the footer reads as one
+    // movement instead of a pause and then two more things.
+    setTimeout(function () {
+      cols.classList.remove("labels-wait");                 // "Pages" / "Follow On" fade in
+      popEmail();
+    }, last + LINK_ROLL * 0.45);
+    setTimeout(function () {
+      cs.forEach(function (c) { c.style.transition = "none"; });
+      cols.classList.remove("is-reeling");
+      anims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+      void cols.offsetWidth;
+      requestAnimationFrame(function () { cs.forEach(function (c) { c.style.transition = ""; }); });
+    }, last + LINK_ROLL + 60);
+  }
+  function play() { markSeen(); typer.start(); setTimeout(reelLinks, typer.ms + 140); }
+  if (!("IntersectionObserver" in window)) { typer.reveal(); reelLinks(); return; }   // popEmail rides along
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      play();
+    });
+  }, { rootMargin: "0px 0px -15% 0px", threshold: 0.2 });
+  io.observe(h);
+})();
+
+/* ---- Contact goes to the BOTTOM of the page (2026-08-14) -----------------------
+   #contact is the footer's own id, so the browser's native jump parks the footer's TOP
+   at the top of the viewport — which leaves the email pill and the legal row below the
+   fold and reads as landing just short. Same-document Contact links are intercepted and
+   taken to the end of the document instead, smoothly and through Lenis where it is
+   running. Cross-document Contact links are left alone: they carry ?go=contact and are
+   handled on arrival by applyHash, which lands at the same place. */
+(function contactToBottom() {
+  document.addEventListener("click", function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href$="#contact"]') : null;
+    if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+    var href = a.getAttribute("href") || "";
+    if (href.charAt(0) !== "#" && href !== location.pathname + "#contact") return;  // other document
+    if (!document.getElementById("contact")) return;
+    e.preventDefault();
+    var y = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { duration: 1.1 });
+    else window.scrollTo({ top: y, behavior: "smooth" });
+    if (history.replaceState) { try { history.replaceState(null, "", "#contact"); } catch (err) {} }
+  });
 })();
 
 /* ---- Post action rail (2026-08-11) --------------------------------------------
