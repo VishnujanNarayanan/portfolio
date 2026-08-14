@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en-US" class="lenis no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What a 429 Really Means: Retry Logic That Makes Things Worse</title>
+<meta name="description" content="HTTP 429 handling done properly: transient vs permanent vs exhausted, honouring Retry-After, and why substring matching on error messages breaks retries.">
+<meta name="author" content="Vishnujan Narayanan">
+<meta property="article:author" content="https://www.linkedin.com/in/vishnujan-narayanan">
+<meta property="article:published_time" content="2026-07-16">
+<meta property="article:modified_time" content="2026-07-16">
+<link rel="icon" href="../../favicon.ico?v=2" sizes="any">
+<link rel="icon" type="image/png" href="../../favicon-512.png?v=2" sizes="512x512">
+<link rel="apple-touch-icon" href="../../apple-touch-icon.png?v=2">
+<link rel="canonical" href="https://vishnujan.dev/blog/what-429-really-means/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta property="og:title" content="What a 429 Really Means: Retry Logic That Makes Things Worse">
+<meta property="og:description" content="Transient, permanent, exhausted — three classes, one status code, and the retry loop that kept dying.">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Vishnujan Narayanan">
+<meta property="og:locale" content="en_US">
+<meta property="og:url" content="https://vishnujan.dev/blog/what-429-really-means/">
+<meta property="og:image" content="https://vishnujan.dev/images/blog/share-rate-limits.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:alt" content="What a 429 Really Means: Retry Logic That Makes Things Worse">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="What a 429 Really Means: Retry Logic That Makes Things Worse">
+<meta name="twitter:description" content="Transient, permanent, exhausted — three classes, one status code, and the retry loop that kept dying.">
+<meta name="twitter:image" content="https://vishnujan.dev/images/blog/share-rate-limits.jpg">
+<!-- Roboto Flex is the nav reel's font (styles.css @font-face). Preloaded so it is in
+     flight before the stylesheet finishes parsing and is ready for the FIRST paint —
+     no fallback render to swap out, which is what made the header snap. crossorigin is
+     required even same-origin: fonts are always fetched in CORS mode. -->
+<link rel="preload" href="/fonts/roboto-flex-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../styles.css">
+<script>document.documentElement.classList.remove("no-js");</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"What a 429 Really Means: Retry Logic That Makes Things Worse","item":"https://vishnujan.dev/blog/what-429-really-means/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"What a 429 Really Means: Retry Logic That Makes Things Worse","description":"HTTP 429 handling done properly: transient vs permanent vs exhausted, honouring Retry-After, and why substring matching on error messages breaks retries.","image":"https://vishnujan.dev/images/blog/share-rate-limits.jpg","datePublished":"2026-07-16","dateModified":"2026-07-16","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/what-429-really-means/"}</script>
+</head>
+<body class="subpage-body post-body blog-body">
+<div class="mobile-nav__overlay"></div>
+<!-- BEGIN generated: header (source: partials/header.html — run scripts/gen-partials.mjs) -->
+<header class="show">
+  <nav class="header__nav-left" aria-label="Primary navigation">
+    <a href="/?go=projects">Projects</a>
+    <a href="/?go=contact">Contact</a>
+    <a href="/blog/">Blog</a>
+    <a href="/">Home</a>
+  </nav>
+  <nav class="header__nav-right" aria-label="Header actions">
+    <div class="header__ctas">
+      <a href="/?go=socials" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Socials</span></a>
+      <button type="button" class="pill-btn pill-btn--dark" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button>
+    </div>
+    <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
+      <span class="menu-btn__icon">
+        <span class="menu-btn__line menu-btn__line--1"></span>
+        <span class="menu-btn__line menu-btn__line--2"></span>
+        <span class="menu-btn__line menu-btn__line--3"></span>
+      </span>
+    </button>
+  </nav>
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <div class="mobile-nav__panel-bg"></div>
+    <div class="mobile-nav__panel">
+      <div class="mobile-nav__header">
+        <a href="/" class="mobile-nav__logo"><span class="logo-text">VJ</span></a>
+        <button class="mobile-nav__close" type="button" aria-label="Close menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="#050419"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="#050419"></rect></svg>
+        </button>
+      </div>
+      <ul class="mobile-nav__list">
+        <li class="mobile-nav__item"><a href="/">Home</a></li>
+        <li class="mobile-nav__item"><a href="/?go=projects">Projects</a></li>
+        <li class="mobile-nav__item"><a href="/?go=contact">Contact</a></li>
+        <li class="mobile-nav__item"><a href="/blog/">Blog</a></li>
+      </ul>
+      <div class="mobile-nav__ctas">
+        <div class="mncta"><a href="/?go=socials" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Socials</span></a></div>
+        <div class="mncta"><button type="button" class="pill-btn pill-btn--dark mobile-nav__cta" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button></div>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<!--
+  Subscribe modal. A static site has no backend, so it cannot store an address or
+  send mail — the signup has to be completed by Substack either way. Two ways to
+  do that: their embed iframe (cross-origin, so its orange button cannot be
+  restyled from here) or this — our own form, styled in the site's blue, GET-ing
+  to Substack's subscribe page with the address in the query string so it arrives
+  pre-filled. No JS: a plain GET form builds ?email=... on its own, so this still
+  works if main.js never runs.
+  Opened by any [data-subscribe-open] button (see the subscribe IIFE in main.js).
+-->
+<dialog class="submodal" id="subscribe-modal" aria-labelledby="submodal-title">
+  <button type="button" class="submodal__close" data-subscribe-close aria-label="Close">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="currentColor"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="currentColor"></rect></svg>
+  </button>
+  <h2 class="submodal__title" id="submodal-title">Get new posts by email</h2>
+  <p class="submodal__text">New posts on data pipelines, scraping, and market-data ML — straight to your inbox.</p>
+  <form class="subform" action="https://vishnujannarayanan.substack.com/subscribe" method="get" target="_blank" rel="noopener">
+    <label class="subform__label" for="subscribe-email">Email</label>
+    <div class="subform__row">
+      <input class="subform__input" id="subscribe-email" type="email" name="email" required autocomplete="email" placeholder="you@example.com" spellcheck="false">
+      <button class="subform__btn" type="submit">Subscribe</button>
+    </div>
+  </form>
+  <p class="submodal__note">It's <strong>completely free</strong>, and you can <strong>unsubscribe anytime</strong>.</p>
+  <p class="submodal__terms">By subscribing you agree to Substack's <a href="https://substack.com/tos" target="_blank" rel="noopener">Terms of Use</a>, its <a href="https://substack.com/privacy" target="_blank" rel="noopener">Privacy Policy</a> and its <a href="https://substack.com/ccpa#personal-data-collected" target="_blank" rel="noopener">Information collection notice</a>.</p>
+  <a class="substack-badge" href="https://vishnujannarayanan.substack.com/" target="_blank" rel="me noopener">
+    <svg viewBox="0 0 21 24" width="13" height="15" aria-hidden="true" focusable="false"><path d="M20.999 0H0v2.836h20.999V0Z" fill="currentColor"></path><path d="M20.999 5.406H0v2.836h20.999V5.406Z" fill="currentColor"></path><path d="M0 10.813V24l10.499-5.887L21 24V10.813H0Z" fill="currentColor"></path></svg>
+    <span>Substack</span>
+  </a>
+</dialog>
+<!-- END generated: header -->
+<main>
+<aside class="post-rail" aria-label="Post actions">
+  <a class="post-rail__btn" href="/blog/" aria-label="Back to all writing" title="Back to all writing">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+  </a>
+  <button class="post-rail__btn" type="button" data-like aria-pressed="false" aria-label="Like this post" title="Like this post">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 6.6a5 5 0 0 0-7.1 0l-1.7 1.7-1.7-1.7a5 5 0 1 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1Z"/></svg>
+  </button>
+  <button class="post-rail__btn" type="button" data-share="https://vishnujan.dev/blog/what-429-really-means/" aria-label="Share this post" title="Share this post">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4"/><path d="m15.4 6.5-6.8 4"/></svg>
+  </button>
+  <span class="post-rail__toast" data-share-toast hidden>Link copied</span>
+</aside>
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>What a 429 Really Means: Retry Logic That Makes Things Worse</nav>
+<article class="article">
+  <div class="post-head">
+    <div class="tag-row"><span class="tag">APIs</span><span class="tag">Reliability</span></div>
+    <h1>What a 429 really means, and the retry logic that makes things worse</h1>
+    <div class="post-head__foot">
+    <div class="byline byline--lg">
+        <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
+        <span class="byline__name">Vishnujan Narayanan</span>
+        <span class="byline__sep" aria-hidden="true">·</span>
+        <span class="byline__date">July 2026</span>
+      </div>
+<div class="share-row">
+      <a class="share-btn" href="mailto:?subject=What%20a%20429%20Really%20Means%3A%20Retry%20Logic%20That%20Makes%20Things%20Worse&body=What%20a%20429%20Really%20Means%3A%20Retry%20Logic%20That%20Makes%20Things%20Worse%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fwhat-429-really-means%2F" aria-label="Share by email" title="Share by email"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
+      <a class="share-btn" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fwhat-429-really-means%2F&text=What%20a%20429%20Really%20Means%3A%20Retry%20Logic%20That%20Makes%20Things%20Worse" target="_blank" rel="noopener" aria-label="Share on X" title="Share on X"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.2 3h3.3l-7.2 8.2L21.8 21h-6.6l-4.3-5.6L5.9 21H2.6l7.7-8.8L2.5 3h6.8l3.9 5.2L17.2 3Zm-1.2 16h1.8L8.1 4.8H6.2L16 19Z"/></svg></a>
+      <a class="share-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fwhat-429-really-means%2F" target="_blank" rel="noopener" aria-label="Share on LinkedIn" title="Share on LinkedIn"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M6.9 8.6H4.2V20h2.7V8.6ZM5.5 4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2ZM20 13.4c0-2.9-1.6-4.3-3.6-4.3-1.7 0-2.4.9-2.8 1.5V8.6H10.9c0 .8 0 11.4 0 11.4h2.7v-6.4c0-.3 0-.6.1-.8.3-.6.8-1.2 1.7-1.2 1.2 0 1.7.9 1.7 2.2V20H20v-6.6Z"/></svg></a>
+      <a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fwhat-429-really-means%2F" target="_blank" rel="noopener" aria-label="Share on Facebook" title="Share on Facebook"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M14.5 8.5V6.9c0-.7.2-1.1 1.2-1.1h1.5V3.1C16.8 3 16 3 15.1 3c-2 0-3.4 1.2-3.4 3.5v2H9.3V11h2.4v8h2.8v-8h2.3l.4-2.5h-2.7Z"/></svg></a>
+      <a class="share-btn" href="https://www.reddit.com/submit?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fwhat-429-really-means%2F&title=What%20a%20429%20Really%20Means%3A%20Retry%20Logic%20That%20Makes%20Things%20Worse" target="_blank" rel="noopener" aria-label="Share on Reddit" title="Share on Reddit"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M22 12.1a2.1 2.1 0 0 0-3.6-1.5 10.3 10.3 0 0 0-5.2-1.6l.9-4.2 2.9.6a1.5 1.5 0 1 0 .2-1.2l-3.4-.7a.6.6 0 0 0-.7.5l-1 4.7a10.4 10.4 0 0 0-5.3 1.6 2.1 2.1 0 1 0-2.3 3.4 3.8 3.8 0 0 0 0 .6c0 3 3.6 5.5 8 5.5s8-2.5 8-5.5a3.8 3.8 0 0 0 0-.6 2.1 2.1 0 0 0 1.5-2Zm-13.6 1.4a1.5 1.5 0 1 1 1.5 1.5 1.5 1.5 0 0 1-1.5-1.5Zm8.3 4a5.6 5.6 0 0 1-3.7 1.1 5.6 5.6 0 0 1-3.7-1.1.5.5 0 1 1 .7-.7 4.7 4.7 0 0 0 3 .8 4.7 4.7 0 0 0 3-.8.5.5 0 1 1 .7.7Zm-.2-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5Z"/></svg></a>
+      <a class="share-btn" href="https://api.whatsapp.com/send?text=What%20a%20429%20Really%20Means%3A%20Retry%20Logic%20That%20Makes%20Things%20Worse%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fwhat-429-really-means%2F" target="_blank" rel="noopener" aria-label="Share on WhatsApp" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Zm0 1.7a7.3 7.3 0 1 1-3.7 13.6l-.3-.2-2.7.7.7-2.6-.2-.3A7.3 7.3 0 0 1 12 4.7Zm4.2 9.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1-.6.7-.7.9-.3.2-.5.1a6 6 0 0 1-1.8-1.1 6.6 6.6 0 0 1-1.2-1.6c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 2 4.5 4.5 0 0 0 1 2.4 10.2 10.2 0 0 0 3.9 3.4c1.8.7 1.8.5 2.2.4a2.3 2.3 0 0 0 1.5-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"/></svg></a>
+    </div>
+    </div>
+    <p class="post-head__dek">The same status code covers &quot;wait three seconds&quot; and &quot;this account is finished for the month&quot;. Treating them alike ended three runs early. The three-class taxonomy that fixed it.</p>
+  </div>
+  <figure class="post-hero">
+    <img src="/images/blog/rate-limits.jpg" alt="" width="1000" height="563" fetchpriority="high" decoding="async">
+  </figure>
+
+  <p>These two messages arrived from the same API, six hours apart, both as HTTP <code>429</code>:</p>
+
+  <pre><code>429 Rate limit reached ... on tokens per minute (TPM):
+    Limit 12000, Used 10986. Please try again in 3.035s.
+
+429 Your project has exceeded its monthly spending cap.</code></pre>
+
+  <p>The first clears in three seconds. The second holds until somebody raises a limit or the month rolls over. Any retry loop that treats them the same handles one of them badly, and which one depends on which way you guessed. Sorting this out properly took three rounds, and the code that came out of it is about forty lines.</p>
+
+  <h2>What a retry loop is, and the assumption inside it</h2>
+
+  <p>Programs that call other people's services fail intermittently — a connection drops, a server is briefly busy — so the standard response is to try again after a pause, doubling the pause each time: 2 seconds, then 4, then 8, then give up. That is exponential backoff, and it is close to free to write — or to get for nothing from <a href="https://tenacity.readthedocs.io/en/latest/" target="_blank" rel="noopener">tenacity</a> in Python, or <a href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.util.html" target="_blank" rel="noopener">urllib3's <code>Retry</code></a> if you are already using <code>requests</code>:</p>
+
+  <pre><code>except Exception as exc:
+    if attempt &lt; attempts:
+        time.sleep(delay)
+        delay = min(delay * 2, max_delay)</code></pre>
+
+  <p>Written that way, the loop encodes a belief: that every failure is worth waiting for. My batches ran 25 items at a time, five attempts each, with the pause capped at 90 seconds. When the provider retired a model and every single call began returning <code>404 no longer available</code>, that belief turned a permanent failure into roughly four minutes of waiting per item, applied to all 25. The run did not crash. It produced identical errors for fifteen minutes and then finished.</p>
+
+  <p>So the taxonomy needs at least two classes, which is the version most retry code eventually gets to:</p>
+
+  <ul>
+    <li><strong>Transient</strong> — <code>503</code>, timeouts, <code>429</code>. Retry with backoff.</li>
+    <li><strong>Permanent</strong> — <code>404</code> unknown model, <code>401</code> bad key, <code>400</code> malformed request. Fail immediately; the next attempt is identical to this one.</li>
+  </ul>
+
+  <p>I wrote that, and left a comment saying <code>429</code> was deliberately absent from the permanent list, because rate limiting is transient by definition and must keep retrying. The spend-cap message above arrived a few hours later and showed the gap.</p>
+
+  <h2>The third class is about scope, not recoverability</h2>
+
+  <p>A spend cap is not recoverable inside a run, but that is not the interesting part. The interesting part is that it says something about <em>every subsequent call</em>, not just this one. A <code>404</code> on item 3 tells you nothing about item 4. A spend cap on item 3 tells you exactly what will happen to items 4 through 25.</p>
+
+  <p>That is a third class, and the property that defines it is scope:</p>
+
+  <ul>
+    <li><strong>Transient</strong> — scope: this call. Retry.</li>
+    <li><strong>Permanent</strong> — scope: this call. Fail this item, continue the batch.</li>
+    <li><strong>Exhausted</strong> — scope: the whole account. Stop the batch, or move to a different provider.</li>
+  </ul>
+
+  <p>The reason this class gets missed is built into HTTP: a status code says <em>what</em> went wrong and never says <em>how widely</em>. Both a per-minute throttle and a monthly spend cap are refusals to serve you right now, so both are 429, and the difference between them lives only in the human-readable text.</p>
+
+  <p>Which means you have to read the text. That sounds unappealing and it is unavoidable — and it also created the next problem.</p>
+
+  <p>A few providers do better than prose. Where a <a href="https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/" target="_blank" rel="noopener">RateLimit header</a> is present it tells you the limit, what is left and when the window resets, as structured fields you can act on without pattern-matching English. It is still a draft standard, so treat it as a bonus rather than a plan.</p>
+
+  <h2>Classifying on message text, and the phrase that broke it</h2>
+
+  <p>Two practical notes before the failure, because both surprised me.</p>
+
+  <p><strong>You cannot classify by exception type.</strong> Between the SDK, the structured-output wrapper and the transport, one failure arrives as three nested classes wrapping each other. The status text is the one thing that survives every layer.</p>
+
+  <p><strong>Vendors write error messages for humans.</strong> That is the trap. My list of "this account is exhausted" markers included the substring <code>billing</code>, which is reasonable — spend-cap messages mention billing. But this provider appends an upsell to <em>every</em> rate-limit message it sends:</p>
+
+  <pre><code>429 Rate limit reached for model `llama-3.3-70b-versatile` on tokens per minute
+(TPM): Limit 12000, Used 10986, Requested 1621. Please try again in 3.035s.
+Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing</code></pre>
+
+  <p>Routine throttling, clearing in three seconds, containing the word that meant "your account is finished". The classifier promoted it to exhaustion and the run moved to a fallback provider that was itself spend-capped. Two runs ended early that way, at 5 of 21 jobs and 4 of 13.</p>
+
+  <p>The taxonomy was not wrong. The evidence used to detect one of its classes was contaminated by text that had nothing to do with the class — an advertisement, not a description of the error. The fix is to make classification ordered, so a narrow, specific signal outranks a broad, incidental one:</p>
+
+  <pre><code>def _is_budget_exhausted(exc) -> bool:
+    message = str(exc).casefold()
+    if any(m in message for m in _DAILY_QUOTA_MARKERS):     # "tokens per day"
+        return True
+    if any(m in message for m in _TRANSIENT_RATE_MARKERS):  # "tokens per minute"
+        return False
+    return any(m in message for m in _BUDGET_ERROR_MARKERS)</code></pre>
+
+  <p><code>billing</code> was deleted from the markers. Deleting it opened a second gap in the other direction — a genuine paywall, one provider returning <code>402 payment_required</code>, then read as transient — so <code>payment_required</code> was added explicitly. The only thing that caught that was running the four real error messages I had collected through the classifier and printing what each came out as. Four strings, four expected answers, one test.</p>
+
+  <h2>A fourth axis: the same words, two different clocks</h2>
+
+  <p>The same provider expresses both of its limits with the same opening phrase:</p>
+
+  <pre><code>... rate limit reached ... on tokens per minute (TPM): Limit 12000 ...
+... rate limit reached ... on tokens per day   (TPD): Limit 100000, Used 98752 ...</code></pre>
+
+  <p>Per-minute reopens inside the run. Per-day does not. So "exhausted" is not only about scope but about whether the window reopens before you finish: a daily quota is exhaustion for this run's purposes even though it is worded identically to the case that clears in seconds. That is why <code>_DAILY_QUOTA_MARKERS</code> is checked first in the function above — it is the narrowest signal available and it outranks wording it shares with the transient case.</p>
+
+  <h2>Honour the wait the provider states</h2>
+
+  <p>Independently of classification, there was a second source of wasted attempts. Providers that throttle usually tell you exactly how long to wait:</p>
+
+  <pre><code>Please try again in 11.344999999s</code></pre>
+
+  <p>My loop ignored that and backed off on its own schedule — 2s, 4s, 8s. Every one of those retries arrived before the window had reopened, was refused, and consumed one of five attempts. The limit would have cleared on its own in eleven seconds; the run instead spent its whole attempt budget arriving early and then escalated to a fallback.</p>
+
+  <pre><code>hinted = retry_after_seconds(exc)      # parsed out of the message
+wait = hinted if hinted is not None else delay
+time.sleep(wait)
+if hinted is None:
+    delay = min(delay * 2, max_delay)   # exponential only when guessing</code></pre>
+
+  <p>Two details worth copying. Add a small margin — half a second — because retrying on the exact boundary is routinely a hair early. And cap what you will honour: a stated wait of an hour is a daily quota in disguise, so above 60 seconds the hint is ignored and the request is classified as exhaustion instead of blocking the run on it.</p>
+
+  <p>Where the header is available rather than a sentence, this is the same idea: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After" target="_blank" rel="noopener"><code>Retry-After</code></a> is a standard response header defined in <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after" target="_blank" rel="noopener">RFC 9110</a>, and reading it is strictly better than guessing, because the server knows when its own window reopens and you do not. It accepts either a number of seconds or an HTTP date, so parse both.</p>
+
+  <h2>"Should I stop?" needs "and", not "or"</h2>
+
+  <p>One more shape, which only appears once you have more than one provider to fall back to. The original rule was: if any provider reported exhaustion, abandon the batch. A briefly-throttled primary plus a spend-capped fallback satisfies that, and a run stopped at 4 of 13 jobs while the primary's window was seconds from reopening.</p>
+
+  <p>The question the rule is trying to ask is <em>will the next item fail in the same way?</em> — and it will only if every provider failed for a reason that persists. So the condition is "some account is exhausted <strong>and</strong> nobody merely ran out of patience":</p>
+
+  <pre><code>any_transient = any(getattr(e, "transient", False) for _cfg, e in failures)
+if budget_failures and not any_transient:
+    raise LLMBudgetError(summary)   # nothing will serve; stop the batch
+raise LLMError(summary)             # this item failed; the next may not</code></pre>
+
+  <p>My first attempt at this rule required <em>all</em> failures to be budget errors, which is wrong in the other direction: a retired model on the primary plus a capped fallback would then keep going, item after item, with nothing able to answer. Both mistakes are one word apart, which is the argument for writing the rule as an explicit statement about the list of failures rather than as flags accumulated inside a loop, and for having a test that names both directions.</p>
+
+  <h2>What I would build on day one now</h2>
+
+  <p><strong>Three classes, not two.</strong> Transient, permanent, exhausted — and decide the third by scope: does this failure predict the next call's failure?</p>
+
+  <p><strong>Read the provider's stated wait before applying your own.</strong> Cap it, add a margin, and treat an implausibly long one as exhaustion.</p>
+
+  <p><strong>Match on specific phrases, in order, narrowest first.</strong> Never on a word that could appear in marketing text. <code>tokens per day</code> is a signal; <code>billing</code> is a coincidence.</p>
+
+  <p><strong>Keep the real error strings.</strong> Four saved messages from live failures were worth more than any reasoning about what providers ought to send, and they are the only reason the paywall case was caught before it ran.</p>
+
+  <p><strong>Add a circuit breaker once there is more than one caller.</strong> The rules above decide what one batch does. When several jobs share an account, the thing that stops them collectively hammering a struggling provider is <a href="https://martinfowler.com/bliki/CircuitBreaker.html" target="_blank" rel="noopener">a breaker that trips after N consecutive failures</a> and stays open for a cool-down. My news collector has one; the job bot does not, and should.</p>
+
+  <p><strong>Log which class you assigned, every time.</strong> Every failure above was visible in hindsight only because the retry line recorded how long it waited and whether the figure came from the provider or from the backoff.</p>
+
+  <p>One limitation: all of this is calibrated against three providers I actually use, and the marker lists are specific to how they word things. The three classes generalise; the strings do not, and anyone copying this should expect to add their own after the first surprise.</p>
+
+  <h2>References and further reading</h2>
+
+  <p>Google's SRE book chapter on <a href="https://sre.google/sre-book/handling-overload/" target="_blank" rel="noopener">handling overload</a> covers the other side of this: why a server sends 429 at all, and why clients retrying aggressively make a struggling service worse rather than better. Its companion chapter on <a href="https://sre.google/sre-book/addressing-cascading-failures/" target="_blank" rel="noopener">cascading failures</a> is the one to read if your retries are pointed at a service you own.</p>
+
+  <p>AWS's <a href="https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/" target="_blank" rel="noopener">timeouts, retries and backoff with jitter</a> is the clearest short explanation of why random jitter belongs in the pause — without it, everything that failed together retries together.</p>
+
+  <h3>The specifications</h3>
+
+  <ul>
+    <li><a href="https://www.rfc-editor.org/rfc/rfc6585#section-4" target="_blank" rel="noopener">RFC 6585 §4</a> — where 429 is defined. Worth reading for how little it says: too many requests, and explicitly not which limit was hit or for how long.</li>
+    <li><a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after" target="_blank" rel="noopener">RFC 9110 — Retry-After</a> — the header that removes the guesswork, in both its seconds and its date form.</li>
+    <li><a href="https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/" target="_blank" rel="noopener">RateLimit header fields (IETF draft)</a> — limit, remaining and reset as structured fields. Check whether your provider already sends them before you write a parser for their prose.</li>
+    <li><a href="https://docs.stripe.com/api/idempotent_requests" target="_blank" rel="noopener">Stripe — idempotency keys</a> — the other half of retrying safely: how to retry a request that may already have succeeded without doing it twice.</li>
+  </ul>
+
+  <h3>Implementations you can copy instead of writing</h3>
+
+  <ul>
+    <li><a href="https://tenacity.readthedocs.io/en/latest/" target="_blank" rel="noopener">tenacity</a> — retry policies as decorators, including jitter and per-exception rules, which maps cleanly onto the three classes above.</li>
+    <li><a href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.util.html" target="_blank" rel="noopener">urllib3 <code>Retry</code></a> — status-aware retries under <code>requests</code>, and it honours <code>Retry-After</code> if you set <code>respect_retry_after_header</code>.</li>
+    <li><a href="https://martinfowler.com/bliki/CircuitBreaker.html" target="_blank" rel="noopener">Circuit breaker</a> — the pattern for stopping calls entirely after repeated failures, which is what "exhausted" wants once more than one job shares an account.</li>
+    <li><a href="https://stripe.com/blog/rate-limiters" target="_blank" rel="noopener">Stripe on rate limiters</a> — written from the server side, and the clearest explanation of why different limits exist and therefore why one status code has to cover all of them.</li>
+    <li><a href="https://console.groq.com/docs/rate-limits" target="_blank" rel="noopener">Groq's rate-limit documentation</a> — a concrete example of per-minute and per-day quotas sitting behind the same status, which is the ambiguity the whole post is about.</li>
+  </ul>
+
+  <h3>Related work of mine</h3>
+
+  <ul>
+    <li><a href="/blog/local-llm-vs-api/">Local LLM vs API</a> — what a daily cap costs you in practice, and how a fallback chain between providers is put together.</li>
+    <li><a href="/blog/why-scrapers-get-blocked/">Why your scraper gets blocked</a> — the refusals that look like rate limiting but are not, and what actually causes them.</li>
+    <li><a href="/blog/building-resumable-etl-pipelines/">Why rerunning a pipeline should fix data</a> — what a run that was partly refused has to leave behind so the next one can finish the job.</li>
+    <li><a href="https://github.com/VishnujanNarayanan/Job_Application_Bot" target="_blank" rel="noopener">Job_Application_Bot</a> (source) — the repository the examples come from: the classifier, the retry loop and the provider chain.</li>
+  </ul>
+</article>
+
+<section class="keep-reading" aria-labelledby="keep-reading-h">
+  <div class="keep-reading__inner">
+    <h2 class="keep-reading__title" id="keep-reading-h">Keep reading</h2>
+    <div class="post-grid post-grid--sm">
+      <a class="post-card post-card--sm" href="/blog/how-to-test-a-data-pipeline/">
+        <div class="post-card__media">
+          <img src="/images/blog/pipeline-tests.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">Testing</span><span class="tag">Data engineering</span></div>
+          <h3 class="post-card__title">How to Test a Data Pipeline: 92 Passing Tests, 3 Broken Features</h3>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+          <p class="post-card__excerpt">A green suite proved the code did what it was written to do, and nothing about whether the product worked. What I test instead now, including the control run that has to come first.</p>
+        </div>
+      </a>
+      <a class="post-card post-card--sm" href="/blog/a-year-of-ingestion-bugs/">
+        <div class="post-card__media">
+          <img src="/images/blog/ingestion-bugs.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">Data engineering</span><span class="tag">Reliability</span></div>
+          <h3 class="post-card__title">A Year of Ingestion Bugs: What Actually Broke in 32 Data Pipelines</h3>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+          <p class="post-card__excerpt">Roughly 30 bugs across a year of collecting Indian market data, sorted by cause. Eight of them produced no error message at all, and those are the ones worth reading about.</p>
+        </div>
+      </a>
+      <a class="post-card post-card--sm" href="/blog/how-i-scraped-nse-insider-filings/">
+        <div class="post-card__media">
+          <img src="/images/blog/scraping.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Data engineering</span></div>
+          <h3 class="post-card__title">How to Scrape 20 Years of Data From a Site That Paginates by Date</h3>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+          <p class="post-card__excerpt">The endpoint only answers 180 days at a time, and the answers are not final. Windowing, deduplication that deleted rows, and why one source was never going to be enough.</p>
+        </div>
+      </a>
+    </div>
+
+  </div>
+</section>
+</main>
+<!-- BEGIN generated: footer (source: partials/footer.html — run scripts/gen-partials.mjs) -->
+<footer class="lfooter">
+
+  <div class="lfooter__layout">
+    <!-- Dark notched box (Lando footer mask) with static contour pattern inside -->
+    <div class="lfooter__clip">
+      <img class="lfooter__pattern" src="/images/footer-blobs.svg" alt="" aria-hidden="true" loading="lazy" decoding="async">
+
+      <div class="lfooter__inner">
+        <h2 class="lfooter__headline">
+          <span class="lfooter__hl-row">Subscribe to my</span>
+          <span class="lfooter__hl-row"><span class="is-hl">Newsletter</span></span>
+        </h2>
+
+        <div class="lfooter__cols">
+          <nav class="lfooter__col lfooter__col--left" aria-label="Pages">
+            <span class="lfooter__col-label">Pages</span>
+            <a href="/" class="lfooter__navlink">Home</a>
+            <a href="/?go=projects" class="lfooter__navlink">Projects</a>
+            <a href="/?go=socials" class="lfooter__navlink">Socials</a>
+            <a href="/blog/" class="lfooter__navlink">Blog</a>
+          </nav>
+          <nav class="lfooter__col lfooter__col--right" aria-label="Social links">
+            <span class="lfooter__col-label">Follow On</span>
+            <a href="https://github.com/VishnujanNarayanan" target="_blank" rel="me noopener" class="lfooter__navlink">GitHub</a>
+            <a href="https://www.linkedin.com/in/vishnujan-narayanan" target="_blank" rel="me noopener" class="lfooter__navlink">LinkedIn</a>
+            <a href="https://www.instagram.com/___vi5hnu___/" target="_blank" rel="me noopener" class="lfooter__navlink">Instagram</a>
+            <a href="https://substack.com/@vishnujannarayanan" target="_blank" rel="me noopener" class="lfooter__navlink">Substack</a>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Sky-blue tools marquee (logos tinted via CSS mask). Two identical tracks,
+           each animated translateX(-100%) of ITS OWN width — so a seamless loop
+           needs every track to be at least as wide as the footer, or the strip
+           empties out after the last logo and snaps when it wraps. The generator
+           repeats the logo list enough times to clear any viewport. -->
+      <div class="lfooter__mq" aria-hidden="true">
+        <div class="lfooter__mq-track">
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+        </div>
+        <div class="lfooter__mq-track">
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+        </div>
+      </div>
+
+      <!-- Blog pages: the subscribe card. Everywhere else: the portrait cutout
+           rising from the bottom (where the reference's helmet sits). -->
+      <div class="lfooter__sub">
+        <h3 class="lfooter__sub-title">Get new posts by email</h3>
+        <p class="lfooter__sub-text">Data pipelines, web scraping, and market-data experiments — delivered as they go up.</p>
+        <form class="subform" action="https://vishnujannarayanan.substack.com/subscribe" method="get" target="_blank" rel="noopener">
+          <label class="subform__label" for="footer-subscribe-email">Email</label>
+          <div class="subform__row">
+            <input class="subform__input" id="footer-subscribe-email" type="email" name="email" required autocomplete="email" placeholder="you@example.com" spellcheck="false">
+            <button class="subform__btn" type="submit">Subscribe</button>
+          </div>
+        </form>
+        <p class="lfooter__sub-note">No account needed, and you can unsubscribe from this email. By subscribing you agree to Substack's <a href="https://substack.com/tos" target="_blank" rel="noopener">Terms of Use</a> and <a href="https://substack.com/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+        <a class="substack-badge substack-badge--dark" href="https://vishnujannarayanan.substack.com/" target="_blank" rel="me noopener">
+          <svg viewBox="0 0 21 24" width="13" height="15" aria-hidden="true" focusable="false"><path d="M20.999 0H0v2.836h20.999V0Z" fill="currentColor"></path><path d="M20.999 5.406H0v2.836h20.999V5.406Z" fill="currentColor"></path><path d="M0 10.813V24l10.499-5.887L21 24V10.813H0Z" fill="currentColor"></path></svg>
+          <span>Substack</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Pill in the bottom-centre tab of the notched box -->
+    <!-- No trailing arrow: main.js splits this into per-letter reel clips on load, and a
+         glyph that is not a letter reels along with them. -->
+    <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me</a>
+
+    <!-- Legal row sits in the gradient shelves either side of the bottom tab -->
+    <div class="lfooter__bottom">
+      <span class="lfooter__copy">© 2026 Vishnujan Narayanan. All rights reserved</span>
+      <div class="lfooter__legal">
+        <a href="https://github.com/VishnujanNarayanan" target="_blank" rel="me noopener">GitHub</a>
+        <a href="https://www.linkedin.com/in/vishnujan-narayanan" target="_blank" rel="me noopener">LinkedIn</a>
+      </div>
+    </div>
+  </div>
+</footer>
+<!-- END generated: footer -->
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
+<script src="../../main.js" defer></script>
+</body>
+</html>

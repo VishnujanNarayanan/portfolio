@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Making Pipeline Reruns Converge Instead of Drift — Vishnujan Narayanan</title>
-<meta name="description" content="Four ways I broke the rule that a rerun must improve the data, the guard added for each, and the one case where convergence still is not guaranteed.">
+<title>Why Rerunning a Pipeline Should Fix Data, Not Corrupt It</title>
+<meta name="description" content="Idempotent, resumable ETL in practice: incremental loads, resume points that survive bad rows, anti-join deduplication, and reruns that heal gaps instead of corrupting history.">
 <meta name="author" content="Vishnujan Narayanan">
 <meta property="article:author" content="https://www.linkedin.com/in/vishnujan-narayanan">
-<meta property="article:published_time" content="2025-05-20">
-<meta property="article:modified_time" content="2025-05-20">
+<meta property="article:published_time" content="2026-07-24">
+<meta property="article:modified_time" content="2026-07-24">
 <link rel="icon" href="../../favicon.ico?v=2" sizes="any">
 <link rel="icon" type="image/png" href="../../favicon-512.png?v=2" sizes="512x512">
 <link rel="apple-touch-icon" href="../../apple-touch-icon.png?v=2">
 <link rel="canonical" href="https://vishnujan.dev/blog/building-resumable-etl-pipelines/">
 <meta name="robots" content="index, follow, max-image-preview:large">
-<meta property="og:title" content="Making Pipeline Reruns Converge Instead of Drift">
+<meta property="og:title" content="Why Rerunning a Pipeline Should Fix Data, Not Corrupt It">
 <meta property="og:description" content="Incremental loads, adaptive backoff, and reruns that heal gaps instead of corrupting history.">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Vishnujan Narayanan">
@@ -24,9 +24,9 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:type" content="image/jpeg">
-<meta property="og:image:alt" content="Making Pipeline Reruns Converge Instead of Drift">
+<meta property="og:image:alt" content="Why Rerunning a Pipeline Should Fix Data, Not Corrupt It">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Making Pipeline Reruns Converge Instead of Drift">
+<meta name="twitter:title" content="Why Rerunning a Pipeline Should Fix Data, Not Corrupt It">
 <meta name="twitter:description" content="Incremental loads, adaptive backoff, and reruns that heal gaps instead of corrupting history.">
 <meta name="twitter:image" content="https://vishnujan.dev/images/blog/share-resumable-etl.jpg">
 <!-- Roboto Flex is the nav reel's font (styles.css @font-face). Preloaded so it is in
@@ -39,8 +39,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../styles.css">
 <script>document.documentElement.classList.remove("no-js");</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"Making Pipeline Reruns Converge Instead of Drift","item":"https://vishnujan.dev/blog/building-resumable-etl-pipelines/"}]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Making Pipeline Reruns Converge Instead of Drift","datePublished":"2025-05-20","dateModified":"2025-05-20","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/building-resumable-etl-pipelines/"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"Why Rerunning a Pipeline Should Fix Data, Not Corrupt It","item":"https://vishnujan.dev/blog/building-resumable-etl-pipelines/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Why Rerunning a Pipeline Should Fix Data, Not Corrupt It","description":"Idempotent, resumable ETL in practice: incremental loads, resume points that survive bad rows, anti-join deduplication, and reruns that heal gaps instead of corrupting history.","image":"https://vishnujan.dev/images/blog/share-resumable-etl.jpg","datePublished":"2026-07-24","dateModified":"2026-07-24","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/building-resumable-etl-pipelines/"}</script>
 </head>
 <body class="subpage-body post-body blog-body">
 <div class="mobile-nav__overlay"></div>
@@ -132,34 +132,34 @@
   </button>
   <span class="post-rail__toast" data-share-toast hidden>Link copied</span>
 </aside>
-<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>Making Pipeline Reruns Converge Instead of Drift</nav>
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>Why Rerunning a Pipeline Should Fix Data, Not Corrupt It</nav>
 <article class="article">
   <div class="post-head">
     <div class="tag-row"><span class="tag">ETL</span><span class="tag">Data engineering</span></div>
-    <h1>Making pipeline reruns converge instead of drift</h1>
+    <h1>Why rerunning a pipeline should fix data, not corrupt it</h1>
     <div class="post-head__foot">
     <div class="byline byline--lg">
         <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
         <span class="byline__name">Vishnujan Narayanan</span>
         <span class="byline__sep" aria-hidden="true">·</span>
-        <span class="byline__date">August 2026</span>
+        <span class="byline__date">July 2026</span>
       </div>
 <div class="share-row">
-      <a class="share-btn" href="mailto:?subject=Making%20Pipeline%20Reruns%20Converge%20Instead%20of%20Drift&body=Making%20Pipeline%20Reruns%20Converge%20Instead%20of%20Drift%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fbuilding-resumable-etl-pipelines%2F" aria-label="Share by email" title="Share by email"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
-      <a class="share-btn" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fbuilding-resumable-etl-pipelines%2F&text=Making%20Pipeline%20Reruns%20Converge%20Instead%20of%20Drift" target="_blank" rel="noopener" aria-label="Share on X" title="Share on X"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.2 3h3.3l-7.2 8.2L21.8 21h-6.6l-4.3-5.6L5.9 21H2.6l7.7-8.8L2.5 3h6.8l3.9 5.2L17.2 3Zm-1.2 16h1.8L8.1 4.8H6.2L16 19Z"/></svg></a>
+      <a class="share-btn" href="mailto:?subject=Why%20Rerunning%20a%20Pipeline%20Should%20Fix%20Data%2C%20Not%20Corrupt%20It&body=Why%20Rerunning%20a%20Pipeline%20Should%20Fix%20Data%2C%20Not%20Corrupt%20It%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fbuilding-resumable-etl-pipelines%2F" aria-label="Share by email" title="Share by email"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
+      <a class="share-btn" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fbuilding-resumable-etl-pipelines%2F&text=Why%20Rerunning%20a%20Pipeline%20Should%20Fix%20Data%2C%20Not%20Corrupt%20It" target="_blank" rel="noopener" aria-label="Share on X" title="Share on X"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.2 3h3.3l-7.2 8.2L21.8 21h-6.6l-4.3-5.6L5.9 21H2.6l7.7-8.8L2.5 3h6.8l3.9 5.2L17.2 3Zm-1.2 16h1.8L8.1 4.8H6.2L16 19Z"/></svg></a>
       <a class="share-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fbuilding-resumable-etl-pipelines%2F" target="_blank" rel="noopener" aria-label="Share on LinkedIn" title="Share on LinkedIn"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M6.9 8.6H4.2V20h2.7V8.6ZM5.5 4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2ZM20 13.4c0-2.9-1.6-4.3-3.6-4.3-1.7 0-2.4.9-2.8 1.5V8.6H10.9c0 .8 0 11.4 0 11.4h2.7v-6.4c0-.3 0-.6.1-.8.3-.6.8-1.2 1.7-1.2 1.2 0 1.7.9 1.7 2.2V20H20v-6.6Z"/></svg></a>
       <a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fbuilding-resumable-etl-pipelines%2F" target="_blank" rel="noopener" aria-label="Share on Facebook" title="Share on Facebook"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M14.5 8.5V6.9c0-.7.2-1.1 1.2-1.1h1.5V3.1C16.8 3 16 3 15.1 3c-2 0-3.4 1.2-3.4 3.5v2H9.3V11h2.4v8h2.8v-8h2.3l.4-2.5h-2.7Z"/></svg></a>
-      <a class="share-btn" href="https://www.reddit.com/submit?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fbuilding-resumable-etl-pipelines%2F&title=Making%20Pipeline%20Reruns%20Converge%20Instead%20of%20Drift" target="_blank" rel="noopener" aria-label="Share on Reddit" title="Share on Reddit"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M22 12.1a2.1 2.1 0 0 0-3.6-1.5 10.3 10.3 0 0 0-5.2-1.6l.9-4.2 2.9.6a1.5 1.5 0 1 0 .2-1.2l-3.4-.7a.6.6 0 0 0-.7.5l-1 4.7a10.4 10.4 0 0 0-5.3 1.6 2.1 2.1 0 1 0-2.3 3.4 3.8 3.8 0 0 0 0 .6c0 3 3.6 5.5 8 5.5s8-2.5 8-5.5a3.8 3.8 0 0 0 0-.6 2.1 2.1 0 0 0 1.5-2Zm-13.6 1.4a1.5 1.5 0 1 1 1.5 1.5 1.5 1.5 0 0 1-1.5-1.5Zm8.3 4a5.6 5.6 0 0 1-3.7 1.1 5.6 5.6 0 0 1-3.7-1.1.5.5 0 1 1 .7-.7 4.7 4.7 0 0 0 3 .8 4.7 4.7 0 0 0 3-.8.5.5 0 1 1 .7.7Zm-.2-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5Z"/></svg></a>
-      <a class="share-btn" href="https://api.whatsapp.com/send?text=Making%20Pipeline%20Reruns%20Converge%20Instead%20of%20Drift%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fbuilding-resumable-etl-pipelines%2F" target="_blank" rel="noopener" aria-label="Share on WhatsApp" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Zm0 1.7a7.3 7.3 0 1 1-3.7 13.6l-.3-.2-2.7.7.7-2.6-.2-.3A7.3 7.3 0 0 1 12 4.7Zm4.2 9.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1-.6.7-.7.9-.3.2-.5.1a6 6 0 0 1-1.8-1.1 6.6 6.6 0 0 1-1.2-1.6c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 2 4.5 4.5 0 0 0 1 2.4 10.2 10.2 0 0 0 3.9 3.4c1.8.7 1.8.5 2.2.4a2.3 2.3 0 0 0 1.5-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"/></svg></a>
+      <a class="share-btn" href="https://www.reddit.com/submit?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fbuilding-resumable-etl-pipelines%2F&title=Why%20Rerunning%20a%20Pipeline%20Should%20Fix%20Data%2C%20Not%20Corrupt%20It" target="_blank" rel="noopener" aria-label="Share on Reddit" title="Share on Reddit"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M22 12.1a2.1 2.1 0 0 0-3.6-1.5 10.3 10.3 0 0 0-5.2-1.6l.9-4.2 2.9.6a1.5 1.5 0 1 0 .2-1.2l-3.4-.7a.6.6 0 0 0-.7.5l-1 4.7a10.4 10.4 0 0 0-5.3 1.6 2.1 2.1 0 1 0-2.3 3.4 3.8 3.8 0 0 0 0 .6c0 3 3.6 5.5 8 5.5s8-2.5 8-5.5a3.8 3.8 0 0 0 0-.6 2.1 2.1 0 0 0 1.5-2Zm-13.6 1.4a1.5 1.5 0 1 1 1.5 1.5 1.5 1.5 0 0 1-1.5-1.5Zm8.3 4a5.6 5.6 0 0 1-3.7 1.1 5.6 5.6 0 0 1-3.7-1.1.5.5 0 1 1 .7-.7 4.7 4.7 0 0 0 3 .8 4.7 4.7 0 0 0 3-.8.5.5 0 1 1 .7.7Zm-.2-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5Z"/></svg></a>
+      <a class="share-btn" href="https://api.whatsapp.com/send?text=Why%20Rerunning%20a%20Pipeline%20Should%20Fix%20Data%2C%20Not%20Corrupt%20It%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fbuilding-resumable-etl-pipelines%2F" target="_blank" rel="noopener" aria-label="Share on WhatsApp" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Zm0 1.7a7.3 7.3 0 1 1-3.7 13.6l-.3-.2-2.7.7.7-2.6-.2-.3A7.3 7.3 0 0 1 12 4.7Zm4.2 9.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1-.6.7-.7.9-.3.2-.5.1a6 6 0 0 1-1.8-1.1 6.6 6.6 0 0 1-1.2-1.6c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 2 4.5 4.5 0 0 0 1 2.4 10.2 10.2 0 0 0 3.9 3.4c1.8.7 1.8.5 2.2.4a2.3 2.3 0 0 0 1.5-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"/></svg></a>
     </div>
     </div>
-    <p class="post-head__dek">Four ways I broke the rule that a rerun must improve the data, the guard added for each, and the one case where convergence still is not guaranteed.</p>
+    <p class="post-head__dek">A rerun is supposed to leave the dataset better than it found it. Four ways I broke that rule, the guard added for each, and the one case where it still is not guaranteed.</p>
   </div>
   <figure class="post-hero">
     <img src="/images/blog/resumable-etl.jpg" alt="" width="1000" height="563" fetchpriority="high" decoding="async">
   </figure>
 
-  <p>I run about 28 scripts that download Indian market data — prices, company announcements, insider filings — and most of them run on a schedule, unattended. The rule I hold all of them to is simple to state: running a script again must leave the data better than before, or at least no worse. Fill in a gap, correct a bad row, otherwise change nothing.</p>
+  <p>I run 32 scripts that download Indian market data — prices, company announcements, insider filings — and most of them run on a schedule, unattended. The rule I hold all of them to is simple to state: running a script again must leave the data better than before, or at least no worse. Fill in a gap, correct a bad row, otherwise change nothing.</p>
 
   <p>That sounds like it should be the default. It is not. I have broken it four separate ways, and every time the result was a dataset that looked completely normal. This is what each break was, and what stops it now.</p>
 
@@ -215,11 +215,11 @@ start = df[df["Close"].notna()]["Date"].max()</code></pre>
 
   <p>There is a catch underneath, which is that a key only works if the same row always produces the same key — and it does not. The same quantity arrives as <code>629221</code> one time and <code>629221.0</code> the next. The same date is <code>15-Jan-2026</code> in one response and <code>2026-01-15</code> in another. Compared as text those are different, so the same row gets stored twice. Every field is therefore forced into one standard form before the key is built: dates to a single format, anything numeric to an actual number.</p>
 
-  <p>One warning from experience, because it cost me months: the key has to be built from fields that genuinely exist in the response. I once built one from three field names that were not real columns, which gave every row an identical empty key and collapsed entire days of records into a single row, silently. If you are using <a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html" target="_blank" rel="noopener"><code>DataFrame.merge</code></a> for this, <code>validate="one_to_one"</code> turns that silent inflation into an error you can actually see.</p>
+  <p>One warning, because this failure is invisible from the outside: the key has to be built from fields that genuinely exist in the response. Mine once named three fields that were not real columns, which gave every row an identical empty key and collapsed entire days of records into a single row, with no error at any point. If you are using <a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html" target="_blank" rel="noopener"><code>DataFrame.merge</code></a> for this, <code>validate="one_to_one"</code> turns that silent inflation into an error you can actually see.</p>
 
   <h2>Break four: going too fast and writing the wreckage</h2>
 
-  <p>All of the above assumes the source keeps answering properly. When you hit a rate limit you often do not get a clean refusal — you get a partial or empty response, which is precisely how bad rows end up in the file in the first place. So backing off is not politeness here, it is a data-quality control.</p>
+  <p>All of the above assumes the source keeps answering properly. Rate limits are their own subject — a refusal that clears in seconds and a quota that is finished for the month arrive as the same status code, which I unpicked in <a href="/blog/what-429-really-means/">what a 429 really means</a>. Here the problem is worse than a refusal: when you hit a rate limit you often do not get a clean refusal — you get a partial or empty response, which is precisely how bad rows end up in the file in the first place. So backing off is not politeness here, it is a data-quality control.</p>
 
   <p>The price downloader adjusts its own speed. It starts with five downloads running at once, drops one whenever the source returns an error, and adds one back after fifteen requests in a row succeed. Individual requests get three attempts with a widening wait between them, and a ten-second cut-off. It speeds up when the source is healthy and slows down the moment it pushes back, without me picking a fixed delay that is either too slow on a good day or too aggressive on a bad one.</p>
 
@@ -229,30 +229,61 @@ start = df[df["Close"].notna()]["Date"].max()</code></pre>
 
   <p>If a company corrects a filing it submitted last month, my duplicate check looks at the corrected row, recognises the key, decides it already has that record, and throws the correction away. Converging on a stable dataset and accepting corrections pull in opposite directions, and I picked one without ever really deciding to. For prices it mostly works out, because adjustments for stock splits and similar events get recalculated anyway. For filings it is a genuine hole.</p>
 
-  <p>I also still cannot tell the difference between "the source had nothing new" and "the source refused to answer" — the failure that has cost me the most across all of these pipelines. I wrote up the whole accounting of that in <a href="/blog/a-year-of-ingestion-bugs/">a year of ingestion bugs</a>. The fix for both problems is probably the same thing: re-download data I already have on a schedule and compare it against what I stored. That is the next thing I want to build.</p>
+  <p>The gap I have not closed is telling "the source had nothing new" apart from "the source refused to answer" — the failure mode that recurs most often across all of these pipelines, because both outcomes are indistinguishable in the output. I wrote up the whole accounting of that in <a href="/blog/a-year-of-ingestion-bugs/">a year of ingestion bugs</a>. The fix for both problems is probably the same thing: re-download data I already have on a schedule and compare it against what I stored. That is the next thing I want to build.</p>
 
-  <h2>Elsewhere</h2>
+  <h2>References and further reading</h2>
 
-  <p><a href="https://jepsen.io/analyses" target="_blank" rel="noopener">Jepsen</a> tests databases by deliberately breaking them and then checking whether the data survived. The reports are worth reading even if you never touch distributed systems, because they are the clearest demonstration of the pattern behind this whole post: a system reporting success while quietly losing or duplicating writes, findable only by checking on purpose.</p>
+  <p><a href="https://jepsen.io/analyses" target="_blank" rel="noopener">Jepsen</a> tests databases by deliberately breaking them and then checking whether the data survived. The reports are worth reading even if you never touch distributed systems, because they are the clearest demonstration of the pattern behind this whole post: a system reporting success while quietly losing or duplicating writes.</p>
 
-  <p><a href="https://pandera.readthedocs.io/" target="_blank" rel="noopener">pandera</a> lets you declare what a valid row looks like — which columns must exist, what values are allowed — and rejects a load that does not match. It is the tidy version of the hand-written validity checks above. I am not using it yet; I probably should be.</p>
+  <p>If you are building this on a scheduler rather than by hand, <a href="https://airflow.apache.org/docs/apache-airflow/stable/best-practices.html" target="_blank" rel="noopener">Airflow's best practices</a> state the same rule as a requirement — every task must be idempotent and re-runnable for its data interval — and its <a href="https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html" target="_blank" rel="noopener">run and backfill model</a> is the vocabulary for the windowing described above.</p>
 
-  <p>These pipelines are part of the <a href="/projects/market-data-pipeline/">market-data platform</a>, and the chunking and two-source reconciliation side of the same system is in <a href="/blog/how-i-scraped-nse-insider-filings/">scraping NSE insider filings</a>.</p>
+  <h3>Doing each piece properly</h3>
+
+  <ul>
+    <li><a href="https://www.postgresql.org/docs/current/sql-insert.html" target="_blank" rel="noopener">Postgres <code>INSERT ... ON CONFLICT</code></a> — an upsert against a unique key is the database's version of the anti-join here, and it cannot inflate rows the way a careless merge can.</li>
+    <li><a href="https://docs.getdbt.com/docs/build/incremental-models" target="_blank" rel="noopener">dbt incremental models</a> — the same "only process what is new, and be safe to run twice" problem, with an explicit unique key and a full-refresh escape hatch.</li>
+    <li><a href="https://docs.getdbt.com/docs/build/snapshots" target="_blank" rel="noopener">dbt snapshots</a> — what to do when the source rewrites its own history, which is the case my resume logic still cannot see.</li>
+    <li><a href="https://docs.stripe.com/api/idempotent_requests" target="_blank" rel="noopener">Stripe idempotency keys</a> — the clearest short explanation of idempotency from the API side: how a client retries safely when it does not know whether the first attempt landed.</li>
+    <li><a href="https://pandera.readthedocs.io/" target="_blank" rel="noopener">pandera</a> — declare what a valid row looks like and reject a load that does not match. The tidy version of the hand-written validity checks above; I am not using it yet, and probably should be.</li>
+    <li><a href="https://lwn.net/Articles/457667/" target="_blank" rel="noopener">Ext4 and data loss</a> and <a href="https://danluu.com/file-consistency/" target="_blank" rel="noopener">Files are hard</a> — required reading if your checkpoint is a file, which mine is.</li>
+    <li><a href="https://tenacity.readthedocs.io/en/latest/" target="_blank" rel="noopener">tenacity</a> — retries and backoff you do not have to write, for the "going too fast" section.</li>
+  </ul>
+
+  <h3>Related work of mine</h3>
+
+  <ul>
+    <li><a href="/blog/a-year-of-ingestion-bugs/">A year of ingestion bugs</a> — a year of real pipeline failures sorted by cause, which is where these rules came from.</li>
+    <li><a href="/blog/how-i-scraped-nse-insider-filings/">Scraping 20 years from a date-windowed endpoint</a> — a walkthrough of pulling two decades out of an endpoint that only answers a few months at a time.</li>
+    <li><a href="/blog/how-to-test-a-data-pipeline/">How to test a data pipeline</a> — how to test resume behaviour: stop a run part-way and check that the next one repairs it.</li>
+    <li><a href="/blog/what-429-really-means/">What a 429 really means</a> — how to tell a rate limit that clears by itself from one that never will, and what each means for a retry.</li>
+    <li><a href="/projects/market-data-pipeline/">Market data platform</a> — the project page for the system these rules were written for.</li>
+  </ul>
 </article>
 
 <section class="keep-reading" aria-labelledby="keep-reading-h">
   <div class="keep-reading__inner">
     <h2 class="keep-reading__title" id="keep-reading-h">Keep reading</h2>
     <div class="post-grid post-grid--sm">
+      <a class="post-card post-card--sm" href="/blog/how-to-test-a-data-pipeline/">
+        <div class="post-card__media">
+          <img src="/images/blog/pipeline-tests.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">Testing</span><span class="tag">Data engineering</span></div>
+          <h3 class="post-card__title">How to Test a Data Pipeline: 92 Passing Tests, 3 Broken Features</h3>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+          <p class="post-card__excerpt">A green suite proved the code did what it was written to do, and nothing about whether the product worked. What I test instead now, including the control run that has to come first.</p>
+        </div>
+      </a>
       <a class="post-card post-card--sm" href="/blog/a-year-of-ingestion-bugs/">
         <div class="post-card__media">
           <img src="/images/blog/ingestion-bugs.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
         </div>
         <div class="post-card__body">
           <div class="tag-row"><span class="tag">Data engineering</span><span class="tag">Reliability</span></div>
-          <h3 class="post-card__title">A Year of Ingestion Bugs: What Actually Broke in 32 Market-Data Pipelines</h3>
+          <h3 class="post-card__title">A Year of Ingestion Bugs: What Actually Broke in 32 Data Pipelines</h3>
           <div class="byline"><span class="byline__date">August 2026</span></div>
-          <p class="post-card__excerpt">Roughly 30 bugs across a year of scraping Indian market data, sorted by cause. Eight of them produced no error at all, and those were the expensive ones.</p>
+          <p class="post-card__excerpt">Roughly 30 bugs across a year of collecting Indian market data, sorted by cause. Eight of them produced no error message at all, and those are the ones worth reading about.</p>
         </div>
       </a>
       <a class="post-card post-card--sm" href="/blog/how-i-scraped-nse-insider-filings/">
@@ -261,20 +292,9 @@ start = df[df["Close"].notna()]["Date"].max()</code></pre>
         </div>
         <div class="post-card__body">
           <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Data engineering</span></div>
-          <h3 class="post-card__title">How I Scraped 20 Years of NSE Insider Filings</h3>
+          <h3 class="post-card__title">How to Scrape 20 Years of Data From a Site That Paginates by Date</h3>
           <div class="byline"><span class="byline__date">August 2026</span></div>
-          <p class="post-card__excerpt">180-day windows, a dedup key that silently deleted filings, and the 30-60 day indexing lag that forces a second source.</p>
-        </div>
-      </a>
-      <a class="post-card post-card--sm" href="/blog/minute-level-stock-prediction/">
-        <div class="post-card__media">
-          <img src="/images/blog/intraday-model.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
-        </div>
-        <div class="post-card__body">
-          <div class="tag-row"><span class="tag">Quant / ML</span><span class="tag">Machine learning</span></div>
-          <h3 class="post-card__title">What My Intraday Model Actually Predicted on 9.4M NSE Ticks</h3>
-          <div class="byline"><span class="byline__date">August 2026</span></div>
-          <p class="post-card__excerpt">61.4% precision against a 46.8% base rate sounds like an edge — until you notice it fired 70 times out of 3,100. The two ways I nearly fooled myself.</p>
+          <p class="post-card__excerpt">The endpoint only answers 180 days at a time, and the answers are not final. Windowing, deduplication that deleted rows, and why one source was never going to be enough.</p>
         </div>
       </a>
     </div>

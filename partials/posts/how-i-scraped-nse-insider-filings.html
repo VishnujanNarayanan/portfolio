@@ -1,0 +1,122 @@
+  <p>Plenty of public archives are only reachable a slice at a time: give me a start date and an end date, and I will give you what falls between them. Twenty years of history then means a few hundred requests, a way to remember where you stopped, and a way to notice when an answer was incomplete. This is that job, done against one real source.</p>
+
+  <p>When a company director buys or sells shares in their own company, they have to tell the exchange. In India those disclosures are public, and the National Stock Exchange serves them from what it calls its PIT endpoint — PIT being Prohibition of Insider Trading, the regulation that requires the disclosure in the first place. I wanted all of them, going back twenty years, in one file I could keep up to date.</p>
+
+  <p>The endpoint will absolutely give you insider filings. What it will not do is tell you when it has given you fewer than you asked for. That single property shaped every design decision below, and it is the reason this took three attempts to get right.</p>
+
+  <h2>Why you cannot just ask for twenty years</h2>
+
+  <p>The obvious first attempt is one request covering 2005 to today. It fails, but it fails in three different ways depending on how wide the range is, and only one of them is obvious.</p>
+
+  <p>A very wide range times out — loud, easy to notice, easy to handle. A merely wide range does something worse: it returns quickly, with a valid response, containing some of the data. There is no error, no flag, no count telling you what the total should have been. If you are not comparing the result against something external, a truncated response and a complete one look the same.</p>
+
+  <p>So the fix is not "retry harder", it is to never ask a question big enough to get truncated. I split the whole history into fixed windows and walk them one at a time:</p>
+
+  <pre><code>DEFAULT_CHUNK_DAYS = 180   # max span fetched per request when looping a wide range
+
+def fetch_range(session, from_date, to_date, chunk_days, retries=3):
+    """Fetch a wide date range by splitting it into chunk_days-sized windows."""
+    start = from_date
+    while start &lt;= to_date:
+        end = min(start + timedelta(days=chunk_days - 1), to_date)
+        ...
+        start = end + timedelta(days=1)</code></pre>
+
+  <p>180 days is not a documented limit. I found it by requesting progressively wider windows and watching where results started going missing, then backing off. That is the only way to find a cap nobody publishes: deliberately walk into it while you can still tell you have hit it. At 180 days, twenty years is about forty requests rather than thousands.</p>
+
+  <p>This also decides how updates work. The first run pulls the full twenty years. Every run after that starts from the newest filing already stored — but backs up a buffer of days first, rather than resuming exactly where it stopped. That buffer exists because filings arrive late: a trade from last Tuesday might be disclosed next Monday. Resume exactly where you stopped and you will step straight over it, permanently, because you will never ask about that date again.</p>
+
+  <h2>Overlapping windows mean deduplication has to be right</h2>
+
+  <p>That buffer is deliberate re-reading. Every update re-downloads filings I already have, which means the pipeline needs a reliable way to recognise a record it has seen before. That check is not a safety net here — it runs on every single update, and if it is wrong the damage is immediate.</p>
+
+  <p>Mine named columns that do not exist, and it stayed that way for a while because the failure has no symptom. Deduplication works by building a key out of a few fields that together identify a record, then discarding rows whose key you already hold. I wrote my key from memory instead of from an actual response:</p>
+
+  <pre><code># What I used. None of these are real NSE column names.
+DEDUP_KEYS = ['personName', 'acqQty', 'securityName']
+
+# What the endpoint actually returns.
+DEDUP_KEYS = ['symbol', 'intimDt', 'acqName', 'secAcq']</code></pre>
+
+  <p>Because none of those first three columns existed, every row produced the same empty key. To the deduplicator, every filing for a company on a given day looked like the same filing repeated — so it kept one and dropped the rest. A company that disclosed four separate transactions in a day was stored as one. Nothing raised an error, because asking pandas for a column that is missing while building a key is not, by itself, a crash. The row count still looked plausible, because it was never compared to anything.</p>
+
+  <p>Fixing the key exposed a second bug hiding underneath it. I had implemented the dedup as a merge — joining new rows against stored rows to see which already existed. A merge against data that already contains duplicate keys does not remove duplicates; it multiplies them, because each new row matches several stored rows and you get one output row per match. So the pipeline went from silently deleting filings to silently inventing them.</p>
+
+  <p>The replacement is a set-membership test, which people call an anti-join: build the set of keys already stored, and keep only the new rows whose key is not in it.</p>
+
+  <pre><code>def deduplicate(new_df, existing_df):
+    new_keys = _composite_key(new_df, DEDUP_KEYS)
+    existing_keys = set(_composite_key(existing_df, DEDUP_KEYS))
+    return new_df[(~new_keys.isin(existing_keys)).values]</code></pre>
+
+  <p>Unlike the merge, this cannot inflate anything, because it never joins — it only asks yes or no about each incoming row, so duplicates already sitting in the stored data cannot multiply the result. If you would rather keep using <a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html" target="_blank" rel="noopener"><code>DataFrame.merge</code></a>, passing <code>validate="one_to_one"</code> makes it raise on exactly the inflation case instead of performing it quietly.</p>
+
+  <h2>The same record does not arrive the same way twice</h2>
+
+  <p>A key only identifies a record if the same record always produces the same key, and in practice it does not. The same quantity comes back as <code>629221</code> from one place and <code>629221.0</code> from another. The same date is <code>15-Jan-2026</code> here and <code>2026-01-15</code> there. Compared as raw text those are different values, so the same filing gets a different key each time and is stored twice.</p>
+
+  <p>So before the key is built, every field is forced into one canonical form — dates to a single format, anything numeric to a number:</p>
+
+  <pre><code>for k in dedup_keys:
+    if k == 'intimDt':
+        col = pd.to_datetime(df[k], errors='coerce').dt.strftime('%Y-%m-%d')
+    else:
+        # '100', 100 and 100.0 all collapse to one key;
+        # names are not numeric, so they fall back to their text form.
+        numeric = pd.to_numeric(df[k], errors='coerce').astype('float64')
+        col = numeric.where(numeric.notna(), df[k]).astype(str)
+    parts.append(col.fillna('').astype(str))
+return parts[0].str.cat(parts[1:], sep='|')</code></pre>
+
+  <p>This looks like housekeeping and is not. It is what makes the next problem solvable at all.</p>
+
+  <h2>NSE is a month or two behind itself</h2>
+
+  <p>Collecting the history turned out to be the easy half. The harder problem is that a filing takes roughly 30 to 60 days to appear in NSE's searchable history after it is disclosed. For a twenty-year backfill that does not matter. For anything current it means the most recent two months of my dataset were always incomplete — and, again, nothing in the response says so. The data looks finished because there is no marker for "still arriving".</p>
+
+  <p>The only fix is a second source that publishes sooner, so the pipeline supplements the last 60 days from one, maps it onto NSE's column layout, and merges it against what NSE has already given. That merge is only safe because of the normalisation above: without it, the same filing from two sources produces two different keys and you end up with a dataset that is duplicated everywhere the sources overlap, which is worse than having one source.</p>
+
+  <p>That second source did not want to be read, in two specific ways worth knowing about because neither is obvious.</p>
+
+  <p>First, it started returning HTTP 405 errors through Cloudflare. Rotating the browser identity in the request headers changed nothing, because the block was not reading the headers — it was fingerprinting the TLS handshake, the way the encrypted connection itself is opened, which differs between a Python HTTP library and a real browser no matter what the headers claim. <a href="https://pypi.org/project/curl-cffi/" target="_blank" rel="noopener">curl_cffi</a> opens the connection the way Chrome does, which gets past it; the full stack of blocking layers is in <a href="/blog/why-scrapers-get-blocked/">why your scraper gets blocked</a>. But the more expensive part of that failure was the reporting: a fully blocked run finished successfully with zero new rows, which is exactly what a genuinely quiet day looks like. It now prints an explicit pass or fail summary, so "blocked" and "nothing new" can never again look identical.</p>
+
+  <p>Second, the free tier caps a response at 200 records per window and does not mention it. Ask for a month over a busy period and you get 200 records and no truncation flag anywhere in the response — the same silent shortfall as NSE's, from a completely different system. The supplement now fetches one day at a time, because a single day almost never exceeds 200 filings. Also, one IP address will not survive a full historical crawl of that source, so it runs through a rotating pool of proxies.</p>
+
+  <h2>What I would do differently</h2>
+
+  <p>Every failure in this post has the same shape: the output was plausible, and nothing checked it. Three things follow from that.</p>
+
+  <p><strong>Check the totals against something outside the pipeline.</strong> Counting filings for a handful of companies I could verify by hand, and comparing against the exchange's own published figures, would have caught the dedup-key bug in a day instead of months. No amount of internal consistency would have, because the pipeline was perfectly consistent with itself.</p>
+
+  <p><strong>Treat "nothing new" as a claim that needs evidence.</strong> It is the correct answer often enough to be unremarkable and wrong often enough to be dangerous — it was the visible symptom of both the Cloudflare block and the 200-row cap. Anything that can legitimately return nothing has to be able to say whether it looked and found nothing, or never got to look.</p>
+
+  <p><strong>Decide what happens when a filing is corrected.</strong> If a company amends a past disclosure, my key sees a record it already holds and drops the correction. That was never a decision; it is a side effect of using set membership, and for a compliance-adjacent dataset it is the gap that bothers me most.</p>
+
+  <p>The full list of what has broken across these pipelines is in <a href="/blog/a-year-of-ingestion-bugs/">a year of ingestion bugs</a>, the guards that make repeat runs safe are in <a href="/blog/building-resumable-etl-pipelines/">making pipeline reruns converge</a>, and the wider system is on the <a href="/projects/market-data-pipeline/">market-data platform</a> page.</p>
+
+  <h2>References and further reading</h2>
+
+  <p>SEBI's <a href="https://www.sebi.gov.in/sebi_data/attachdocs/1421319519608.pdf" target="_blank" rel="noopener">Prohibition of Insider Trading Regulations, 2015</a> (the original gazette notification, amended several times since) set out who has to disclose what and by when. Those deadlines are the reason the data arrives late rather than wrong, and reading them is what turned "the source is unreliable" into a schedule I could design around.</p>
+
+  <p>NSE's <a href="https://www.nseindia.com/companies-listing/corporate-filings-insider-trading" target="_blank" rel="noopener">insider trading disclosures</a> page shows the same records a human would see. It is the fastest way to check a single company by hand when you suspect your own pipeline is dropping rows — and doing that check is what surfaced the deduplication bug.</p>
+
+  <h3>The techniques, generalised</h3>
+
+  <ul>
+    <li><a href="https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html" target="_blank" rel="noopener">Airflow DAG runs and backfills</a> — the standard vocabulary for "process this window, then that one, and let a rerun repair a window that failed". Worth reading even if you never install it, because it names what a hand-rolled windowed backfill is doing.</li>
+    <li><a href="https://docs.getdbt.com/docs/build/snapshots" target="_blank" rel="noopener">dbt snapshots</a> — the standard answer to a source that revises history, which is what a filing amended after publication is.</li>
+    <li><a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html" target="_blank" rel="noopener">pandas <code>merge</code></a> — <code>validate="one_to_one"</code> raises on the join that turns deduplication into duplication.</li>
+    <li><a href="https://www.postgresql.org/docs/current/sql-insert.html" target="_blank" rel="noopener">Postgres <code>ON CONFLICT</code></a> — the deduplication problem solved by a unique constraint instead of by application code, which is what I would reach for building this again.</li>
+    <li><a href="https://github.com/lexiforest/curl_cffi" target="_blank" rel="noopener">curl_cffi</a> — the fix for the supplement source's TLS-level block, in one import.</li>
+    <li><a href="https://docs.python.org/3/library/urllib.robotparser.html" target="_blank" rel="noopener">Python robotparser</a> and <a href="https://www.rfc-editor.org/rfc/rfc9309.html" target="_blank" rel="noopener">RFC 9309</a> — what a crawler is expected to respect, in three lines of code and one short standard.</li>
+  </ul>
+
+  <h3>Related work of mine</h3>
+
+  <ul>
+    <li><a href="/blog/why-scrapers-get-blocked/">Why your scraper gets blocked</a> — the four things that refuse a scraper (headers, TLS fingerprint, IP address, behaviour) and what fixes each.</li>
+    <li><a href="/blog/building-resumable-etl-pipelines/">Why rerunning a pipeline should fix data</a> — how to make a long backfill safe to interrupt and rerun.</li>
+    <li><a href="/blog/a-year-of-ingestion-bugs/">A year of ingestion bugs</a> — a year of real pipeline failures sorted by cause, including the ones a job like this produces.</li>
+    <li><a href="/blog/playwright-vs-selenium/">Playwright vs Selenium</a> — when a scrape needs a real browser and when a plain HTTP request is enough.</li>
+    <li><a href="/projects/market-data-pipeline/">Market data platform</a> — the project page for the platform this dataset feeds.</li>
+  </ul>

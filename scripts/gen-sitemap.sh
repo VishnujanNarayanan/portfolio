@@ -23,11 +23,16 @@ PAGES=(
   "projects/fraud-detection/index.html|/projects/fraud-detection/|0.8"
   "projects/nse-stock-prediction/index.html|/projects/nse-stock-prediction/|0.8"
   "blog/index.html|/blog/|0.7"
-  "blog/how-i-scraped-nse-insider-filings/index.html|/blog/how-i-scraped-nse-insider-filings/|0.8"
-  "blog/building-resumable-etl-pipelines/index.html|/blog/building-resumable-etl-pipelines/|0.8"
-  "blog/minute-level-stock-prediction/index.html|/blog/minute-level-stock-prediction/|0.8"
-  "blog/a-year-of-ingestion-bugs/index.html|/blog/a-year-of-ingestion-bugs/|0.8"
 )
+
+# Blog posts are enumerated rather than listed: they are generated from
+# partials/posts.json by scripts/gen-post.mjs, so a new post should not also
+# require an edit here to be crawled.
+for post in blog/*/index.html; do
+  [ "$post" = "blog/index.html" ] && continue
+  slug="$(basename "$(dirname "$post")")"
+  PAGES+=("$post|/blog/$slug/|0.8")
+done
 
 {
   echo '<?xml version="1.0" encoding="UTF-8"?>'
