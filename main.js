@@ -2700,6 +2700,12 @@ function buildPillReel(pill) {
     var ROLL = 460;                                                // how long one letter takes to roll up
     var EASE = "cubic-bezier(.19,1,.22,1)";
     var NAV_MS = navCols.length * STEP;                            // the pills' shells land on this beat
+    // …but they don't START there. Fading them in over the whole nav run left two empty
+    // capsules sitting in the corner for most of it; they now hold off until this far
+    // through the nav (0 = with the first letter, 1 = not at all) and still land together
+    // on the last one, right before their own labels reel in.
+    var PILL_IN = 0.72;
+    var PILL_LAG = 160;                                            // …and settle this much AFTER it
     var anims = [];
     hdr.classList.add("is-reeling");                               // park the letters BEFORE the first paint
 
@@ -2739,7 +2745,7 @@ function buildPillReel(pill) {
       // pill after the other.
       pills.forEach(function (p) {
         anims.push(p.animate([{ opacity: 0, transform: "scale(.94)" }, { opacity: 1, transform: "none" }],
-                             { duration: NAV_MS, easing: EASE, fill: "both" }));
+                             { delay: NAV_MS * PILL_IN, duration: NAV_MS * (1 - PILL_IN) + PILL_LAG, easing: EASE, fill: "both" }));
       });
       TOTAL = reel(navCols, 0);
       pillCols.forEach(function (cols) { TOTAL = reel(cols, TOTAL); });
