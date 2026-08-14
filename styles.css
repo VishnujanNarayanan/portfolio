@@ -104,7 +104,7 @@ a.feature-item:hover{border-left-color:var(--color-highlight)}
 .article h2{font-family:"Inter",sans-serif;font-weight:500;font-size:28px;letter-spacing:-.5px;color:var(--color-text);margin:40px 0 12px}
 .article p{font-size:18px;line-height:1.65;color:var(--color-text-muted);margin-bottom:20px}
 .article ul{margin:0 0 20px 22px;list-style:disc}
-.article li{font-size:18px;line-height:1.6;color:var(--color-text-muted);margin-bottom:8px}
+.article li{font-size:18px;line-height:1.6;color:var(--color-text-muted);margin-bottom:8px;list-style:disc}
 .article a{color:var(--color-highlight)}
 .article .back{display:inline-block;margin-top:40px;font-family:var(--font-ui);font-size:14px;color:var(--color-highlight)}
 .tech-list{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 8px}
@@ -429,6 +429,29 @@ header .header__nav-left a{color:#050419;font-size:16px}
    and figures: the label runs the height of the strip from the top, the figure sits big and
    heavy at the foot of it. Sized off the strip itself (--strip is 64-108px), so they scale
    with it instead of against the viewport. */
+/* Many-panel stacks (the blog grew past six posts): the default 64-108px strip only
+   fits about six of them beside the open content column, so the whole stack would
+   overflow its container. A denser strip — and correspondingly smaller specimen
+   figures — keeps nine panels inside the pin at every desktop width. The class is
+   applied by scripts/gen-post.mjs from the post count, not by hand. */
+.writing--dense{--strip:clamp(44px,4.2vw,84px)}
+/* The four-panel ramp above is hardcoded per nth-child, so a dense stack needs its own.
+   Same endpoints (#3b518a to #161d2e, 73%% to 100%% height taper), interpolated across nine. */
+.writing--dense .wpanel:nth-child(1){--bg:#3b518a;--ph:73.0%;z-index:1}
+.writing--dense .wpanel:nth-child(2){--bg:#364a7e;--ph:76.4%;z-index:2}
+.writing--dense .wpanel:nth-child(3){--bg:#324473;--ph:79.8%;z-index:3}
+.writing--dense .wpanel:nth-child(4){--bg:#2d3e68;--ph:83.1%;z-index:4}
+.writing--dense .wpanel:nth-child(5){--bg:#28375c;--ph:86.5%;z-index:5}
+.writing--dense .wpanel:nth-child(6){--bg:#243050;--ph:89.9%;z-index:6}
+.writing--dense .wpanel:nth-child(7){--bg:#1f2a45;--ph:93.2%;z-index:7}
+.writing--dense .wpanel:nth-child(8){--bg:#1b243a;--ph:96.6%;z-index:8}
+.writing--dense .wpanel:nth-child(9){--bg:#161d2e;--ph:100.0%;z-index:9}
+/* The open panel's width is strip + --cw (main.js uses --cw for its geometry), so in a
+   dense stack the content column has to be exactly --cw — the default clamp reaches 360px
+   on a wide screen, which is wider than a dense panel opens and would clip the last words. */
+.writing--dense .wpanel__content{width:clamp(250px,22.4vw,322px)}
+.writing--dense .wpanel__vert{font-size:clamp(17px,1.5vw,27px);top:18px}
+.writing--dense .wpanel__num{font-size:clamp(30px,3vw,54px);bottom:16px}
 .wpanel__vert{position:absolute;left:calc(var(--strip) / 2);top:22px;transform:translateX(-50%) rotate(180deg);will-change:opacity;
   writing-mode:vertical-rl;font-family:"Inter",sans-serif;font-weight:500;
   font-size:clamp(26px,2.4vw,42px);line-height:1;letter-spacing:-.01em;text-transform:uppercase;white-space:nowrap;

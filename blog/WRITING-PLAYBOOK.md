@@ -246,16 +246,73 @@ qualifies; a decorative header image does not. Rules:
 - The numbers must also appear in the body text — the chart is a second view of the data,
   never the only one.
 
+### How to add a post (the generator)
+
+Since 2026-08-14 a post is **two files, and nothing else is edited by hand**:
+
+1. `partials/posts/<slug>.html` — the article body only, starting at the first `<p>`.
+   No `<article>`, no head, no header/footer, no share buttons.
+2. An entry in `partials/posts.json` — slug, `title` (the SEO/card headline, Title Case),
+   `h1` (the same thing in sentence case), `dek`, `description` (meta description, aim
+   150–170 chars), `shareDescription`, `tags`, `published` (ISO date), `image`, `share`.
+
+Then:
+
+```
+python3 scripts/gen-post-covers.py <image-basename>   # only if it needs a cover
+node scripts/gen-post.mjs && node scripts/gen-partials.mjs
+./scripts/gen-sitemap.sh                              # after committing
+```
+
+`gen-post.mjs` writes `blog/<slug>/index.html` in full, plus the card list on `/blog/`, the
+four homepage `.wpanel` panels, and the "Keep reading" cards at the foot of every post.
+**Do not edit any of those by hand** — the next run overwrites them. A title change is a
+one-line edit in the manifest and propagates to about thirty places, including the
+percent-encoded share URLs and both JSON-LD blocks.
+
+Covers are generated (`scripts/gen-post-covers.py`) rather than sourced: seeded contour
+plates in the site palette, so nothing licensed is introduced. Overwrite the JPEG with a
+real image whenever there is one worth using.
+
+### Every post ends with References
+
+Set 2026-08-14. The last section of a post is `<h2>References and further reading</h2>`, and it
+is not decoration — it is a large part of what the reader is being given.
+
+Shape:
+
+1. Two or three **discursive paragraphs** first, in the voice of the post: the one or two sources
+   that are genuinely worth someone's next hour, each with a sentence on what it gives them.
+2. Then grouped `<h3>` lists. The groups that keep earning their place:
+   - **Tools / documentation** — the thing that fixes the problem the post describes, so a reader
+     can act on it today.
+   - **Background / the specifications** — primary sources: the RFC, the paper, the vendor doc.
+     Never a listicle summarising them.
+   - **Related work of mine** — other posts on this site, the project page, and the repo if it is
+     public. This is what turns nine posts into one body of work rather than nine pages.
+3. Every list item is `<a>link</a> — one line on why to open it`. A bare link is not a reference.
+
+Rules learned writing them:
+
+- **Link where the claim is, not only at the end.** If a paragraph says a flag would have caught a
+  bug, that flag's doc page belongs in that paragraph.
+- **Verify every URL before publishing.** `curl -s -o /dev/null -w "%{http_code}" -L <url>`, and
+  fix or drop anything that is not 200. Doc sites reorganise constantly: two links written from
+  memory in the first draft of these posts were already 404.
+- **Only link repos that are public.** `market_data` is private, so posts describe it and link the
+  project page instead. Public ones: `product-explorer`, `Job_Application_Bot`,
+  `binance-futures-trading-bot`, `Fraud_Transaction_Detection`, `ticket-classifier-nlp`,
+  `Trader_sentiment_analysis`.
+- Prefer a stable primary URL over a prettier one: `usenix.org` PDFs and `rfc-editor.org` outlive
+  vendor blog posts, and some publishers (SSRN, AMS) 403 automated checks even when the page works.
+
 ### Page furniture
 
 Handled by CSS, but worth knowing when drafting:
 
-- Posts wrap in `.post-shell` (a 1180px grid) with a sticky `.post-nav` rail on the left
-  listing every post and marking the current one. Adding a post means adding a line to that
-  rail **in all four files** — there is no template yet, which is the main argument for
-  building the markdown generator.
 - Article column is ~860px. Long `<pre>` blocks scroll inside the article rather than
-  widening the page.
+  widening the page. `h2`, `h3`, `ul`, `pre` and inline `code` are styled; **tables are
+  not** — use a list or prose instead.
 - Sub-pages hide the centred VJ mark and sit on `--color-bg`.
 
 ---
@@ -319,3 +376,45 @@ stop anywhere and think *"wait, what is that"* or *"why are we suddenly here"*, 
 defect in the post, not in the reader. Fix it by adding a sentence, not by removing the
 detail — the numbers and the specifics are the whole value. Length is not the enemy;
 compression is.
+
+
+## 8. Never reference your own work cold
+
+Set 2026-08-14. The reader has not seen your repositories and never will. Anything that only
+means something to someone who has — a scenario, a count, a file name, a numbered category
+from another post — is noise to everyone else, and the reader's reaction is *what is he even
+talking about*.
+
+Two ways to handle a project-specific detail, and there is no third:
+
+1. **Use it as a worked example, fully set up.** Say what the thing is, in general terms,
+   before you lean on it: *"a small program that collects job adverts, scores them, and
+   messages me the good ones"* — then the 92 tests, the four failures, the retired model all
+   land. If you quote code, explain what it does; the code is evidence, not the argument.
+2. **Cut it.** If setting it up would cost more than the point is worth, the point is not
+   worth making here.
+
+**Opening lines are where this goes wrong first.** `The bot had 92 unit tests` assumes a bot
+the reader has never heard of. `I run a small program on a schedule: it collects job adverts,
+scores them, and messages me the good ones. It had 92 unit tests` costs one clause and loses
+nobody.
+
+**Linking your own posts and projects.** Describe what the reader will *find* there, in their
+terms — "check this out, it covers X and Y". Never describe it in terms of this post's
+internals.
+
+| Don't | Do |
+| --- | --- |
+| — the error classification behind the "budget exhausted mid-run" scenario. | — how to tell apart a rate limit that clears on its own, one that never will, and a quota that is simply spent: the distinction a retry loop needs. |
+| — the full census these four rules came out of. | — a year of real pipeline failures sorted by cause, which is where these rules came from. |
+| — what these 32 scripts feed. | — the project page for the system these collectors run in: what it gathers and how the pieces fit together. |
+| — where this pipeline's bugs sit in the wider census; it is one of the two files that account for half of them. | — a year of real pipeline failures sorted by cause, including the ones a job like this produces. |
+
+Back-references *within a single post* are fine — "category 1 above", "failure 2", "layer 2" —
+because the reader has just read the thing being referenced. The rule is about references that
+reach outside the page.
+
+**Also never name internal or tooling files in a post** — repo scaffolding, agent instruction
+files, private notes. Elide them (`CHANGELOG.md  PRD.md  job_automation_architecture.md`) or
+leave the list generic. Same for `http://localhost:...` URLs in pasted output: cut the host
+(`'.../resume/....pdf'`), since the point is never the address.
