@@ -1943,9 +1943,12 @@ header.is-hero .header__nav-left a .nav-char__c{color:#050419}
   background-image:linear-gradient(var(--color-highlight),var(--color-highlight));
   background-repeat:no-repeat;background-position:0 0;background-size:0 100%;
   color:var(--color-text);
-  transition:background-size .85s var(--ease-default),color .2s linear .28s}
+  transition:background-size .75s var(--ease-default),color .2s linear .24s}
 .callout-socials-heading__line.is-hl.hl-sweep.is-lit,.callout-socials-follow.hl-sweep.is-lit{
   background-size:100% 100%;color:var(--color-text-light)}
 /* the three links start EMPTY: every letter column parked below its clip until the
    reel rolls it up (same shape as the header's reel-in) */
 .callout-socials-links-layout.is-reeling .pill-char__col{transform:translateY(100%)}
+/* the eight footer column links start EMPTY: each letter column parked below its
+   clip until the reel-in rolls it up (see footerHeadlineType in main.js) */
+.lfooter__cols.is-reeling .lreel__col{transform:translateY(100%)}
