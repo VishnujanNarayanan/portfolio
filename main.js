@@ -178,7 +178,12 @@ function buildPillReel(pill) {
       return m ? "#" + m[1] : location.hash;
     })();
     var userScrolled = false;
-    ["wheel", "touchstart", "keydown"].forEach(function (t) {
+    // pointerdown counts as "the visitor took over" too, not just scrolling. Arriving from a
+    // sub-page (/?go=contact) the retries below keep re-asserting the target for ~1.5s, and a
+    // CLICK on another nav anchor is a native jump the loop knew nothing about — it pulled the
+    // page straight back to the arrival target, so the first click after landing appeared to do
+    // nothing and only a second one, after the retries had run out, worked.
+    ["wheel", "touchstart", "keydown", "pointerdown"].forEach(function (t) {
       addEventListener(t, function () { userScrolled = true; }, { passive: true, once: true });
     });
     function applyHash() {
