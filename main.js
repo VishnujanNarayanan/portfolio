@@ -77,8 +77,9 @@ function buildPillReel(pill) {
    plain text. Every glyph keeps its final box throughout (the reveal is opacity-only),
    so nothing reflows as the text arrives.
    runs: [{ el, step }] in typing order; opts: { gap } between runs, { hold } for how
-   long the cursor keeps blinking at the end. Returns null when there is nothing to
-   type, so callers can treat "no type-in" as a plain absence. */
+   long the cursor keeps blinking at the end, or { keep: true } to leave it blinking at
+   the end of the last line for good — a terminal sitting at its prompt. Returns null
+   when there is nothing to type, so callers can treat "no type-in" as a plain absence. */
 function makeTypeIn(host, runs, opts) {
   if (!host || !runs || !runs.length) return null;
   opts = opts || {};
@@ -130,7 +131,7 @@ function makeTypeIn(host, runs, opts) {
           t.c.classList.add("is-typed", "is-cursor");
         }, t.at);
       });
-      setTimeout(finish, runMs + hold);
+      if (!opts.keep) setTimeout(finish, runMs + hold);   // keep → the cursor stays, blinking
     },
     ms: runMs,                                      // when the last letter lands, for chaining
     reveal: finish,                                 // give up and show the text as it is
@@ -271,7 +272,12 @@ function makeTypeIn(host, runs, opts) {
       var tries = 0;
       (function attempt() {
         if (userScrolled || tries++ > 8) return;
-        var top = el.getBoundingClientRect().top;
+        // #contact IS the footer, and the footer is the last thing on the page: putting its
+        // TOP at the top of the viewport leaves the email pill and the legal row below the
+        // fold, which reads as "not quite there". Contact goes to the very bottom instead.
+        var top = wantHash === "#contact"
+          ? Math.max(0, document.documentElement.scrollHeight - window.innerHeight) - (window.scrollY || 0)
+          : el.getBoundingClientRect().top;
         if (Math.abs(top) > 2) {
           var y = top + (window.scrollY || 0);
           if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { immediate: true, force: true });
@@ -2335,7 +2341,7 @@ function makeTypeIn(host, runs, opts) {
       { el: pad.querySelector(".writing__eyebrow"), step: EYE_STEP },
       { el: pad.querySelector(".writing__title"),   step: EYE_STEP },
       { el: pad.querySelector(".writing__desc"),    step: DESC_STEP }
-    ]);
+    ], { keep: true });          // cursor stays blinking at the end of the description
     // Resized down to mobile before it ever ran → nothing will trigger it, so show the text.
     if (introType) window.addEventListener("resize", function () {
       if (!introType.ran() && window.innerWidth <= 820) introType.reveal();
@@ -3850,7 +3856,7 @@ function makeTypeIn(host, runs, opts) {
           being dragged over them. Until then there is NO blue behind either line.
      Skipped on mobile and under reduced motion, where the fan does not run either:
      the two lines keep their plain CSS background and the links are simply there. */
-  const HEAD_STEP = 55, FOLLOW_STEP = 18;
+  const HEAD_STEP = 32, FOLLOW_STEP = 18;
   const LINK_STEP = 49, LINK_ROLL = 565, LINK_EASE = "cubic-bezier(.19,1,.22,1)";
   const socialsInner = document.querySelector(".callout-socials-layout");
   const linksWrap = document.querySelector(".callout-socials-links-layout");
@@ -3863,7 +3869,7 @@ function makeTypeIn(host, runs, opts) {
   ]);
   const followType = !staged ? null : makeTypeIn(socialsInner, [
     { el: document.querySelector(".callout-socials-follow"), step: FOLLOW_STEP }
-  ], { hold: 600 });
+  ], { keep: true });            // cursor stays blinking after "…social media"
   const linkCols = staged && linksWrap
     ? Array.from(linksWrap.querySelectorAll(".pill-char__col")) : [];
   if (staged) {
@@ -3908,7 +3914,7 @@ function makeTypeIn(host, runs, opts) {
     const center = (_layTop - (window.scrollY || window.pageYOffset || 0)) + _layH / 2;
     const vh = window.innerHeight;
     if (headType && center < vh * 1.02) headType.start();       // a beat BEFORE the fan
-    if (followType && !followType.ran() && center < vh * 0.55) {    // …and this one well after it
+    if (followType && !followType.ran() && center < vh * 0.50) {    // …and this one later, on its own line
       followType.start();
       // A short beat after the line lands, the links roll in and the blue is dragged
       // across the two lines — together, one gesture.
@@ -4368,7 +4374,45 @@ function makeTypeIn(host, runs, opts) {
   var rows = Array.prototype.slice.call(h.querySelectorAll(".lfooter__hl-row"));
   if (!rows.length) return;
   var HEAD_STEP = 45;
-  var typer = makeTypeIn(h, rows.map(function (el) { return { el: el, step: HEAD_STEP }; }), { gap: 120 });
+
+  // ONCE PER FOOTER, PER SESSION. The footer is shared by all ten pages, so without this
+  // it replayed on every single navigation. There are exactly two headlines — the default
+  // one and the blog pages' variant — and each earns its entrance once: the key is derived
+  // from the headline's own text, so the two are tracked separately and no third can appear.
+  // A visitor who bounces between home and a post sees it twice at most. Already seen →
+  // return before anything is hidden, so the footer simply renders as plain markup.
+  // An explicit RELOAD resets the whole set, not just this page's entry: refreshing the
+  // homepage means the homepage footer types again AND the blog one does when you next
+  // reach it. sessionStorage survives a refresh (it lives as long as the tab), so without
+  // this a hard refresh could never show the entrance again. Back/forward and in-site
+  // links do not reset anything.
+  var PREFIX = "vj:footer-in:";
+  var KEY = PREFIX + (rows[0].textContent || "").trim().toLowerCase().replace(/[^a-z]+/g, "-").slice(0, 32);
+  var reloaded = (function () {
+    try {
+      var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+      if (nav) return nav.type === "reload";
+      return !!(performance.navigation && performance.navigation.type === 1);
+    } catch (e) { return false; }
+  })();
+  try {
+    if (reloaded) {
+      Object.keys(sessionStorage).forEach(function (k) {
+        if (k.indexOf(PREFIX) === 0) sessionStorage.removeItem(k);
+      });
+    } else if (sessionStorage.getItem(KEY) === "1") return;
+  } catch (e) {}
+  function markSeen() { try { sessionStorage.setItem(KEY, "1"); } catch (e) {} }
+  // Spent when you LEAVE the page, even if the footer never came into view. Marking it
+  // only when the entrance plays left a hole big enough to drive through: the homepage
+  // footer is a long scroll away, so leaving before reaching it recorded nothing and the
+  // entrance played again on the next visit — which is the "it runs every time" symptom.
+  // pagehide (not beforeunload) so it also fires on the way into the back/forward cache.
+  addEventListener("pagehide", markSeen);
+
+  // No lingering cursor here — it clears shortly after the last letter (the resting
+  // cursor lives on the socials follow line and the blog description).
+  var typer = makeTypeIn(h, rows.map(function (el) { return { el: el, step: HEAD_STEP }; }), { gap: 120, hold: 420 });
   if (!typer) return;
 
   // …and once it lands, the eight column links reel in from nothing. They already carry
@@ -4377,11 +4421,40 @@ function makeTypeIn(host, runs, opts) {
   // this only has to park the letter columns below their clips and roll them up.
   var cols = document.querySelector(".lfooter__cols");
   var LETTER_STEP = 26, LINK_GAP = 72, LINK_ROLL = 560, EASE = "cubic-bezier(.19,1,.22,1)";
-  if (cols) cols.classList.add("is-reeling");
+  // The column LABELS ("Pages" / "Follow On") wait for the links under them and simply
+  // fade in once the reel is done; the "Email me" pill POPS in after it the way the
+  // header CTAs do on load — shell first, its own letters reeling up inside it.
+  if (cols) cols.classList.add("is-reeling", "labels-wait");
+  var mail = document.querySelector(".lfooter__email");
+  var mailCols = mail ? Array.prototype.slice.call(mail.querySelectorAll(".pill-char__col")) : [];
+  if (mail) mail.classList.add("is-waiting", "is-reeling");
+  function popEmail() {
+    if (!mail) return;
+    mail.classList.remove("is-waiting");
+    // The pill is CENTRED with its own transform (translateX(-50%) in the bottom tab), so
+    // a bare scale() keyframe would replace that and shove it to the right. Compose the
+    // pop onto whatever transform it is already resting at.
+    var base = getComputedStyle(mail).transform;
+    if (base === "none") base = "";
+    var anims = [mail.animate([{ opacity: 0, transform: (base + " scale(.94)").trim() },
+                               { opacity: 1, transform: base || "none" }],
+                              { duration: 420, easing: EASE, fill: "both" })];
+    mailCols.forEach(function (c, i) {
+      anims.push(c.animate([{ transform: "translateY(100%)" }, { transform: "translateY(0)" }],
+                           { duration: LINK_ROLL, delay: 180 + i * LETTER_STEP, easing: EASE, fill: "both" }));
+    });
+    setTimeout(function () {
+      mailCols.forEach(function (c) { c.style.transition = "none"; });
+      mail.classList.remove("is-reeling");
+      anims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+      void mail.offsetWidth;
+      requestAnimationFrame(function () { mailCols.forEach(function (c) { c.style.transition = ""; }); });
+    }, 180 + mailCols.length * LETTER_STEP + LINK_ROLL + 60);
+  }
   function reelLinks() {
     if (!cols) return;
     var cs = Array.prototype.slice.call(cols.querySelectorAll(".lreel__col"));
-    if (!cs.length) { cols.classList.remove("is-reeling"); return; }
+    if (!cs.length) { cols.classList.remove("is-reeling", "labels-wait"); popEmail(); return; }
     // BOTTOM UP: the links arrive from the last row upward (both columns together,
     // since the two sit at the same heights), each one's letters still rolling up
     // left to right within it. Ordered by where they actually are on screen rather
@@ -4401,6 +4474,13 @@ function makeTypeIn(host, runs, opts) {
     // Same handoff as the other reels: .lreel__col carries the hover roll's own
     // transition, so dropping is-reeling while the animations are cancelled would
     // start a transition and reel all eight a second time.
+    // The labels and the pill come in while the LAST links are still rolling, rather than
+    // waiting for the reel to be completely over — the tail of the footer reads as one
+    // movement instead of a pause and then two more things.
+    setTimeout(function () {
+      cols.classList.remove("labels-wait");                 // "Pages" / "Follow On" fade in
+      popEmail();
+    }, last + LINK_ROLL * 0.45);
     setTimeout(function () {
       cs.forEach(function (c) { c.style.transition = "none"; });
       cols.classList.remove("is-reeling");
@@ -4409,8 +4489,8 @@ function makeTypeIn(host, runs, opts) {
       requestAnimationFrame(function () { cs.forEach(function (c) { c.style.transition = ""; }); });
     }, last + LINK_ROLL + 60);
   }
-  function play() { typer.start(); setTimeout(reelLinks, typer.ms + 260); }
-  if (!("IntersectionObserver" in window)) { typer.reveal(); reelLinks(); return; }
+  function play() { markSeen(); typer.start(); setTimeout(reelLinks, typer.ms + 140); }
+  if (!("IntersectionObserver" in window)) { typer.reveal(); reelLinks(); return; }   // popEmail rides along
   var io = new IntersectionObserver(function (entries) {
     entries.forEach(function (e) {
       if (!e.isIntersecting) return;
@@ -4419,6 +4499,28 @@ function makeTypeIn(host, runs, opts) {
     });
   }, { rootMargin: "0px 0px -15% 0px", threshold: 0.2 });
   io.observe(h);
+})();
+
+/* ---- Contact goes to the BOTTOM of the page (2026-08-14) -----------------------
+   #contact is the footer's own id, so the browser's native jump parks the footer's TOP
+   at the top of the viewport — which leaves the email pill and the legal row below the
+   fold and reads as landing just short. Same-document Contact links are intercepted and
+   taken to the end of the document instead, smoothly and through Lenis where it is
+   running. Cross-document Contact links are left alone: they carry ?go=contact and are
+   handled on arrival by applyHash, which lands at the same place. */
+(function contactToBottom() {
+  document.addEventListener("click", function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href$="#contact"]') : null;
+    if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+    var href = a.getAttribute("href") || "";
+    if (href.charAt(0) !== "#" && href !== location.pathname + "#contact") return;  // other document
+    if (!document.getElementById("contact")) return;
+    e.preventDefault();
+    var y = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { duration: 1.1 });
+    else window.scrollTo({ top: y, behavior: "smooth" });
+    if (history.replaceState) { try { history.replaceState(null, "", "#contact"); } catch (err) {} }
+  });
 })();
 
 /* ---- Post action rail (2026-08-11) --------------------------------------------
