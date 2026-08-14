@@ -256,6 +256,9 @@ function makeTypeIn(host, runs, opts) {
     ["wheel", "touchstart", "keydown", "pointerdown"].forEach(function (t) {
       addEventListener(t, function () { userScrolled = true; }, { passive: true, once: true });
     });
+    // Socials reads better a little PAST its own top edge — the heading sits high in the
+    // section, so landing exactly on the boundary leaves the fanned cards low in the frame.
+    var SOCIALS_DROP = 0.05;                       // fraction of a viewport past the top edge
     function applyHash() {
       if (!wantHash || wantHash === "#" || wantHash === "#top") return;
       var el = null;
@@ -277,7 +280,7 @@ function makeTypeIn(host, runs, opts) {
         // fold, which reads as "not quite there". Contact goes to the very bottom instead.
         var top = wantHash === "#contact"
           ? Math.max(0, document.documentElement.scrollHeight - window.innerHeight) - (window.scrollY || 0)
-          : el.getBoundingClientRect().top;
+          : el.getBoundingClientRect().top + (wantHash === "#socials" ? window.innerHeight * SOCIALS_DROP : 0);
         if (Math.abs(top) > 2) {
           var y = top + (window.scrollY || 0);
           if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { immediate: true, force: true });
@@ -3857,18 +3860,24 @@ function makeTypeIn(host, runs, opts) {
      Skipped on mobile and under reduced motion, where the fan does not run either:
      the two lines keep their plain CSS background and the links are simply there. */
   const HEAD_STEP = 32, FOLLOW_STEP = 18;
-  const LINK_STEP = 49, LINK_ROLL = 565, LINK_EASE = "cubic-bezier(.19,1,.22,1)";
+  const LINK_STEP = 32, LINK_ROLL = 420, LINK_EASE = "cubic-bezier(.19,1,.22,1)";
   const socialsInner = document.querySelector(".callout-socials-layout");
   const linksWrap = document.querySelector(".callout-socials-links-layout");
   const hlEls = [document.querySelector(".callout-socials-heading__line.is-hl"),
                  document.querySelector(".callout-socials-follow")].filter(Boolean);
   const staged = !reduce && !mq.matches && !!socialsInner;
-  const headType = !staged ? null : makeTypeIn(socialsInner, [
-    { el: document.querySelector(".callout-socials-heading__line:not(.is-hl)"), step: HEAD_STEP },
-    { el: document.querySelector(".callout-socials-heading__line.is-hl"),       step: HEAD_STEP }
+  // Each typer hosts its OWN element, never a shared ancestor. `is-typing` on the host is
+  // what hides the not-yet-typed letters, so with both on .callout-socials-layout the
+  // heading's finish() stripped the class off the whole section and the follow line, still
+  // waiting its turn, was simply revealed — it appeared instead of typing.
+  const headEl = document.querySelector(".callout-socials-heading");
+  const followEl = document.querySelector(".callout-socials-follow");
+  const headType = !staged || !headEl ? null : makeTypeIn(headEl, [
+    { el: headEl.querySelector(".callout-socials-heading__line:not(.is-hl)"), step: HEAD_STEP },
+    { el: headEl.querySelector(".callout-socials-heading__line.is-hl"),       step: HEAD_STEP }
   ]);
-  const followType = !staged ? null : makeTypeIn(socialsInner, [
-    { el: document.querySelector(".callout-socials-follow"), step: FOLLOW_STEP }
+  const followType = !staged || !followEl ? null : makeTypeIn(followEl, [
+    { el: followEl, step: FOLLOW_STEP }
   ], { keep: true });            // cursor stays blinking after "…social media"
   const linkCols = staged && linksWrap
     ? Array.from(linksWrap.querySelectorAll(".pill-char__col")) : [];
@@ -3882,7 +3891,26 @@ function makeTypeIn(host, runs, opts) {
   // cancelled would start a transition and reel every word a second time. Mute it,
   // drop class and animations together, commit, release a frame later.
   let lit = false;
-  function highlight() { hlEls.forEach(function (el) { el.classList.add("is-lit"); }); }
+  // The blue takes SWEEP_MS to cross a line, so flipping the whole line to white at one
+  // moment leaves the tail of a wide sentence white on a still-unhighlighted background —
+  // invisible until the wipe catches up. Each CHARACTER instead turns white as the edge
+  // reaches it: the type-in already left every glyph as its own span, so the delay is just
+  // where that glyph sits across the line.
+  const SWEEP_MS = 750;                                        // matches the CSS sweep
+  function highlight() {
+    hlEls.forEach(function (el) {
+      var chars = el.querySelectorAll(".wtype-c");
+      if (chars.length) {
+        var r = el.getBoundingClientRect();
+        Array.prototype.forEach.call(chars, function (c) {
+          var cr = c.getBoundingClientRect();
+          var t = (cr.left + cr.width / 2 - r.left) / Math.max(1, r.width);
+          c.style.transitionDelay = Math.max(0, Math.round(SWEEP_MS * t) - 40) + "ms";
+        });
+      }
+      el.classList.add("is-lit");
+    });
+  }
   function lightUp() {
     if (lit) return;
     lit = true;
@@ -3908,18 +3936,55 @@ function makeTypeIn(host, runs, opts) {
     lightUp(); highlight();
   }, { passive: true });
 
+  // Beat 2 + everything it drags with it, as one call: used both by the scroll threshold
+  // and by an anchor JUMP, which never crosses that threshold gradually.
+  function playFollow() {
+    if (!followType || followType.ran()) return;
+    followType.start();
+    // A short beat after the line lands, the links roll in and the blue is dragged
+    // across the two lines — together, one gesture.
+    setTimeout(lightUp, followType.ms + 180);
+  }
+  // The whole section, played back to back — for arrivals that are not a scroll.
+  // On an ARRIVAL both lines are triggered together — there is no scroll left to stage
+  // them against, so waiting for the heading to finish just left the section looking
+  // half-done. (Scrolling in still gets the two separate thresholds.)
+  function playAll() {
+    if (reduce || mq.matches) return;
+    if (headType) headType.start();
+    playFollow();
+    pT = 1;
+    kick();
+  }
+  window.__socialsPlay = playAll;
+
+  let lastY = window.scrollY || window.pageYOffset || 0, firstEval = true;
   function evalReveal() {
     if (reduce) { pT = 1; return; }
     if (!_layH) measureLayout();
-    const center = (_layTop - (window.scrollY || window.pageYOffset || 0)) + _layH / 2;
+    const y = window.scrollY || window.pageYOffset || 0;
     const vh = window.innerHeight;
+    // JUMPED in (the Socials button is a plain anchor, so it lands here in one step and
+    // never crosses beat 2's line by scrolling): play the WHOLE sequence, heading first
+    // and the follow line behind it, instead of leaving the section half-arrived until
+    // the visitor happens to scroll further. Re-measure first — a jump usually means the
+    // sections above just changed height (the projects pin sizes itself from JS), and a
+    // stale document position would put the section nowhere near where it really is.
+    const jumped = Math.abs(y - lastY) > vh * 0.5;
+    lastY = y;
+    if (jumped || firstEval) measureLayout();
+    const center = (_layTop - y) + _layH / 2;
+    const inView = center < vh * 1.02 && center > -_layH;
+    // ARRIVED, rather than scrolled in. Two ways that happens: a jump from elsewhere on
+    // the page, or the page LOADING already parked here — coming from a sub-page, whose
+    // Socials link carries ?go=socials, the boot IIFE performs that scroll before this
+    // section ever initialises, so its first reading shows no movement at all and only
+    // the heading's line matches. Either way the whole sequence plays.
+    const arrived = firstEval && inView;
+    firstEval = false;
+    if (inView && (jumped || arrived)) { playAll(); return; }
     if (headType && center < vh * 1.02) headType.start();       // a beat BEFORE the fan
-    if (followType && !followType.ran() && center < vh * 0.50) {    // …and this one later, on its own line
-      followType.start();
-      // A short beat after the line lands, the links roll in and the blue is dragged
-      // across the two lines — together, one gesture.
-      setTimeout(lightUp, followType.ms + 180);
-    }
+    if (center < vh * 0.50) playFollow();                       // …and this one later, on its own line
     pT = center < vh * 0.85 ? 1 : 0;
   }
 
@@ -4501,6 +4566,34 @@ function makeTypeIn(host, runs, opts) {
   io.observe(h);
 })();
 
+/* ---- Socials button plays the section (2026-08-14) ----------------------------
+   #socials is a plain anchor: it lands in the middle of the section in one step, so the
+   scroll thresholds that stage the copy are never crossed one at a time and the section
+   sat there half-arrived. socialsFan exposes __socialsPlay for exactly this — the click
+   still jumps natively, and the sequence is kicked off on the frame after it lands. */
+(function socialsClickPlays() {
+  document.addEventListener("click", function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href$="#socials"]') : null;
+    if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+    var href = a.getAttribute("href") || "";
+    if (href.charAt(0) !== "#" && href !== location.pathname + "#socials") return;   // other document
+    var sec = document.getElementById("socials");
+    if (sec) {
+      // Land a little PAST the section's top edge, matching the ?go=socials arrival. Still
+      // a JUMP, never an animated scroll: travelling there would cross the projects pin,
+      // whose stick grabs any crossing that arrives by scrolling.
+      e.preventDefault();
+      var y = sec.getBoundingClientRect().top + (window.scrollY || 0) + window.innerHeight * 0.05;
+      if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { immediate: true, force: true });
+      window.scrollTo(0, y);
+      if (history.replaceState) { try { history.replaceState(null, "", "#socials"); } catch (err) {} }
+    }
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { if (window.__socialsPlay) window.__socialsPlay(); });
+    });
+  });
+})();
+
 /* ---- Contact goes to the BOTTOM of the page (2026-08-14) -----------------------
    #contact is the footer's own id, so the browser's native jump parks the footer's TOP
    at the top of the viewport — which leaves the email pill and the legal row below the
@@ -4517,8 +4610,13 @@ function makeTypeIn(host, runs, opts) {
     if (!document.getElementById("contact")) return;
     e.preventDefault();
     var y = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-    if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { duration: 1.1 });
-    else window.scrollTo({ top: y, behavior: "smooth" });
+    // JUMP, exactly as the native anchor did — do NOT animate the way there. A smooth
+    // scroll travels THROUGH the pinned projects terminal, and engageStick() grabs any
+    // crossing that arrives by scrolling: the page locks at projects for the stick and
+    // the click never reaches the footer. A single step lands past the pin's threshold
+    // by more than a viewport, which is exactly how that check tells a jump from a scroll.
+    if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { immediate: true, force: true });
+    window.scrollTo(0, y);                       // also move the real scroller, in case Lenis is absent
     if (history.replaceState) { try { history.replaceState(null, "", "#contact"); } catch (err) {} }
   });
 })();
