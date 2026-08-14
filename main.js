@@ -3694,7 +3694,16 @@ function makeTypeIn(host, runs, opts) {
     var curveTop = null;
     function measureCurve() { curveTop = sec.getBoundingClientRect().top + (window.scrollY || window.pageYOffset || 0); }
     window.addEventListener("resize", measureCurve, { passive: true });
-    window.addEventListener("load", measureCurve);
+    window.addEventListener("load", function () { measureCurve(); render(); });
+    // .brand-teaser sits directly under the projects section, whose height is set from JS
+    // (at the reveal, on resize, and on every filter click) — so its DOCUMENT position
+    // moves by that delta and the cached one is wrong. The pin announces the change with
+    // "layoutshift"; without listening for it the seam computed its progress against a
+    // stale position and bulged out early, or read as already done and never appeared to
+    // trigger at all. Which of the two you got depended on whether the pin had re-sized
+    // before or after the one measurement — hence "sometimes".
+    window.addEventListener("layoutshift", function () { measureCurve(); render(); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { measureCurve(); render(); });
     function render() {
       ticking = false;
       if (window.innerWidth <= 820) return;
