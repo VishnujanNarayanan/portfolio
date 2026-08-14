@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>A Year of Ingestion Bugs: What Actually Broke in 32 Market-Data Pipelines — Vishnujan Narayanan</title>
-<meta name="description" content="Roughly 30 bugs across a year of scraping Indian market data, sorted by cause. Eight of them produced no error at all, and those were the expensive ones.">
+<title>A Year of Ingestion Bugs: What Actually Broke in 32 Data Pipelines</title>
+<meta name="description" content="A year of data pipeline failures sorted by cause: bot blocks, silently wrong data, concurrency and config. What each one looked like and the guard that caught it.">
 <meta name="author" content="Vishnujan Narayanan">
 <meta property="article:author" content="https://www.linkedin.com/in/vishnujan-narayanan">
 <meta property="article:published_time" content="2026-08-10">
@@ -14,8 +14,8 @@
 <link rel="apple-touch-icon" href="../../apple-touch-icon.png?v=2">
 <link rel="canonical" href="https://vishnujan.dev/blog/a-year-of-ingestion-bugs/">
 <meta name="robots" content="index, follow, max-image-preview:large">
-<meta property="og:title" content="A Year of Ingestion Bugs: What Actually Broke in 32 Market-Data Pipelines">
-<meta property="og:description" content="Roughly 30 bugs across a year of scraping Indian market data, sorted by cause. Eight produced no error at all.">
+<meta property="og:title" content="A Year of Ingestion Bugs: What Actually Broke in 32 Data Pipelines">
+<meta property="og:description" content="Roughly 30 bugs across 32 pipelines, sorted by cause. Eight produced no error at all.">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Vishnujan Narayanan">
 <meta property="og:locale" content="en_US">
@@ -24,10 +24,10 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:type" content="image/jpeg">
-<meta property="og:image:alt" content="A Year of Ingestion Bugs: What Actually Broke in 32 Market-Data Pipelines">
+<meta property="og:image:alt" content="A Year of Ingestion Bugs: What Actually Broke in 32 Data Pipelines">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="A Year of Ingestion Bugs: What Actually Broke in 32 Market-Data Pipelines">
-<meta name="twitter:description" content="Roughly 30 bugs across a year of scraping Indian market data, sorted by cause. Eight produced no error at all.">
+<meta name="twitter:title" content="A Year of Ingestion Bugs: What Actually Broke in 32 Data Pipelines">
+<meta name="twitter:description" content="Roughly 30 bugs across 32 pipelines, sorted by cause. Eight produced no error at all.">
 <meta name="twitter:image" content="https://vishnujan.dev/images/blog/share-ingestion-bugs.jpg">
 <!-- Roboto Flex is the nav reel's font (styles.css @font-face). Preloaded so it is in
      flight before the stylesheet finishes parsing and is ready for the FIRST paint —
@@ -39,8 +39,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../styles.css">
 <script>document.documentElement.classList.remove("no-js");</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"A Year of Ingestion Bugs: What Actually Broke in 32 Market-Data Pipelines","item":"https://vishnujan.dev/blog/a-year-of-ingestion-bugs/"}]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"A Year of Ingestion Bugs: What Actually Broke in 32 Market-Data Pipelines","datePublished":"2026-08-10","dateModified":"2026-08-10","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/a-year-of-ingestion-bugs/"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"A Year of Ingestion Bugs: What Actually Broke in 32 Data Pipelines","item":"https://vishnujan.dev/blog/a-year-of-ingestion-bugs/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"A Year of Ingestion Bugs: What Actually Broke in 32 Data Pipelines","description":"A year of data pipeline failures sorted by cause: bot blocks, silently wrong data, concurrency and config. What each one looked like and the guard that caught it.","image":"https://vishnujan.dev/images/blog/share-ingestion-bugs.jpg","datePublished":"2026-08-10","dateModified":"2026-08-10","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/a-year-of-ingestion-bugs/"}</script>
 </head>
 <body class="subpage-body post-body blog-body">
 <div class="mobile-nav__overlay"></div>
@@ -132,11 +132,11 @@
   </button>
   <span class="post-rail__toast" data-share-toast hidden>Link copied</span>
 </aside>
-<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>A Year of Ingestion Bugs</nav>
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>A Year of Ingestion Bugs: What Actually Broke in 32 Data Pipelines</nav>
 <article class="article">
   <div class="post-head">
     <div class="tag-row"><span class="tag">Data engineering</span><span class="tag">Reliability</span></div>
-    <h1>A year of ingestion bugs: what actually broke in 32 market-data pipelines</h1>
+    <h1>A year of ingestion bugs: what actually broke in 32 data pipelines</h1>
     <div class="post-head__foot">
     <div class="byline byline--lg">
         <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
@@ -145,27 +145,29 @@
         <span class="byline__date">August 2026</span>
       </div>
 <div class="share-row">
-      <a class="share-btn" href="mailto:?subject=A%20Year%20of%20Ingestion%20Bugs%3A%20What%20Actually%20Broke%20in%2032%20Market-Data%20Pipelines&body=A%20Year%20of%20Ingestion%20Bugs%3A%20What%20Actually%20Broke%20in%2032%20Market-Data%20Pipelines%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fa-year-of-ingestion-bugs%2F" aria-label="Share by email" title="Share by email"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
-      <a class="share-btn" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fa-year-of-ingestion-bugs%2F&text=A%20Year%20of%20Ingestion%20Bugs%3A%20What%20Actually%20Broke%20in%2032%20Market-Data%20Pipelines" target="_blank" rel="noopener" aria-label="Share on X" title="Share on X"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.2 3h3.3l-7.2 8.2L21.8 21h-6.6l-4.3-5.6L5.9 21H2.6l7.7-8.8L2.5 3h6.8l3.9 5.2L17.2 3Zm-1.2 16h1.8L8.1 4.8H6.2L16 19Z"/></svg></a>
+      <a class="share-btn" href="mailto:?subject=A%20Year%20of%20Ingestion%20Bugs%3A%20What%20Actually%20Broke%20in%2032%20Data%20Pipelines&body=A%20Year%20of%20Ingestion%20Bugs%3A%20What%20Actually%20Broke%20in%2032%20Data%20Pipelines%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fa-year-of-ingestion-bugs%2F" aria-label="Share by email" title="Share by email"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
+      <a class="share-btn" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fa-year-of-ingestion-bugs%2F&text=A%20Year%20of%20Ingestion%20Bugs%3A%20What%20Actually%20Broke%20in%2032%20Data%20Pipelines" target="_blank" rel="noopener" aria-label="Share on X" title="Share on X"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.2 3h3.3l-7.2 8.2L21.8 21h-6.6l-4.3-5.6L5.9 21H2.6l7.7-8.8L2.5 3h6.8l3.9 5.2L17.2 3Zm-1.2 16h1.8L8.1 4.8H6.2L16 19Z"/></svg></a>
       <a class="share-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fa-year-of-ingestion-bugs%2F" target="_blank" rel="noopener" aria-label="Share on LinkedIn" title="Share on LinkedIn"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M6.9 8.6H4.2V20h2.7V8.6ZM5.5 4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2ZM20 13.4c0-2.9-1.6-4.3-3.6-4.3-1.7 0-2.4.9-2.8 1.5V8.6H10.9c0 .8 0 11.4 0 11.4h2.7v-6.4c0-.3 0-.6.1-.8.3-.6.8-1.2 1.7-1.2 1.2 0 1.7.9 1.7 2.2V20H20v-6.6Z"/></svg></a>
       <a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fa-year-of-ingestion-bugs%2F" target="_blank" rel="noopener" aria-label="Share on Facebook" title="Share on Facebook"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M14.5 8.5V6.9c0-.7.2-1.1 1.2-1.1h1.5V3.1C16.8 3 16 3 15.1 3c-2 0-3.4 1.2-3.4 3.5v2H9.3V11h2.4v8h2.8v-8h2.3l.4-2.5h-2.7Z"/></svg></a>
-      <a class="share-btn" href="https://www.reddit.com/submit?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fa-year-of-ingestion-bugs%2F&title=A%20Year%20of%20Ingestion%20Bugs%3A%20What%20Actually%20Broke%20in%2032%20Market-Data%20Pipelines" target="_blank" rel="noopener" aria-label="Share on Reddit" title="Share on Reddit"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M22 12.1a2.1 2.1 0 0 0-3.6-1.5 10.3 10.3 0 0 0-5.2-1.6l.9-4.2 2.9.6a1.5 1.5 0 1 0 .2-1.2l-3.4-.7a.6.6 0 0 0-.7.5l-1 4.7a10.4 10.4 0 0 0-5.3 1.6 2.1 2.1 0 1 0-2.3 3.4 3.8 3.8 0 0 0 0 .6c0 3 3.6 5.5 8 5.5s8-2.5 8-5.5a3.8 3.8 0 0 0 0-.6 2.1 2.1 0 0 0 1.5-2Zm-13.6 1.4a1.5 1.5 0 1 1 1.5 1.5 1.5 1.5 0 0 1-1.5-1.5Zm8.3 4a5.6 5.6 0 0 1-3.7 1.1 5.6 5.6 0 0 1-3.7-1.1.5.5 0 1 1 .7-.7 4.7 4.7 0 0 0 3 .8 4.7 4.7 0 0 0 3-.8.5.5 0 1 1 .7.7Zm-.2-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5Z"/></svg></a>
-      <a class="share-btn" href="https://api.whatsapp.com/send?text=A%20Year%20of%20Ingestion%20Bugs%3A%20What%20Actually%20Broke%20in%2032%20Market-Data%20Pipelines%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fa-year-of-ingestion-bugs%2F" target="_blank" rel="noopener" aria-label="Share on WhatsApp" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Zm0 1.7a7.3 7.3 0 1 1-3.7 13.6l-.3-.2-2.7.7.7-2.6-.2-.3A7.3 7.3 0 0 1 12 4.7Zm4.2 9.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1-.6.7-.7.9-.3.2-.5.1a6 6 0 0 1-1.8-1.1 6.6 6.6 0 0 1-1.2-1.6c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 2 4.5 4.5 0 0 0 1 2.4 10.2 10.2 0 0 0 3.9 3.4c1.8.7 1.8.5 2.2.4a2.3 2.3 0 0 0 1.5-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"/></svg></a>
+      <a class="share-btn" href="https://www.reddit.com/submit?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fa-year-of-ingestion-bugs%2F&title=A%20Year%20of%20Ingestion%20Bugs%3A%20What%20Actually%20Broke%20in%2032%20Data%20Pipelines" target="_blank" rel="noopener" aria-label="Share on Reddit" title="Share on Reddit"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M22 12.1a2.1 2.1 0 0 0-3.6-1.5 10.3 10.3 0 0 0-5.2-1.6l.9-4.2 2.9.6a1.5 1.5 0 1 0 .2-1.2l-3.4-.7a.6.6 0 0 0-.7.5l-1 4.7a10.4 10.4 0 0 0-5.3 1.6 2.1 2.1 0 1 0-2.3 3.4 3.8 3.8 0 0 0 0 .6c0 3 3.6 5.5 8 5.5s8-2.5 8-5.5a3.8 3.8 0 0 0 0-.6 2.1 2.1 0 0 0 1.5-2Zm-13.6 1.4a1.5 1.5 0 1 1 1.5 1.5 1.5 1.5 0 0 1-1.5-1.5Zm8.3 4a5.6 5.6 0 0 1-3.7 1.1 5.6 5.6 0 0 1-3.7-1.1.5.5 0 1 1 .7-.7 4.7 4.7 0 0 0 3 .8 4.7 4.7 0 0 0 3-.8.5.5 0 1 1 .7.7Zm-.2-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5Z"/></svg></a>
+      <a class="share-btn" href="https://api.whatsapp.com/send?text=A%20Year%20of%20Ingestion%20Bugs%3A%20What%20Actually%20Broke%20in%2032%20Data%20Pipelines%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fa-year-of-ingestion-bugs%2F" target="_blank" rel="noopener" aria-label="Share on WhatsApp" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Zm0 1.7a7.3 7.3 0 1 1-3.7 13.6l-.3-.2-2.7.7.7-2.6-.2-.3A7.3 7.3 0 0 1 12 4.7Zm4.2 9.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1-.6.7-.7.9-.3.2-.5.1a6 6 0 0 1-1.8-1.1 6.6 6.6 0 0 1-1.2-1.6c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 2 4.5 4.5 0 0 0 1 2.4 10.2 10.2 0 0 0 3.9 3.4c1.8.7 1.8.5 2.2.4a2.3 2.3 0 0 0 1.5-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"/></svg></a>
     </div>
     </div>
-    <p class="post-head__dek">Roughly 30 bugs across a year of scraping Indian market data, sorted by cause. Eight of them produced no error at all, and those were the expensive ones.</p>
+    <p class="post-head__dek">Roughly 30 bugs across a year of collecting Indian market data, sorted by cause. Eight of them produced no error message at all, and those are the ones worth reading about.</p>
   </div>
   <figure class="post-hero">
     <img src="/images/blog/ingestion-bugs.jpg" alt="" width="1000" height="563" fetchpriority="high" decoding="async">
   </figure>
 
-  <p>Over the last year I fixed about 30 bugs across the 32 scripts that pull Indian market data — prices, corporate announcements, insider filings, news, and a few things I'd rather not admit to scraping. Eight of those bugs produced no error message of any kind. The run exited zero, the CSV got bigger, and the data was wrong. Those eight took far longer to find than the other twenty-two combined, and I think that ratio is the only genuinely interesting thing here.</p>
+  <p>Over the last year I fixed about 30 bugs across the 32 scripts that collect Indian market data — share prices, company announcements, insider filings and news. Eight of those bugs produced no error message of any kind. The script finished, reported success, the file got bigger, and the data in it was wrong. That ratio is the only genuinely interesting thing here, and it is the reason the rest of this is worth reading.</p>
 
-  <p>I'm writing this down mostly because this kind of knowledge evaporates. Six months after you fix something, all that survives is a vague sense that "the insider trades thing was annoying once," which is useless to you and to everyone else. Looking at a year of failures in one place also makes a pattern obvious that isn't obvious one bug at a time.</p>
+  <p>If any of the terms below are new: these scripts are <em>ingestion</em>, which is the stage that gets data from somebody else's system into yours. Nothing in this post is specific to finance. A pipeline pulling orders from a payments provider fails in the same five ways.</p>
+
+  <p>I am writing it down because this kind of knowledge evaporates. Six months after a fix, all that survives is a vague sense that "the insider trades thing was awkward once", which helps nobody. A year of failures in one place also makes a pattern visible that is invisible one bug at a time.</p>
 
   <h2>What broke, by cause</h2>
 
-  <p>Assigning each bug a single cause is a bit of a lie — the Cloudflare one below belongs in two categories and I put it in the one that cost me more. With that caveat:</p>
+  <p>Assigning each bug a single cause is approximate — the Cloudflare one below belongs in two categories, and I filed it under the one that took more work to resolve. With that caveat:</p>
 
   <figure class="fig">
     <svg viewBox="0 0 640 200" role="img" aria-label="Bar chart of about 30 ingestion bugs by cause: the source fighting back 9, silently wrong data 8, crashes and timeouts 5, environment and config 5, concurrency 3." class="fig__chart">
@@ -235,7 +237,7 @@ start = df[df["Close"].notna()]["Date"].max()</code></pre>
 
   <h3>A blocked run that looked like a successful one</h3>
 
-  <p>Trendlyne started returning Cloudflare 405s to plain <code>requests</code>. The supplement step caught the failure, logged it somewhere I wasn't reading, and the overall run reported success with zero rows added — which is indistinguishable from "there was nothing new," which is a completely normal outcome. I switched the fetch to <a href="https://pypi.org/project/curl-cffi/" target="_blank" rel="noopener">curl_cffi</a> with Chrome impersonation, which gets you a matching TLS fingerprint rather than just a matching user agent. The part of that fix I actually care about is the pass/fail summary printed at the end, so a fully-blocked run can't be mistaken for a quiet one.</p>
+  <p>Trendlyne started returning Cloudflare 405s to plain <code>requests</code>. The supplement step caught the failure, logged it somewhere I wasn't reading, and the overall run reported success with zero rows added — which is indistinguishable from "there was nothing new," which is a completely normal outcome. The four layers a block can come from, and how to tell them apart, are in <a href="/blog/why-scrapers-get-blocked/">why your scraper gets blocked</a>. I switched the fetch to <a href="https://pypi.org/project/curl-cffi/" target="_blank" rel="noopener">curl_cffi</a> with Chrome impersonation, which gets you a matching TLS fingerprint rather than just a matching user agent. The part of that fix I actually care about is the pass/fail summary printed at the end, so a fully-blocked run can't be mistaken for a quiet one.</p>
 
   <h3>The 200-row window</h3>
 
@@ -247,7 +249,7 @@ start = df[df["Close"].notna()]["Date"].max()</code></pre>
 
   <h2>2. The source fighting back — 9 bugs</h2>
 
-  <p>The largest category by count and the least interesting, because every one of these announced itself. 403s from <a href="https://scrapy.org/" target="_blank" rel="noopener">Scrapy</a> until I rotated user agents and slowed the request rate — <a href="https://docs.scrapy.org/en/latest/topics/autothrottle.html" target="_blank" rel="noopener">AutoThrottle</a> does most of that for you and I should have turned it on before writing my own middleware. A Playwright browser that crashed until I ran it headless. Twitter rate-limiting hard enough that the scraper needed seven cycles of three-minute waits on a fresh page, twelve-minute waits mid-scroll, and per-handle re-auth. Cloudflare, twice. Eventually a proxy pool with rotation, because a single IP wasn't going to finish a full crawl.</p>
+  <p>The largest category by count and the least interesting, because every one of these announced itself. 403s from <a href="https://scrapy.org/" target="_blank" rel="noopener">Scrapy</a> until I rotated user agents and slowed the request rate — <a href="https://docs.scrapy.org/en/latest/topics/autothrottle.html" target="_blank" rel="noopener">AutoThrottle</a> does most of that work and is the right default; I reached for custom middleware first, and the built-in setting has done the job since. A Playwright browser that crashed until I ran it headless. Twitter rate-limiting hard enough that the scraper needed seven cycles of three-minute waits on a fresh page, twelve-minute waits mid-scroll, and per-handle re-auth. Cloudflare, twice. Eventually a proxy pool with rotation, because a single IP wasn't going to finish a full crawl.</p>
 
   <p>The useful thing to come out of this category isn't any individual fix but the adaptive worker pool in the price downloader: it starts at five concurrent workers, drops one on any API or rate-limit error, and adds one back after fifteen consecutive clean calls. It means most of these stopped happening rather than each needing to be handled. I wrote about that pattern in <a href="/blog/building-resumable-etl-pipelines/">building resumable ETL pipelines</a>.</p>
 
@@ -259,11 +261,11 @@ start = df[df["Close"].notna()]["Date"].max()</code></pre>
 
   <p>Hardcoded output directories, three separate times, each one discovered by running the pipeline somewhere other than my machine. A script that broke because I renamed <code>scripts/</code> to <code>Scripts/</code> when I moved the project, which is a bug that only exists on case-sensitive filesystems and therefore only appeared on the machine that mattered. Output paths are arguments now.</p>
 
-  <p>These are embarrassing rather than interesting, but they're a fifth of the total, which is the kind of thing you only notice by counting.</p>
+  <p>Individually these are dull. Collectively they are a sixth of the total, which is the kind of proportion you only see by counting — and every one of them is the same root cause: a value that belongs to the environment written into the code instead of passed into it.</p>
 
   <h2>5. Concurrency — 3 bugs</h2>
 
-  <p>All three are really one bug I didn't fix properly the first two times. Every worker thread appended its result to a shared <code>combined.csv</code> by reading the file, concatenating, deduping and writing it back:</p>
+  <p>All three are one bug, approached three times. Every worker thread appended its result to a shared <code>combined.csv</code> by reading the file, concatenating, deduping and writing it back:</p>
 
   <pre><code># Before: every worker reads, merges and rewrites the whole file.
 with combined_file_lock:
@@ -278,15 +280,15 @@ frames = [f.result().df for f in as_completed(futures)]
    .drop_duplicates(["Date", "Symbol"], keep="last")
    .to_csv(combined_path, index=False))</code></pre>
 
-  <p>The lock stopped two threads writing at the same instant, which is not the same as making this correct. The whole read-modify-write cycle was still redoing an enormous amount of work, and an interruption mid-write left a truncated file that the next thread would read as the complete dataset and then write back. Three attempts over one day to get this right, which is two more than I'd like to admit for a problem this well-known.</p>
+  <p>The lock stopped two threads writing at the same instant, which is not the same as making this correct. Writing a file in place is not atomic: the correct shape is to write a temporary file and <a href="https://lwn.net/Articles/457667/" target="_blank" rel="noopener">rename it over the original</a>, which is the one filesystem operation that either happens or does not. The whole read-modify-write cycle was still redoing an enormous amount of work, and an interruption mid-write left a truncated file that the next thread would read as the complete dataset and then write back. It took three passes in one day to settle, which is a fair indicator of how much of this problem is in the design rather than in the lock: the first two attempts made the write safer without changing the fact that every worker was rewriting the whole file.</p>
 
   <h2>What I'd do differently</h2>
 
-  <p>The obvious conclusion — write more tests — is one everybody already agrees with and nobody acts on, so here are the two narrower things that would actually have helped.</p>
+  <p>The obvious conclusion — write more tests — is one everybody already agrees with and nobody acts on. It is also not quite the right conclusion: a passing test suite is evidence about the code and not about the data, which I went through separately in <a href="/blog/how-to-test-a-data-pipeline/">how to test a data pipeline</a>. So here are the two narrower things that would actually have helped.</p>
 
   <p><strong>An empty result and a blocked result are different, and the pipeline has to say which one it got.</strong> Three of the eight silent bugs are really the same bug. Cloudflare blocked me, or the window truncated at 200 rows, or the dedup key deleted everything — and in all three cases the output was "zero new rows," which is also what a quiet Tuesday looks like. Anything that can return nothing needs to distinguish "the source had nothing" from "I was prevented from finding out." A pass/fail summary at the end of a run is a crude instrument and it caught two of these.</p>
 
-  <p><strong>Don't let the data be its own checkpoint unless you validate it first.</strong> Resuming from the newest row in the file is a genuinely good pattern and I still use it — an interrupted run needs no separate state. But any bad row you write becomes the instruction for where to start next time, and two of the eight silent bugs are exactly that. Resume from the newest <em>valid</em> row, where "valid" is defined explicitly per pipeline. If you'd rather not hand-roll the check, <a href="https://pandera.readthedocs.io/" target="_blank" rel="noopener">pandera</a> lets you declare the schema and column constraints and fail the load instead of writing the row. I'm not using it yet; I probably should be.</p>
+  <p><strong>Don't let the data be its own checkpoint unless you validate it first.</strong> Resuming from the newest row in the file is a genuinely good pattern and I still use it — an interrupted run needs no separate state. But any bad row you write becomes the instruction for where to start next time, and two of the eight silent bugs are exactly that. Resume from the newest <em>valid</em> row, where "valid" is defined explicitly per pipeline. If you'd rather not hand-roll the check, <a href="https://pandera.readthedocs.io/" target="_blank" rel="noopener">pandera</a> lets you declare the schema and column constraints and fail the load instead of writing the row, and <a href="https://greatexpectations.io/expectations/" target="_blank" rel="noopener">Great Expectations</a> has a ready-made vocabulary for the same checks. I'm not using it yet; I probably should be.</p>
 
   <p>The thing I haven't done, and should, is measure how long each of these was live before I caught it. The loud ones are easy: they were fixed within hours of appearing, because they appeared. For the silent ones I genuinely don't know, and that's the point — nothing in my setup records when a bug started, only when I got around to fixing it.</p>
 
@@ -303,48 +305,77 @@ frames = [f.result().df for f in as_completed(futures)]
 
   <p>Which is roughly where I've landed: the loud failures are a solved problem and mostly handle themselves now, and the silent ones I catch by luck. Closing that gap probably means re-fetching data I already have and diffing it against itself on a schedule, which is the next thing I want to build, and which I suspect will find things I won't enjoy. The stack this came out of is described on the <a href="/projects/market-data-pipeline/">market-data pipeline</a> page, and the dedup problems in more detail in <a href="/blog/how-i-scraped-nse-insider-filings/">scraping NSE insider filings</a>.</p>
 
-  <h2>Elsewhere</h2>
+  <h2>References and further reading</h2>
 
-  <p>Ding Yuan et al., <a href="https://www.usenix.org/conference/osdi14/technical-sessions/presentation/yuan" target="_blank" rel="noopener">Simple Testing Can Prevent Most Critical Failures</a> (OSDI '14), looked at catastrophic failures in Cassandra, HBase, HDFS, MapReduce and Redis and found the majority came from error-handling code that was wrong or empty rather than from the original error. Mine is smaller and much less rigorous, but the shape is the same: the failure that hurts isn't the one that throws.</p>
+  <p>Ding Yuan et al., <a href="https://www.usenix.org/system/files/conference/osdi14/osdi14-paper-yuan.pdf" target="_blank" rel="noopener">Simple Testing Can Prevent Most Critical Failures</a> (OSDI '14), looked at catastrophic failures in Cassandra, HBase, HDFS, MapReduce and Redis and found the majority came from error-handling code that was wrong or empty rather than from the original error. Category 1 above is that paper, at one-person scale.</p>
 
   <p><a href="https://jepsen.io/analyses" target="_blank" rel="noopener">Jepsen's analyses</a> are the best demonstration I know that a system will happily tell you everything is fine while losing your writes, and that the only way to know otherwise is to go looking on purpose. Different scale, same problem as the dedup key.</p>
+
+  <h3>The specific fixes, in someone else's words</h3>
+
+  <ul>
+    <li><a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.merge.html" target="_blank" rel="noopener">pandas <code>merge</code></a> — the <code>validate="one_to_one"</code> argument raises on the row-multiplying join that turned my deduplication into duplication.</li>
+    <li><a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.drop_duplicates.html" target="_blank" rel="noopener">pandas <code>drop_duplicates</code></a> — worth reading closely for what happens when a named subset column is missing, which is the mechanism behind the first silent bug.</li>
+    <li><a href="https://www.postgresql.org/docs/current/sql-insert.html" target="_blank" rel="noopener">Postgres <code>INSERT ... ON CONFLICT</code></a> — the same problem solved properly by a database. If your pipeline can write to Postgres instead of a CSV, most of category 1 stops being possible.</li>
+    <li><a href="https://lwn.net/Articles/457667/" target="_blank" rel="noopener">Ext4 and data loss</a> (LWN) — why "write the file in place" is not safe, and why write-temp-then-rename is the pattern.</li>
+    <li><a href="https://www.sqlite.org/atomiccommit.html" target="_blank" rel="noopener">How SQLite implements atomic commit</a> — the long version of the same idea, and a good argument for using a database rather than reimplementing one badly around a CSV.</li>
+    <li><a href="https://pandera.readthedocs.io/" target="_blank" rel="noopener">pandera</a> and <a href="https://greatexpectations.io/expectations/" target="_blank" rel="noopener">Great Expectations</a> — declare what a valid row looks like and fail the load, rather than discovering it downstream.</li>
+    <li><a href="https://airflow.apache.org/docs/apache-airflow/stable/best-practices.html" target="_blank" rel="noopener">Airflow best practices</a> — the idempotency and "tasks must be re-runnable" rules, which is the same discipline these scripts arrived at without a scheduler.</li>
+  </ul>
+
+  <h3>Background</h3>
+
+  <ul>
+    <li><a href="https://danluu.com/file-consistency/" target="_blank" rel="noopener">Files are hard</a> — the survey of how many ways writing a file goes wrong. Read it before trusting any pipeline whose checkpoint is a file.</li>
+    <li><a href="https://github.com/ranaroussi/yfinance" target="_blank" rel="noopener">yfinance</a> — the source behind the all-NaN rows. Its issue tracker is a useful reminder that an unofficial client's behaviour is not a contract.</li>
+    <li><a href="https://www.nseindia.com/companies-listing/corporate-filings-insider-trading" target="_blank" rel="noopener">NSE insider-trading disclosures</a> — the page the dedup bug was quietly discarding filings from.</li>
+  </ul>
+
+  <h3>Related work of mine</h3>
+
+  <ul>
+    <li><a href="/blog/building-resumable-etl-pipelines/">Why rerunning a pipeline should fix data</a> — how to design a pipeline so that rerunning it repairs bad data instead of duplicating it.</li>
+    <li><a href="/blog/how-to-test-a-data-pipeline/">How to test a data pipeline</a> — the kinds of tests that catch failures like these before they ship, and why a passing unit-test suite misses them.</li>
+    <li><a href="/blog/why-scrapers-get-blocked/">Why your scraper gets blocked</a> — what actually refuses a scraper (headers, TLS fingerprint, IP address, behaviour) and which fix addresses which.</li>
+    <li><a href="/projects/market-data-pipeline/">Market data platform</a> — the project page for the system these collectors run in: what it gathers and how the pieces fit together.</li>
+  </ul>
 </article>
 
 <section class="keep-reading" aria-labelledby="keep-reading-h">
   <div class="keep-reading__inner">
     <h2 class="keep-reading__title" id="keep-reading-h">Keep reading</h2>
     <div class="post-grid post-grid--sm">
+      <a class="post-card post-card--sm" href="/blog/how-to-test-a-data-pipeline/">
+        <div class="post-card__media">
+          <img src="/images/blog/pipeline-tests.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">Testing</span><span class="tag">Data engineering</span></div>
+          <h3 class="post-card__title">How to Test a Data Pipeline: 92 Passing Tests, 3 Broken Features</h3>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+          <p class="post-card__excerpt">A green suite proved the code did what it was written to do, and nothing about whether the product worked. What I test instead now, including the control run that has to come first.</p>
+        </div>
+      </a>
       <a class="post-card post-card--sm" href="/blog/how-i-scraped-nse-insider-filings/">
         <div class="post-card__media">
           <img src="/images/blog/scraping.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
         </div>
         <div class="post-card__body">
           <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Data engineering</span></div>
-          <h3 class="post-card__title">How I Scraped 20 Years of NSE Insider Filings</h3>
+          <h3 class="post-card__title">How to Scrape 20 Years of Data From a Site That Paginates by Date</h3>
           <div class="byline"><span class="byline__date">August 2026</span></div>
-          <p class="post-card__excerpt">180-day windows, a dedup key that silently deleted filings, and the 30-60 day indexing lag that forces a second source.</p>
+          <p class="post-card__excerpt">The endpoint only answers 180 days at a time, and the answers are not final. Windowing, deduplication that deleted rows, and why one source was never going to be enough.</p>
         </div>
       </a>
-      <a class="post-card post-card--sm" href="/blog/building-resumable-etl-pipelines/">
+      <a class="post-card post-card--sm" href="/blog/local-llm-vs-api/">
         <div class="post-card__media">
-          <img src="/images/blog/resumable-etl.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+          <img src="/images/blog/local-llm.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
         </div>
         <div class="post-card__body">
-          <div class="tag-row"><span class="tag">ETL</span><span class="tag">Data engineering</span></div>
-          <h3 class="post-card__title">Making Pipeline Reruns Converge Instead of Drift</h3>
-          <div class="byline"><span class="byline__date">August 2026</span></div>
-          <p class="post-card__excerpt">Four ways I broke the rule that a rerun must improve the data, the guard added for each, and the one case where convergence still is not guaranteed.</p>
-        </div>
-      </a>
-      <a class="post-card post-card--sm" href="/blog/minute-level-stock-prediction/">
-        <div class="post-card__media">
-          <img src="/images/blog/intraday-model.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
-        </div>
-        <div class="post-card__body">
-          <div class="tag-row"><span class="tag">Quant / ML</span><span class="tag">Machine learning</span></div>
-          <h3 class="post-card__title">What My Intraday Model Actually Predicted on 9.4M NSE Ticks</h3>
-          <div class="byline"><span class="byline__date">August 2026</span></div>
-          <p class="post-card__excerpt">61.4% precision against a 46.8% base rate sounds like an edge — until you notice it fired 70 times out of 3,100. The two ways I nearly fooled myself.</p>
+          <div class="tag-row"><span class="tag">LLMs</span><span class="tag">Infrastructure</span></div>
+          <h3 class="post-card__title">Local LLM vs API: The Numbers From Running Both on a 6GB GPU</h3>
+          <div class="byline"><span class="byline__date">July 2026</span></div>
+          <p class="post-card__excerpt">A 7B model on a laptop GPU against a hosted 70B on a free tier. Four times slower, no daily cap, and one measurement that turned out to be answering a different question.</p>
         </div>
       </a>
     </div>
