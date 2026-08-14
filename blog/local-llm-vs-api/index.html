@@ -240,7 +240,7 @@ job_type
 
   <p><strong>Local</strong> when the task is narrow and repetitive — extract these fields from this document — when the volume is steady and would collide with a daily cap, when nobody is waiting on the response, or when the text should not leave the machine.</p>
 
-  <p><strong>Both, ordered by cost.</strong> What I actually run is a chain: local first because it is uncapped, then the free hosted tier, then a metered account that is only reached when everything free has failed. The whole chain is in <a href="https://github.com/VishnujanNarayanan/Job_Application_Bot" target="_blank" rel="noopener">Job_Application_Bot</a> if you want the wiring. That also means the classification described in <a href="/blog/what-429-really-means/">what a 429 really means</a> has to be right, since it decides when to give up on one link and move to the next.</p>
+  <p><strong>Both, ordered by cost.</strong> What I actually run is a chain: local first because it is uncapped, then the free hosted tier, then a metered account that is only reached when everything free has failed. The whole chain is in <a href="https://github.com/VishnujanNarayanan/Job_Application_Bot" target="_blank" rel="noopener">Job_Application_Bot</a> if you want the wiring. That also means the classification described in <a href="/blog/http-429-retry-logic/">what a 429 really means</a> has to be right, since it decides when to give up on one link and move to the next.</p>
 
   <p><strong>If you take one thing:</strong> constrain the output with a schema, then measure whether the fields have content, not whether they parse. Those are different tests and only the second one is about the model.</p>
 
@@ -272,7 +272,7 @@ job_type
   <h3>Related work of mine</h3>
 
   <ul>
-    <li><a href="/blog/what-429-really-means/">What a 429 really means</a> — how to classify a provider's refusals, which is what decides when to fall back to the next one.</li>
+    <li><a href="/blog/http-429-retry-logic/">What a 429 really means</a> — how to classify a provider's refusals, which is what decides when to fall back to the next one.</li>
     <li><a href="/blog/how-to-test-a-data-pipeline/">How to test a data pipeline</a> — why a passing test suite can still miss a provider retiring a model, and what to test instead.</li>
     <li><a href="https://github.com/VishnujanNarayanan/Job_Application_Bot" target="_blank" rel="noopener">Job_Application_Bot</a> (source) — the repository these measurements come from: the prompt, the JSON schema and the provider fallback chain.</li>
     <li><a href="https://console.groq.com/docs/rate-limits" target="_blank" rel="noopener">Groq rate limits</a> — the provider's published free-tier limits, if you want to check where your own usage would land.</li>
