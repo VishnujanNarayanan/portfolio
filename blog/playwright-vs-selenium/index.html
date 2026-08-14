@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en-US" class="lenis no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Playwright vs Selenium: What Changed When I Moved 12 Scrapers Over</title>
+<meta name="description" content="Playwright vs Selenium compared on real scrapers: waits, session reuse, async, headless detection, and the one blocking problem no browser tool solves.">
+<meta name="author" content="Vishnujan Narayanan">
+<meta property="article:author" content="https://www.linkedin.com/in/vishnujan-narayanan">
+<meta property="article:published_time" content="2026-06-18">
+<meta property="article:modified_time" content="2026-06-18">
+<link rel="icon" href="../../favicon.ico?v=2" sizes="any">
+<link rel="icon" type="image/png" href="../../favicon-512.png?v=2" sizes="512x512">
+<link rel="apple-touch-icon" href="../../apple-touch-icon.png?v=2">
+<link rel="canonical" href="https://vishnujan.dev/blog/playwright-vs-selenium/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta property="og:title" content="Playwright vs Selenium: What Changed When I Moved 12 Scrapers Over">
+<meta property="og:description" content="Waits, session reuse, async, headless detection — and the one blocking problem neither tool solves.">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Vishnujan Narayanan">
+<meta property="og:locale" content="en_US">
+<meta property="og:url" content="https://vishnujan.dev/blog/playwright-vs-selenium/">
+<meta property="og:image" content="https://vishnujan.dev/images/blog/share-playwright-selenium.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:alt" content="Playwright vs Selenium: What Changed When I Moved 12 Scrapers Over">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Playwright vs Selenium: What Changed When I Moved 12 Scrapers Over">
+<meta name="twitter:description" content="Waits, session reuse, async, headless detection — and the one blocking problem neither tool solves.">
+<meta name="twitter:image" content="https://vishnujan.dev/images/blog/share-playwright-selenium.jpg">
+<!-- Roboto Flex is the nav reel's font (styles.css @font-face). Preloaded so it is in
+     flight before the stylesheet finishes parsing and is ready for the FIRST paint —
+     no fallback render to swap out, which is what made the header snap. crossorigin is
+     required even same-origin: fonts are always fetched in CORS mode. -->
+<link rel="preload" href="/fonts/roboto-flex-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../styles.css">
+<script>document.documentElement.classList.remove("no-js");</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"Playwright vs Selenium: What Changed When I Moved 12 Scrapers Over","item":"https://vishnujan.dev/blog/playwright-vs-selenium/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Playwright vs Selenium: What Changed When I Moved 12 Scrapers Over","description":"Playwright vs Selenium compared on real scrapers: waits, session reuse, async, headless detection, and the one blocking problem no browser tool solves.","image":"https://vishnujan.dev/images/blog/share-playwright-selenium.jpg","datePublished":"2026-06-18","dateModified":"2026-06-18","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/playwright-vs-selenium/"}</script>
+</head>
+<body class="subpage-body post-body blog-body">
+<div class="mobile-nav__overlay"></div>
+<!-- BEGIN generated: header (source: partials/header.html — run scripts/gen-partials.mjs) -->
+<header class="show">
+  <nav class="header__nav-left" aria-label="Primary navigation">
+    <a href="/?go=projects">Projects</a>
+    <a href="/?go=contact">Contact</a>
+    <a href="/blog/">Blog</a>
+    <a href="/">Home</a>
+  </nav>
+  <nav class="header__nav-right" aria-label="Header actions">
+    <div class="header__ctas">
+      <a href="/?go=socials" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Socials</span></a>
+      <button type="button" class="pill-btn pill-btn--dark" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button>
+    </div>
+    <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
+      <span class="menu-btn__icon">
+        <span class="menu-btn__line menu-btn__line--1"></span>
+        <span class="menu-btn__line menu-btn__line--2"></span>
+        <span class="menu-btn__line menu-btn__line--3"></span>
+      </span>
+    </button>
+  </nav>
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <div class="mobile-nav__panel-bg"></div>
+    <div class="mobile-nav__panel">
+      <div class="mobile-nav__header">
+        <a href="/" class="mobile-nav__logo"><span class="logo-text">VJ</span></a>
+        <button class="mobile-nav__close" type="button" aria-label="Close menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="#050419"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="#050419"></rect></svg>
+        </button>
+      </div>
+      <ul class="mobile-nav__list">
+        <li class="mobile-nav__item"><a href="/">Home</a></li>
+        <li class="mobile-nav__item"><a href="/?go=projects">Projects</a></li>
+        <li class="mobile-nav__item"><a href="/?go=contact">Contact</a></li>
+        <li class="mobile-nav__item"><a href="/blog/">Blog</a></li>
+      </ul>
+      <div class="mobile-nav__ctas">
+        <div class="mncta"><a href="/?go=socials" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Socials</span></a></div>
+        <div class="mncta"><button type="button" class="pill-btn pill-btn--dark mobile-nav__cta" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button></div>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<!--
+  Subscribe modal. A static site has no backend, so it cannot store an address or
+  send mail — the signup has to be completed by Substack either way. Two ways to
+  do that: their embed iframe (cross-origin, so its orange button cannot be
+  restyled from here) or this — our own form, styled in the site's blue, GET-ing
+  to Substack's subscribe page with the address in the query string so it arrives
+  pre-filled. No JS: a plain GET form builds ?email=... on its own, so this still
+  works if main.js never runs.
+  Opened by any [data-subscribe-open] button (see the subscribe IIFE in main.js).
+-->
+<dialog class="submodal" id="subscribe-modal" aria-labelledby="submodal-title">
+  <button type="button" class="submodal__close" data-subscribe-close aria-label="Close">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="currentColor"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="currentColor"></rect></svg>
+  </button>
+  <h2 class="submodal__title" id="submodal-title">Get new posts by email</h2>
+  <p class="submodal__text">New posts on data pipelines, scraping, and market-data ML — straight to your inbox.</p>
+  <form class="subform" action="https://vishnujannarayanan.substack.com/subscribe" method="get" target="_blank" rel="noopener">
+    <label class="subform__label" for="subscribe-email">Email</label>
+    <div class="subform__row">
+      <input class="subform__input" id="subscribe-email" type="email" name="email" required autocomplete="email" placeholder="you@example.com" spellcheck="false">
+      <button class="subform__btn" type="submit">Subscribe</button>
+    </div>
+  </form>
+  <p class="submodal__note">It's <strong>completely free</strong>, and you can <strong>unsubscribe anytime</strong>.</p>
+  <p class="submodal__terms">By subscribing you agree to Substack's <a href="https://substack.com/tos" target="_blank" rel="noopener">Terms of Use</a>, its <a href="https://substack.com/privacy" target="_blank" rel="noopener">Privacy Policy</a> and its <a href="https://substack.com/ccpa#personal-data-collected" target="_blank" rel="noopener">Information collection notice</a>.</p>
+  <a class="substack-badge" href="https://vishnujannarayanan.substack.com/" target="_blank" rel="me noopener">
+    <svg viewBox="0 0 21 24" width="13" height="15" aria-hidden="true" focusable="false"><path d="M20.999 0H0v2.836h20.999V0Z" fill="currentColor"></path><path d="M20.999 5.406H0v2.836h20.999V5.406Z" fill="currentColor"></path><path d="M0 10.813V24l10.499-5.887L21 24V10.813H0Z" fill="currentColor"></path></svg>
+    <span>Substack</span>
+  </a>
+</dialog>
+<!-- END generated: header -->
+<main>
+<aside class="post-rail" aria-label="Post actions">
+  <a class="post-rail__btn" href="/blog/" aria-label="Back to all writing" title="Back to all writing">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+  </a>
+  <button class="post-rail__btn" type="button" data-like aria-pressed="false" aria-label="Like this post" title="Like this post">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 6.6a5 5 0 0 0-7.1 0l-1.7 1.7-1.7-1.7a5 5 0 1 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1Z"/></svg>
+  </button>
+  <button class="post-rail__btn" type="button" data-share="https://vishnujan.dev/blog/playwright-vs-selenium/" aria-label="Share this post" title="Share this post">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4"/><path d="m15.4 6.5-6.8 4"/></svg>
+  </button>
+  <span class="post-rail__toast" data-share-toast hidden>Link copied</span>
+</aside>
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>Playwright vs Selenium: What Changed When I Moved 12 Scrapers Over</nav>
+<article class="article">
+  <div class="post-head">
+    <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Tooling</span></div>
+    <h1>Playwright vs Selenium: what changed when I moved 12 scrapers over</h1>
+    <div class="post-head__foot">
+    <div class="byline byline--lg">
+        <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
+        <span class="byline__name">Vishnujan Narayanan</span>
+        <span class="byline__sep" aria-hidden="true">·</span>
+        <span class="byline__date">June 2026</span>
+      </div>
+<div class="share-row">
+      <a class="share-btn" href="mailto:?subject=Playwright%20vs%20Selenium%3A%20What%20Changed%20When%20I%20Moved%2012%20Scrapers%20Over&body=Playwright%20vs%20Selenium%3A%20What%20Changed%20When%20I%20Moved%2012%20Scrapers%20Over%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fplaywright-vs-selenium%2F" aria-label="Share by email" title="Share by email"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
+      <a class="share-btn" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fplaywright-vs-selenium%2F&text=Playwright%20vs%20Selenium%3A%20What%20Changed%20When%20I%20Moved%2012%20Scrapers%20Over" target="_blank" rel="noopener" aria-label="Share on X" title="Share on X"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.2 3h3.3l-7.2 8.2L21.8 21h-6.6l-4.3-5.6L5.9 21H2.6l7.7-8.8L2.5 3h6.8l3.9 5.2L17.2 3Zm-1.2 16h1.8L8.1 4.8H6.2L16 19Z"/></svg></a>
+      <a class="share-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fplaywright-vs-selenium%2F" target="_blank" rel="noopener" aria-label="Share on LinkedIn" title="Share on LinkedIn"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M6.9 8.6H4.2V20h2.7V8.6ZM5.5 4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2ZM20 13.4c0-2.9-1.6-4.3-3.6-4.3-1.7 0-2.4.9-2.8 1.5V8.6H10.9c0 .8 0 11.4 0 11.4h2.7v-6.4c0-.3 0-.6.1-.8.3-.6.8-1.2 1.7-1.2 1.2 0 1.7.9 1.7 2.2V20H20v-6.6Z"/></svg></a>
+      <a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fplaywright-vs-selenium%2F" target="_blank" rel="noopener" aria-label="Share on Facebook" title="Share on Facebook"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M14.5 8.5V6.9c0-.7.2-1.1 1.2-1.1h1.5V3.1C16.8 3 16 3 15.1 3c-2 0-3.4 1.2-3.4 3.5v2H9.3V11h2.4v8h2.8v-8h2.3l.4-2.5h-2.7Z"/></svg></a>
+      <a class="share-btn" href="https://www.reddit.com/submit?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fplaywright-vs-selenium%2F&title=Playwright%20vs%20Selenium%3A%20What%20Changed%20When%20I%20Moved%2012%20Scrapers%20Over" target="_blank" rel="noopener" aria-label="Share on Reddit" title="Share on Reddit"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M22 12.1a2.1 2.1 0 0 0-3.6-1.5 10.3 10.3 0 0 0-5.2-1.6l.9-4.2 2.9.6a1.5 1.5 0 1 0 .2-1.2l-3.4-.7a.6.6 0 0 0-.7.5l-1 4.7a10.4 10.4 0 0 0-5.3 1.6 2.1 2.1 0 1 0-2.3 3.4 3.8 3.8 0 0 0 0 .6c0 3 3.6 5.5 8 5.5s8-2.5 8-5.5a3.8 3.8 0 0 0 0-.6 2.1 2.1 0 0 0 1.5-2Zm-13.6 1.4a1.5 1.5 0 1 1 1.5 1.5 1.5 1.5 0 0 1-1.5-1.5Zm8.3 4a5.6 5.6 0 0 1-3.7 1.1 5.6 5.6 0 0 1-3.7-1.1.5.5 0 1 1 .7-.7 4.7 4.7 0 0 0 3 .8 4.7 4.7 0 0 0 3-.8.5.5 0 1 1 .7.7Zm-.2-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5Z"/></svg></a>
+      <a class="share-btn" href="https://api.whatsapp.com/send?text=Playwright%20vs%20Selenium%3A%20What%20Changed%20When%20I%20Moved%2012%20Scrapers%20Over%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fplaywright-vs-selenium%2F" target="_blank" rel="noopener" aria-label="Share on WhatsApp" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Zm0 1.7a7.3 7.3 0 1 1-3.7 13.6l-.3-.2-2.7.7.7-2.6-.2-.3A7.3 7.3 0 0 1 12 4.7Zm4.2 9.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1-.6.7-.7.9-.3.2-.5.1a6 6 0 0 1-1.8-1.1 6.6 6.6 0 0 1-1.2-1.6c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 2 4.5 4.5 0 0 0 1 2.4 10.2 10.2 0 0 0 3.9 3.4c1.8.7 1.8.5 2.2.4a2.3 2.3 0 0 0 1.5-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"/></svg></a>
+    </div>
+    </div>
+    <p class="post-head__dek">Two years of running both against sites that did not want to be read. Where Playwright genuinely wins, where the difference is nothing, and the case where neither one helps.</p>
+  </div>
+  <figure class="post-hero">
+    <img src="/images/blog/playwright-selenium.jpg" alt="" width="1000" height="563" fetchpriority="high" decoding="async">
+  </figure>
+
+  <p>My market-data repo has 32 collection scripts. Fourteen of them drive a real web browser, because the data they want only appears after a page has run its JavaScript. Twelve use Playwright and two use Selenium, and the two Selenium ones are the oldest files in the folder.</p>
+
+  <p>That ratio is the honest summary of my opinion, but it is not an argument, and the reasons people usually give for it are mostly wrong. This is what actually changed when the same jobs moved across, including the part where the tidy story about Playwright does not survive contact with my own code.</p>
+
+  <h2>What these tools do, in one paragraph</h2>
+
+  <p>A lot of a modern web page does not exist in the file the server sends you. The server sends a mostly empty shell plus JavaScript, and the numbers you can see in the browser get filled in a moment later. If you fetch that page the plain way — the equivalent of <code>curl</code> — you get the shell. So instead you start an actual browser, invisibly, and tell it what to do: open this page, click that button, now give me the text. <a href="https://www.selenium.dev/" target="_blank" rel="noopener">Selenium</a> and <a href="https://playwright.dev/" target="_blank" rel="noopener">Playwright</a> are both ways to give a browser those instructions from code. Selenium arrived in 2004 and is the reason the whole category exists; Playwright is Microsoft's, from 2020.</p>
+
+  <p>Both work. Anything one can scrape, the other can scrape. The differences are in how much code you write around the parts where a page is slower than your script.</p>
+
+  <h2>The difference that shows up on line one: waiting</h2>
+
+  <p>The core problem in browser automation is that your code runs instantly and a page does not. You ask for a button that has not been drawn yet, and you get an error rather than a button.</p>
+
+  <p>Selenium's answer is that you say so explicitly. You wrap the thing you want in a wait that polls until a condition holds:</p>
+
+  <pre><code>self.wait = WebDriverWait(self.driver, 15)
+news_tab = WebDriverWait(self.driver, 10).until(
+    EC.element_to_be_clickable((By.XPATH, "//a[contains(text(),'News')]")))</code></pre>
+
+  <p>That is from my Economic Times news scraper, which is one of the two Selenium files. It is 563 lines, and 12 of them are <code>except</code> clauses. One catches <code>StaleElementReferenceException</code>, which is worth explaining because it is the single most Selenium-shaped thing in the codebase: when you find an element, Selenium hands you a reference to that specific object in the page. If the page redraws that part of itself — which single-page sites do constantly, for reasons that have nothing to do with you — your reference now points at something that no longer exists, and using it raises. The element is still there on screen. Your handle to it is not.</p>
+
+  <p>Playwright does not hand you the element. It hands you a <em>locator</em>, which is a stored description of how to find the element, resolved fresh every time you use it, with a wait built in:</p>
+
+  <pre><code>await page.locator("input[name='password']").fill(PASSWORD)
+await page.get_by_role("button", name="Log in").click()
+await page.wait_for_url("**/home", timeout=15000)</code></pre>
+
+  <p>Each of those three lines waits on its own for the element to exist, be visible, and be ready to be interacted with. There is no wait object, and a redraw between two lines is not an error, because the description is re-run rather than a handle being reused. That is the real difference, and it is a difference in what you have to think about rather than in what is possible.</p>
+
+  <h2>Where that story breaks: my Playwright scripts are full of fixed sleeps</h2>
+
+  <p>The usual claim is that auto-waiting means you stop writing <code>sleep(5)</code>. I counted mine. Across the 12 Playwright scripts there are 52 calls to <code>wait_for_timeout</code>, which is a fixed sleep wearing a different name, against 25 uses of the proper "wait until this appears" call.</p>
+
+  <p>Those 52 are not all the same thing, and separating them is the useful part:</p>
+
+  <p><strong>Pacing.</strong> A good share of them are deliberate — a pause between requests so a script reads more like a person and less like a flood. That has nothing to do with which tool is in use, and removing it would be a mistake.</p>
+
+  <p><strong>No signal to wait on.</strong> Auto-waiting answers "is this element ready", which requires you to know which element proves the page is done. When clicking a filter triggers a background fetch that swaps numbers inside table cells that were already on the screen, there is no new element to wait for, and the honest options are to <a href="https://playwright.dev/python/docs/network" target="_blank" rel="noopener">wait for the network response by URL</a> or to sleep. I reached for the sleep in more places than I would defend.</p>
+
+  <p>So the accurate version of the claim is narrower than the popular one: auto-waiting removes the class of failure where the element was not there <em>yet</em>. It does not remove the need to know when a page has finished, and it does not write that knowledge for you.</p>
+
+  <h2>Logging in once instead of every run</h2>
+
+  <p>This is the feature that actually changed how I structure scripts, and it gets less attention than the waiting.</p>
+
+  <p>Several sources only show data to a signed-in account. Signing in from code is the fragile part of any scraper: it is the most heavily defended page on the site, and it is where a wrong move costs you the account rather than the run. Playwright lets you do it once, by hand, in a visible browser, and then save everything the browser learned — cookies and stored site data — to a JSON file:</p>
+
+  <pre><code>browser = await p.chromium.launch(headless=False)   # visible: log in as a human
+context = await browser.new_context()
+# ... fill the login form once, then:
+await context.storage_state(path="storageState.json")</code></pre>
+
+  <p>Every later run starts from that file and is already signed in, with no credentials in the scraping code at all. The equivalent in Selenium is to point Chrome at a saved user profile directory, which does work and is heavier: it is a whole browser profile on disk rather than a small file, it carries state you did not ask for, and two runs cannot share it at the same time. Being able to commit a script that has no password in it, and hand the session file separately, is a structural improvement rather than a convenience.</p>
+
+  <h2>One process, many pages</h2>
+
+  <p>Playwright's Python API has an async version, so a single script can drive several pages at once inside one process. The Selenium way to get concurrency is a browser per thread, which is much heavier and is the reason a large Selenium setup ends up wanting a <a href="https://www.selenium.dev/documentation/grid/" target="_blank" rel="noopener">Grid</a> — a separate service that hands out browsers. If you would rather not write the pool yourself, <a href="https://crawlee.dev/python/" target="_blank" rel="noopener">Crawlee</a> wraps Playwright with request queueing, retries and concurrency limits already built; I use it in <a href="https://github.com/VishnujanNarayanan/product-explorer" target="_blank" rel="noopener">product-explorer</a> for exactly that reason.</p>
+
+  <p>One caution from my own logs: concurrency is where scraping bugs come from. Three of the bugs in my <a href="/blog/a-year-of-ingestion-bugs/">year of ingestion bugs</a> were caused by parallel workers, not by the sites. Running eight pages at once also means arriving at a site eight times as fast, which is the fastest way to turn a working scraper into a blocked one.</p>
+
+  <h2>The operational difference nobody mentions until it breaks</h2>
+
+  <p>Selenium drives a browser you supply. That means the browser and the driver that talks to it have to be version-compatible, and Chrome updates itself roughly monthly. The usual patch is <a href="https://pypi.org/project/webdriver-manager/" target="_blank" rel="noopener">webdriver-manager</a>, which downloads a matching driver at runtime — it is in my requirements file for exactly this reason. It works, and it adds a network call at startup to a place where you did not previously have one.</p>
+
+  <p>Since 4.6, Selenium ships <a href="https://www.selenium.dev/documentation/selenium_manager/" target="_blank" rel="noopener">Selenium Manager</a>, which does the same job in-process and makes <code>webdriver-manager</code> largely unnecessary — worth knowing if you last touched Selenium before that, because it removes most of the version-matching pain this paragraph describes.</p>
+
+  <p>Playwright downloads and pins its own browser builds through <code>playwright install</code>. The browser is a dependency of the project rather than a property of the machine, so a script that ran last month runs the same way this month, and the same way in a container. For unattended jobs on a schedule, that is worth more than any API difference.</p>
+
+  <h2>Where the choice makes no difference at all</h2>
+
+  <p>Neither tool helps with the thing that actually stops scrapers, which is being refused. My clearest example: Trendlyne, a stock-data site I use to fill gaps, started returning <code>405</code> to a plain Python request. It was not looking at the code, the headers, or the user agent. It was looking at the shape of the TLS handshake — the pattern of the encrypted connection itself, which differs between Python's networking library and a real Chrome. No amount of browser automation choice changes that; what fixed it was <a href="https://github.com/lexiforest/curl_cffi" target="_blank" rel="noopener"><code>curl_cffi</code></a>, which makes a plain HTTP request whose handshake matches Chrome's, and no browser at all:</p>
+
+  <pre><code># curl_cffi impersonates a real browser's TLS/JA3 fingerprint, which is what
+# gets past Trendlyne's Cloudflare bot mitigation (plain `requests` gets 405'd).
+from curl_cffi import requests as cffi_requests</code></pre>
+
+  <p>That is the general shape of it. A browser is the answer when the data genuinely does not exist until JavaScript runs, and it is the most expensive tool available for everything else — a Chrome instance to fetch a JSON endpoint costs hundreds of megabytes of memory and a second of startup to do what one HTTP request does in 200 milliseconds. Of my 32 scripts, 18 never open a browser. One of those 18 is still called <code>trendlyne_selenium.py</code> and contains no Selenium at all — it drives nothing, fetches HTML directly, and the filename is left over from the version that needed a browser to get the same rows. <a href="/blog/why-scrapers-get-blocked/">Why scrapers get blocked</a> goes through the rest of that stack.</p>
+
+  <h2>How I would choose now</h2>
+
+  <p><strong>New scraping work: Playwright.</strong> Locators remove a class of error, sessions save to a file, browsers are pinned, and concurrency does not need a second service.</p>
+
+  <p><strong>An existing Selenium suite: leave it.</strong> Both my Selenium scripts still run. Nothing above is worth a rewrite on its own, and a working scraper is worth more than a modern one. I ported nothing; I only wrote new work in the new tool.</p>
+
+  <p><strong>Cross-browser testing across a fleet, or a team already running Grid:</strong> Selenium is a <a href="https://www.w3.org/TR/webdriver2/" target="_blank" rel="noopener">W3C standard</a> with two decades of infrastructure behind it, and that matters more for a test suite that must run on browsers you do not control than it does for a scraper you run yourself.</p>
+
+  <p><strong>Neither, if the page is not the point.</strong> Open the network tab, find the endpoint the page is calling, and call that instead. It is faster, it breaks less often, and it is a smaller thing to be blocked for.</p>
+
+  <p>One limitation on all of the above: this comes from porting the same jobs between tools over about two years, not from a controlled benchmark. I did not run both against the same site on the same day with a stopwatch, so nothing here should be read as a speed claim. The parts I would defend are the ones about failure modes and operations, because those I have logs for.</p>
+
+  <h2>References and further reading</h2>
+
+  <p>Playwright's own page on <a href="https://playwright.dev/python/docs/actionability" target="_blank" rel="noopener">actionability</a> lists exactly which conditions each action waits for, which is the most useful page in either project's documentation and is the thing to read before deciding whether auto-waiting covers your case.</p>
+
+  <p>Selenium's <a href="https://www.selenium.dev/documentation/webdriver/waits/" target="_blank" rel="noopener">waits documentation</a> is direct about why implicit waits and explicit waits should not be mixed, which is a footgun I hit before I read it.</p>
+
+  <h3>Documentation worth having open</h3>
+
+  <ul>
+    <li><a href="https://playwright.dev/python/docs/auth" target="_blank" rel="noopener">Playwright — authentication</a>: the save-the-session-to-a-file pattern from above, with more care about when a saved state expires.</li>
+    <li><a href="https://playwright.dev/python/docs/trace-viewer" target="_blank" rel="noopener">Playwright — trace viewer</a>: records a run and replays it with the DOM, network and console at every step. It is the single biggest debugging difference between the two tools and I did not use it for far too long.</li>
+    <li><a href="https://playwright.dev/python/docs/api/class-route" target="_blank" rel="noopener">Playwright — request interception</a>: block images and fonts, or answer a request from your own data. Blocking media alone typically halves page-load time on a scrape.</li>
+    <li><a href="https://www.selenium.dev/documentation/selenium_manager/" target="_blank" rel="noopener">Selenium Manager</a>: the built-in driver resolution that replaced third-party driver managers from Selenium 4.6 onward.</li>
+    <li><a href="https://www.selenium.dev/documentation/webdriver/bidi/" target="_blank" rel="noopener">Selenium BiDi</a>: the bidirectional protocol that closes most of the capability gap — network interception and console access from Selenium, standardised rather than Chrome-only.</li>
+    <li><a href="https://www.w3.org/TR/webdriver2/" target="_blank" rel="noopener">W3C WebDriver</a> and the <a href="https://chromedevtools.github.io/devtools-protocol/" target="_blank" rel="noopener">Chrome DevTools Protocol</a>: the two wire protocols underneath all of this. Reading the second explains why Playwright can do things the first cannot express.</li>
+  </ul>
+
+  <h3>Tools mentioned</h3>
+
+  <ul>
+    <li><a href="https://crawlee.dev/python/" target="_blank" rel="noopener">Crawlee for Python</a> — queueing, retries, proxy rotation and concurrency around Playwright, so you are not rebuilding a crawler each time.</li>
+    <li><a href="https://github.com/lexiforest/curl_cffi" target="_blank" rel="noopener">curl_cffi</a> — HTTP requests whose TLS handshake matches a real browser, which is the fix when the page itself was never the problem.</li>
+    <li><a href="https://github.com/ultrafunkamsterdam/undetected-chromedriver" target="_blank" rel="noopener">undetected-chromedriver</a> — the Selenium-side answer to automation detection, if you are staying on Selenium.</li>
+    <li><a href="https://scrapy.org/" target="_blank" rel="noopener">Scrapy</a> — still the right tool when no JavaScript is involved: it is faster than any browser and its <a href="https://docs.scrapy.org/en/latest/topics/autothrottle.html" target="_blank" rel="noopener">AutoThrottle</a> handles pacing for you.</li>
+  </ul>
+
+  <h3>Related work of mine</h3>
+
+  <ul>
+    <li><a href="/blog/why-scrapers-get-blocked/">Why your scraper gets blocked</a> — the four things a refusal can come from, and why your choice of browser tool is not one of them.</li>
+    <li><a href="/blog/a-year-of-ingestion-bugs/">A year of ingestion bugs</a> — a year of real pipeline failures sorted by cause, including the ones that only appear when jobs run in parallel.</li>
+    <li><a href="/projects/market-data-pipeline/">Market data platform</a> — the project page for the platform these scrapers belong to.</li>
+    <li><a href="https://github.com/VishnujanNarayanan/product-explorer" target="_blank" rel="noopener">product-explorer</a> (source) — a public repository driving Playwright and Crawlee from a NestJS service, including a fallback that runs the scrape in the visitor's own browser.</li>
+  </ul>
+</article>
+
+<section class="keep-reading" aria-labelledby="keep-reading-h">
+  <div class="keep-reading__inner">
+    <h2 class="keep-reading__title" id="keep-reading-h">Keep reading</h2>
+    <div class="post-grid post-grid--sm">
+      <a class="post-card post-card--sm" href="/blog/how-to-test-a-data-pipeline/">
+        <div class="post-card__media">
+          <img src="/images/blog/pipeline-tests.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">Testing</span><span class="tag">Data engineering</span></div>
+          <h3 class="post-card__title">How to Test a Data Pipeline: 92 Passing Tests, 3 Broken Features</h3>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+          <p class="post-card__excerpt">A green suite proved the code did what it was written to do, and nothing about whether the product worked. What I test instead now, including the control run that has to come first.</p>
+        </div>
+      </a>
+      <a class="post-card post-card--sm" href="/blog/a-year-of-ingestion-bugs/">
+        <div class="post-card__media">
+          <img src="/images/blog/ingestion-bugs.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">Data engineering</span><span class="tag">Reliability</span></div>
+          <h3 class="post-card__title">A Year of Ingestion Bugs: What Actually Broke in 32 Data Pipelines</h3>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+          <p class="post-card__excerpt">Roughly 30 bugs across a year of collecting Indian market data, sorted by cause. Eight of them produced no error message at all, and those are the ones worth reading about.</p>
+        </div>
+      </a>
+      <a class="post-card post-card--sm" href="/blog/how-i-scraped-nse-insider-filings/">
+        <div class="post-card__media">
+          <img src="/images/blog/scraping.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Data engineering</span></div>
+          <h3 class="post-card__title">How to Scrape 20 Years of Data From a Site That Paginates by Date</h3>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+          <p class="post-card__excerpt">The endpoint only answers 180 days at a time, and the answers are not final. Windowing, deduplication that deleted rows, and why one source was never going to be enough.</p>
+        </div>
+      </a>
+    </div>
+
+  </div>
+</section>
+</main>
+<!-- BEGIN generated: footer (source: partials/footer.html — run scripts/gen-partials.mjs) -->
+<footer class="lfooter">
+
+  <div class="lfooter__layout">
+    <!-- Dark notched box (Lando footer mask) with static contour pattern inside -->
+    <div class="lfooter__clip">
+      <img class="lfooter__pattern" src="/images/footer-blobs.svg" alt="" aria-hidden="true" loading="lazy" decoding="async">
+
+      <div class="lfooter__inner">
+        <h2 class="lfooter__headline">
+          <span class="lfooter__hl-row">Subscribe to my</span>
+          <span class="lfooter__hl-row"><span class="is-hl">Newsletter</span></span>
+        </h2>
+
+        <div class="lfooter__cols">
+          <nav class="lfooter__col lfooter__col--left" aria-label="Pages">
+            <span class="lfooter__col-label">Pages</span>
+            <a href="/" class="lfooter__navlink">Home</a>
+            <a href="/?go=projects" class="lfooter__navlink">Projects</a>
+            <a href="/?go=socials" class="lfooter__navlink">Socials</a>
+            <a href="/blog/" class="lfooter__navlink">Blog</a>
+          </nav>
+          <nav class="lfooter__col lfooter__col--right" aria-label="Social links">
+            <span class="lfooter__col-label">Follow On</span>
+            <a href="https://github.com/VishnujanNarayanan" target="_blank" rel="me noopener" class="lfooter__navlink">GitHub</a>
+            <a href="https://www.linkedin.com/in/vishnujan-narayanan" target="_blank" rel="me noopener" class="lfooter__navlink">LinkedIn</a>
+            <a href="https://www.instagram.com/___vi5hnu___/" target="_blank" rel="me noopener" class="lfooter__navlink">Instagram</a>
+            <a href="https://substack.com/@vishnujannarayanan" target="_blank" rel="me noopener" class="lfooter__navlink">Substack</a>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Sky-blue tools marquee (logos tinted via CSS mask). Two identical tracks,
+           each animated translateX(-100%) of ITS OWN width — so a seamless loop
+           needs every track to be at least as wide as the footer, or the strip
+           empties out after the last logo and snaps when it wraps. The generator
+           repeats the logo list enough times to clear any viewport. -->
+      <div class="lfooter__mq" aria-hidden="true">
+        <div class="lfooter__mq-track">
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+        </div>
+        <div class="lfooter__mq-track">
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+        </div>
+      </div>
+
+      <!-- Blog pages: the subscribe card. Everywhere else: the portrait cutout
+           rising from the bottom (where the reference's helmet sits). -->
+      <div class="lfooter__sub">
+        <h3 class="lfooter__sub-title">Get new posts by email</h3>
+        <p class="lfooter__sub-text">Data pipelines, web scraping, and market-data experiments — delivered as they go up.</p>
+        <form class="subform" action="https://vishnujannarayanan.substack.com/subscribe" method="get" target="_blank" rel="noopener">
+          <label class="subform__label" for="footer-subscribe-email">Email</label>
+          <div class="subform__row">
+            <input class="subform__input" id="footer-subscribe-email" type="email" name="email" required autocomplete="email" placeholder="you@example.com" spellcheck="false">
+            <button class="subform__btn" type="submit">Subscribe</button>
+          </div>
+        </form>
+        <p class="lfooter__sub-note">No account needed, and you can unsubscribe from this email. By subscribing you agree to Substack's <a href="https://substack.com/tos" target="_blank" rel="noopener">Terms of Use</a> and <a href="https://substack.com/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+        <a class="substack-badge substack-badge--dark" href="https://vishnujannarayanan.substack.com/" target="_blank" rel="me noopener">
+          <svg viewBox="0 0 21 24" width="13" height="15" aria-hidden="true" focusable="false"><path d="M20.999 0H0v2.836h20.999V0Z" fill="currentColor"></path><path d="M20.999 5.406H0v2.836h20.999V5.406Z" fill="currentColor"></path><path d="M0 10.813V24l10.499-5.887L21 24V10.813H0Z" fill="currentColor"></path></svg>
+          <span>Substack</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Pill in the bottom-centre tab of the notched box -->
+    <!-- No trailing arrow: main.js splits this into per-letter reel clips on load, and a
+         glyph that is not a letter reels along with them. -->
+    <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me</a>
+
+    <!-- Legal row sits in the gradient shelves either side of the bottom tab -->
+    <div class="lfooter__bottom">
+      <span class="lfooter__copy">© 2026 Vishnujan Narayanan. All rights reserved</span>
+      <div class="lfooter__legal">
+        <a href="https://github.com/VishnujanNarayanan" target="_blank" rel="me noopener">GitHub</a>
+        <a href="https://www.linkedin.com/in/vishnujan-narayanan" target="_blank" rel="me noopener">LinkedIn</a>
+      </div>
+    </div>
+  </div>
+</footer>
+<!-- END generated: footer -->
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
+<script src="../../main.js" defer></script>
+</body>
+</html>

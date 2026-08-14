@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en-US" class="lenis no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Why Your Scraper Gets Blocked (and What Actually Fixes It)</title>
+<meta name="description" content="Why scrapers get blocked: TLS fingerprinting, IP reputation, headless detection and rate limits — the four layers, how to tell them apart, and the fix for each.">
+<meta name="author" content="Vishnujan Narayanan">
+<meta property="article:author" content="https://www.linkedin.com/in/vishnujan-narayanan">
+<meta property="article:published_time" content="2026-07-02">
+<meta property="article:modified_time" content="2026-07-02">
+<link rel="icon" href="../../favicon.ico?v=2" sizes="any">
+<link rel="icon" type="image/png" href="../../favicon-512.png?v=2" sizes="512x512">
+<link rel="apple-touch-icon" href="../../apple-touch-icon.png?v=2">
+<link rel="canonical" href="https://vishnujan.dev/blog/why-scrapers-get-blocked/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta property="og:title" content="Why Your Scraper Gets Blocked (and What Actually Fixes It)">
+<meta property="og:description" content="TLS fingerprints, IP reputation, headless detection, rate limits — how to tell which one is blocking you.">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Vishnujan Narayanan">
+<meta property="og:locale" content="en_US">
+<meta property="og:url" content="https://vishnujan.dev/blog/why-scrapers-get-blocked/">
+<meta property="og:image" content="https://vishnujan.dev/images/blog/share-blocked-scraper.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:alt" content="Why Your Scraper Gets Blocked (and What Actually Fixes It)">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Why Your Scraper Gets Blocked (and What Actually Fixes It)">
+<meta name="twitter:description" content="TLS fingerprints, IP reputation, headless detection, rate limits — how to tell which one is blocking you.">
+<meta name="twitter:image" content="https://vishnujan.dev/images/blog/share-blocked-scraper.jpg">
+<!-- Roboto Flex is the nav reel's font (styles.css @font-face). Preloaded so it is in
+     flight before the stylesheet finishes parsing and is ready for the FIRST paint —
+     no fallback render to swap out, which is what made the header snap. crossorigin is
+     required even same-origin: fonts are always fetched in CORS mode. -->
+<link rel="preload" href="/fonts/roboto-flex-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../styles.css">
+<script>document.documentElement.classList.remove("no-js");</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"Why Your Scraper Gets Blocked (and What Actually Fixes It)","item":"https://vishnujan.dev/blog/why-scrapers-get-blocked/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Why Your Scraper Gets Blocked (and What Actually Fixes It)","description":"Why scrapers get blocked: TLS fingerprinting, IP reputation, headless detection and rate limits — the four layers, how to tell them apart, and the fix for each.","image":"https://vishnujan.dev/images/blog/share-blocked-scraper.jpg","datePublished":"2026-07-02","dateModified":"2026-07-02","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/why-scrapers-get-blocked/"}</script>
+</head>
+<body class="subpage-body post-body blog-body">
+<div class="mobile-nav__overlay"></div>
+<!-- BEGIN generated: header (source: partials/header.html — run scripts/gen-partials.mjs) -->
+<header class="show">
+  <nav class="header__nav-left" aria-label="Primary navigation">
+    <a href="/?go=projects">Projects</a>
+    <a href="/?go=contact">Contact</a>
+    <a href="/blog/">Blog</a>
+    <a href="/">Home</a>
+  </nav>
+  <nav class="header__nav-right" aria-label="Header actions">
+    <div class="header__ctas">
+      <a href="/?go=socials" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Socials</span></a>
+      <button type="button" class="pill-btn pill-btn--dark" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button>
+    </div>
+    <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
+      <span class="menu-btn__icon">
+        <span class="menu-btn__line menu-btn__line--1"></span>
+        <span class="menu-btn__line menu-btn__line--2"></span>
+        <span class="menu-btn__line menu-btn__line--3"></span>
+      </span>
+    </button>
+  </nav>
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <div class="mobile-nav__panel-bg"></div>
+    <div class="mobile-nav__panel">
+      <div class="mobile-nav__header">
+        <a href="/" class="mobile-nav__logo"><span class="logo-text">VJ</span></a>
+        <button class="mobile-nav__close" type="button" aria-label="Close menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="#050419"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="#050419"></rect></svg>
+        </button>
+      </div>
+      <ul class="mobile-nav__list">
+        <li class="mobile-nav__item"><a href="/">Home</a></li>
+        <li class="mobile-nav__item"><a href="/?go=projects">Projects</a></li>
+        <li class="mobile-nav__item"><a href="/?go=contact">Contact</a></li>
+        <li class="mobile-nav__item"><a href="/blog/">Blog</a></li>
+      </ul>
+      <div class="mobile-nav__ctas">
+        <div class="mncta"><a href="/?go=socials" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Socials</span></a></div>
+        <div class="mncta"><button type="button" class="pill-btn pill-btn--dark mobile-nav__cta" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button></div>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<!--
+  Subscribe modal. A static site has no backend, so it cannot store an address or
+  send mail — the signup has to be completed by Substack either way. Two ways to
+  do that: their embed iframe (cross-origin, so its orange button cannot be
+  restyled from here) or this — our own form, styled in the site's blue, GET-ing
+  to Substack's subscribe page with the address in the query string so it arrives
+  pre-filled. No JS: a plain GET form builds ?email=... on its own, so this still
+  works if main.js never runs.
+  Opened by any [data-subscribe-open] button (see the subscribe IIFE in main.js).
+-->
+<dialog class="submodal" id="subscribe-modal" aria-labelledby="submodal-title">
+  <button type="button" class="submodal__close" data-subscribe-close aria-label="Close">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect y="14.1421" width="20" height="2" transform="rotate(-45 0 14.1421)" fill="currentColor"></rect><rect x="1.41406" y="0.000610352" width="20" height="2" transform="rotate(45 1.41406 0.000610352)" fill="currentColor"></rect></svg>
+  </button>
+  <h2 class="submodal__title" id="submodal-title">Get new posts by email</h2>
+  <p class="submodal__text">New posts on data pipelines, scraping, and market-data ML — straight to your inbox.</p>
+  <form class="subform" action="https://vishnujannarayanan.substack.com/subscribe" method="get" target="_blank" rel="noopener">
+    <label class="subform__label" for="subscribe-email">Email</label>
+    <div class="subform__row">
+      <input class="subform__input" id="subscribe-email" type="email" name="email" required autocomplete="email" placeholder="you@example.com" spellcheck="false">
+      <button class="subform__btn" type="submit">Subscribe</button>
+    </div>
+  </form>
+  <p class="submodal__note">It's <strong>completely free</strong>, and you can <strong>unsubscribe anytime</strong>.</p>
+  <p class="submodal__terms">By subscribing you agree to Substack's <a href="https://substack.com/tos" target="_blank" rel="noopener">Terms of Use</a>, its <a href="https://substack.com/privacy" target="_blank" rel="noopener">Privacy Policy</a> and its <a href="https://substack.com/ccpa#personal-data-collected" target="_blank" rel="noopener">Information collection notice</a>.</p>
+  <a class="substack-badge" href="https://vishnujannarayanan.substack.com/" target="_blank" rel="me noopener">
+    <svg viewBox="0 0 21 24" width="13" height="15" aria-hidden="true" focusable="false"><path d="M20.999 0H0v2.836h20.999V0Z" fill="currentColor"></path><path d="M20.999 5.406H0v2.836h20.999V5.406Z" fill="currentColor"></path><path d="M0 10.813V24l10.499-5.887L21 24V10.813H0Z" fill="currentColor"></path></svg>
+    <span>Substack</span>
+  </a>
+</dialog>
+<!-- END generated: header -->
+<main>
+<aside class="post-rail" aria-label="Post actions">
+  <a class="post-rail__btn" href="/blog/" aria-label="Back to all writing" title="Back to all writing">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+  </a>
+  <button class="post-rail__btn" type="button" data-like aria-pressed="false" aria-label="Like this post" title="Like this post">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 6.6a5 5 0 0 0-7.1 0l-1.7 1.7-1.7-1.7a5 5 0 1 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1Z"/></svg>
+  </button>
+  <button class="post-rail__btn" type="button" data-share="https://vishnujan.dev/blog/why-scrapers-get-blocked/" aria-label="Share this post" title="Share this post">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4"/><path d="m15.4 6.5-6.8 4"/></svg>
+  </button>
+  <span class="post-rail__toast" data-share-toast hidden>Link copied</span>
+</aside>
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>Why Your Scraper Gets Blocked (and What Actually Fixes It)</nav>
+<article class="article">
+  <div class="post-head">
+    <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Reliability</span></div>
+    <h1>Why your scraper gets blocked, and what actually fixes it</h1>
+    <div class="post-head__foot">
+    <div class="byline byline--lg">
+        <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
+        <span class="byline__name">Vishnujan Narayanan</span>
+        <span class="byline__sep" aria-hidden="true">·</span>
+        <span class="byline__date">July 2026</span>
+      </div>
+<div class="share-row">
+      <a class="share-btn" href="mailto:?subject=Why%20Your%20Scraper%20Gets%20Blocked%20(and%20What%20Actually%20Fixes%20It)&body=Why%20Your%20Scraper%20Gets%20Blocked%20(and%20What%20Actually%20Fixes%20It)%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fwhy-scrapers-get-blocked%2F" aria-label="Share by email" title="Share by email"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
+      <a class="share-btn" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fwhy-scrapers-get-blocked%2F&text=Why%20Your%20Scraper%20Gets%20Blocked%20(and%20What%20Actually%20Fixes%20It)" target="_blank" rel="noopener" aria-label="Share on X" title="Share on X"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.2 3h3.3l-7.2 8.2L21.8 21h-6.6l-4.3-5.6L5.9 21H2.6l7.7-8.8L2.5 3h6.8l3.9 5.2L17.2 3Zm-1.2 16h1.8L8.1 4.8H6.2L16 19Z"/></svg></a>
+      <a class="share-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fwhy-scrapers-get-blocked%2F" target="_blank" rel="noopener" aria-label="Share on LinkedIn" title="Share on LinkedIn"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M6.9 8.6H4.2V20h2.7V8.6ZM5.5 4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2ZM20 13.4c0-2.9-1.6-4.3-3.6-4.3-1.7 0-2.4.9-2.8 1.5V8.6H10.9c0 .8 0 11.4 0 11.4h2.7v-6.4c0-.3 0-.6.1-.8.3-.6.8-1.2 1.7-1.2 1.2 0 1.7.9 1.7 2.2V20H20v-6.6Z"/></svg></a>
+      <a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fwhy-scrapers-get-blocked%2F" target="_blank" rel="noopener" aria-label="Share on Facebook" title="Share on Facebook"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M14.5 8.5V6.9c0-.7.2-1.1 1.2-1.1h1.5V3.1C16.8 3 16 3 15.1 3c-2 0-3.4 1.2-3.4 3.5v2H9.3V11h2.4v8h2.8v-8h2.3l.4-2.5h-2.7Z"/></svg></a>
+      <a class="share-btn" href="https://www.reddit.com/submit?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fwhy-scrapers-get-blocked%2F&title=Why%20Your%20Scraper%20Gets%20Blocked%20(and%20What%20Actually%20Fixes%20It)" target="_blank" rel="noopener" aria-label="Share on Reddit" title="Share on Reddit"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M22 12.1a2.1 2.1 0 0 0-3.6-1.5 10.3 10.3 0 0 0-5.2-1.6l.9-4.2 2.9.6a1.5 1.5 0 1 0 .2-1.2l-3.4-.7a.6.6 0 0 0-.7.5l-1 4.7a10.4 10.4 0 0 0-5.3 1.6 2.1 2.1 0 1 0-2.3 3.4 3.8 3.8 0 0 0 0 .6c0 3 3.6 5.5 8 5.5s8-2.5 8-5.5a3.8 3.8 0 0 0 0-.6 2.1 2.1 0 0 0 1.5-2Zm-13.6 1.4a1.5 1.5 0 1 1 1.5 1.5 1.5 1.5 0 0 1-1.5-1.5Zm8.3 4a5.6 5.6 0 0 1-3.7 1.1 5.6 5.6 0 0 1-3.7-1.1.5.5 0 1 1 .7-.7 4.7 4.7 0 0 0 3 .8 4.7 4.7 0 0 0 3-.8.5.5 0 1 1 .7.7Zm-.2-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5Z"/></svg></a>
+      <a class="share-btn" href="https://api.whatsapp.com/send?text=Why%20Your%20Scraper%20Gets%20Blocked%20(and%20What%20Actually%20Fixes%20It)%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fwhy-scrapers-get-blocked%2F" target="_blank" rel="noopener" aria-label="Share on WhatsApp" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Zm0 1.7a7.3 7.3 0 1 1-3.7 13.6l-.3-.2-2.7.7.7-2.6-.2-.3A7.3 7.3 0 0 1 12 4.7Zm4.2 9.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1-.6.7-.7.9-.3.2-.5.1a6 6 0 0 1-1.8-1.1 6.6 6.6 0 0 1-1.2-1.6c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 2 4.5 4.5 0 0 0 1 2.4 10.2 10.2 0 0 0 3.9 3.4c1.8.7 1.8.5 2.2.4a2.3 2.3 0 0 0 1.5-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"/></svg></a>
+    </div>
+    </div>
+    <p class="post-head__dek">Rotating user agents fixes almost nothing. A walk down the stack — IP, TLS fingerprint, browser signals, behaviour — with what each block looks like and what stopped it.</p>
+  </div>
+  <figure class="post-hero">
+    <img src="/images/blog/blocked-scraper.jpg" alt="" width="1000" height="563" fetchpriority="high" decoding="async">
+  </figure>
+
+  <p>A stock-data site I collect from started answering my script with <code>405 Method Not Allowed</code>. Nothing had changed on my side. The advice you find first — rotate your user agent, add some headers — could not have worked, because the site was not reading my headers. It was looking at the shape of the encrypted connection itself, which is decided before a single header is sent.</p>
+
+  <p>Blocking is not one thing, and that is the whole difficulty. There are four separate layers at which a site can decide you are not welcome, they produce similar-looking failures, and a fix aimed at the wrong layer does nothing at all. This is each layer, what it looks like from the outside, and what actually stopped it in my own collection scripts.</p>
+
+  <h2>First, the thing that makes all of this hard to debug</h2>
+
+  <p>When that 405 started, my run reported success. It fetched, it caught the error, it logged it somewhere nobody was reading, and it finished with zero new rows — which is exactly what a quiet day looks like. The data simply stopped growing.</p>
+
+  <p>Anything that can legitimately return nothing has to be able to tell <em>the source had nothing</em> apart from <em>I was prevented from finding out</em>. Before any of the fixes below, the change that mattered was an explicit pass/fail count printed at the end of every run, so a block shows up as a block. Three of the bugs in my <a href="/blog/a-year-of-ingestion-bugs/">year of ingestion bugs</a> were the same shape.</p>
+
+  <h2>Layer 1 — what you say: headers</h2>
+
+  <p>Every HTTP request carries a set of labels: which browser you claim to be, what you will accept back, which page you came from. This is the layer everyone starts with, and it is the least likely to be your problem — but getting it wrong will block you on sites that block nothing else. ScrapeOps keeps a <a href="https://scrapeops.io/web-scraping-playbook/web-scraping-guide-header-user-agents/" target="_blank" rel="noopener">practical guide to header sets</a> that is more specific than most, if you want a checklist for this layer.</p>
+
+  <p>The National Stock Exchange's data endpoints are the clearest example I have. They will not answer unless the request looks like it came from the page that normally calls them:</p>
+
+  <pre><code>HEADERS = {
+    "User-Agent": "Mozilla/5.0",
+    "Accept": "application/json",
+    "Referer": "https://www.nseindia.com/companies-listing/corporate-filings-insider-trading",
+    "Accept-Language": "en-US,en;q=0.9",
+}</code></pre>
+
+  <p>The <code>Referer</code> is the load-bearing line: it says which page sent you. Many sites also require that you visited the ordinary page first, because that visit is what issues the cookie the data endpoint checks. Nothing here is clever, and rotating through a list of fake user agents adds nothing on top — a site that checks headers checks whether they are coherent, not whether they are varied.</p>
+
+  <h2>Layer 2 — how you connect: the TLS fingerprint</h2>
+
+  <p>This is the layer that produced the 405, and the one most people have not heard of.</p>
+
+  <p>Before any HTTP request happens, your program and the server negotiate an encrypted connection. In that opening message your side lists which encryption methods it supports, in a particular order, with particular extensions. Python's networking library makes that list differently from Chrome. The pattern is stable enough to be summarised as a fingerprint — the common form is called <a href="https://github.com/salesforce/ja3" target="_blank" rel="noopener">JA3</a>, now largely superseded by <a href="https://github.com/FoxIO-LLC/ja4" target="_blank" rel="noopener">JA4</a> — and a bot-mitigation service can compare it against what a real Chrome produces before it has read one byte of your request. You can see your own in about two seconds: fetch <a href="https://tls.browserleaks.com/json" target="_blank" rel="noopener">tls.browserleaks.com/json</a> from your script and then from your browser, and compare the fingerprint fields.</p>
+
+  <p>So a request claiming to be Chrome, whose handshake is Python's, is caught by a check that never looks at the claim. You cannot fix this with headers, and you cannot fix it by trying harder in the same library. What fixes it is making the handshake itself match:</p>
+
+  <pre><code># curl_cffi impersonates a real browser's TLS/JA3 fingerprint, which is what
+# gets past Trendlyne's Cloudflare bot mitigation (plain `requests` gets 405'd).
+from curl_cffi import requests as cffi_requests
+
+resp = cffi_requests.get(url, headers=HEADERS, impersonate="chrome131")</code></pre>
+
+  <p><a href="https://github.com/lexiforest/curl_cffi" target="_blank" rel="noopener"><code>curl_cffi</code></a> is a drop-in replacement for Python's <code>requests</code> that speaks through a TLS stack configured to match a named browser version. One import and one argument. The rest of the script was unchanged, and the endpoint started answering again.</p>
+
+  <p>How to tell this is your layer: the same URL works in your browser, often works from <code>curl</code> on the command line, and fails from your script with a status that has nothing to do with the request being malformed — <code>403</code>, <code>405</code>, or a challenge page. Getting a challenge page while a real browser on the same machine and network sails through is the tell. If you are not in Python, <a href="https://github.com/bogdanfinn/tls-client" target="_blank" rel="noopener">tls-client</a> is the equivalent for Go, and the same technique underlies most commercial "unblocker" products.</p>
+
+  <h2>Layer 3 — where you connect from: the address</h2>
+
+  <p>Once your handshake looks right and your headers look right, the next thing a site has is your IP address, and it knows two things about it: whether it belongs to a home connection or a data centre, and how it has behaved recently.</p>
+
+  <p>Both of my clearest blocks were at this layer. The insider-filings supplement, after enough requests, started getting Cloudflare's "confirm you are human" wall — served as ordinary-looking HTML with a 403, 405, 429 or 503 attached. Detecting it needs both signals, because the status alone is ambiguous and the page alone is just text:</p>
+
+  <pre><code>BLOCK_STATUS = {403, 405, 429, 503}
+CHALLENGE_MARKERS = ("cf-chl", "challenge-platform", "/cdn-cgi/challenge")
+
+def looks_blocked(status_code, text=""):
+    """True if a response is a Cloudflare block/challenge rather than real content."""
+    return status_code in BLOCK_STATUS or any(m in text for m in CHALLENGE_MARKERS)</code></pre>
+
+  <p>The response to that is rotation: a pool of proxy addresses, a fixed number of requests taken through each before moving to the next, and a fresh batch pulled and tested when the pool wears out. Mine leases 10 requests per address, pauses 30 to 90 seconds between batches of 20, and validates every candidate address against the real site before trusting it — free proxy lists are mostly dead entries, so the validation pass is not optional.</p>
+
+  <p>Two honest caveats, because this is the layer where advice gets irresponsible. First, free proxies are unreliable, frequently slower than not scraping at all, and you have no idea who operates them, which makes them unfit for anything carrying credentials. Second, rotation treats a symptom. If a site blocks your address after 200 requests, the reason is usually the rate rather than the identity, and pacing the run is the fix that keeps working when rotation stops.</p>
+
+  <p>The other case is more interesting because rotation was not available. My book-catalogue app runs on a hosting provider and fetches pages from a retailer on demand. The retailer blocks data-centre addresses, which is every address the app has. Rotating within a data centre does not help when the data centre is the thing being scored. The change was to move the fetch to the one address the site had no reason to distrust — the visitor's own browser, which loads the page and hands the result back to the API. That path is open source in <a href="https://github.com/VishnujanNarayanan/product-explorer" target="_blank" rel="noopener">product-explorer</a>, and the <a href="/projects/product-explorer/">project page</a> covers why the app fetches on demand at all. The commit message is the summary: <em>scrape from the visitor's browser, because ours is the address being blocked</em>.</p>
+
+  <h2>Layer 4 — whether you look like a person</h2>
+
+  <p>Running a real browser gets you past the first two layers automatically, and introduces a fourth: automated browsers announce themselves. The most famous signal is a property the browser sets when it is being driven by a program, which is one line of JavaScript to read:</p>
+
+  <pre><code>Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
+Object.defineProperty(navigator, 'hardwareConcurrency', {get: () => 8});</code></pre>
+
+  <p>There are dozens more — screen size, available fonts, how the browser renders a test image, whether a headless build reports the same graphics driver as a real one. Libraries exist to patch the known set; I use <a href="https://github.com/AtuboDad/playwright_stealth" target="_blank" rel="noopener"><code>playwright-stealth</code></a> where I need it, and <a href="https://github.com/ultrafunkamsterdam/undetected-chromedriver" target="_blank" rel="noopener">undetected-chromedriver</a> is the Selenium equivalent. Treat that as raising the bar rather than clearing it: this is an arms race between people who publish patches and people who publish new checks, and the checks are updated more often.</p>
+
+  <p>The other half of this layer is behaviour, and it is the half that actually decides. A real session has irregular gaps, does not request 400 pages in perfect 1.0-second intervals, and does not run at 03:00 for exactly the same duration every night. Jittered pauses and batch breaks cost almost nothing and remove the most obvious pattern you present.</p>
+
+  <p>Where I have needed the strongest measures — a couple of sources that check hard — the answer was to stop hiding: run the browser visibly rather than headless, log in once by hand, and save the session to a file so later runs start already authenticated. That is described in <a href="/blog/playwright-vs-selenium/">Playwright vs Selenium</a>.</p>
+
+  <h2>The block that is not a block</h2>
+
+  <p>Two more failures look like blocking and are not.</p>
+
+  <p><strong>Rate limiting.</strong> A <code>429</code> usually means slow down, and it clears on its own. It is not a verdict on you, and responding to it by rotating addresses converts a two-minute pause into a real block. It also has more than one meaning, which is its own post: <a href="/blog/what-429-really-means/">what a 429 really means</a>.</p>
+
+  <p><strong>A cap you were never told about.</strong> The same supplement source silently truncates any response at 200 rows for non-subscribers. No error, no flag, no indication that anything was withheld — a wide date window simply returns fewer records than it contains. The fix was to request one day at a time so no window can reach the cap. Nothing in the response would ever have told me; it was findable only by pulling a range twice with different window sizes and noticing the totals disagreed.</p>
+
+  <h2>The order I would work through it</h2>
+
+  <p>Cheapest first, because each step rules out a layer:</p>
+
+  <p><strong>1. Make the failure visible.</strong> Print how many requests succeeded and how many were refused. Everything below is guesswork until a block is distinguishable from a quiet day.</p>
+
+  <p><strong>2. Check whether you need the page at all.</strong> Open the browser's network tab and look for the endpoint the page itself calls. A JSON endpoint with the right <code>Referer</code> is less work to keep alive than a browser, and a smaller thing to be blocked for.</p>
+
+  <p><strong>3. Fix the headers, once.</strong> Real user agent, correct <code>Referer</code>, visit the ordinary page first so you hold the cookie.</p>
+
+  <p><strong>4. Match the handshake</strong> with <code>curl_cffi</code> or equivalent, if you get challenge pages that a browser on the same machine does not.</p>
+
+  <p><strong>5. Slow down before you rotate.</strong> Pacing fixes rate-based blocks permanently; rotation fixes them until the new address is scored too. Scrapy's <a href="https://docs.scrapy.org/en/latest/topics/autothrottle.html" target="_blank" rel="noopener">AutoThrottle</a> and <a href="https://crawlee.dev/python/" target="_blank" rel="noopener">Crawlee</a> both do this adaptively, which beats any fixed delay you will pick by hand.</p>
+
+  <p><strong>6. Use a real browser</strong> only when the content genuinely does not exist without JavaScript — and expect layer 4 once you do.</p>
+
+  <h2>The part that is not technical</h2>
+
+  <p>All of the above is about whether a request succeeds, which is a different question from whether it should be made. What I hold to: public data only, never anything behind a paywall or another person's login, honour <a href="https://docs.python.org/3/library/urllib.robotparser.html" target="_blank" rel="noopener"><code>robots.txt</code></a> and the terms where they speak to this, keep the request rate low enough that nobody would notice the load, and identify honestly where a site offers a way to. Every rate limit and pause described here also exists for that reason, not only to stay unblocked. If a site offers an API or a bulk download, that is the correct route even when it costs money, and it will outlive any of these techniques.</p>
+
+  <h2>References and further reading</h2>
+
+  <p>Cloudflare's own <a href="https://developers.cloudflare.com/bots/concepts/bot-score/" target="_blank" rel="noopener">bot score</a> documentation is the clearest description of these layers from the defending side: it names the signals, and it says plainly that the score is a learned combination of them rather than a rule you can satisfy.</p>
+
+  <p>Salesforce's <a href="https://github.com/salesforce/ja3" target="_blank" rel="noopener">JA3</a> repository explains how a handshake becomes a fingerprint in about a page, and <a href="https://github.com/FoxIO-LLC/ja4" target="_blank" rel="noopener">JA4</a> is the current successor. Read one of them if layer 2 was new to you — it is the piece most scraping guides never mention.</p>
+
+  <h3>Tools, by layer</h3>
+
+  <ul>
+    <li><a href="https://github.com/lexiforest/curl_cffi" target="_blank" rel="noopener">curl_cffi</a> (layer 2) — <code>requests</code>-compatible calls with a browser's TLS handshake. One import and an <code>impersonate=</code> argument.</li>
+    <li><a href="https://tls.browserleaks.com/json" target="_blank" rel="noopener">browserleaks TLS probe</a> (layer 2) — fetch it from your code and from your browser; if the fingerprints differ, that is your block.</li>
+    <li><a href="https://github.com/bogdanfinn/tls-client" target="_blank" rel="noopener">tls-client</a> (layer 2) — the same capability for Go.</li>
+    <li><a href="https://docs.scrapy.org/en/latest/topics/autothrottle.html" target="_blank" rel="noopener">Scrapy AutoThrottle</a> and <a href="https://crawlee.dev/python/" target="_blank" rel="noopener">Crawlee</a> (layer 3) — adaptive pacing, retries and proxy rotation, instead of hand-tuned delays.</li>
+    <li><a href="https://github.com/AtuboDad/playwright_stealth" target="_blank" rel="noopener">playwright-stealth</a> and <a href="https://github.com/ultrafunkamsterdam/undetected-chromedriver" target="_blank" rel="noopener">undetected-chromedriver</a> (layer 4) — the published patches for known automation signals. Both raise the bar rather than clearing it.</li>
+    <li><a href="https://curl.se/docs/http-cookies.html" target="_blank" rel="noopener">curl on HTTP cookies</a> (layer 1) — worth reading when a site only answers after you have loaded an ordinary page first, which is a cookie problem wearing a blocking costume.</li>
+  </ul>
+
+  <h3>Rules, standards, and the legal side</h3>
+
+  <ul>
+    <li><a href="https://www.rfc-editor.org/rfc/rfc9309.html" target="_blank" rel="noopener">RFC 9309</a> — the Robots Exclusion Protocol, standardised only in 2022, which is more recent than most people assume. Python's <a href="https://docs.python.org/3/library/urllib.robotparser.html" target="_blank" rel="noopener">robotparser</a> reads it in three lines.</li>
+    <li><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429" target="_blank" rel="noopener">MDN on 429</a> — being throttled versus being blocked, which decides whether to wait or to change something.</li>
+    <li><a href="https://www.eff.org/deeplinks/2022/04/scraping-public-websites-still-isnt-crime-court-appeals-declares" target="_blank" rel="noopener">EFF on hiQ v. LinkedIn</a> — the US appeals ruling that scraping publicly available data is not "unauthorised access" under the computer-crime statute. Context, not legal advice: it says nothing about contract terms, copyright, or other jurisdictions.</li>
+  </ul>
+
+  <h3>Related work of mine</h3>
+
+  <ul>
+    <li><a href="/blog/playwright-vs-selenium/">Playwright vs Selenium</a> — whether you need a browser at all, and what changes between the two.</li>
+    <li><a href="/blog/what-429-really-means/">What a 429 really means</a> — the refusal that clears by itself, and the retry logic that makes it worse.</li>
+    <li><a href="/blog/how-i-scraped-nse-insider-filings/">Scraping 20 years from a date-windowed endpoint</a> — these defences met on a real public archive, including a row cap that returns success while quietly hiding data.</li>
+    <li><a href="/projects/market-data-pipeline/">Market data platform</a> and <a href="/projects/product-explorer/">Product Explorer</a> — the project pages for the two systems the examples come from.</li>
+  </ul>
+</article>
+
+<section class="keep-reading" aria-labelledby="keep-reading-h">
+  <div class="keep-reading__inner">
+    <h2 class="keep-reading__title" id="keep-reading-h">Keep reading</h2>
+    <div class="post-grid post-grid--sm">
+      <a class="post-card post-card--sm" href="/blog/how-to-test-a-data-pipeline/">
+        <div class="post-card__media">
+          <img src="/images/blog/pipeline-tests.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">Testing</span><span class="tag">Data engineering</span></div>
+          <h3 class="post-card__title">How to Test a Data Pipeline: 92 Passing Tests, 3 Broken Features</h3>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+          <p class="post-card__excerpt">A green suite proved the code did what it was written to do, and nothing about whether the product worked. What I test instead now, including the control run that has to come first.</p>
+        </div>
+      </a>
+      <a class="post-card post-card--sm" href="/blog/a-year-of-ingestion-bugs/">
+        <div class="post-card__media">
+          <img src="/images/blog/ingestion-bugs.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">Data engineering</span><span class="tag">Reliability</span></div>
+          <h3 class="post-card__title">A Year of Ingestion Bugs: What Actually Broke in 32 Data Pipelines</h3>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+          <p class="post-card__excerpt">Roughly 30 bugs across a year of collecting Indian market data, sorted by cause. Eight of them produced no error message at all, and those are the ones worth reading about.</p>
+        </div>
+      </a>
+      <a class="post-card post-card--sm" href="/blog/how-i-scraped-nse-insider-filings/">
+        <div class="post-card__media">
+          <img src="/images/blog/scraping.jpg" alt="" width="1000" height="563" loading="lazy" decoding="async">
+        </div>
+        <div class="post-card__body">
+          <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Data engineering</span></div>
+          <h3 class="post-card__title">How to Scrape 20 Years of Data From a Site That Paginates by Date</h3>
+          <div class="byline"><span class="byline__date">August 2026</span></div>
+          <p class="post-card__excerpt">The endpoint only answers 180 days at a time, and the answers are not final. Windowing, deduplication that deleted rows, and why one source was never going to be enough.</p>
+        </div>
+      </a>
+    </div>
+
+  </div>
+</section>
+</main>
+<!-- BEGIN generated: footer (source: partials/footer.html — run scripts/gen-partials.mjs) -->
+<footer class="lfooter">
+
+  <div class="lfooter__layout">
+    <!-- Dark notched box (Lando footer mask) with static contour pattern inside -->
+    <div class="lfooter__clip">
+      <img class="lfooter__pattern" src="/images/footer-blobs.svg" alt="" aria-hidden="true" loading="lazy" decoding="async">
+
+      <div class="lfooter__inner">
+        <h2 class="lfooter__headline">
+          <span class="lfooter__hl-row">Subscribe to my</span>
+          <span class="lfooter__hl-row"><span class="is-hl">Newsletter</span></span>
+        </h2>
+
+        <div class="lfooter__cols">
+          <nav class="lfooter__col lfooter__col--left" aria-label="Pages">
+            <span class="lfooter__col-label">Pages</span>
+            <a href="/" class="lfooter__navlink">Home</a>
+            <a href="/?go=projects" class="lfooter__navlink">Projects</a>
+            <a href="/?go=socials" class="lfooter__navlink">Socials</a>
+            <a href="/blog/" class="lfooter__navlink">Blog</a>
+          </nav>
+          <nav class="lfooter__col lfooter__col--right" aria-label="Social links">
+            <span class="lfooter__col-label">Follow On</span>
+            <a href="https://github.com/VishnujanNarayanan" target="_blank" rel="me noopener" class="lfooter__navlink">GitHub</a>
+            <a href="https://www.linkedin.com/in/vishnujan-narayanan" target="_blank" rel="me noopener" class="lfooter__navlink">LinkedIn</a>
+            <a href="https://www.instagram.com/___vi5hnu___/" target="_blank" rel="me noopener" class="lfooter__navlink">Instagram</a>
+            <a href="https://substack.com/@vishnujannarayanan" target="_blank" rel="me noopener" class="lfooter__navlink">Substack</a>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Sky-blue tools marquee (logos tinted via CSS mask). Two identical tracks,
+           each animated translateX(-100%) of ITS OWN width — so a seamless loop
+           needs every track to be at least as wide as the footer, or the strip
+           empties out after the last logo and snaps when it wraps. The generator
+           repeats the logo list enough times to clear any viewport. -->
+      <div class="lfooter__mq" aria-hidden="true">
+        <div class="lfooter__mq-track">
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+        </div>
+        <div class="lfooter__mq-track">
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+          <i style="--logo:url('/images/logos/Python.svg')"></i>
+          <i style="--logo:url('/images/logos/FastAPI.svg')"></i>
+          <i style="--logo:url('/images/logos/PostgresSQL.svg')"></i>
+          <i style="--logo:url('/images/logos/Docker.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Airflow.svg')"></i>
+          <i style="--logo:url('/images/logos/Apache Spark.svg')"></i>
+          <i style="--logo:url('/images/logos/AWS.svg')"></i>
+          <i style="--logo:url('/images/logos/Linux.svg')"></i>
+          <i style="--logo:url('/images/logos/Git.svg')"></i>
+          <i style="--logo:url('/images/logos/Bash.svg')"></i>
+          <i style="--logo:url('/images/logos/Ubuntu.svg')"></i>
+          <i style="--logo:url('/images/logos/Vim.svg')"></i>
+        </div>
+      </div>
+
+      <!-- Blog pages: the subscribe card. Everywhere else: the portrait cutout
+           rising from the bottom (where the reference's helmet sits). -->
+      <div class="lfooter__sub">
+        <h3 class="lfooter__sub-title">Get new posts by email</h3>
+        <p class="lfooter__sub-text">Data pipelines, web scraping, and market-data experiments — delivered as they go up.</p>
+        <form class="subform" action="https://vishnujannarayanan.substack.com/subscribe" method="get" target="_blank" rel="noopener">
+          <label class="subform__label" for="footer-subscribe-email">Email</label>
+          <div class="subform__row">
+            <input class="subform__input" id="footer-subscribe-email" type="email" name="email" required autocomplete="email" placeholder="you@example.com" spellcheck="false">
+            <button class="subform__btn" type="submit">Subscribe</button>
+          </div>
+        </form>
+        <p class="lfooter__sub-note">No account needed, and you can unsubscribe from this email. By subscribing you agree to Substack's <a href="https://substack.com/tos" target="_blank" rel="noopener">Terms of Use</a> and <a href="https://substack.com/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+        <a class="substack-badge substack-badge--dark" href="https://vishnujannarayanan.substack.com/" target="_blank" rel="me noopener">
+          <svg viewBox="0 0 21 24" width="13" height="15" aria-hidden="true" focusable="false"><path d="M20.999 0H0v2.836h20.999V0Z" fill="currentColor"></path><path d="M20.999 5.406H0v2.836h20.999V5.406Z" fill="currentColor"></path><path d="M0 10.813V24l10.499-5.887L21 24V10.813H0Z" fill="currentColor"></path></svg>
+          <span>Substack</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Pill in the bottom-centre tab of the notched box -->
+    <!-- No trailing arrow: main.js splits this into per-letter reel clips on load, and a
+         glyph that is not a letter reels along with them. -->
+    <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me</a>
+
+    <!-- Legal row sits in the gradient shelves either side of the bottom tab -->
+    <div class="lfooter__bottom">
+      <span class="lfooter__copy">© 2026 Vishnujan Narayanan. All rights reserved</span>
+      <div class="lfooter__legal">
+        <a href="https://github.com/VishnujanNarayanan" target="_blank" rel="me noopener">GitHub</a>
+        <a href="https://www.linkedin.com/in/vishnujan-narayanan" target="_blank" rel="me noopener">LinkedIn</a>
+      </div>
+    </div>
+  </div>
+</footer>
+<!-- END generated: footer -->
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js" defer></script>
+<script src="../../main.js" defer></script>
+</body>
+</html>

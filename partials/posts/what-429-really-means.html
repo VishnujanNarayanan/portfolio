@@ -1,0 +1,162 @@
+  <p>These two messages arrived from the same API, six hours apart, both as HTTP <code>429</code>:</p>
+
+  <pre><code>429 Rate limit reached ... on tokens per minute (TPM):
+    Limit 12000, Used 10986. Please try again in 3.035s.
+
+429 Your project has exceeded its monthly spending cap.</code></pre>
+
+  <p>The first clears in three seconds. The second holds until somebody raises a limit or the month rolls over. Any retry loop that treats them the same handles one of them badly, and which one depends on which way you guessed. Sorting this out properly took three rounds, and the code that came out of it is about forty lines.</p>
+
+  <h2>What a retry loop is, and the assumption inside it</h2>
+
+  <p>Programs that call other people's services fail intermittently — a connection drops, a server is briefly busy — so the standard response is to try again after a pause, doubling the pause each time: 2 seconds, then 4, then 8, then give up. That is exponential backoff, and it is close to free to write — or to get for nothing from <a href="https://tenacity.readthedocs.io/en/latest/" target="_blank" rel="noopener">tenacity</a> in Python, or <a href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.util.html" target="_blank" rel="noopener">urllib3's <code>Retry</code></a> if you are already using <code>requests</code>:</p>
+
+  <pre><code>except Exception as exc:
+    if attempt &lt; attempts:
+        time.sleep(delay)
+        delay = min(delay * 2, max_delay)</code></pre>
+
+  <p>Written that way, the loop encodes a belief: that every failure is worth waiting for. My batches ran 25 items at a time, five attempts each, with the pause capped at 90 seconds. When the provider retired a model and every single call began returning <code>404 no longer available</code>, that belief turned a permanent failure into roughly four minutes of waiting per item, applied to all 25. The run did not crash. It produced identical errors for fifteen minutes and then finished.</p>
+
+  <p>So the taxonomy needs at least two classes, which is the version most retry code eventually gets to:</p>
+
+  <ul>
+    <li><strong>Transient</strong> — <code>503</code>, timeouts, <code>429</code>. Retry with backoff.</li>
+    <li><strong>Permanent</strong> — <code>404</code> unknown model, <code>401</code> bad key, <code>400</code> malformed request. Fail immediately; the next attempt is identical to this one.</li>
+  </ul>
+
+  <p>I wrote that, and left a comment saying <code>429</code> was deliberately absent from the permanent list, because rate limiting is transient by definition and must keep retrying. The spend-cap message above arrived a few hours later and showed the gap.</p>
+
+  <h2>The third class is about scope, not recoverability</h2>
+
+  <p>A spend cap is not recoverable inside a run, but that is not the interesting part. The interesting part is that it says something about <em>every subsequent call</em>, not just this one. A <code>404</code> on item 3 tells you nothing about item 4. A spend cap on item 3 tells you exactly what will happen to items 4 through 25.</p>
+
+  <p>That is a third class, and the property that defines it is scope:</p>
+
+  <ul>
+    <li><strong>Transient</strong> — scope: this call. Retry.</li>
+    <li><strong>Permanent</strong> — scope: this call. Fail this item, continue the batch.</li>
+    <li><strong>Exhausted</strong> — scope: the whole account. Stop the batch, or move to a different provider.</li>
+  </ul>
+
+  <p>The reason this class gets missed is built into HTTP: a status code says <em>what</em> went wrong and never says <em>how widely</em>. Both a per-minute throttle and a monthly spend cap are refusals to serve you right now, so both are 429, and the difference between them lives only in the human-readable text.</p>
+
+  <p>Which means you have to read the text. That sounds unappealing and it is unavoidable — and it also created the next problem.</p>
+
+  <p>A few providers do better than prose. Where a <a href="https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/" target="_blank" rel="noopener">RateLimit header</a> is present it tells you the limit, what is left and when the window resets, as structured fields you can act on without pattern-matching English. It is still a draft standard, so treat it as a bonus rather than a plan.</p>
+
+  <h2>Classifying on message text, and the phrase that broke it</h2>
+
+  <p>Two practical notes before the failure, because both surprised me.</p>
+
+  <p><strong>You cannot classify by exception type.</strong> Between the SDK, the structured-output wrapper and the transport, one failure arrives as three nested classes wrapping each other. The status text is the one thing that survives every layer.</p>
+
+  <p><strong>Vendors write error messages for humans.</strong> That is the trap. My list of "this account is exhausted" markers included the substring <code>billing</code>, which is reasonable — spend-cap messages mention billing. But this provider appends an upsell to <em>every</em> rate-limit message it sends:</p>
+
+  <pre><code>429 Rate limit reached for model `llama-3.3-70b-versatile` on tokens per minute
+(TPM): Limit 12000, Used 10986, Requested 1621. Please try again in 3.035s.
+Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing</code></pre>
+
+  <p>Routine throttling, clearing in three seconds, containing the word that meant "your account is finished". The classifier promoted it to exhaustion and the run moved to a fallback provider that was itself spend-capped. Two runs ended early that way, at 5 of 21 jobs and 4 of 13.</p>
+
+  <p>The taxonomy was not wrong. The evidence used to detect one of its classes was contaminated by text that had nothing to do with the class — an advertisement, not a description of the error. The fix is to make classification ordered, so a narrow, specific signal outranks a broad, incidental one:</p>
+
+  <pre><code>def _is_budget_exhausted(exc) -> bool:
+    message = str(exc).casefold()
+    if any(m in message for m in _DAILY_QUOTA_MARKERS):     # "tokens per day"
+        return True
+    if any(m in message for m in _TRANSIENT_RATE_MARKERS):  # "tokens per minute"
+        return False
+    return any(m in message for m in _BUDGET_ERROR_MARKERS)</code></pre>
+
+  <p><code>billing</code> was deleted from the markers. Deleting it opened a second gap in the other direction — a genuine paywall, one provider returning <code>402 payment_required</code>, then read as transient — so <code>payment_required</code> was added explicitly. The only thing that caught that was running the four real error messages I had collected through the classifier and printing what each came out as. Four strings, four expected answers, one test.</p>
+
+  <h2>A fourth axis: the same words, two different clocks</h2>
+
+  <p>The same provider expresses both of its limits with the same opening phrase:</p>
+
+  <pre><code>... rate limit reached ... on tokens per minute (TPM): Limit 12000 ...
+... rate limit reached ... on tokens per day   (TPD): Limit 100000, Used 98752 ...</code></pre>
+
+  <p>Per-minute reopens inside the run. Per-day does not. So "exhausted" is not only about scope but about whether the window reopens before you finish: a daily quota is exhaustion for this run's purposes even though it is worded identically to the case that clears in seconds. That is why <code>_DAILY_QUOTA_MARKERS</code> is checked first in the function above — it is the narrowest signal available and it outranks wording it shares with the transient case.</p>
+
+  <h2>Honour the wait the provider states</h2>
+
+  <p>Independently of classification, there was a second source of wasted attempts. Providers that throttle usually tell you exactly how long to wait:</p>
+
+  <pre><code>Please try again in 11.344999999s</code></pre>
+
+  <p>My loop ignored that and backed off on its own schedule — 2s, 4s, 8s. Every one of those retries arrived before the window had reopened, was refused, and consumed one of five attempts. The limit would have cleared on its own in eleven seconds; the run instead spent its whole attempt budget arriving early and then escalated to a fallback.</p>
+
+  <pre><code>hinted = retry_after_seconds(exc)      # parsed out of the message
+wait = hinted if hinted is not None else delay
+time.sleep(wait)
+if hinted is None:
+    delay = min(delay * 2, max_delay)   # exponential only when guessing</code></pre>
+
+  <p>Two details worth copying. Add a small margin — half a second — because retrying on the exact boundary is routinely a hair early. And cap what you will honour: a stated wait of an hour is a daily quota in disguise, so above 60 seconds the hint is ignored and the request is classified as exhaustion instead of blocking the run on it.</p>
+
+  <p>Where the header is available rather than a sentence, this is the same idea: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After" target="_blank" rel="noopener"><code>Retry-After</code></a> is a standard response header defined in <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after" target="_blank" rel="noopener">RFC 9110</a>, and reading it is strictly better than guessing, because the server knows when its own window reopens and you do not. It accepts either a number of seconds or an HTTP date, so parse both.</p>
+
+  <h2>"Should I stop?" needs "and", not "or"</h2>
+
+  <p>One more shape, which only appears once you have more than one provider to fall back to. The original rule was: if any provider reported exhaustion, abandon the batch. A briefly-throttled primary plus a spend-capped fallback satisfies that, and a run stopped at 4 of 13 jobs while the primary's window was seconds from reopening.</p>
+
+  <p>The question the rule is trying to ask is <em>will the next item fail in the same way?</em> — and it will only if every provider failed for a reason that persists. So the condition is "some account is exhausted <strong>and</strong> nobody merely ran out of patience":</p>
+
+  <pre><code>any_transient = any(getattr(e, "transient", False) for _cfg, e in failures)
+if budget_failures and not any_transient:
+    raise LLMBudgetError(summary)   # nothing will serve; stop the batch
+raise LLMError(summary)             # this item failed; the next may not</code></pre>
+
+  <p>My first attempt at this rule required <em>all</em> failures to be budget errors, which is wrong in the other direction: a retired model on the primary plus a capped fallback would then keep going, item after item, with nothing able to answer. Both mistakes are one word apart, which is the argument for writing the rule as an explicit statement about the list of failures rather than as flags accumulated inside a loop, and for having a test that names both directions.</p>
+
+  <h2>What I would build on day one now</h2>
+
+  <p><strong>Three classes, not two.</strong> Transient, permanent, exhausted — and decide the third by scope: does this failure predict the next call's failure?</p>
+
+  <p><strong>Read the provider's stated wait before applying your own.</strong> Cap it, add a margin, and treat an implausibly long one as exhaustion.</p>
+
+  <p><strong>Match on specific phrases, in order, narrowest first.</strong> Never on a word that could appear in marketing text. <code>tokens per day</code> is a signal; <code>billing</code> is a coincidence.</p>
+
+  <p><strong>Keep the real error strings.</strong> Four saved messages from live failures were worth more than any reasoning about what providers ought to send, and they are the only reason the paywall case was caught before it ran.</p>
+
+  <p><strong>Add a circuit breaker once there is more than one caller.</strong> The rules above decide what one batch does. When several jobs share an account, the thing that stops them collectively hammering a struggling provider is <a href="https://martinfowler.com/bliki/CircuitBreaker.html" target="_blank" rel="noopener">a breaker that trips after N consecutive failures</a> and stays open for a cool-down. My news collector has one; the job bot does not, and should.</p>
+
+  <p><strong>Log which class you assigned, every time.</strong> Every failure above was visible in hindsight only because the retry line recorded how long it waited and whether the figure came from the provider or from the backoff.</p>
+
+  <p>One limitation: all of this is calibrated against three providers I actually use, and the marker lists are specific to how they word things. The three classes generalise; the strings do not, and anyone copying this should expect to add their own after the first surprise.</p>
+
+  <h2>References and further reading</h2>
+
+  <p>Google's SRE book chapter on <a href="https://sre.google/sre-book/handling-overload/" target="_blank" rel="noopener">handling overload</a> covers the other side of this: why a server sends 429 at all, and why clients retrying aggressively make a struggling service worse rather than better. Its companion chapter on <a href="https://sre.google/sre-book/addressing-cascading-failures/" target="_blank" rel="noopener">cascading failures</a> is the one to read if your retries are pointed at a service you own.</p>
+
+  <p>AWS's <a href="https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/" target="_blank" rel="noopener">timeouts, retries and backoff with jitter</a> is the clearest short explanation of why random jitter belongs in the pause — without it, everything that failed together retries together.</p>
+
+  <h3>The specifications</h3>
+
+  <ul>
+    <li><a href="https://www.rfc-editor.org/rfc/rfc6585#section-4" target="_blank" rel="noopener">RFC 6585 §4</a> — where 429 is defined. Worth reading for how little it says: too many requests, and explicitly not which limit was hit or for how long.</li>
+    <li><a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after" target="_blank" rel="noopener">RFC 9110 — Retry-After</a> — the header that removes the guesswork, in both its seconds and its date form.</li>
+    <li><a href="https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/" target="_blank" rel="noopener">RateLimit header fields (IETF draft)</a> — limit, remaining and reset as structured fields. Check whether your provider already sends them before you write a parser for their prose.</li>
+    <li><a href="https://docs.stripe.com/api/idempotent_requests" target="_blank" rel="noopener">Stripe — idempotency keys</a> — the other half of retrying safely: how to retry a request that may already have succeeded without doing it twice.</li>
+  </ul>
+
+  <h3>Implementations you can copy instead of writing</h3>
+
+  <ul>
+    <li><a href="https://tenacity.readthedocs.io/en/latest/" target="_blank" rel="noopener">tenacity</a> — retry policies as decorators, including jitter and per-exception rules, which maps cleanly onto the three classes above.</li>
+    <li><a href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.util.html" target="_blank" rel="noopener">urllib3 <code>Retry</code></a> — status-aware retries under <code>requests</code>, and it honours <code>Retry-After</code> if you set <code>respect_retry_after_header</code>.</li>
+    <li><a href="https://martinfowler.com/bliki/CircuitBreaker.html" target="_blank" rel="noopener">Circuit breaker</a> — the pattern for stopping calls entirely after repeated failures, which is what "exhausted" wants once more than one job shares an account.</li>
+    <li><a href="https://stripe.com/blog/rate-limiters" target="_blank" rel="noopener">Stripe on rate limiters</a> — written from the server side, and the clearest explanation of why different limits exist and therefore why one status code has to cover all of them.</li>
+    <li><a href="https://console.groq.com/docs/rate-limits" target="_blank" rel="noopener">Groq's rate-limit documentation</a> — a concrete example of per-minute and per-day quotas sitting behind the same status, which is the ambiguity the whole post is about.</li>
+  </ul>
+
+  <h3>Related work of mine</h3>
+
+  <ul>
+    <li><a href="/blog/local-llm-vs-api/">Local LLM vs API</a> — what a daily cap costs you in practice, and how a fallback chain between providers is put together.</li>
+    <li><a href="/blog/why-scrapers-get-blocked/">Why your scraper gets blocked</a> — the refusals that look like rate limiting but are not, and what actually causes them.</li>
+    <li><a href="/blog/building-resumable-etl-pipelines/">Why rerunning a pipeline should fix data</a> — what a run that was partly refused has to leave behind so the next one can finish the job.</li>
+    <li><a href="https://github.com/VishnujanNarayanan/Job_Application_Bot" target="_blank" rel="noopener">Job_Application_Bot</a> (source) — the repository the examples come from: the classifier, the retry loop and the provider chain.</li>
+  </ul>
