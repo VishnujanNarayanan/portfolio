@@ -3796,18 +3796,27 @@ function makeTypeIn(host, runs, opts) {
     return _sf;
   }
 
+  // How far apart the cards sit AT REST. Applied to the resting x only — the hover
+  // push (DX) is added on top untouched, so parting the fan around the hovered card
+  // still moves exactly as far as the captured values say. Shrinking the cards left
+  // the resting gaps looking too wide for them; this closes the spread back up
+  // without touching the hover behaviour or the shared sizeFactor (which the hover
+  // offsets ride through too).
+  const REST_TIGHTEN = 0.90;
+  function restX(i) { return REST[i].x * REST_TIGHTEN; }
+
   // ---- target pose (px, pre-sizeFactor) for the current hover state ----
   let hovered = -1;
   function targetOf(i) {
     const base = REST[i];
-    if (hovered < 0) return { x: base.x, y: base.y, r: base.r, s: base.s };
-    if (i === hovered) return { x: base.x, y: base.y - POP_LIFT, r: base.r, s: base.s * POP_SCALE };
-    return { x: base.x + DX[hovered][i], y: base.y, r: base.r + drot(hovered, i), s: base.s };
+    if (hovered < 0) return { x: restX(i), y: base.y, r: base.r, s: base.s };
+    if (i === hovered) return { x: restX(i), y: base.y - POP_LIFT, r: base.r, s: base.s * POP_SCALE };
+    return { x: restX(i) + DX[hovered][i], y: base.y, r: base.r + drot(hovered, i), s: base.s };
   }
 
   // ---- hover spring (snappy, with bounce): underdamped spring to the target ----
   const STIFF = 320, DAMP = 21; // zeta ~0.59 (~10% overshoot), settle ~0.37s — snappy
-  const cur = REST.map((p) => ({ x: p.x, y: p.y, r: p.r, s: p.s }));
+  const cur = REST.map((p, i) => ({ x: restX(i), y: p.y, r: p.r, s: p.s }));
   const vel = REST.map(() => ({ x: 0, y: 0, r: 0, s: 0 }));
 
   // ---- reveal spring (the initial fan-out also BOUNCES): pCur springs 0<->1,
@@ -3882,7 +3891,14 @@ function makeTypeIn(host, runs, opts) {
   const linkCols = staged && linksWrap
     ? Array.from(linksWrap.querySelectorAll(".pill-char__col")) : [];
   if (staged) {
-    hlEls.forEach(function (el) { el.classList.add("hl-sweep"); });   // background off until beat 3
+    // Background off until beat 3 — and applied with transitions MUTED. .hl-sweep carries
+    // the sweep's own `color` transition, so adding it after the browser has painted the
+    // line in its resting white animates that white → black flip. Below the fold nobody
+    // sees it; arriving straight into the section (?go=socials from a sub-page) it played
+    // in full view and the line typed itself out white before turning black.
+    hlEls.forEach(function (el) { el.style.transition = "none"; el.classList.add("hl-sweep"); });
+    void document.documentElement.offsetWidth;                       // commit it unanimated
+    requestAnimationFrame(function () { hlEls.forEach(function (el) { el.style.transition = ""; }); });
     if (linkCols.length) linksWrap.classList.add("is-reeling");       // letters parked below their clips
   }
   // Beat 3. The links roll up staggered; the highlight rides across at the same time.
@@ -3984,7 +4000,7 @@ function makeTypeIn(host, runs, opts) {
     firstEval = false;
     if (inView && (jumped || arrived)) { playAll(); return; }
     if (headType && center < vh * 1.02) headType.start();       // a beat BEFORE the fan
-    if (center < vh * 0.50) playFollow();                       // …and this one later, on its own line
+    if (center < vh * 0.65) playFollow();                       // …and this one later, on its own line
     pT = center < vh * 0.85 ? 1 : 0;
   }
 
