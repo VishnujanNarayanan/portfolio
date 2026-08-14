@@ -85,19 +85,29 @@ function makeTypeIn(host, runs, opts) {
   var gap = opts.gap == null ? 160 : opts.gap;
   var hold = opts.hold == null ? 1400 : opts.hold;
   var seq = [], at = 0, any = false;
+  // Walk the element's own child NODES rather than flattening textContent: a run may
+  // wrap part of itself in markup (the footer's highlighted word, a link) and that
+  // wrapper has to survive with its characters still inside it.
+  function split(node, step) {
+    Array.prototype.slice.call(node.childNodes).forEach(function (n) {
+      if (n.nodeType === 3) {
+        var text = n.nodeValue, frag = document.createDocumentFragment();
+        for (var i = 0; i < text.length; i++) {
+          var ch = text[i];
+          if (ch === " " || ch === "\n" || ch === "\t" || ch === "\u00a0") { frag.appendChild(document.createTextNode(ch)); continue; }
+          var sp = document.createElement("span");
+          sp.className = "wtype-c"; sp.textContent = ch;
+          frag.appendChild(sp);
+          seq.push({ c: sp, at: at });
+          at += step;
+        }
+        node.replaceChild(frag, n);
+      } else if (n.nodeType === 1) split(n, step);
+    });
+  }
   runs.forEach(function (r) {
     if (!r.el) return;
-    var text = r.el.textContent, frag = document.createDocumentFragment();
-    for (var i = 0; i < text.length; i++) {
-      var ch = text[i];
-      if (ch === " " || ch === "\n" || ch === "\t" || ch === "\u00a0") { frag.appendChild(document.createTextNode(ch)); continue; }
-      var sp = document.createElement("span");
-      sp.className = "wtype-c"; sp.textContent = ch;
-      frag.appendChild(sp);
-      seq.push({ c: sp, at: at });
-      at += r.step;
-    }
-    r.el.textContent = ""; r.el.appendChild(frag);
+    split(r.el, r.step);
     at += gap; any = true;
   });
   if (!any) return null;
@@ -3841,7 +3851,7 @@ function makeTypeIn(host, runs, opts) {
      Skipped on mobile and under reduced motion, where the fan does not run either:
      the two lines keep their plain CSS background and the links are simply there. */
   const HEAD_STEP = 55, FOLLOW_STEP = 18;
-  const LINK_STEP = 55, LINK_ROLL = 620, LINK_EASE = "cubic-bezier(.19,1,.22,1)";
+  const LINK_STEP = 49, LINK_ROLL = 565, LINK_EASE = "cubic-bezier(.19,1,.22,1)";
   const socialsInner = document.querySelector(".callout-socials-layout");
   const linksWrap = document.querySelector(".callout-socials-links-layout");
   const hlEls = [document.querySelector(".callout-socials-heading__line.is-hl"),
@@ -3866,10 +3876,11 @@ function makeTypeIn(host, runs, opts) {
   // cancelled would start a transition and reel every word a second time. Mute it,
   // drop class and animations together, commit, release a frame later.
   let lit = false;
+  function highlight() { hlEls.forEach(function (el) { el.classList.add("is-lit"); }); }
   function lightUp() {
     if (lit) return;
     lit = true;
-    hlEls.forEach(function (el) { el.classList.add("is-lit"); });
+    highlight();                                              // the blue rides in WITH the links
     if (!linkCols.length) return;
     const anims = linkCols.map(function (c, i) {
       return c.animate([{ transform: "translateY(100%)" }, { transform: "translateY(0)" }],
@@ -3888,7 +3899,7 @@ function makeTypeIn(host, runs, opts) {
     if (!mq.matches || lit) return;
     if (headType && !headType.ran()) headType.reveal();
     if (followType && !followType.ran()) followType.reveal();
-    lightUp();
+    lightUp(); highlight();
   }, { passive: true });
 
   function evalReveal() {
@@ -3897,9 +3908,11 @@ function makeTypeIn(host, runs, opts) {
     const center = (_layTop - (window.scrollY || window.pageYOffset || 0)) + _layH / 2;
     const vh = window.innerHeight;
     if (headType && center < vh * 1.02) headType.start();       // a beat BEFORE the fan
-    if (followType && !followType.ran() && center < vh * 0.70) {    // …and this one after it
+    if (followType && !followType.ran() && center < vh * 0.55) {    // …and this one well after it
       followType.start();
-      setTimeout(lightUp, followType.ms + 120);                 // links + highlight on its last letter
+      // A short beat after the line lands, the links roll in and the blue is dragged
+      // across the two lines — together, one gesture.
+      setTimeout(lightUp, followType.ms + 180);
     }
     pT = center < vh * 0.85 ? 1 : 0;
   }
@@ -4338,6 +4351,74 @@ function makeTypeIn(host, runs, opts) {
       else pills.forEach(function (p) { p.classList.remove("is-rolled"); });
     });
   })();
+})();
+
+/* ---- Footer headline TYPE-IN (2026-08-14) -------------------------------------
+   "Data in. / Products out." types itself in the same way the blog intro and the
+   socials heading do, on the footer's own arrival — an IntersectionObserver here
+   rather than a scroll threshold, because the footer is not pinned and has no
+   state machine of its own to hang off. Runs on every page (the footer is shared),
+   so the blog pages' variant of the headline types too.
+
+   The highlighted word keeps its markup: makeTypeIn walks child nodes, so the
+   .is-hl span survives with its letters inside it and simply types in its colour. */
+(function footerHeadlineType() {
+  var h = document.querySelector(".lfooter__headline");
+  if (!h || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  var rows = Array.prototype.slice.call(h.querySelectorAll(".lfooter__hl-row"));
+  if (!rows.length) return;
+  var HEAD_STEP = 45;
+  var typer = makeTypeIn(h, rows.map(function (el) { return { el: el, step: HEAD_STEP }; }), { gap: 120 });
+  if (!typer) return;
+
+  // …and once it lands, the eight column links reel in from nothing. They already carry
+  // the per-letter .lreel clips (footerLinkReel builds them for the hover roll, further
+  // down this file — so the columns are only READ at reel time, not now), which means
+  // this only has to park the letter columns below their clips and roll them up.
+  var cols = document.querySelector(".lfooter__cols");
+  var LETTER_STEP = 26, LINK_GAP = 72, LINK_ROLL = 560, EASE = "cubic-bezier(.19,1,.22,1)";
+  if (cols) cols.classList.add("is-reeling");
+  function reelLinks() {
+    if (!cols) return;
+    var cs = Array.prototype.slice.call(cols.querySelectorAll(".lreel__col"));
+    if (!cs.length) { cols.classList.remove("is-reeling"); return; }
+    // BOTTOM UP: the links arrive from the last row upward (both columns together,
+    // since the two sit at the same heights), each one's letters still rolling up
+    // left to right within it. Ordered by where they actually are on screen rather
+    // than by DOM order, so the two columns interleave by row.
+    var links = Array.prototype.slice.call(cols.querySelectorAll(".lfooter__navlink"))
+      .map(function (a) { return { a: a, top: a.getBoundingClientRect().top }; })
+      .sort(function (x, y) { return y.top - x.top; });
+    var anims = [], last = 0;
+    links.forEach(function (L, li) {
+      Array.prototype.forEach.call(L.a.querySelectorAll(".lreel__col"), function (c, i) {
+        var delay = li * LINK_GAP + i * LETTER_STEP;
+        if (delay > last) last = delay;
+        anims.push(c.animate([{ transform: "translateY(100%)" }, { transform: "translateY(0)" }],
+                             { duration: LINK_ROLL, delay: delay, easing: EASE, fill: "both" }));
+      });
+    });
+    // Same handoff as the other reels: .lreel__col carries the hover roll's own
+    // transition, so dropping is-reeling while the animations are cancelled would
+    // start a transition and reel all eight a second time.
+    setTimeout(function () {
+      cs.forEach(function (c) { c.style.transition = "none"; });
+      cols.classList.remove("is-reeling");
+      anims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+      void cols.offsetWidth;
+      requestAnimationFrame(function () { cs.forEach(function (c) { c.style.transition = ""; }); });
+    }, last + LINK_ROLL + 60);
+  }
+  function play() { typer.start(); setTimeout(reelLinks, typer.ms + 260); }
+  if (!("IntersectionObserver" in window)) { typer.reveal(); reelLinks(); return; }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      play();
+    });
+  }, { rootMargin: "0px 0px -15% 0px", threshold: 0.2 });
+  io.observe(h);
 })();
 
 /* ---- Post action rail (2026-08-11) --------------------------------------------
