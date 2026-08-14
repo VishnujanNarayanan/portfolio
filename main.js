@@ -4064,7 +4064,18 @@ function makeTypeIn(host, runs, opts) {
   }
 
   cards.forEach((c, i) => c.addEventListener("pointerenter", () => setHover(i)));
+  // Leaving is NOT just leaving the layout box. The cards are absolutely positioned and
+  // transformed inside it — fanned out, dipped and rotated — so the box holds plenty of
+  // empty ground that belongs to no card, and the outermost cards hang past its edges.
+  // Sliding off a card into that empty ground fired no leave at all and the fan stayed
+  // parted. So while something IS hovered, any pointer move that is not over a card
+  // clears it; the layout's own leave stays as the cheap common case.
   layout.addEventListener("pointerleave", () => setHover(-1));
+  document.addEventListener("pointermove", (e) => {
+    if (hovered < 0) return;                                   // nothing to clear → no work
+    const t = e.target;
+    if (!(t && t.closest && t.closest(".callout-socials-card-w"))) setHover(-1);
+  }, { passive: true });
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", () => { measureSizeFactor(); measureLayout(); if (mq.matches) clearMobile(); else { evalReveal(); kick(); } });
   window.addEventListener("load", () => { measureSizeFactor(); measureLayout(); });
