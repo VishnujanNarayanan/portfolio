@@ -1884,3 +1884,32 @@ html.boot-active #boot-loader{display:flex}
 /* stroke- and fill-based glyphs alike follow currentColor, set to white above */
 .share-btn:hover svg,.post-rail__pop-btn:hover svg{color:var(--color-text-light)}
 .blog-body .keep-reading{border-top-color:rgba(5,4,25,.1)}
+
+/* ============================================================
+   Header REEL-IN (see reelHeaderIn in main.js)
+   The empty state: every letter column parked just below its
+   clip, so the header shows no words at all until the reel-in
+   animation rolls them up. Transform-only on the existing clips,
+   so no glyph box moves and the header never reflows.
+   ============================================================ */
+header.is-reeling .header__nav-left a .nav-char__col,
+header.is-reeling .header__ctas .pill-char__col{transform:translateY(100%)}
+/* the pill shells themselves: hidden until the JS fade (WAAPI) takes over */
+header.is-reeling .header__ctas .pill-btn{opacity:0}
+
+/* Hovered nav link during a world flip (see __navLight): the hover roll is suspended so
+   the letters can reel in the world flip where they are visible, then the clone rolls back
+   in with the new --hc. Outranks the :hover roll rule ((0,4,2) vs (0,3,1)). */
+header .header__nav-left a.is-reflip:hover .nav-char__col{transform:translateY(0)}
+
+/* Hero nav hover clone: ALWAYS the light world's black, for the whole hero run
+   (header.is-hero = up to the flip threshold at .955vh). The nav is black
+   throughout that range, so this is what currentColor already resolved to on a
+   normal scroll — but the inline colour is deliberately left in the world it
+   came FROM after a reeled flip (setHeaderTheme keeps __a's source colour so the
+   reel can read old→new), and clicking Home from the projects run is exactly
+   that case: the letters land black while currentColor is still white, so every
+   word hovered afterwards came up white. Pinning the clone here settles it for
+   good, with no timing involved. The pill clones are NOT included — the dark
+   pill's letters are white on the hero, so black would erase them. */
+header.is-hero .header__nav-left a .nav-char__c{color:#050419}
