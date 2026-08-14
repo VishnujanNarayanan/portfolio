@@ -3881,10 +3881,14 @@ function makeTypeIn(host, runs, opts) {
   // waiting its turn, was simply revealed — it appeared instead of typing.
   const headEl = document.querySelector(".callout-socials-heading");
   const followEl = document.querySelector(".callout-socials-follow");
+  // hold 120: the cursor travels with the heading while it types and is gone almost the
+  // instant it stops. It used to sit there for the default beat and a bit — and once the
+  // highlight swept "On Socials" the text (and so the cursor, which is currentColor) went
+  // white, leaving a white block parked at the end of the line.
   const headType = !staged || !headEl ? null : makeTypeIn(headEl, [
     { el: headEl.querySelector(".callout-socials-heading__line:not(.is-hl)"), step: HEAD_STEP },
     { el: headEl.querySelector(".callout-socials-heading__line.is-hl"),       step: HEAD_STEP }
-  ]);
+  ], { hold: 120 });
   const followType = !staged || !followEl ? null : makeTypeIn(followEl, [
     { el: followEl, step: FOLLOW_STEP }
   ], { keep: true });            // cursor stays blinking after "…social media"
