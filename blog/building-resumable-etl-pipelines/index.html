@@ -219,7 +219,7 @@ start = df[df["Close"].notna()]["Date"].max()</code></pre>
 
   <h2>Break four: going too fast and writing the wreckage</h2>
 
-  <p>All of the above assumes the source keeps answering properly. Rate limits are their own subject — a refusal that clears in seconds and a quota that is finished for the month arrive as the same status code, which I unpicked in <a href="/blog/what-429-really-means/">what a 429 really means</a>. Here the problem is worse than a refusal: when you hit a rate limit you often do not get a clean refusal — you get a partial or empty response, which is precisely how bad rows end up in the file in the first place. So backing off is not politeness here, it is a data-quality control.</p>
+  <p>All of the above assumes the source keeps answering properly. Rate limits are their own subject — a refusal that clears in seconds and a quota that is finished for the month arrive as the same status code, which I unpicked in <a href="/blog/http-429-retry-logic/">what a 429 really means</a>. Here the problem is worse than a refusal: when you hit a rate limit you often do not get a clean refusal — you get a partial or empty response, which is precisely how bad rows end up in the file in the first place. So backing off is not politeness here, it is a data-quality control.</p>
 
   <p>The price downloader adjusts its own speed. It starts with five downloads running at once, drops one whenever the source returns an error, and adds one back after fifteen requests in a row succeed. Individual requests get three attempts with a widening wait between them, and a ten-second cut-off. It speeds up when the source is healthy and slows down the moment it pushes back, without me picking a fixed delay that is either too slow on a good day or too aggressive on a bad one.</p>
 
@@ -255,7 +255,7 @@ start = df[df["Close"].notna()]["Date"].max()</code></pre>
     <li><a href="/blog/a-year-of-ingestion-bugs/">A year of ingestion bugs</a> — a year of real pipeline failures sorted by cause, which is where these rules came from.</li>
     <li><a href="/blog/how-i-scraped-nse-insider-filings/">Scraping 20 years from a date-windowed endpoint</a> — a walkthrough of pulling two decades out of an endpoint that only answers a few months at a time.</li>
     <li><a href="/blog/how-to-test-a-data-pipeline/">How to test a data pipeline</a> — how to test resume behaviour: stop a run part-way and check that the next one repairs it.</li>
-    <li><a href="/blog/what-429-really-means/">What a 429 really means</a> — how to tell a rate limit that clears by itself from one that never will, and what each means for a retry.</li>
+    <li><a href="/blog/http-429-retry-logic/">What a 429 really means</a> — how to tell a rate limit that clears by itself from one that never will, and what each means for a retry.</li>
     <li><a href="/projects/market-data-pipeline/">Market data platform</a> — the project page for the system these rules were written for.</li>
   </ul>
 </article>

@@ -30,7 +30,7 @@
     "share": "/images/blog/share-blocked-scraper.jpg"
   },
   {
-    "slug": "what-429-really-means",
+    "slug": "http-429-retry-logic",
     "title": "What a 429 Really Means: Retry Logic That Makes Things Worse",
     "h1": "What a 429 really means, and the retry logic that makes things worse",
     "dek": "The same status code covers \"wait three seconds\" and \"this account is finished for the month\". Treating them alike ended three runs early. The three-class taxonomy that fixed it.",

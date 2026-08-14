@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/blog/what-429-really-means",
+      "destination": "/blog/http-429-retry-logic/",
+      "permanent": true
+    },
+    {
+      "source": "/blog/what-429-really-means/",
+      "destination": "/blog/http-429-retry-logic/",
+      "permanent": true
+    }
+  ]
+}
