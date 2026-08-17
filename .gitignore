@@ -53,6 +53,10 @@ yarn-error.log*
 # but KEEP the ones the site actually loads so they deploy.
 *.mp4
 !videos/*.mp4
+# Project-card videos are encoded web-ready (900x900, ~100-500KB each) and the cards
+# reference them directly, so they must ship. The heavy raw captures they are cut from
+# live in reel/videos/ and stay ignored by the rule above.
+!images/projects/*.mp4
 # *.avi
 # *.mov
 # *.mkv
@@ -133,3 +137,8 @@ images/messages_part1.png
 images/footer_2.jpeg
 
 flow
+
+# Raw capture staging: screen recordings and notebook-extracted plots that the
+# generators in scripts/ read from. Hundreds of MB, and none of it is served.
+reel/
+__pycache__/
