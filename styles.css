@@ -537,6 +537,17 @@ header .header__nav-left a{color:#050419;font-size:16px}
    filled and re-uploaded to the GPU every frame to show one viewport of it.
    Height is set from JS; transform is the per-frame offset. */
 .section-contours{position:absolute;left:0;top:0;width:100%;z-index:0;pointer-events:none;will-change:transform}
+/* Opaque fallback UNDER each contour canvas, matching that section's fill in main.js
+   (darkSecs: .features rgb(15,22,40), the brand zone rgb(208,225,235), .faq
+   rgb(27,34,54)). Without it these sections have no background of their own and the
+   canvas is the only thing painting them — but the canvas is sized in whole device
+   pixels while section heights are fractional, so at some scroll offsets and zoom
+   levels a sub-pixel sliver of the light page background showed through as a white
+   hairline at the section seams (most visibly where the projects terminal meets
+   .projects-tail, and at the skills bulge). */
+.features{background-color:#0f1628}
+.brand-teaser,.brand-manifesto{background-color:#d0e1eb}
+.faq{background-color:#1b2236}
 /* keep each section's real content above its canvas */
 .features__sticky,.standards__container,.faq__container{position:relative;z-index:1}
 
