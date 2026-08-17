@@ -599,41 +599,45 @@
      card OR its matching text item in .flow-panel__list activates BOTH (the
      .is-active class mirrors the card's :hover). Built here from CARD_DATA so the
      verbose frame SVG isn't duplicated 16× in the HTML. */
-  var IMG = {
-    dc: "images/flow/data-collection.jpg", ps: "images/flow/processing-storage.jpg",
-    ml: "images/flow/ml-analysis.jpg", bs: "images/flow/build-ship.jpg"
-  };
+  // Stock stand-in, still used by the cards that have no real capture yet. The other
+  // three entries were dropped once every card that used them gained its own plate or
+  // video; add one back if a new card needs a placeholder.
+  var IMG = { dc: "images/flow/data-collection.jpg" };
   var CARD_DATA = [
     [ // 01 Anti-Bot Scraping
       { k: "p", n: "Market Data Platform", img: IMG.dc, d: "28-pipeline NSE ingestion layer feeding 12+ datasets.", t: ["Python", "Playwright", "ETL"], href: "/projects/market-data-pipeline/" },
       { k: "p", n: "Job Application Bot", img: IMG.dc, d: "Scrapes Indeed, Glassdoor & LinkedIn; tailors a resume per match.", t: ["Python", "Playwright", "FastAPI"], href: "https://github.com/VishnujanNarayanan/Job_Application_Bot", ext: true },
-      { k: "p", n: "Product Explorer", img: IMG.ps, d: "Crawlee/Playwright scraper streaming a catalog over WebSockets.", t: ["Crawlee", "Playwright", "NestJS"], href: "/projects/product-explorer/" },
+      { k: "p", n: "Product Explorer", img: "images/projects/product-explorer-poster.jpg", video: "images/projects/product-explorer.mp4", d: "Crawlee/Playwright scraper streaming a catalog over WebSockets.", t: ["Crawlee", "Playwright", "NestJS"], href: "/projects/product-explorer/" },
       { k: "b", n: "Scraping 20 Years of NSE Filings", d: "Beating bot defenses to backfill two decades of insider filings.", t: ["Scraping", "Playwright"], href: "/blog/how-i-scraped-nse-insider-filings/" }
     ],
     [ // 02 Resilient ETL & ML
-      { k: "p", n: "Fraud Detection", img: IMG.ml, d: "95% of fraud caught at 0.995 ROC-AUC on 6.4M transactions.", t: ["scikit-learn", "pandas"], href: "/projects/fraud-detection/" },
-      { k: "p", n: "Minute-Level Stock Prediction", img: IMG.bs, d: "Next-minute price direction over 9.4M NSE ticks.", t: ["scikit-learn", "Backtesting"], href: "/projects/nse-stock-prediction/" },
-      { k: "p", n: "Trader Sentiment Analysis", img: IMG.dc, d: "Fear & Greed sentiment vs trader PnL across 211K crypto trades.", t: ["pandas", "SciPy"], href: "https://github.com/VishnujanNarayanan/Trader_sentiment_analysis", ext: true },
+      { k: "p", n: "Fraud Detection", img: "images/projects/fraud-detection.jpg", d: "95% of fraud caught at 0.995 ROC-AUC on 6.4M transactions.", t: ["scikit-learn", "pandas"], href: "/projects/fraud-detection/" },
+      { k: "p", n: "Minute-Level Stock Prediction", img: "images/projects/nse-stock-prediction.jpg", d: "Next-minute price direction over 9.4M NSE ticks.", t: ["scikit-learn", "Backtesting"], href: "/projects/nse-stock-prediction/" },
+      { k: "p", n: "Semantic Quote Retrieval", img: "images/projects/quote-retrieval-poster.jpg", video: "images/projects/quote-retrieval.mp4", d: "Fine-tuned embeddings + FAISS over ~2,500 quotes.", t: ["FAISS", "PyTorch", "Streamlit"], href: "https://github.com/VishnujanNarayanan/Quotes_Retrieval", ext: true },
       { k: "b", n: "Resumable ETL Pipelines", d: "Incremental loads, adaptive backoff, and reruns that repair gaps.", t: ["ETL", "Python"], href: "/blog/building-resumable-etl-pipelines/" }
     ],
     [ // 03 Deploys & Uptime
-      { k: "p", n: "DekhLaw Platform", img: IMG.bs, d: "Production legal-tech on Railway/Vercel — Docker, self-healing schema.", t: ["Railway", "Docker", "PostgreSQL"] },
+      { k: "p", n: "Law Firm Website", img: "images/projects/law-firm-poster.jpg", video: "images/projects/law-firm.mp4", d: "Next.js 14 site on Vercel — 14 routes, Resend lead capture, full SEO.", t: ["Next.js", "Vercel", "Resend"], href: "https://smartnperfectlegal.legal/", ext: true },
       { k: "p", n: "Job Application Bot", img: IMG.dc, d: "Dockerized pipeline on AWS & GCP, Postgres on Neon.", t: ["Docker", "AWS", "GCP"], href: "https://github.com/VishnujanNarayanan/Job_Application_Bot", ext: true },
       { k: "b", n: "What a 429 Really Means", d: "Transient, permanent, exhausted — the retry logic that keeps a scheduled run alive.", t: ["APIs", "Reliability"], href: "/blog/http-429-retry-logic/" },
       { k: "b", n: "How to Test a Data Pipeline", d: "92 passing tests, 3 broken features, and the checks that would have caught them.", t: ["Testing", "CI"], href: "/blog/how-to-test-a-data-pipeline/" }
     ],
     [ // 04 APIs & Apps
-      { k: "p", n: "DekhLaw API", img: IMG.bs, d: "~30 Express endpoints, JWT auth, and Twilio voice orchestration.", t: ["Express", "Twilio", "JWT"] },
-      { k: "p", n: "Law Firm Website", img: IMG.ps, d: "Next.js 14 site — 14 routes, Resend lead capture, full SEO.", t: ["Next.js", "TypeScript", "Resend"] },
-      { k: "p", n: "Professional Directory App", img: IMG.ps, d: "React Native across 12 screens over a FastAPI REST service.", t: ["React Native", "FastAPI"] },
+      { k: "p", n: "DekhLaw API", img: "images/projects/dekhlaw-poster.jpg", video: "images/projects/dekhlaw.mp4", d: "~30 Express endpoints, JWT auth, and Twilio voice orchestration.", t: ["Express", "Twilio", "JWT"] },
+      { k: "p", n: "Functional Task Manager", img: "images/projects/task-manager-poster.jpg", video: "images/projects/task-manager.mp4", d: "Scala 3 compiled to JS — immutable state, UI as a pure projection.", t: ["Scala 3", "Scala.js", "Laminar"], href: "https://task-manager-using-functional-progr.vercel.app/", ext: true },
       { k: "b", n: "Local LLM vs API", d: "A 7B model on a 6GB GPU against a hosted 70B — latency, quotas, structured output.", t: ["LLMs", "APIs"], href: "/blog/local-llm-vs-api/" }
     ]
   ];
   function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
   function cardHtml(c, i) {
+    // A card with `video` renders one, poster-first; applyActive() below plays it while
+    // the card is the active one. preload="none" keeps it off the wire until then.
     var face = c.k === "b"
       ? '<span class="proj-card__shot" aria-hidden="true"></span>'
-      : '<img class="proj-card__img" src="' + c.img + '" alt="" loading="lazy" decoding="async">';
+      : c.video
+        ? '<video class="proj-card__img proj-card__video" src="' + c.video + '" poster="' + c.img +
+          '" muted loop playsinline preload="none" aria-hidden="true"></video>'
+        : '<img class="proj-card__img" src="' + c.img + '" alt="" loading="lazy" decoding="async">';
     var openA = c.href ? '<a class="proj-card__media" href="' + c.href + '"' + (c.ext ? ' target="_blank" rel="noopener"' : "") + ">" : '<span class="proj-card__media">';
     var closeA = c.href ? "</a>" : "</span>";
     return '<div class="proj-card flow-pcard' + (c.k === "b" ? " proj-card--blog" : "") + '" data-card="' + i + '">' +
@@ -662,7 +666,20 @@
   // active pair always tracks the card that's really beneath the cursor right now.
   function applyActive(panel, idx, on) {
     var els = panel.querySelectorAll('.flow-panel__item[data-card="' + idx + '"], .flow-panel__cards .proj-card[data-card="' + idx + '"]');
-    Array.prototype.forEach.call(els, function (el) { el.classList.toggle("is-active", on); });
+    Array.prototype.forEach.call(els, function (el) {
+      el.classList.toggle("is-active", on);
+      // Video cards play only while active. Keyed off this rather than pointerenter
+      // for the same reason .is-active is: the cards move every frame and their
+      // pointer-events flip per stage, so element-level hover events get missed.
+      var vid = el.classList.contains("proj-card") ? el.querySelector(".proj-card__video") : null;
+      if (!vid) return;
+      if (on && !reduce) {
+        var p = vid.play();
+        if (p && p.catch) p.catch(function () {});   // autoplay refused: poster stands in
+      } else {
+        vid.pause();
+      }
+    });
   }
   var hoverPanel = null, hoverIdx = -1, hoverX = -1, hoverY = -1;
   function refreshHover() {
