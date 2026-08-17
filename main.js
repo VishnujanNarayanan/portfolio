@@ -2878,22 +2878,21 @@ function makeTypeIn(host, runs, opts) {
     // and dom = domain(s) — both drive the side-panel "Filter by" facets.
     var PROJECTS = [
       { n: "Market Data Platform", d: "28-pipeline NSE market-data ingestion layer feeding 12+ datasets into a partitioned store.", t: ["Python", "pandas", "ETL", "SQL"], tools: ["Python", "pandas", "NumPy", "SQL", "ETL"], dom: ["Data", "Finance"], h: "/projects/market-data-pipeline/", img: "images/flow/data-collection.jpg" },
-      { n: "Product Explorer", d: "Full-stack TypeScript app scraping a book catalog into PostgreSQL, served via Next.js with real-time WebSocket scraping.", t: ["TypeScript", "NestJS", "PostgreSQL", "Redis"], tools: ["TypeScript", "NestJS", "Next.js", "PostgreSQL", "Redis", "WebSockets"], dom: ["Scraping", "Backend", "Full-Stack", "Data"], h: "/projects/product-explorer/", img: "images/flow/processing-storage.jpg" },
-      { n: "DekhLaw Legal-Emergency Platform", d: "Solo-built production legal-emergency platform — ~30 Express endpoints over PostgreSQL with JWT auth, a real-time Twilio call-dispatch engine, and Haversine lawyer matching, deployed on Railway and Vercel.", t: ["Node.js", "Express", "PostgreSQL", "Twilio"], tools: ["Node.js", "Express", "PostgreSQL", "SQLite", "Twilio", "JWT", "Cloudinary", "Railway", "Vercel"], dom: ["Full-Stack", "Backend", "DevOps"], img: "images/flow/build-ship.jpg" },
-      { n: "Law Firm Website", d: "Production law-firm marketing site in Next.js 14 + TypeScript — 14 routes, Resend-backed lead capture, Zod-validated forms, and full SEO/JSON-LD, designed and shipped solo.", t: ["Next.js", "TypeScript", "Tailwind", "Framer Motion"], tools: ["Next.js", "React", "TypeScript", "Tailwind", "Framer Motion", "Resend", "Zod", "Vercel"], dom: ["Full-Stack", "Frontend"], img: "images/flow/processing-storage.jpg" },
+      { n: "Product Explorer", d: "Full-stack TypeScript app scraping a book catalog into PostgreSQL, served via Next.js with real-time WebSocket scraping.", t: ["TypeScript", "NestJS", "PostgreSQL", "Redis"], tools: ["TypeScript", "NestJS", "Next.js", "PostgreSQL", "Redis", "WebSockets"], dom: ["Scraping", "Backend", "Full-Stack", "Data"], h: "/projects/product-explorer/", img: "images/projects/product-explorer-poster.jpg", video: "images/projects/product-explorer.mp4" },
+      { n: "DekhLaw Legal-Emergency Platform", d: "Solo-built production legal-emergency platform — ~30 Express endpoints over PostgreSQL with JWT auth, a real-time Twilio call-dispatch engine, and Haversine lawyer matching, deployed on Railway and Vercel.", t: ["Node.js", "Express", "PostgreSQL", "Twilio"], tools: ["Node.js", "Express", "PostgreSQL", "SQLite", "Twilio", "JWT", "Cloudinary", "Railway", "Vercel"], dom: ["Full-Stack", "Backend", "DevOps"], img: "images/projects/dekhlaw-poster.jpg", video: "images/projects/dekhlaw.mp4" },
+      { n: "Law Firm Website", d: "Production law-firm marketing site in Next.js 14 + TypeScript — 14 routes, Resend-backed lead capture, Zod-validated forms, and full SEO/JSON-LD, designed and shipped solo.", t: ["Next.js", "TypeScript", "Tailwind", "Framer Motion"], tools: ["Next.js", "React", "TypeScript", "Tailwind", "Framer Motion", "Resend", "Zod", "Vercel"], dom: ["Full-Stack", "Frontend"], h: "https://smartnperfectlegal.legal/", img: "images/projects/law-firm-poster.jpg", video: "images/projects/law-firm.mp4" },
       { n: "Job Application Bot", d: "Autonomous job-search bot — scrapes Indeed, Glassdoor, and LinkedIn listings, scores them against a master profile, and builds a tailored resume per match with an LLM, rendered on demand via FastAPI.", t: ["Python", "FastAPI", "Playwright", "LLM"], tools: ["Python", "FastAPI", "Playwright", "PostgreSQL", "spaCy", "Gemini", "Docker", "AWS", "GCP"], dom: ["Backend", "Scraping", "ML", "NLP", "DevOps"], img: "images/flow/data-collection.jpg" },
-      { n: "Fraud Transaction Detection", d: "Fraud-detection model on 6.4M transactions — 95% caught at 0.995 ROC-AUC despite a 0.13% fraud rate.", t: ["Python", "scikit-learn", "pandas"], tools: ["Python", "scikit-learn", "pandas", "NumPy", "SciPy"], dom: ["ML", "Data", "Finance"], h: "/projects/fraud-detection/", code: "https://github.com/VishnujanNarayanan/Fraud_Transaction_Detection", img: "images/flow/ml-analysis.jpg" },
-      { n: "Minute-Level Stock Prediction", d: "Intraday price-direction system over 9.4M NSE ticks, raising next-minute precision from 0.51 to 0.61.", t: ["Python", "scikit-learn", "Backtesting"], tools: ["Python", "scikit-learn", "pandas", "Backtesting"], dom: ["ML", "Quant", "Finance", "Data"], h: "/projects/nse-stock-prediction/", code: "https://github.com/VishnujanNarayanan/minute-level-stock-prediction", img: "images/flow/build-ship.jpg" },
-      { n: "Trader Sentiment Analysis", d: "Quantified how Bitcoin Fear & Greed sentiment drives trader PnL across 211K crypto trades, with a contrarian sentiment-gated signal.", t: ["Python", "pandas", "SciPy", "Statistics"], tools: ["Python", "pandas", "SciPy", "Matplotlib"], dom: ["Finance", "Quant", "Data"], code: "https://github.com/VishnujanNarayanan/Trader_sentiment_analysis", img: "images/flow/data-collection.jpg" },
-      { n: "Nexora Semantic Vibe Matcher", d: "Semantic product-search engine that embeds descriptions and ranks by cosine similarity — finds matches with no shared keywords.", t: ["Python", "sentence-transformers", "NLP"], tools: ["Python", "sentence-transformers", "PyTorch"], dom: ["ML", "NLP"], code: "https://github.com/VishnujanNarayanan/nexora_submission", img: "images/flow/processing-storage.jpg" },
+      { n: "Fraud Transaction Detection", d: "Fraud-detection model on 6.4M transactions — 95% caught at 0.995 ROC-AUC despite a 0.13% fraud rate.", t: ["Python", "scikit-learn", "pandas"], tools: ["Python", "scikit-learn", "pandas", "NumPy", "SciPy"], dom: ["ML", "Data", "Finance"], h: "/projects/fraud-detection/", code: "https://github.com/VishnujanNarayanan/Fraud_Transaction_Detection", img: "images/projects/fraud-detection.jpg" },
+      { n: "Minute-Level Stock Prediction", d: "Intraday price-direction system over 9.4M NSE ticks, raising next-minute precision from 0.51 to 0.61.", t: ["Python", "scikit-learn", "Backtesting"], tools: ["Python", "scikit-learn", "pandas", "Backtesting"], dom: ["ML", "Quant", "Finance", "Data"], h: "/projects/nse-stock-prediction/", code: "https://github.com/VishnujanNarayanan/minute-level-stock-prediction", img: "images/projects/nse-stock-prediction.jpg" },
+      { n: "Trader Sentiment Analysis", d: "Quantified how Bitcoin Fear & Greed sentiment drives trader PnL across 211K crypto trades, with a contrarian sentiment-gated signal.", t: ["Python", "pandas", "SciPy", "Statistics"], tools: ["Python", "pandas", "SciPy", "Matplotlib"], dom: ["Finance", "Quant", "Data"], code: "https://github.com/VishnujanNarayanan/Trader_sentiment_analysis", img: "images/projects/trader-sentiment.jpg" },
       { n: "Support Ticket Classifier", d: "End-to-end NLP system classifying support tickets by issue type and urgency and extracting entities, served via a Gradio app.", t: ["Python", "scikit-learn", "NLTK", "Gradio"], tools: ["Python", "scikit-learn", "NLTK", "Gradio"], dom: ["ML", "NLP"], code: "https://github.com/VishnujanNarayanan/ticket-classifier-nlp", img: "images/flow/ml-analysis.jpg" },
-      { n: "Semantic Quote Retrieval", d: "Semantic quote search — fine-tuned sentence embeddings + FAISS index over ~2,500 quotes, served through Streamlit.", t: ["Python", "FAISS", "PyTorch", "Streamlit"], tools: ["Python", "FAISS", "PyTorch", "sentence-transformers", "Streamlit"], dom: ["ML", "NLP"], code: "https://github.com/VishnujanNarayanan/Quotes_Retrieval", img: "images/flow/build-ship.jpg" },
+      { n: "Semantic Quote Retrieval", d: "Semantic quote search — fine-tuned sentence embeddings + FAISS index over ~2,500 quotes, served through Streamlit.", t: ["Python", "FAISS", "PyTorch", "Streamlit"], tools: ["Python", "FAISS", "PyTorch", "sentence-transformers", "Streamlit"], dom: ["ML", "NLP"], code: "https://github.com/VishnujanNarayanan/Quotes_Retrieval", img: "images/projects/quote-retrieval-poster.jpg", video: "images/projects/quote-retrieval.mp4" },
       { n: "Age & Gender Classifier", d: "Multi-task CNN predicting age and gender from a face photo, trained on 10,000+ UTKFace images with face detection and alignment.", t: ["Python", "TensorFlow", "Keras", "OpenCV"], tools: ["Python", "TensorFlow", "Keras", "OpenCV"], dom: ["ML", "Computer Vision"], code: "https://github.com/VishnujanNarayanan/Image_classifier", img: "images/flow/data-collection.jpg" },
-      { n: "Neural Network From Scratch", d: "Feed-forward classifier built in pure NumPy — 97.4% accuracy / 0.995 ROC-AUC on Breast-Cancer-Wisconsin, with hand-derived backprop.", t: ["Python", "NumPy"], tools: ["Python", "NumPy"], dom: ["ML"], code: "https://github.com/VishnujanNarayanan/Neural_net_from_scratch", img: "images/flow/processing-storage.jpg" },
+      { n: "Neural Network From Scratch", d: "Feed-forward classifier built in pure NumPy — 97.4% accuracy / 0.995 ROC-AUC on Breast-Cancer-Wisconsin, with hand-derived backprop.", t: ["Python", "NumPy"], tools: ["Python", "NumPy"], dom: ["ML"], code: "https://github.com/VishnujanNarayanan/Neural_net_from_scratch", img: "images/projects/neural-net-scratch.jpg" },
       { n: "Multi-Task Face Network", d: "From-scratch NumPy multi-task network predicting age and gender from 24,102 face images — shared trunk, two heads, manual backprop.", t: ["Python", "NumPy", "OpenCV"], tools: ["Python", "NumPy", "OpenCV"], dom: ["ML", "Computer Vision"], code: "https://github.com/VishnujanNarayanan/Neural_net_from_scratch", img: "images/flow/ml-analysis.jpg" },
-      { n: "Linear Regression From Scratch", d: "Linear regression built end to end in pure NumPy — hand-derived gradient descent and a closed-form solver, validated vs scikit-learn.", t: ["Python", "NumPy"], tools: ["Python", "NumPy", "scikit-learn"], dom: ["ML"], code: "https://github.com/VishnujanNarayanan/Linear_regression_from_scratch", img: "images/flow/build-ship.jpg" },
-      { n: "Binance Futures Trading Bot", d: "CLI trading bot placing market, limit, and stop-limit orders and managing positions on the Binance USDT-M Futures Testnet.", t: ["Python", "python-binance", "CLI"], tools: ["Python", "python-binance", "CLI"], dom: ["Finance", "Backend"], code: "https://github.com/VishnujanNarayanan/binance-futures-trading-bot", img: "images/flow/data-collection.jpg" },
-      { n: "Professional Directory App", d: "Cross-platform React Native directory app across 12 screens — auth, search, and messaging — over a FastAPI REST service.", t: ["React Native", "Expo", "FastAPI"], tools: ["React Native", "Expo", "FastAPI"], dom: ["Full-Stack", "Backend", "Mobile"], img: "images/flow/processing-storage.jpg" }
+      { n: "Linear Regression From Scratch", d: "Linear regression built end to end in pure NumPy — hand-derived gradient descent and a closed-form solver, validated vs scikit-learn.", t: ["Python", "NumPy"], tools: ["Python", "NumPy", "scikit-learn"], dom: ["ML"], code: "https://github.com/VishnujanNarayanan/Linear_regression_from_scratch", img: "images/projects/linear-regression-scratch.jpg" },
+      { n: "Binance Futures Trading Bot", d: "CLI trading bot placing market, limit, and stop-limit orders and managing positions on the Binance USDT-M Futures Testnet.", t: ["Python", "python-binance", "CLI"], tools: ["Python", "python-binance", "CLI"], dom: ["Finance", "Backend"], code: "https://github.com/VishnujanNarayanan/binance-futures-trading-bot", img: "images/projects/trading-bot-1.jpg", imgs: ["images/projects/trading-bot-1.jpg", "images/projects/trading-bot-2.jpg", "images/projects/trading-bot-3.jpg", "images/projects/trading-bot-4.jpg"] },
+      { n: "Functional Task Manager", d: "Browser task planner written in Scala 3 and compiled to JavaScript — state is one immutable Var, the UI a pure projection of it, with no manual DOM manipulation.", t: ["Scala 3", "Scala.js", "Laminar"], tools: ["Scala", "Scala.js", "Laminar", "sbt", "Vercel"], dom: ["Frontend", "Functional Programming"], h: "https://task-manager-using-functional-progr.vercel.app/", code: "https://github.com/VishnujanNarayanan/task_manager_using_functional_programming", img: "images/projects/task-manager-poster.jpg", video: "images/projects/task-manager.mp4" },
     ];
     // Notched-corner card frame (Lando "helmet-grid" reference): base outline + a
     // brighter overlay outline that fades in on hover. Same viewBox/path as the ref.
@@ -2947,16 +2946,28 @@ function makeTypeIn(host, runs, opts) {
       var rows = PROJECTS.map(function (p, n) {
         // Media links to the subpage if one exists, otherwise straight to GitHub.
         var primary = p.h || p.code || "";
-        var ext = !p.h && !!p.code; // github → new tab
+        // Anything off-site opens in a new tab. Tested on the resolved URL rather than
+        // on "is this p.code", because p.h is a site-relative path for most projects
+        // but an absolute live-demo URL for the ones with no sub-page.
+        var ext = /^https?:/i.test(primary);
         var openA = primary
           ? '<a class="proj-card__media" href="' + primary + '"' + (ext ? ' target="_blank" rel="noopener"' : "") + ">"
           : '<span class="proj-card__media">';
         var closeA = primary ? "</a>" : "</span>";
         // data-tools / data-dom (lowercased, |-joined) let the side-panel filter match.
         var dataF = ' data-tools="|' + p.tools.map(slug).join("|") + '|" data-dom="|' + p.dom.map(slug).join("|") + '|"';
+        // A multi-frame card ships every frame in data-frames; wireFrames() cycles
+        // them on hover. p.img stays the first frame so the static markup is complete.
+        if (p.imgs && p.imgs.length > 1) dataF += ' data-frames="' + p.imgs.join("|") + '"';
         return '<div class="proj-card"' + dataF + ">" +
           openA +
-            '<img class="proj-card__img" src="' + p.img + '" alt="" loading="lazy" decoding="async">' +
+            // A video card ships its poster in the markup, so a crawler and anyone who
+            // never hovers still get a real image. preload="none" keeps it off the wire
+            // until hover; wireVideos() starts and pauses it.
+            (p.video
+              ? '<video class="proj-card__img proj-card__video" src="' + p.video + '" poster="' + p.img +
+                '" muted loop playsinline preload="none" aria-hidden="true"></video>'
+              : '<img class="proj-card__img" src="' + p.img + '" alt="" loading="lazy" decoding="async">') +
             '<span class="proj-card__reveal">' +
               '<span class="proj-card__desc">' + escapeHtml(p.d) + "</span>" +
             "</span>" +
@@ -3193,6 +3204,59 @@ function makeTypeIn(host, runs, opts) {
         sel = { tools: {}, dom: {} };
         [].slice.call(panel.querySelectorAll(".filter__cb")).forEach(function (cb) { cb.checked = false; });
         apply();
+      });
+    })();
+
+    // ---- Multi-frame cards: cycle the stills while hovered ----
+    // A card whose PROJECTS entry carries `imgs` renders the first frame statically
+    // (so a crawler and a no-JS reader still get a real image) and lists the rest in
+    // data-frames. Hovering steps through them on a timer — the cheap version of a
+    // screen recording for projects whose demo is a sequence of terminal states.
+    (function wireFrames() {
+      var STEP_MS = 500;
+      [].slice.call(projEl.querySelectorAll(".proj-card[data-frames]")).forEach(function (card) {
+        var frames = card.getAttribute("data-frames").split("|").filter(Boolean);
+        var img = card.querySelector(".proj-card__img");
+        if (!img || frames.length < 2) return;
+
+        // Decode every frame up front, on the first hover only. Swapping src to an
+        // undecoded image blanks the element for a beat, which reads as a flicker.
+        var warmed = false, timer = null, i = 0;
+        function warm() {
+          if (warmed) return;
+          warmed = true;
+          frames.forEach(function (src) { var pre = new Image(); pre.src = src; });
+        }
+        function stop() {
+          if (timer) { clearInterval(timer); timer = null; }
+          i = 0;
+          img.src = frames[0];
+        }
+        card.addEventListener("pointerenter", function () {
+          if (reduce || timer) return;          // reduced motion: hold frame 1
+          warm();
+          timer = setInterval(function () {
+            i = (i + 1) % frames.length;
+            img.src = frames[i];
+          }, STEP_MS);
+        });
+        card.addEventListener("pointerleave", stop);
+      });
+    })();
+
+    // ---- Video cards: play while hovered, pause when not ----
+    (function wireVideos() {
+      [].slice.call(projEl.querySelectorAll(".proj-card__video")).forEach(function (vid) {
+        var card = vid.closest(".proj-card");
+        if (!card) return;
+        card.addEventListener("pointerenter", function () {
+          if (reduce) return;                  // reduced motion: the poster stands in
+          // play() rejects if the gesture heuristics disagree; muted+playsinline is
+          // the combination browsers allow, and a rejection just leaves the poster.
+          var p = vid.play();
+          if (p && p.catch) p.catch(function () {});
+        });
+        card.addEventListener("pointerleave", function () { vid.pause(); });
       });
     })();
 
