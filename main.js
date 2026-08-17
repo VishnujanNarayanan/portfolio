@@ -3245,12 +3245,68 @@ function makeTypeIn(host, runs, opts) {
     })();
 
     // ---- Video cards: play while hovered, pause when not ----
+    // Loading follows the two rules the hero video established:
+    //
+    //  1. NOT preloaded at first paint. Same call as the transition videos — these are
+    //     far below the fold and only ever play on hover, so fetching them on load
+    //     would compete with the hero for bandwidth and the decoder, which is exactly
+    //     the stutter that preload="none" fixed there.
+    //  2. Warmed BEFORE they are needed, and the decoder PRIMED, not just buffered.
+    //     Buffered bytes do not mean the decode pipeline is spun up; the hero pays for
+    //     that under the boot loader, and paying for it on the first hover would put
+    //     the stall somewhere visible. Here the trigger is the section approaching
+    //     rather than boot: an observer with a one-viewport margin warms the videos
+    //     while the terminal is still off screen, then rolls each briefly and parks it
+    //     back at frame 0.
+    //  3. HIDDEN = PAUSED. Pointerleave is not enough on its own: hover, then scroll
+    //     away without moving the pointer, and the card keeps decoding off screen.
     (function wireVideos() {
-      [].slice.call(projEl.querySelectorAll(".proj-card__video")).forEach(function (vid) {
+      var vids = [].slice.call(projEl.querySelectorAll(".proj-card__video"));
+      if (!vids.length) return;
+
+      function prime(vid) {
+        if (vid._warmed) return;
+        vid._warmed = true;
+        vid.preload = "auto";
+        var park = function () { try { vid.pause(); vid.currentTime = 0; } catch (e) {} };
+        var roll = function () {
+          if (reduce) return;                  // reduced motion: never rolls, so never primes
+          var pr;
+          try { pr = vid.play(); } catch (e) { park(); return; }
+          if (pr && pr.then) pr.then(function () { setTimeout(park, 160); }, park);
+          else setTimeout(park, 160);
+        };
+        if (vid.readyState >= 3) { roll(); return; }
+        vid.addEventListener("canplaythrough", roll, { once: true });
+        vid.addEventListener("loadeddata", roll, { once: true });
+        try { vid.load(); } catch (e) {}
+      }
+
+      if (window.IntersectionObserver) {
+        var warmObs = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (!e.isIntersecting) return;
+            vids.forEach(prime);
+            warmObs.disconnect();
+          });
+        }, { rootMargin: "100% 0px" });
+        warmObs.observe(projEl);
+
+        // Off-screen cards must not keep decoding, however the pointer left them.
+        var seenObs = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) { if (!e.isIntersecting) e.target.pause(); });
+        }, { threshold: 0 });
+        vids.forEach(function (v) { seenObs.observe(v); });
+      } else {
+        vids.forEach(prime);                   // no observer support: just warm them
+      }
+
+      vids.forEach(function (vid) {
         var card = vid.closest(".proj-card");
         if (!card) return;
         card.addEventListener("pointerenter", function () {
           if (reduce) return;                  // reduced motion: the poster stands in
+          prime(vid);                          // covers a hover that beats the observer
           // play() rejects if the gesture heuristics disagree; muted+playsinline is
           // the combination browsers allow, and a rejection just leaves the poster.
           var p = vid.play();

@@ -617,14 +617,15 @@
       { k: "b", n: "Resumable ETL Pipelines", d: "Incremental loads, adaptive backoff, and reruns that repair gaps.", t: ["ETL", "Python"], href: "/blog/building-resumable-etl-pipelines/" }
     ],
     [ // 03 Deploys & Uptime
-      { k: "p", n: "Law Firm Website", img: "images/projects/law-firm-poster.jpg", video: "images/projects/law-firm.mp4", d: "Next.js 14 site on Vercel — 14 routes, Resend lead capture, full SEO.", t: ["Next.js", "Vercel", "Resend"], href: "https://smartnperfectlegal.legal/", ext: true },
+      { k: "p", n: "Functional Task Manager", img: "images/projects/task-manager-poster.jpg", video: "images/projects/task-manager.mp4", d: "Scala 3 cross-compiled by sbt and shipped to Vercel as static JS.", t: ["Scala.js", "sbt", "Vercel"], href: "https://task-manager-using-functional-progr.vercel.app/", ext: true },
       { k: "p", n: "Job Application Bot", img: IMG.dc, d: "Dockerized pipeline on AWS & GCP, Postgres on Neon.", t: ["Docker", "AWS", "GCP"], href: "https://github.com/VishnujanNarayanan/Job_Application_Bot", ext: true },
-      { k: "b", n: "What a 429 Really Means", d: "Transient, permanent, exhausted — the retry logic that keeps a scheduled run alive.", t: ["APIs", "Reliability"], href: "/blog/http-429-retry-logic/" },
+      { k: "b", n: "A Year of Ingestion Bugs", d: "~30 bugs across a year of collection, sorted by cause. Eight threw no error at all.", t: ["Data engineering", "Reliability"], href: "/blog/a-year-of-ingestion-bugs/" },
       { k: "b", n: "How to Test a Data Pipeline", d: "92 passing tests, 3 broken features, and the checks that would have caught them.", t: ["Testing", "CI"], href: "/blog/how-to-test-a-data-pipeline/" }
     ],
     [ // 04 APIs & Apps
       { k: "p", n: "DekhLaw API", img: "images/projects/dekhlaw-poster.jpg", video: "images/projects/dekhlaw.mp4", d: "~30 Express endpoints, JWT auth, and Twilio voice orchestration.", t: ["Express", "Twilio", "JWT"] },
-      { k: "p", n: "Functional Task Manager", img: "images/projects/task-manager-poster.jpg", video: "images/projects/task-manager.mp4", d: "Scala 3 compiled to JS — immutable state, UI as a pure projection.", t: ["Scala 3", "Scala.js", "Laminar"], href: "https://task-manager-using-functional-progr.vercel.app/", ext: true },
+      { k: "p", n: "Law Firm Website", img: "images/projects/law-firm-poster.jpg", video: "images/projects/law-firm.mp4", d: "Next.js 14 site — 14 routes, Resend lead capture, full SEO.", t: ["Next.js", "TypeScript", "Resend"], href: "https://smartnperfectlegal.legal/", ext: true },
+      { k: "b", n: "What a 429 Really Means", d: "Transient, permanent, exhausted — the retry logic that keeps a scheduled run alive.", t: ["APIs", "Reliability"], href: "/blog/http-429-retry-logic/" },
       { k: "b", n: "Local LLM vs API", d: "A 7B model on a 6GB GPU against a hosted 70B — latency, quotas, structured output.", t: ["LLMs", "APIs"], href: "/blog/local-llm-vs-api/" }
     ]
   ];
@@ -655,6 +656,42 @@
       return cardHtml(c, i);
     }).join("");
   });
+
+  // Card videos ship preload="none" so they do not compete with the hero for bandwidth
+  // or the decoder at first paint — the same call as the transition videos. They are
+  // warmed once the flow section comes within a viewport, and the decoder is PRIMED
+  // (rolled briefly, parked at frame 0) rather than merely buffered, because buffered
+  // bytes do not spin the decode pipeline up and that cost would otherwise land on the
+  // first hover. Mirrors wireVideos() in main.js; see the hero's loadVideo().
+  (function warmFlowVideos() {
+    var vids = Array.prototype.slice.call(flow.querySelectorAll(".proj-card__video"));
+    if (!vids.length || reduce) return;
+    function prime(v) {
+      if (v._warmed) return;
+      v._warmed = true;
+      v.preload = "auto";
+      var park = function () { try { v.pause(); v.currentTime = 0; } catch (e) {} };
+      var roll = function () {
+        var pr;
+        try { pr = v.play(); } catch (e) { park(); return; }
+        if (pr && pr.then) pr.then(function () { setTimeout(park, 160); }, park);
+        else setTimeout(park, 160);
+      };
+      if (v.readyState >= 3) { roll(); return; }
+      v.addEventListener("canplaythrough", roll, { once: true });
+      v.addEventListener("loadeddata", roll, { once: true });
+      try { v.load(); } catch (e) {}
+    }
+    if (!window.IntersectionObserver) { vids.forEach(prime); return; }
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        vids.forEach(prime);
+        obs.disconnect();
+      });
+    }, { rootMargin: "100% 0px" });
+    obs.observe(flow);
+  })();
   // Hover coupling — hovering a card OR its matching text item activates BOTH (the
   // .is-active class mirrors the card's :hover). The cards are transformed EVERY frame
   // (cursor parallax + the horizontal scroll-slide) and their pointer-events toggle on
