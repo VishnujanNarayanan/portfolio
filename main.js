@@ -3213,7 +3213,10 @@ function makeTypeIn(host, runs, opts) {
     // data-frames. Hovering steps through them on a timer — the cheap version of a
     // screen recording for projects whose demo is a sequence of terminal states.
     (function wireFrames() {
-      var STEP_MS = 500;
+      // Slower than the video cards run, on purpose: these are four static terminal
+      // states, not motion. Each one has to be read before it is replaced, and there
+      // is no continuity between frames to carry the eye across a fast cut.
+      var STEP_MS = 1100;
       [].slice.call(projEl.querySelectorAll(".proj-card[data-frames]")).forEach(function (card) {
         var frames = card.getAttribute("data-frames").split("|").filter(Boolean);
         var img = card.querySelector(".proj-card__img");

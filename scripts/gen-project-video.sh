@@ -23,11 +23,14 @@
 #
 # The encodes currently shipping, so any of them can be reproduced exactly:
 #
-#   ./gen-project-video.sh reel/videos/Dekhlaw.mp4              dekhlaw          2 12 1.3 white
-#   ./gen-project-video.sh reel/videos/scpls_final.mp4          law-firm         0 10 1.3 white 35 -135
-#   ./gen-project-video.sh "reel/videos/product explorer final.mp4" product-explorer 2 14 1.0 '#0a0f0d'
-#   ./gen-project-video.sh "reel/videos/quate retriever final.mp4"  quote-retrieval  2 14 1.0 '#12151e'
-#   ./gen-project-video.sh reel/videos/task_manager_final.mp4   task-manager     0 16 1.0 '#fbfbf8'
+#   SPEED=1.5 ./gen-project-video.sh reel/videos/Dekhlaw.mp4          dekhlaw          2 12 1.3 white
+#   SPEED=1.5 ./gen-project-video.sh reel/videos/scpls_final.mp4      law-firm         0 10 1.3 white 35 -135
+#   SPEED=1.5 ./gen-project-video.sh "reel/videos/product explorer final.mp4" product-explorer 2 "" 1.0 '#0a0f0d'
+#   SPEED=1.5 ./gen-project-video.sh "reel/videos/quate retriever final.mp4"  quote-retrieval  2 14 1.0 '#12151e'
+#   SPEED=1.5 ./gen-project-video.sh reel/videos/task_manager_final.mp4 task-manager    0 16 1.0 '#fbfbf8'
+#
+# Product Explorer passes an empty duration deliberately: it runs to the end of its
+# recording, because the product-detail pages at the tail are part of the demo.
 #
 # The law firm needs XSHIFT because its hero text starts ~5% from the left margin, so
 # a centred crop clips the first letter at any zoom above ~1.10.
@@ -48,6 +51,7 @@ YSHIFT="${7:-0}"    # nudge the frame down (+) or up (-) inside the square, in p
 XSHIFT="${8:-0}"
 
 CRF="${CRF:-32}"    # x264 quality; the cards display at ~260px, so 32 is invisible here
+SPEED="${SPEED:-1}" # playback speed multiplier baked into the encode (setpts)
 PLATE=900
 SCRIM="$ROOT/scripts/plate-scrim.png"
 OUT_DIR="$ROOT/images/projects"
@@ -70,7 +74,12 @@ PAD_Y="(oh-ih)/2"
 [ "$YSHIFT" != "0" ] && PAD_Y="max(0\,min(oh-ih\,(oh-ih)/2+(${YSHIFT})))"
 CROP_X="(iw-ow)/2"
 [ "$XSHIFT" != "0" ] && CROP_X="max(0\,min(iw-ow\,(iw-ow)/2+(${XSHIFT})))"
-filter="[0:v]scale=${SCALED_W}:-2,crop='min(iw,${PLATE})':'min(ih,${PLATE})':${CROP_X}:0,pad=${PLATE}:${PLATE}:(ow-iw)/2:${PAD_Y}:color=${PAD}[v];[v][1:v]overlay=0:0[out]"
+# Speed is baked in with setpts rather than left to playbackRate, so the shipped file
+# is shorter and lighter too, and a card that is hovered briefly still gets through
+# more of the demo. There is no audio to keep in sync.
+SPT=""
+[ "$SPEED" != "1" ] && SPT=",setpts=PTS/${SPEED}"
+filter="[0:v]scale=${SCALED_W}:-2,crop='min(iw,${PLATE})':'min(ih,${PLATE})':${CROP_X}:0,pad=${PLATE}:${PLATE}:(ow-iw)/2:${PAD_Y}:color=${PAD}${SPT}[v];[v][1:v]overlay=0:0[out]"
 
 ffmpeg -v error -y "${trim[@]}" -i "$SRC" -i "$SCRIM" \
   -filter_complex "$filter" -map "[out]" \
