@@ -23,8 +23,12 @@
 #   --start SEC        trim from here (default 0)
 #   --duration SEC     clip length (default: to the end; cards read best at 6-12s)
 #   --poster SEC       frame to grab the poster from, relative to --start (default 0.5)
-#   --crop W:H:X:Y     crop to this source-pixel rect instead of letterboxing
-#   --crop center      crop to the largest centred square instead of letterboxing
+#   --crop W:H:X:Y     crop to this source-pixel rect BEFORE framing. Use it to cut the
+#                      dead space around a UI so the part that matters fills more of the
+#                      900px width — the square's width is the binding constraint, so
+#                      cropping vertically alone changes nothing.
+#   --fill             stretch to fill the square instead of letterboxing. Only sensible
+#                      with a --crop that is already close to square.
 #   --bar RRGGBB       force the outer bar colour (default 1b2236, the section navy)
 #
 # After running, point the card at it in main.js PROJECTS:
@@ -36,13 +40,14 @@ src=${1:?usage: encode-card-media.sh <source> <slug> [options]}
 slug=${2:?usage: encode-card-media.sh <source> <slug> [options]}
 shift 2
 
-start=0; duration=; poster=0.5; crop=; bar=1b2236
+start=0; duration=; poster=0.5; crop=; fill=; bar=1b2236
 while [ $# -gt 0 ]; do
   case $1 in
     --start)    start=$2;    shift 2 ;;
     --duration) duration=$2; shift 2 ;;
     --poster)   poster=$2;   shift 2 ;;
     --crop)     crop=$2;     shift 2 ;;
+    --fill)     fill=1;      shift 1 ;;
     --bar)      bar=${2#\#}; shift 2 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
@@ -58,28 +63,35 @@ tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 trim=(-ss "$start")
 [ -n "$duration" ] && trim+=(-t "$duration")
 
+# A crop, when given, happens first and redefines the frame everything below works from.
+pre=""
 if [ -n "$crop" ]; then
-  [ "$crop" = center ] && crop="'min(iw,ih)':'min(iw,ih)'"
+  pre="crop=$crop,"
+  cw=${crop%%:*}; rest=${crop#*:}; ch=${rest%%:*}
+else
+  read -r cw ch < <(ffprobe -v error -select_streams v:0 \
+    -show_entries stream=width,height -of csv=p=0 "$src" | tr ',' ' ')
+fi
+
+if [ -n "$fill" ]; then
   ffmpeg -v error -y "${trim[@]}" -i "$src" \
-    -vf "crop=$crop,scale=900:900:flags=lanczos,fps=30" \
+    -vf "${pre}scale=900:900:flags=lanczos,fps=30" \
     -an -c:v libx264 -profile:v high -pix_fmt yuv420p \
     -crf 30 -preset slow -movflags +faststart "$out_mp4"
 else
-  # Scaled height of the 16:9 frame inside a 900-wide square, rounded to even (yuv420p
-  # needs even dimensions), and the bar height above and below it.
-  read -r iw ih < <(ffprobe -v error -select_streams v:0 \
-    -show_entries stream=width,height -of csv=p=0 "$src" | tr ',' ' ')
-  vh=$(( (900 * ih / iw + 1) / 2 * 2 ))
-  [ "$vh" -ge 900 ] && { echo "source is not wider than tall — use --crop" >&2; exit 1; }
+  # Scaled height of the frame inside a 900-wide square, rounded to even (yuv420p needs
+  # even dimensions), and the bar height above and below it.
+  vh=$(( (900 * ch / cw + 1) / 2 * 2 ))
+  [ "$vh" -ge 900 ] && { echo "frame is not wider than tall — crop it or pass --fill" >&2; exit 1; }
   barh=$(( (900 - vh) / 2 ))
 
   # Sample the clip's own top and bottom edge colours so each ramp lands on the colour
   # the frame actually starts with. One frame from the middle of the trimmed range.
   mid=$(awk -v s="$start" -v d="${duration:-4}" 'BEGIN{print s + d/2}')
-  ffmpeg -v error -y -ss "$mid" -i "$src" -frames:v 1 "$tmp/f.png"
-  topc=$(convert "$tmp/f.png" -gravity north -crop "${iw}x8+0+0" +repage \
+  ffmpeg -v error -y -ss "$mid" -i "$src" -frames:v 1 -vf "${pre%,}" "$tmp/f.png"
+  topc=$(convert "$tmp/f.png" -gravity north -crop "${cw}x8+0+0" +repage \
            -resize 1x1! -format "%[hex:p{0,0}]" info: | cut -c1-6)
-  botc=$(convert "$tmp/f.png" -gravity south -crop "${iw}x8+0+0" +repage \
+  botc=$(convert "$tmp/f.png" -gravity south -crop "${cw}x8+0+0" +repage \
            -resize 1x1! -format "%[hex:p{0,0}]" info: | cut -c1-6)
 
   # Backdrop: navy at the outer edge ramping to the frame's edge colour where they meet.
@@ -90,7 +102,7 @@ else
     "$tmp/bot.png" -geometry "+0+$((barh + vh))" -composite "$tmp/bg.png"
 
   ffmpeg -v error -y "${trim[@]}" -i "$src" -i "$tmp/bg.png" \
-    -filter_complex "[0:v]scale=900:${vh}:flags=lanczos[v];[1:v][v]overlay=0:${barh},fps=30[o]" \
+    -filter_complex "[0:v]${pre}scale=900:${vh}:flags=lanczos[v];[1:v][v]overlay=0:${barh},fps=30[o]" \
     -map "[o]" -an -c:v libx264 -profile:v high -pix_fmt yuv420p \
     -crf 30 -preset slow -movflags +faststart "$out_mp4"
 fi
