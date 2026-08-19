@@ -2894,6 +2894,19 @@ function makeTypeIn(host, runs, opts) {
       { n: "Binance Futures Trading Bot", d: "CLI trading bot placing market, limit, and stop-limit orders and managing positions on the Binance USDT-M Futures Testnet.", t: ["Python", "python-binance", "CLI"], tools: ["Python", "python-binance", "CLI"], dom: ["Finance", "Backend"], code: "https://github.com/VishnujanNarayanan/binance-futures-trading-bot", img: "images/projects/trading-bot-1.jpg", imgs: ["images/projects/trading-bot-1.jpg", "images/projects/trading-bot-2.jpg", "images/projects/trading-bot-3.jpg", "images/projects/trading-bot-4.jpg"] },
       { n: "Functional Task Manager", d: "Browser task planner written in Scala 3 and compiled to JavaScript — state is one immutable Var, the UI a pure projection of it, with no manual DOM manipulation.", t: ["Scala 3", "Scala.js", "Laminar"], tools: ["Scala", "Scala.js", "Laminar", "sbt", "Vercel"], dom: ["Frontend", "Functional Programming"], h: "https://task-manager-using-functional-progr.vercel.app/", code: "https://github.com/VishnujanNarayanan/task_manager_using_functional_programming", img: "images/projects/task-manager-poster.jpg", video: "images/projects/task-manager.mp4" },
     ];
+
+    // PROJECTS is the single source of truth for a project's card media. The flow
+    // section renders its own cards from its own list, and used to repeat img/video
+    // there — so a project that gained a real capture kept a stock placeholder in the
+    // flow until someone remembered to edit both places (the Job Application Bot and
+    // Market Data Platform were both stale that way). Publish a name-keyed registry
+    // instead; flow.js reads it and carries no media paths of its own, so adding a
+    // video here reaches every surface that shows the project.
+    window.__PROJECT_MEDIA = PROJECTS.reduce(function (m, p) {
+      m[p.n] = { img: p.img, video: p.video || null };
+      return m;
+    }, {});
+
     // Notched-corner card frame (Lando "helmet-grid" reference): base outline + a
     // brighter overlay outline that fades in on hover. Same viewBox/path as the ref.
     var F_BASE = "M8 .5h390.89a7.5 7.5 0 0 1 7.5 7.5v356.983a7.5 7.5 0 0 1-7.5 7.5H263.329a23.502 23.502 0 0 0-18.375 8.849l-16.499 20.695a22.502 22.502 0 0 1-17.593 8.473H8A7.5 7.5 0 0 1 .5 403V8A7.5 7.5 0 0 1 8 .5Z";
