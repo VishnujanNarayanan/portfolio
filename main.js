@@ -256,9 +256,17 @@ function makeTypeIn(host, runs, opts) {
     ["wheel", "touchstart", "keydown", "pointerdown"].forEach(function (t) {
       addEventListener(t, function () { userScrolled = true; }, { passive: true, once: true });
     });
-    // Socials reads better a little PAST its own top edge — the heading sits high in the
-    // section, so landing exactly on the boundary leaves the fanned cards low in the frame.
-    var SOCIALS_DROP = 0.05;                       // fraction of a viewport past the top edge
+    // Socials is CENTRED in the viewport rather than aligned to its top edge. Aligning
+    // the top put the fan wherever the leftover height happened to fall — a tall window
+    // left a lot of empty room under the links, a short one cut the cards off — so where
+    // the section sat depended on the browser. Centring makes the framing the same
+    // everywhere: whatever height is spare is split evenly above and below.
+    // Returns the delta (px) from the current position to the centred one, or null when
+    // the hash is not one we place by hand.
+    function centreDelta(el) {
+      var r = el.getBoundingClientRect();
+      return r.top - (window.innerHeight - r.height) / 2;
+    }
     function applyHash() {
       if (!wantHash || wantHash === "#" || wantHash === "#top") return;
       var el = null;
@@ -280,7 +288,7 @@ function makeTypeIn(host, runs, opts) {
         // fold, which reads as "not quite there". Contact goes to the very bottom instead.
         var top = wantHash === "#contact"
           ? Math.max(0, document.documentElement.scrollHeight - window.innerHeight) - (window.scrollY || 0)
-          : el.getBoundingClientRect().top + (wantHash === "#socials" ? window.innerHeight * SOCIALS_DROP : 0);
+          : (wantHash === "#socials" ? centreDelta(el) : el.getBoundingClientRect().top);
         if (Math.abs(top) > 2) {
           var y = top + (window.scrollY || 0);
           if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { immediate: true, force: true });
@@ -4756,11 +4764,14 @@ function makeTypeIn(host, runs, opts) {
     if (href.charAt(0) !== "#" && href !== location.pathname + "#socials") return;   // other document
     var sec = document.getElementById("socials");
     if (sec) {
-      // Land a little PAST the section's top edge, matching the ?go=socials arrival. Still
-      // a JUMP, never an animated scroll: travelling there would cross the projects pin,
-      // whose stick grabs any crossing that arrives by scrolling.
+      // CENTRE the section in the viewport, matching the ?go=socials arrival (see
+      // centreDelta in the boot IIFE): the spare height is split evenly above and below,
+      // so the framing does not depend on how tall the browser window is. Still a JUMP,
+      // never an animated scroll: travelling there would cross the projects pin, whose
+      // stick grabs any crossing that arrives by scrolling.
       e.preventDefault();
-      var y = sec.getBoundingClientRect().top + (window.scrollY || 0) + window.innerHeight * 0.05;
+      var r = sec.getBoundingClientRect();
+      var y = Math.max(0, r.top - (window.innerHeight - r.height) / 2 + (window.scrollY || 0));
       if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { immediate: true, force: true });
       window.scrollTo(0, y);
       if (history.replaceState) { try { history.replaceState(null, "", "#socials"); } catch (err) {} }
