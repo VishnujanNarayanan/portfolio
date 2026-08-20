@@ -4033,9 +4033,11 @@ function makeTypeIn(host, runs, opts) {
     { el: headEl.querySelector(".callout-socials-heading__line:not(.is-hl)"), step: HEAD_STEP },
     { el: headEl.querySelector(".callout-socials-heading__line.is-hl"),       step: HEAD_STEP }
   ], { hold: 120 });
+  // hold 120: no resting cursor here either — it clears almost as soon as the line
+  // finishes, instead of parking a blinking block at the end of "…social media".
   const followType = !staged || !followEl ? null : makeTypeIn(followEl, [
     { el: followEl, step: FOLLOW_STEP }
-  ], { keep: true });            // cursor stays blinking after "…social media"
+  ], { hold: 120 });
   const linkCols = staged && linksWrap
     ? Array.from(linksWrap.querySelectorAll(".pill-char__col")) : [];
   if (staged) {
@@ -4650,8 +4652,8 @@ function makeTypeIn(host, runs, opts) {
   // pagehide (not beforeunload) so it also fires on the way into the back/forward cache.
   addEventListener("pagehide", markSeen);
 
-  // No lingering cursor here — it clears shortly after the last letter (the resting
-  // cursor lives on the socials follow line and the blog description).
+  // No lingering cursor here — it clears shortly after the last letter (the only
+  // resting cursor left on the page is the blog description's).
   var typer = makeTypeIn(h, rows.map(function (el) { return { el: el, step: HEAD_STEP }; }), { gap: 120, hold: 420 });
   if (!typer) return;
 
