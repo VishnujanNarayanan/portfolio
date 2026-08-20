@@ -135,6 +135,16 @@ function makeTypeIn(host, runs, opts) {
     },
     ms: runMs,                                      // when the last letter lands, for chaining
     reveal: finish,                                 // give up and show the text as it is
+    // Put the run back to its pre-start state (letters hidden again, cursor cleared) so
+    // start() types it out afresh. The spans are already split, so this is cheap — it is
+    // what lets a section replay its type-in instead of the started/done latch swallowing
+    // the second play.
+    rearm: function () {
+      if (!started) return;
+      started = false; done = false;
+      host.classList.add("is-typing");
+      seq.forEach(function (t) { t.c.classList.remove("is-typed", "is-cursor"); });
+    },
     ran: function () { return started; }
   };
 }
@@ -256,9 +266,17 @@ function makeTypeIn(host, runs, opts) {
     ["wheel", "touchstart", "keydown", "pointerdown"].forEach(function (t) {
       addEventListener(t, function () { userScrolled = true; }, { passive: true, once: true });
     });
-    // Socials reads better a little PAST its own top edge — the heading sits high in the
-    // section, so landing exactly on the boundary leaves the fanned cards low in the frame.
-    var SOCIALS_DROP = 0.05;                       // fraction of a viewport past the top edge
+    // Socials is CENTRED in the viewport rather than aligned to its top edge. Aligning
+    // the top put the fan wherever the leftover height happened to fall — a tall window
+    // left a lot of empty room under the links, a short one cut the cards off — so where
+    // the section sat depended on the browser. Centring makes the framing the same
+    // everywhere: whatever height is spare is split evenly above and below.
+    // Returns the delta (px) from the current position to the centred one, or null when
+    // the hash is not one we place by hand.
+    function centreDelta(el) {
+      var r = el.getBoundingClientRect();
+      return r.top - (window.innerHeight - r.height) / 2;
+    }
     function applyHash() {
       if (!wantHash || wantHash === "#" || wantHash === "#top") return;
       var el = null;
@@ -280,7 +298,7 @@ function makeTypeIn(host, runs, opts) {
         // fold, which reads as "not quite there". Contact goes to the very bottom instead.
         var top = wantHash === "#contact"
           ? Math.max(0, document.documentElement.scrollHeight - window.innerHeight) - (window.scrollY || 0)
-          : el.getBoundingClientRect().top + (wantHash === "#socials" ? window.innerHeight * SOCIALS_DROP : 0);
+          : (wantHash === "#socials" ? centreDelta(el) : el.getBoundingClientRect().top);
         if (Math.abs(top) > 2) {
           var y = top + (window.scrollY || 0);
           if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { immediate: true, force: true });
@@ -3868,7 +3886,7 @@ function makeTypeIn(host, runs, opts) {
 })();
 
 /* ============================================================
-   What's Up — On Socials: scroll-driven fanned-card spread.
+   Check Out My Socials: scroll-driven fanned-card spread.
    Cards start stacked at centre (pushed down 10rem, upright) and
    fan out into a symmetric peacock spread as the section scrolls
    into view. Pure function of scroll → reverses on scroll-up.
@@ -4003,12 +4021,12 @@ function makeTypeIn(host, runs, opts) {
   }
   /* ---- Socials copy: type, then reel, then highlight -----------------------------
      Three beats, each on its own line of scroll:
-       1. the HEADING ("What's Up" / "On Socials") types in, a beat EARLIER than the
+       1. the HEADING ("Check Out" / "My Socials") types in, a beat EARLIER than the
           cards fan out, so the words are already being written as the spread starts;
        2. scrolling on, the FOLLOW line types;
        3. the moment that line finishes, the three social LINKS reel in from nothing —
           the same per-letter roll the nav does on load — and the blue highlight sweeps
-          across "On Socials" and the follow line, left to right, like a text selection
+          across "My Socials" and the follow line, left to right, like a text selection
           being dragged over them. Until then there is NO blue behind either line.
      Skipped on mobile and under reduced motion, where the fan does not run either:
      the two lines keep their plain CSS background and the links are simply there. */
@@ -4027,15 +4045,17 @@ function makeTypeIn(host, runs, opts) {
   const followEl = document.querySelector(".callout-socials-follow");
   // hold 120: the cursor travels with the heading while it types and is gone almost the
   // instant it stops. It used to sit there for the default beat and a bit — and once the
-  // highlight swept "On Socials" the text (and so the cursor, which is currentColor) went
+  // highlight swept "My Socials" the text (and so the cursor, which is currentColor) went
   // white, leaving a white block parked at the end of the line.
   const headType = !staged || !headEl ? null : makeTypeIn(headEl, [
     { el: headEl.querySelector(".callout-socials-heading__line:not(.is-hl)"), step: HEAD_STEP },
     { el: headEl.querySelector(".callout-socials-heading__line.is-hl"),       step: HEAD_STEP }
   ], { hold: 120 });
+  // hold 120: no resting cursor here either — it clears almost as soon as the line
+  // finishes, instead of parking a blinking block at the end of "…social media".
   const followType = !staged || !followEl ? null : makeTypeIn(followEl, [
     { el: followEl, step: FOLLOW_STEP }
-  ], { keep: true });            // cursor stays blinking after "…social media"
+  ], { hold: 120 });
   const linkCols = staged && linksWrap
     ? Array.from(linksWrap.querySelectorAll(".pill-char__col")) : [];
   if (staged) {
@@ -4113,8 +4133,34 @@ function makeTypeIn(host, runs, opts) {
   // On an ARRIVAL both lines are triggered together — there is no scroll left to stage
   // them against, so waiting for the heading to finish just left the section looking
   // half-done. (Scrolling in still gets the two separate thresholds.)
-  function playAll() {
+  // Put every beat back to its "not yet played" state. Clicking the Socials link a
+  // second time used to land on a section that had already run: the two type-ins latch on
+  // started/done, `lit` latches, and the fan spring was already resting at 1 — so the jump
+  // arrived at a finished section. Coming from a SUB-page never hit this, because that is
+  // a fresh document with nothing played yet, which is why it only looked broken from the
+  // homepage.
+  function rearmStage() {
+    if (!staged) return;
+    lit = false;
+    // Drop the highlight with its transition muted: removing .is-lit otherwise animates
+    // the sweep BACKWARDS across the line before the replay can run it forwards.
+    hlEls.forEach(function (el) {
+      el.style.transition = "none";
+      el.classList.remove("is-lit");
+      Array.prototype.forEach.call(el.querySelectorAll(".wtype-c"), function (c) { c.style.transitionDelay = ""; });
+    });
+    void document.documentElement.offsetWidth;
+    requestAnimationFrame(function () { hlEls.forEach(function (el) { el.style.transition = ""; }); });
+    if (linkCols.length) linksWrap.classList.add("is-reeling");     // letters parked below their clips again
+    if (headType) headType.rearm();
+    if (followType) followType.rearm();
+    pCur = 0; pVel = 0;                                             // fan folded, ready to spring out again
+  }
+  // replay=true → rewind first, so a click always plays the sequence instead of landing
+  // on the finished state the last visit left behind.
+  function playAll(replay) {
     if (reduce || mq.matches) return;
+    if (replay) rearmStage();
     if (headType) headType.start();
     playFollow();
     pT = 1;
@@ -4650,8 +4696,8 @@ function makeTypeIn(host, runs, opts) {
   // pagehide (not beforeunload) so it also fires on the way into the back/forward cache.
   addEventListener("pagehide", markSeen);
 
-  // No lingering cursor here — it clears shortly after the last letter (the resting
-  // cursor lives on the socials follow line and the blog description).
+  // No lingering cursor here — it clears shortly after the last letter (the only
+  // resting cursor left on the page is the blog description's).
   var typer = makeTypeIn(h, rows.map(function (el) { return { el: el, step: HEAD_STEP }; }), { gap: 120, hold: 420 });
   if (!typer) return;
 
@@ -4754,17 +4800,20 @@ function makeTypeIn(host, runs, opts) {
     if (href.charAt(0) !== "#" && href !== location.pathname + "#socials") return;   // other document
     var sec = document.getElementById("socials");
     if (sec) {
-      // Land a little PAST the section's top edge, matching the ?go=socials arrival. Still
-      // a JUMP, never an animated scroll: travelling there would cross the projects pin,
-      // whose stick grabs any crossing that arrives by scrolling.
+      // CENTRE the section in the viewport, matching the ?go=socials arrival (see
+      // centreDelta in the boot IIFE): the spare height is split evenly above and below,
+      // so the framing does not depend on how tall the browser window is. Still a JUMP,
+      // never an animated scroll: travelling there would cross the projects pin, whose
+      // stick grabs any crossing that arrives by scrolling.
       e.preventDefault();
-      var y = sec.getBoundingClientRect().top + (window.scrollY || 0) + window.innerHeight * 0.05;
+      var r = sec.getBoundingClientRect();
+      var y = Math.max(0, r.top - (window.innerHeight - r.height) / 2 + (window.scrollY || 0));
       if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { immediate: true, force: true });
       window.scrollTo(0, y);
       if (history.replaceState) { try { history.replaceState(null, "", "#socials"); } catch (err) {} }
     }
     requestAnimationFrame(function () {
-      requestAnimationFrame(function () { if (window.__socialsPlay) window.__socialsPlay(); });
+      requestAnimationFrame(function () { if (window.__socialsPlay) window.__socialsPlay(true); });
     });
   });
 })();

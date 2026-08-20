@@ -1304,11 +1304,15 @@
     });
 
     // Opposite-direction column parallax — VERTICAL ONLY (horizontal is the scroll-slide
-    // above). Ported 1:1 from the reference nav-images: p = (clientY/vh − 0.5)·2·6 rem
-    // (≈±6rem ≈ ±96px), left column y = −p, right column y = +p, eased. mCY is the
-    // smoothed (clientY/vh − 0.5); the 0.05 lerp stands in for GSAP's duration-2 ease.
+    // above). From the reference nav-images: p = (clientY/vh − 0.5)·2·GAIN rem, left
+    // column y = −p, right column y = +p, eased. mCY is the smoothed (clientY/vh − 0.5);
+    // the 0.05 lerp stands in for GSAP's duration-2 ease.
+    // GAIN is the reference's 6rem less 23% — the cards moved further with the cursor
+    // than the effect wanted. Displacement only: the easing and the direction split are
+    // untouched, so it tracks the cursor just as promptly, only 23% less far.
+    var HOVER_GAIN = 4.62;          // rem at the top/bottom of the window (was 6)
     mCY += (mTY - mCY) * 0.05;
-    var p = mCY * 2 * 6;            // rem
+    var p = mCY * 2 * HOVER_GAIN;   // rem
     // Scroll-momentum column splay — the two columns part vertically (left up / right
     // down via o.dir) as a function of scroll, with a BLEED, not an ease-back. Two
     // terms: scroll moves the held offset (mSplay) DIRECTLY (SPLAY_GAIN — instant
