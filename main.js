@@ -135,6 +135,16 @@ function makeTypeIn(host, runs, opts) {
     },
     ms: runMs,                                      // when the last letter lands, for chaining
     reveal: finish,                                 // give up and show the text as it is
+    // Put the run back to its pre-start state (letters hidden again, cursor cleared) so
+    // start() types it out afresh. The spans are already split, so this is cheap — it is
+    // what lets a section replay its type-in instead of the started/done latch swallowing
+    // the second play.
+    rearm: function () {
+      if (!started) return;
+      started = false; done = false;
+      host.classList.add("is-typing");
+      seq.forEach(function (t) { t.c.classList.remove("is-typed", "is-cursor"); });
+    },
     ran: function () { return started; }
   };
 }
@@ -3876,7 +3886,7 @@ function makeTypeIn(host, runs, opts) {
 })();
 
 /* ============================================================
-   What's Up — On Socials: scroll-driven fanned-card spread.
+   Check Out My Socials: scroll-driven fanned-card spread.
    Cards start stacked at centre (pushed down 10rem, upright) and
    fan out into a symmetric peacock spread as the section scrolls
    into view. Pure function of scroll → reverses on scroll-up.
@@ -4011,12 +4021,12 @@ function makeTypeIn(host, runs, opts) {
   }
   /* ---- Socials copy: type, then reel, then highlight -----------------------------
      Three beats, each on its own line of scroll:
-       1. the HEADING ("What's Up" / "On Socials") types in, a beat EARLIER than the
+       1. the HEADING ("Check Out" / "My Socials") types in, a beat EARLIER than the
           cards fan out, so the words are already being written as the spread starts;
        2. scrolling on, the FOLLOW line types;
        3. the moment that line finishes, the three social LINKS reel in from nothing —
           the same per-letter roll the nav does on load — and the blue highlight sweeps
-          across "On Socials" and the follow line, left to right, like a text selection
+          across "My Socials" and the follow line, left to right, like a text selection
           being dragged over them. Until then there is NO blue behind either line.
      Skipped on mobile and under reduced motion, where the fan does not run either:
      the two lines keep their plain CSS background and the links are simply there. */
@@ -4035,7 +4045,7 @@ function makeTypeIn(host, runs, opts) {
   const followEl = document.querySelector(".callout-socials-follow");
   // hold 120: the cursor travels with the heading while it types and is gone almost the
   // instant it stops. It used to sit there for the default beat and a bit — and once the
-  // highlight swept "On Socials" the text (and so the cursor, which is currentColor) went
+  // highlight swept "My Socials" the text (and so the cursor, which is currentColor) went
   // white, leaving a white block parked at the end of the line.
   const headType = !staged || !headEl ? null : makeTypeIn(headEl, [
     { el: headEl.querySelector(".callout-socials-heading__line:not(.is-hl)"), step: HEAD_STEP },
@@ -4123,8 +4133,34 @@ function makeTypeIn(host, runs, opts) {
   // On an ARRIVAL both lines are triggered together — there is no scroll left to stage
   // them against, so waiting for the heading to finish just left the section looking
   // half-done. (Scrolling in still gets the two separate thresholds.)
-  function playAll() {
+  // Put every beat back to its "not yet played" state. Clicking the Socials link a
+  // second time used to land on a section that had already run: the two type-ins latch on
+  // started/done, `lit` latches, and the fan spring was already resting at 1 — so the jump
+  // arrived at a finished section. Coming from a SUB-page never hit this, because that is
+  // a fresh document with nothing played yet, which is why it only looked broken from the
+  // homepage.
+  function rearmStage() {
+    if (!staged) return;
+    lit = false;
+    // Drop the highlight with its transition muted: removing .is-lit otherwise animates
+    // the sweep BACKWARDS across the line before the replay can run it forwards.
+    hlEls.forEach(function (el) {
+      el.style.transition = "none";
+      el.classList.remove("is-lit");
+      Array.prototype.forEach.call(el.querySelectorAll(".wtype-c"), function (c) { c.style.transitionDelay = ""; });
+    });
+    void document.documentElement.offsetWidth;
+    requestAnimationFrame(function () { hlEls.forEach(function (el) { el.style.transition = ""; }); });
+    if (linkCols.length) linksWrap.classList.add("is-reeling");     // letters parked below their clips again
+    if (headType) headType.rearm();
+    if (followType) followType.rearm();
+    pCur = 0; pVel = 0;                                             // fan folded, ready to spring out again
+  }
+  // replay=true → rewind first, so a click always plays the sequence instead of landing
+  // on the finished state the last visit left behind.
+  function playAll(replay) {
     if (reduce || mq.matches) return;
+    if (replay) rearmStage();
     if (headType) headType.start();
     playFollow();
     pT = 1;
@@ -4777,7 +4813,7 @@ function makeTypeIn(host, runs, opts) {
       if (history.replaceState) { try { history.replaceState(null, "", "#socials"); } catch (err) {} }
     }
     requestAnimationFrame(function () {
-      requestAnimationFrame(function () { if (window.__socialsPlay) window.__socialsPlay(); });
+      requestAnimationFrame(function () { if (window.__socialsPlay) window.__socialsPlay(true); });
     });
   });
 })();
