@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>What a 429 Really Means: Retry Logic That Makes Things Worse</title>
+<title>HTTP 429: What It Means and How to Retry — Vishnujan Narayanan</title>
 <meta name="description" content="HTTP 429 handling done properly: transient vs permanent vs exhausted, honouring Retry-After, and why substring matching on error messages breaks retries.">
 <meta name="author" content="Vishnujan Narayanan">
 <meta property="article:author" content="https://www.linkedin.com/in/vishnujan-narayanan">
@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" href="../../apple-touch-icon.png?v=2">
 <link rel="canonical" href="https://vishnujan.dev/blog/http-429-retry-logic/">
 <meta name="robots" content="index, follow, max-image-preview:large">
-<meta property="og:title" content="What a 429 Really Means: Retry Logic That Makes Things Worse">
+<meta property="og:title" content="HTTP 429: What It Means and How to Retry">
 <meta property="og:description" content="Transient, permanent, exhausted — three classes, one status code, and the retry loop that kept dying.">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Vishnujan Narayanan">
@@ -24,9 +24,9 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:type" content="image/jpeg">
-<meta property="og:image:alt" content="What a 429 Really Means: Retry Logic That Makes Things Worse">
+<meta property="og:image:alt" content="HTTP 429: What It Means and How to Retry">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="What a 429 Really Means: Retry Logic That Makes Things Worse">
+<meta name="twitter:title" content="HTTP 429: What It Means and How to Retry">
 <meta name="twitter:description" content="Transient, permanent, exhausted — three classes, one status code, and the retry loop that kept dying.">
 <meta name="twitter:image" content="https://vishnujan.dev/images/blog/share-rate-limits.jpg">
 <!-- Roboto Flex is the nav reel's font (styles.css @font-face). Preloaded so it is in
@@ -39,8 +39,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../styles.css">
 <script>document.documentElement.classList.remove("no-js");</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"What a 429 Really Means: Retry Logic That Makes Things Worse","item":"https://vishnujan.dev/blog/http-429-retry-logic/"}]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"What a 429 Really Means: Retry Logic That Makes Things Worse","description":"HTTP 429 handling done properly: transient vs permanent vs exhausted, honouring Retry-After, and why substring matching on error messages breaks retries.","image":"https://vishnujan.dev/images/blog/share-rate-limits.jpg","datePublished":"2026-07-16","dateModified":"2026-07-16","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/http-429-retry-logic/"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"HTTP 429: What It Means and How to Retry","item":"https://vishnujan.dev/blog/http-429-retry-logic/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"HTTP 429: What It Means and How to Retry","description":"HTTP 429 handling done properly: transient vs permanent vs exhausted, honouring Retry-After, and why substring matching on error messages breaks retries.","image":"https://vishnujan.dev/images/blog/share-rate-limits.jpg","datePublished":"2026-07-16","dateModified":"2026-07-16","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/http-429-retry-logic/"}</script>
 </head>
 <body class="subpage-body post-body blog-body">
 <div class="mobile-nav__overlay"></div>
@@ -132,11 +132,11 @@
   </button>
   <span class="post-rail__toast" data-share-toast hidden>Link copied</span>
 </aside>
-<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>What a 429 Really Means: Retry Logic That Makes Things Worse</nav>
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>HTTP 429: What It Means and How to Retry</nav>
 <article class="article">
   <div class="post-head">
     <div class="tag-row"><span class="tag">APIs</span><span class="tag">Reliability</span></div>
-    <h1>What a 429 really means, and the retry logic that makes things worse</h1>
+    <h1>HTTP 429: what it means and how to retry</h1>
     <div class="post-head__foot">
     <div class="byline byline--lg">
         <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
@@ -145,15 +145,15 @@
         <span class="byline__date">July 2026</span>
       </div>
 <div class="share-row">
-      <a class="share-btn" href="mailto:?subject=What%20a%20429%20Really%20Means%3A%20Retry%20Logic%20That%20Makes%20Things%20Worse&body=What%20a%20429%20Really%20Means%3A%20Retry%20Logic%20That%20Makes%20Things%20Worse%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhttp-429-retry-logic%2F" aria-label="Share by email" title="Share by email"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
-      <a class="share-btn" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhttp-429-retry-logic%2F&text=What%20a%20429%20Really%20Means%3A%20Retry%20Logic%20That%20Makes%20Things%20Worse" target="_blank" rel="noopener" aria-label="Share on X" title="Share on X"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.2 3h3.3l-7.2 8.2L21.8 21h-6.6l-4.3-5.6L5.9 21H2.6l7.7-8.8L2.5 3h6.8l3.9 5.2L17.2 3Zm-1.2 16h1.8L8.1 4.8H6.2L16 19Z"/></svg></a>
+      <a class="share-btn" href="mailto:?subject=HTTP%20429%3A%20What%20It%20Means%20and%20How%20to%20Retry&body=HTTP%20429%3A%20What%20It%20Means%20and%20How%20to%20Retry%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhttp-429-retry-logic%2F" aria-label="Share by email" title="Share by email"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
+      <a class="share-btn" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhttp-429-retry-logic%2F&text=HTTP%20429%3A%20What%20It%20Means%20and%20How%20to%20Retry" target="_blank" rel="noopener" aria-label="Share on X" title="Share on X"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.2 3h3.3l-7.2 8.2L21.8 21h-6.6l-4.3-5.6L5.9 21H2.6l7.7-8.8L2.5 3h6.8l3.9 5.2L17.2 3Zm-1.2 16h1.8L8.1 4.8H6.2L16 19Z"/></svg></a>
       <a class="share-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhttp-429-retry-logic%2F" target="_blank" rel="noopener" aria-label="Share on LinkedIn" title="Share on LinkedIn"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M6.9 8.6H4.2V20h2.7V8.6ZM5.5 4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2ZM20 13.4c0-2.9-1.6-4.3-3.6-4.3-1.7 0-2.4.9-2.8 1.5V8.6H10.9c0 .8 0 11.4 0 11.4h2.7v-6.4c0-.3 0-.6.1-.8.3-.6.8-1.2 1.7-1.2 1.2 0 1.7.9 1.7 2.2V20H20v-6.6Z"/></svg></a>
       <a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhttp-429-retry-logic%2F" target="_blank" rel="noopener" aria-label="Share on Facebook" title="Share on Facebook"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M14.5 8.5V6.9c0-.7.2-1.1 1.2-1.1h1.5V3.1C16.8 3 16 3 15.1 3c-2 0-3.4 1.2-3.4 3.5v2H9.3V11h2.4v8h2.8v-8h2.3l.4-2.5h-2.7Z"/></svg></a>
-      <a class="share-btn" href="https://www.reddit.com/submit?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhttp-429-retry-logic%2F&title=What%20a%20429%20Really%20Means%3A%20Retry%20Logic%20That%20Makes%20Things%20Worse" target="_blank" rel="noopener" aria-label="Share on Reddit" title="Share on Reddit"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M22 12.1a2.1 2.1 0 0 0-3.6-1.5 10.3 10.3 0 0 0-5.2-1.6l.9-4.2 2.9.6a1.5 1.5 0 1 0 .2-1.2l-3.4-.7a.6.6 0 0 0-.7.5l-1 4.7a10.4 10.4 0 0 0-5.3 1.6 2.1 2.1 0 1 0-2.3 3.4 3.8 3.8 0 0 0 0 .6c0 3 3.6 5.5 8 5.5s8-2.5 8-5.5a3.8 3.8 0 0 0 0-.6 2.1 2.1 0 0 0 1.5-2Zm-13.6 1.4a1.5 1.5 0 1 1 1.5 1.5 1.5 1.5 0 0 1-1.5-1.5Zm8.3 4a5.6 5.6 0 0 1-3.7 1.1 5.6 5.6 0 0 1-3.7-1.1.5.5 0 1 1 .7-.7 4.7 4.7 0 0 0 3 .8 4.7 4.7 0 0 0 3-.8.5.5 0 1 1 .7.7Zm-.2-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5Z"/></svg></a>
-      <a class="share-btn" href="https://api.whatsapp.com/send?text=What%20a%20429%20Really%20Means%3A%20Retry%20Logic%20That%20Makes%20Things%20Worse%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhttp-429-retry-logic%2F" target="_blank" rel="noopener" aria-label="Share on WhatsApp" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Zm0 1.7a7.3 7.3 0 1 1-3.7 13.6l-.3-.2-2.7.7.7-2.6-.2-.3A7.3 7.3 0 0 1 12 4.7Zm4.2 9.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1-.6.7-.7.9-.3.2-.5.1a6 6 0 0 1-1.8-1.1 6.6 6.6 0 0 1-1.2-1.6c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 2 4.5 4.5 0 0 0 1 2.4 10.2 10.2 0 0 0 3.9 3.4c1.8.7 1.8.5 2.2.4a2.3 2.3 0 0 0 1.5-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"/></svg></a>
+      <a class="share-btn" href="https://www.reddit.com/submit?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhttp-429-retry-logic%2F&title=HTTP%20429%3A%20What%20It%20Means%20and%20How%20to%20Retry" target="_blank" rel="noopener" aria-label="Share on Reddit" title="Share on Reddit"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M22 12.1a2.1 2.1 0 0 0-3.6-1.5 10.3 10.3 0 0 0-5.2-1.6l.9-4.2 2.9.6a1.5 1.5 0 1 0 .2-1.2l-3.4-.7a.6.6 0 0 0-.7.5l-1 4.7a10.4 10.4 0 0 0-5.3 1.6 2.1 2.1 0 1 0-2.3 3.4 3.8 3.8 0 0 0 0 .6c0 3 3.6 5.5 8 5.5s8-2.5 8-5.5a3.8 3.8 0 0 0 0-.6 2.1 2.1 0 0 0 1.5-2Zm-13.6 1.4a1.5 1.5 0 1 1 1.5 1.5 1.5 1.5 0 0 1-1.5-1.5Zm8.3 4a5.6 5.6 0 0 1-3.7 1.1 5.6 5.6 0 0 1-3.7-1.1.5.5 0 1 1 .7-.7 4.7 4.7 0 0 0 3 .8 4.7 4.7 0 0 0 3-.8.5.5 0 1 1 .7.7Zm-.2-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5Z"/></svg></a>
+      <a class="share-btn" href="https://api.whatsapp.com/send?text=HTTP%20429%3A%20What%20It%20Means%20and%20How%20to%20Retry%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhttp-429-retry-logic%2F" target="_blank" rel="noopener" aria-label="Share on WhatsApp" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Zm0 1.7a7.3 7.3 0 1 1-3.7 13.6l-.3-.2-2.7.7.7-2.6-.2-.3A7.3 7.3 0 0 1 12 4.7Zm4.2 9.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1-.6.7-.7.9-.3.2-.5.1a6 6 0 0 1-1.8-1.1 6.6 6.6 0 0 1-1.2-1.6c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 2 4.5 4.5 0 0 0 1 2.4 10.2 10.2 0 0 0 3.9 3.4c1.8.7 1.8.5 2.2.4a2.3 2.3 0 0 0 1.5-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"/></svg></a>
     </div>
     </div>
-    <p class="post-head__dek">The same status code covers &quot;wait three seconds&quot; and &quot;this account is finished for the month&quot;. Treating them alike ended three runs early. The three-class taxonomy that fixed it.</p>
+    <p class="post-head__dek">One status code, three meanings — wait, stop, or out of quota. Telling them apart, and honouring Retry-After.</p>
   </div>
   <figure class="post-hero">
     <img src="/images/blog/rate-limits.jpg" alt="" width="1000" height="563" fetchpriority="high" decoding="async">
@@ -170,7 +170,7 @@
 
   <h2>What a retry loop is, and the assumption inside it</h2>
 
-  <p>Programs that call other people's services fail intermittently — a connection drops, a server is briefly busy — so the standard response is to try again after a pause, doubling the pause each time: 2 seconds, then 4, then 8, then give up. That is exponential backoff, and it is close to free to write — or to get for nothing from <a href="https://tenacity.readthedocs.io/en/latest/" target="_blank" rel="noopener">tenacity</a> in Python, or <a href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.util.html" target="_blank" rel="noopener">urllib3's <code>Retry</code></a> if you are already using <code>requests</code>:</p>
+  <p>Programs that call other people's services fail intermittently: a connection drops, a server is briefly busy. The standard response is to try again after a pause, doubling the pause each time — 2 seconds, then 4, then 8, then give up. That is exponential backoff, and it is close to free to write — or to get for nothing from <a href="https://tenacity.readthedocs.io/en/latest/" target="_blank" rel="noopener">tenacity</a> in Python, or <a href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.util.html" target="_blank" rel="noopener">urllib3's <code>Retry</code></a> if you are already using <code>requests</code>:</p>
 
   <pre><code>except Exception as exc:
     if attempt &lt; attempts:
@@ -255,9 +255,9 @@ time.sleep(wait)
 if hinted is None:
     delay = min(delay * 2, max_delay)   # exponential only when guessing</code></pre>
 
-  <p>Two details worth copying. Add a small margin — half a second — because retrying on the exact boundary is routinely a hair early. And cap what you will honour: a stated wait of an hour is a daily quota in disguise, so above 60 seconds the hint is ignored and the request is classified as exhaustion instead of blocking the run on it.</p>
+  <p>Two details worth copying. Add a small margin — half a second — because retrying on the exact boundary is routinely a hair early. And cap what you will honour. A stated wait of an hour is a daily quota in disguise. Above 60 seconds the hint is ignored and the request is classified as exhaustion, rather than blocking the run on it.</p>
 
-  <p>Where the header is available rather than a sentence, this is the same idea: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After" target="_blank" rel="noopener"><code>Retry-After</code></a> is a standard response header defined in <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after" target="_blank" rel="noopener">RFC 9110</a>, and reading it is strictly better than guessing, because the server knows when its own window reopens and you do not. It accepts either a number of seconds or an HTTP date, so parse both.</p>
+  <p>Where the header is available rather than a sentence, this is the same idea: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After" target="_blank" rel="noopener"><code>Retry-After</code></a> is a standard response header defined in <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after" target="_blank" rel="noopener">RFC 9110</a>. Reading it is strictly better than guessing: the server knows when its own window reopens and you do not. It accepts either a number of seconds or an HTTP date, so parse both.</p>
 
   <h2>"Should I stop?" needs "and", not "or"</h2>
 
@@ -270,7 +270,7 @@ if budget_failures and not any_transient:
     raise LLMBudgetError(summary)   # nothing will serve; stop the batch
 raise LLMError(summary)             # this item failed; the next may not</code></pre>
 
-  <p>My first attempt at this rule required <em>all</em> failures to be budget errors, which is wrong in the other direction: a retired model on the primary plus a capped fallback would then keep going, item after item, with nothing able to answer. Both mistakes are one word apart, which is the argument for writing the rule as an explicit statement about the list of failures rather than as flags accumulated inside a loop, and for having a test that names both directions.</p>
+  <p>The first attempt at this rule required <em>all</em> failures to be budget errors. That is wrong in the other direction: a retired model on the primary, plus a capped fallback, would keep going item after item with nothing able to answer. Both mistakes are one word apart. That is the argument for writing the rule as an explicit statement about the list of failures, rather than as flags accumulated inside a loop — and for a test that names both directions.</p>
 
   <h2>What I would build on day one now</h2>
 
@@ -313,13 +313,18 @@ raise LLMError(summary)             # this item failed; the next may not</code><
     <li><a href="https://console.groq.com/docs/rate-limits" target="_blank" rel="noopener">Groq's rate-limit documentation</a> — a concrete example of per-minute and per-day quotas sitting behind the same status, which is the ambiguity the whole post is about.</li>
   </ul>
 
-  <h3>Related work of mine</h3>
+  <h3>Related posts</h3>
 
   <ul>
     <li><a href="/blog/local-llm-vs-api/">Local LLM vs API</a> — what a daily cap costs you in practice, and how a fallback chain between providers is put together.</li>
     <li><a href="/blog/why-scrapers-get-blocked/">Why your scraper gets blocked</a> — the refusals that look like rate limiting but are not, and what actually causes them.</li>
-    <li><a href="/blog/building-resumable-etl-pipelines/">Why rerunning a pipeline should fix data</a> — what a run that was partly refused has to leave behind so the next one can finish the job.</li>
-    <li><a href="https://github.com/VishnujanNarayanan/Job_Application_Bot" target="_blank" rel="noopener">Job_Application_Bot</a> (source) — the repository the examples come from: the classifier, the retry loop and the provider chain.</li>
+    <li><a href="/blog/building-resumable-etl-pipelines/">How to make an ETL pipeline safe to rerun</a> — what a run that was partly refused has to leave behind so the next one can finish the job.</li>
+  </ul>
+
+  <h3>My own projects</h3>
+
+  <ul>
+    <li><a href="https://github.com/VishnujanNarayanan/Job_Application_Bot" target="_blank" rel="noopener">Job_Application_Bot</a> — source for the examples here: the classifier, the retry loop and the provider chain.</li>
   </ul>
 </article>
 
@@ -333,9 +338,9 @@ raise LLMError(summary)             # this item failed; the next may not</code><
         </div>
         <div class="post-card__body">
           <div class="tag-row"><span class="tag">Testing</span><span class="tag">Data engineering</span></div>
-          <h3 class="post-card__title">How to Test a Data Pipeline: 92 Passing Tests, 3 Broken Features</h3>
+          <h3 class="post-card__title">How to Test a Data Pipeline: What Tests Miss</h3>
           <div class="byline"><span class="byline__date">August 2026</span></div>
-          <p class="post-card__excerpt">A green suite proved the code did what it was written to do, and nothing about whether the product worked. What I test instead now, including the control run that has to come first.</p>
+          <p class="post-card__excerpt">92 tests passed while three features were broken. What I test now, and the control run that comes first.</p>
         </div>
       </a>
       <a class="post-card post-card--sm" href="/blog/a-year-of-ingestion-bugs/">
@@ -344,9 +349,9 @@ raise LLMError(summary)             # this item failed; the next may not</code><
         </div>
         <div class="post-card__body">
           <div class="tag-row"><span class="tag">Data engineering</span><span class="tag">Reliability</span></div>
-          <h3 class="post-card__title">A Year of Ingestion Bugs: What Actually Broke in 32 Data Pipelines</h3>
+          <h3 class="post-card__title">Data Ingestion Bugs and How to Catch Them</h3>
           <div class="byline"><span class="byline__date">August 2026</span></div>
-          <p class="post-card__excerpt">Roughly 30 bugs across a year of collecting Indian market data, sorted by cause. Eight of them produced no error message at all, and those are the ones worth reading about.</p>
+          <p class="post-card__excerpt">About 30 bugs from a year of market-data pipelines, sorted by cause. Eight threw no error at all.</p>
         </div>
       </a>
       <a class="post-card post-card--sm" href="/blog/how-i-scraped-nse-insider-filings/">
@@ -355,9 +360,9 @@ raise LLMError(summary)             # this item failed; the next may not</code><
         </div>
         <div class="post-card__body">
           <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Data engineering</span></div>
-          <h3 class="post-card__title">How to Scrape 20 Years of Data From a Site That Paginates by Date</h3>
+          <h3 class="post-card__title">How to Scrape a Site That Paginates by Date</h3>
           <div class="byline"><span class="byline__date">August 2026</span></div>
-          <p class="post-card__excerpt">The endpoint only answers 180 days at a time, and the answers are not final. Windowing, deduplication that deleted rows, and why one source was never going to be enough.</p>
+          <p class="post-card__excerpt">The endpoint returns 180 days at a time and the data changes after publication. Windowing, dedup, and what broke.</p>
         </div>
       </a>
     </div>

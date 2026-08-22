@@ -1,10 +1,10 @@
-  <p>I run a small program on a schedule: it collects job advertisements, scores each one, and messages me the good ones with a tailored resume attached. It had 92 unit tests, every external service mocked, and continuous integration running on every push. In one sitting I found three separate live failures, each of which had been in place for weeks, and not one was detectable from the test suite. One of them was that the suite itself had been failing on the server since 5 July while passing on my machine.</p>
+  <p>The usual way to test a data pipeline is unit tests, mocked services and continuous integration — which is exactly what this one had. A small scheduled program collects job advertisements, scores each one, and sends the good ones with a tailored resume attached. It had 92 unit tests, every external service mocked, and continuous integration running on every push. In one sitting I found three separate live failures, each of which had been in place for weeks, and not one was detectable from the test suite. One of them was that the suite itself had been failing on the server since 5 July while passing on my machine.</p>
 
   <p>None of that is an argument against unit tests. It is an argument about what they prove, which is narrower than it looks, and about which cheap tests actually catch the failures a data pipeline produces. Here is each failure, why the suite could not see it, and what I test now.</p>
 
-  <h2>What the thing does</h2>
+  <h2>What the pipeline does</h2>
 
-  <p>In more detail: it scrapes job advertisements, scores each one against my profile, and sends a message with an apply link and the resume attached. Roughly: fetch, filter, score, notify. Every failure below is one of those four stages, and the general shape applies to any pipeline that collects data on a schedule and does something at the end of it.</p>
+  <p>In more detail: it scrapes job advertisements, scores each one against a stored profile, and sends a message with an apply link and the resume attached. Roughly: fetch, filter, score, notify. Every failure below is one of those four stages, and the general shape applies to any pipeline that collects data on a schedule and does something at the end of it.</p>
 
   <h2>Failure 1: the notifications had not been sending, and the logs said so</h2>
 
@@ -41,7 +41,7 @@ AssertionError: Missing scaffold paths:
     ).stdout.split()
     assert not tracked</code></pre>
 
-  <p>That version means the same thing in a checkout as on my machine, which is the whole point — the original was environment-dependent and therefore could not be a check at all.</p>
+  <p>That version means the same thing in a fresh checkout as on a developer machine. The original depended on the environment, so it could not be a check at all.</p>
 
   <p>The technique worth stealing is smaller than the lesson: <strong>run the suite inside a fresh clone of your own repository.</strong> It reproduces exactly what the server sees, and it takes ten seconds. The same class of problem is why <a href="https://testcontainers.com/" target="_blank" rel="noopener">Testcontainers</a> exists — if a test needs a database, starting a real one in a container beats asserting that the one on your laptop is configured correctly.</p>
 
@@ -54,7 +54,7 @@ cd /tmp/cicheck &amp;&amp; pytest -q</code></pre>
 
   <pre><code>404 This model models/gemini-2.5-flash is no longer available to new users.</code></pre>
 
-  <p>No code had changed. The vendor withdrew the model for projects that were not already using it. No test suite can catch this, because every test of that code path mocks the vendor — which is correct practice, and also means those tests assert nothing whatsoever about whether the vendor still answers. (If you want the mocks to at least stay faithful to what the vendor really sent, <a href="https://vcrpy.readthedocs.io/en/latest/" target="_blank" rel="noopener">VCR.py</a> records real responses once and replays them, so the fixture is a transcript rather than something you invented.)</p>
+  <p>No code had changed. The vendor withdrew the model for projects that were not already using it. No test suite can catch this, because every test of that code path mocks the vendor — which is correct practice, and also means those tests assert nothing whatsoever about whether the vendor still answers. (If you want the mocks to at least stay faithful to what the vendor really sent, <a href="https://vcrpy.readthedocs.io/en/latest/" target="_blank" rel="noopener">VCR.py</a> records real responses once and replays them. The fixture is then a transcript rather than something you invented.)</p>
 
   <p>The detail I did not expect: the vendor's own "list available models" call still returned that model at the moment every generation request was returning 404. <strong>Listing is not proof of callability.</strong> A startup check that lists models would have passed while the pipeline was dead; one that makes a single tiny real call would not.</p>
 
@@ -65,7 +65,7 @@ cd /tmp/cicheck &amp;&amp; pytest -q</code></pre>
   <pre><code>notification_error: Inline keyboard button url
 '.../resume/....pdf' is invalid: wrong http url</code></pre>
 
-  <p>The messaging platform rejects the <em>entire</em> message if any one button URL is unreachable from the internet, and a base-URL setting still held its shipped placeholder. One unset value discarded the only output the pipeline exists to produce.</p>
+  <p>The messaging platform rejects the <em>entire</em> message if any one button URL is unreachable from the internet. A base-URL setting still held its shipped placeholder. One unset value discarded the only output the pipeline exists to produce.</p>
 
   <p>The guard that generalises is not "validate that setting". It is: when assembling something out of several optional parts, a bad part should cost you that part, not the whole. The buttons are now filtered to the ones with a public URL, and the message goes out with whatever survives.</p>
 
@@ -77,9 +77,9 @@ cd /tmp/cicheck &amp;&amp; pytest -q</code></pre>
 
   <h2>The test that has to come first: measure the noise floor</h2>
 
-  <p>This is the part I would most want someone to take away, and it comes from a different pipeline — a collector that pulls news headlines for a set of crypto assets.</p>
+  <p>This is the part most worth taking away. It comes from a different pipeline: a collector that pulls news headlines for a set of crypto assets.</p>
 
-  <p>I wanted to know whether running it with several workers in parallel was corrupting results, so I compared a parallel run against a single-worker baseline:</p>
+  <p>The question was whether running it with several workers in parallel corrupted results. So a parallel run was compared against a single-worker baseline:</p>
 
   <pre><code>workers   4   →  77.9s   IDENTICAL     ← baseline
 workers  12   →  40.5s   IDENTICAL
@@ -124,7 +124,7 @@ assert f.requests_made &lt;= expected_max, f"refetched too much: {f.requests_mad
 
   <h2>What I would set up on a new pipeline, in order</h2>
 
-  <p><strong>1. Make "nothing happened" distinguishable from "nothing was allowed to happen."</strong> Zero new rows is both the normal outcome and the failure outcome, which is the single most common way pipeline breakage hides. An explicit success/failure count at the end of every run costs nothing. Several bugs in my <a href="/blog/a-year-of-ingestion-bugs/">year of ingestion bugs</a> were only findable this way.</p>
+  <p><strong>1. Make "nothing happened" distinguishable from "nothing was allowed to happen."</strong> Zero new rows is both the normal outcome and the failure outcome, which is the single most common way pipeline breakage hides. An explicit success/failure count at the end of every run costs nothing. Several bugs in my <a href="/blog/a-year-of-ingestion-bugs/">common data ingestion bugs</a> were only findable this way.</p>
 
   <p><strong>2. One end-to-end run against the real dependencies with throwaway data</strong>, checked into the schedule rather than the test suite. It is the only thing that would have caught the retired model, the placeholder URL and the mistyped config key — all three in a single run.</p>
 
@@ -132,7 +132,7 @@ assert f.requests_made &lt;= expected_max, f"refetched too much: {f.requests_mad
 
   <p><strong>4. Measure the noise floor before comparing anything to a baseline.</strong></p>
 
-  <p><strong>5. Kill the run in every way it can die, and assert the next run repairs it.</strong> This is <a href="https://principlesofchaos.org/" target="_blank" rel="noopener">chaos engineering</a> at the scale of one script, and it needs no infrastructure — a <code>KeyboardInterrupt</code>, a killed process and a wall of 503s cover most of it. Interrupt, process death, budget exhaustion, a wall of errors. This is the property a scheduled pipeline actually rests on, and it is testable offline. The design it verifies is in <a href="/blog/building-resumable-etl-pipelines/">why rerunning a pipeline should fix data</a>.</p>
+  <p><strong>5. Kill the run in every way it can die, and assert the next run repairs it.</strong> This is <a href="https://principlesofchaos.org/" target="_blank" rel="noopener">chaos engineering</a> at the scale of one script, and it needs no infrastructure — a <code>KeyboardInterrupt</code>, a killed process and a wall of 503s cover most of it. Interrupt, process death, budget exhaustion, a wall of errors. This is the property a scheduled pipeline actually rests on, and it is testable offline. The design it verifies is in <a href="/blog/building-resumable-etl-pipelines/">how to make an ETL pipeline safe to rerun</a>.</p>
 
   <p><strong>6. Run the suite in a fresh clone before trusting it.</strong> Ten seconds, and it is the difference between a check and a description of your own machine.</p>
 
@@ -162,11 +162,16 @@ assert f.requests_made &lt;= expected_max, f"refetched too much: {f.requests_mad
     <li><a href="https://principlesofchaos.org/" target="_blank" rel="noopener">Principles of chaos engineering</a> — the discipline the scenario tests borrow from, minus the infrastructure.</li>
   </ul>
 
-  <h3>Related work of mine</h3>
+  <h3>Related posts</h3>
 
   <ul>
-    <li><a href="/blog/a-year-of-ingestion-bugs/">A year of ingestion bugs</a> — a year of real pipeline failures sorted by cause, useful for deciding what your tests should be looking for.</li>
-    <li><a href="/blog/building-resumable-etl-pipelines/">Why rerunning a pipeline should fix data</a> — the design these stop-and-resume tests are written against: rerunning repairs data instead of duplicating it.</li>
+    <li><a href="/blog/a-year-of-ingestion-bugs/">Common data ingestion bugs</a> — a year of real pipeline failures sorted by cause, useful for deciding what your tests should be looking for.</li>
+    <li><a href="/blog/building-resumable-etl-pipelines/">How to make an ETL pipeline safe to rerun</a> — the design these stop-and-resume tests are written against: rerunning repairs data instead of duplicating it.</li>
     <li><a href="/blog/http-429-retry-logic/">What a 429 really means</a> — how to tell apart a rate limit that clears on its own, one that never will, and a quota that is simply spent: the distinction a retry loop needs.</li>
-    <li><a href="https://github.com/VishnujanNarayanan/Job_Application_Bot" target="_blank" rel="noopener">Job_Application_Bot</a> (source) — the repository behind the examples here, including the test suite and the rewritten smoke test.</li>
+  </ul>
+
+  <h3>My own projects</h3>
+
+  <ul>
+    <li><a href="https://github.com/VishnujanNarayanan/Job_Application_Bot" target="_blank" rel="noopener">Job_Application_Bot</a> — source for the examples here, including the test suite and the rewritten smoke test.</li>
   </ul>

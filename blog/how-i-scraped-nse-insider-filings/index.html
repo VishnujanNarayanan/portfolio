@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>How to Scrape 20 Years of Data From a Site That Paginates by Date</title>
-<meta name="description" content="Scraping a 20-year archive from a date-windowed endpoint: window sizing, resumable backfill, a dedup key that silently deleted rows, and handling a source that backfills late.">
+<title>How to Scrape a Site That Paginates by Date — Vishnujan Narayanan</title>
+<meta name="description" content="How to scrape a date-windowed endpoint: window sizing, resumable backfill, a dedup key that deleted rows, and sources that backfill late.">
 <meta name="author" content="Vishnujan Narayanan">
 <meta property="article:author" content="https://www.linkedin.com/in/vishnujan-narayanan">
 <meta property="article:published_time" content="2026-08-04">
@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" href="../../apple-touch-icon.png?v=2">
 <link rel="canonical" href="https://vishnujan.dev/blog/how-i-scraped-nse-insider-filings/">
 <meta name="robots" content="index, follow, max-image-preview:large">
-<meta property="og:title" content="How to Scrape 20 Years of Data From a Site That Paginates by Date">
+<meta property="og:title" content="How to Scrape a Site That Paginates by Date">
 <meta property="og:description" content="180-day windows, a dedup key that silently deleted filings, and the indexing lag that forces a second source.">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Vishnujan Narayanan">
@@ -24,9 +24,9 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:type" content="image/jpeg">
-<meta property="og:image:alt" content="How to Scrape 20 Years of Data From a Site That Paginates by Date">
+<meta property="og:image:alt" content="How to Scrape a Site That Paginates by Date">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="How to Scrape 20 Years of Data From a Site That Paginates by Date">
+<meta name="twitter:title" content="How to Scrape a Site That Paginates by Date">
 <meta name="twitter:description" content="180-day windows, a dedup key that silently deleted filings, and the indexing lag that forces a second source.">
 <meta name="twitter:image" content="https://vishnujan.dev/images/blog/share-scraping.jpg">
 <!-- Roboto Flex is the nav reel's font (styles.css @font-face). Preloaded so it is in
@@ -39,8 +39,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../styles.css">
 <script>document.documentElement.classList.remove("no-js");</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"How to Scrape 20 Years of Data From a Site That Paginates by Date","item":"https://vishnujan.dev/blog/how-i-scraped-nse-insider-filings/"}]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"How to Scrape 20 Years of Data From a Site That Paginates by Date","description":"Scraping a 20-year archive from a date-windowed endpoint: window sizing, resumable backfill, a dedup key that silently deleted rows, and handling a source that backfills late.","image":"https://vishnujan.dev/images/blog/share-scraping.jpg","datePublished":"2026-08-04","dateModified":"2026-08-04","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/how-i-scraped-nse-insider-filings/"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"How to Scrape a Site That Paginates by Date","item":"https://vishnujan.dev/blog/how-i-scraped-nse-insider-filings/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"How to Scrape a Site That Paginates by Date","description":"How to scrape a date-windowed endpoint: window sizing, resumable backfill, a dedup key that deleted rows, and sources that backfill late.","image":"https://vishnujan.dev/images/blog/share-scraping.jpg","datePublished":"2026-08-04","dateModified":"2026-08-04","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/how-i-scraped-nse-insider-filings/"}</script>
 </head>
 <body class="subpage-body post-body blog-body">
 <div class="mobile-nav__overlay"></div>
@@ -132,11 +132,11 @@
   </button>
   <span class="post-rail__toast" data-share-toast hidden>Link copied</span>
 </aside>
-<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>How to Scrape 20 Years of Data From a Site That Paginates by Date</nav>
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>How to Scrape a Site That Paginates by Date</nav>
 <article class="article">
   <div class="post-head">
     <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Data engineering</span></div>
-    <h1>How to scrape 20 years of data from a site that paginates by date</h1>
+    <h1>How to scrape a site that paginates by date</h1>
     <div class="post-head__foot">
     <div class="byline byline--lg">
         <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
@@ -145,27 +145,27 @@
         <span class="byline__date">August 2026</span>
       </div>
 <div class="share-row">
-      <a class="share-btn" href="mailto:?subject=How%20to%20Scrape%2020%20Years%20of%20Data%20From%20a%20Site%20That%20Paginates%20by%20Date&body=How%20to%20Scrape%2020%20Years%20of%20Data%20From%20a%20Site%20That%20Paginates%20by%20Date%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhow-i-scraped-nse-insider-filings%2F" aria-label="Share by email" title="Share by email"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
-      <a class="share-btn" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhow-i-scraped-nse-insider-filings%2F&text=How%20to%20Scrape%2020%20Years%20of%20Data%20From%20a%20Site%20That%20Paginates%20by%20Date" target="_blank" rel="noopener" aria-label="Share on X" title="Share on X"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.2 3h3.3l-7.2 8.2L21.8 21h-6.6l-4.3-5.6L5.9 21H2.6l7.7-8.8L2.5 3h6.8l3.9 5.2L17.2 3Zm-1.2 16h1.8L8.1 4.8H6.2L16 19Z"/></svg></a>
+      <a class="share-btn" href="mailto:?subject=How%20to%20Scrape%20a%20Site%20That%20Paginates%20by%20Date&body=How%20to%20Scrape%20a%20Site%20That%20Paginates%20by%20Date%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhow-i-scraped-nse-insider-filings%2F" aria-label="Share by email" title="Share by email"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
+      <a class="share-btn" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhow-i-scraped-nse-insider-filings%2F&text=How%20to%20Scrape%20a%20Site%20That%20Paginates%20by%20Date" target="_blank" rel="noopener" aria-label="Share on X" title="Share on X"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.2 3h3.3l-7.2 8.2L21.8 21h-6.6l-4.3-5.6L5.9 21H2.6l7.7-8.8L2.5 3h6.8l3.9 5.2L17.2 3Zm-1.2 16h1.8L8.1 4.8H6.2L16 19Z"/></svg></a>
       <a class="share-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhow-i-scraped-nse-insider-filings%2F" target="_blank" rel="noopener" aria-label="Share on LinkedIn" title="Share on LinkedIn"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M6.9 8.6H4.2V20h2.7V8.6ZM5.5 4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2ZM20 13.4c0-2.9-1.6-4.3-3.6-4.3-1.7 0-2.4.9-2.8 1.5V8.6H10.9c0 .8 0 11.4 0 11.4h2.7v-6.4c0-.3 0-.6.1-.8.3-.6.8-1.2 1.7-1.2 1.2 0 1.7.9 1.7 2.2V20H20v-6.6Z"/></svg></a>
       <a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhow-i-scraped-nse-insider-filings%2F" target="_blank" rel="noopener" aria-label="Share on Facebook" title="Share on Facebook"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M14.5 8.5V6.9c0-.7.2-1.1 1.2-1.1h1.5V3.1C16.8 3 16 3 15.1 3c-2 0-3.4 1.2-3.4 3.5v2H9.3V11h2.4v8h2.8v-8h2.3l.4-2.5h-2.7Z"/></svg></a>
-      <a class="share-btn" href="https://www.reddit.com/submit?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhow-i-scraped-nse-insider-filings%2F&title=How%20to%20Scrape%2020%20Years%20of%20Data%20From%20a%20Site%20That%20Paginates%20by%20Date" target="_blank" rel="noopener" aria-label="Share on Reddit" title="Share on Reddit"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M22 12.1a2.1 2.1 0 0 0-3.6-1.5 10.3 10.3 0 0 0-5.2-1.6l.9-4.2 2.9.6a1.5 1.5 0 1 0 .2-1.2l-3.4-.7a.6.6 0 0 0-.7.5l-1 4.7a10.4 10.4 0 0 0-5.3 1.6 2.1 2.1 0 1 0-2.3 3.4 3.8 3.8 0 0 0 0 .6c0 3 3.6 5.5 8 5.5s8-2.5 8-5.5a3.8 3.8 0 0 0 0-.6 2.1 2.1 0 0 0 1.5-2Zm-13.6 1.4a1.5 1.5 0 1 1 1.5 1.5 1.5 1.5 0 0 1-1.5-1.5Zm8.3 4a5.6 5.6 0 0 1-3.7 1.1 5.6 5.6 0 0 1-3.7-1.1.5.5 0 1 1 .7-.7 4.7 4.7 0 0 0 3 .8 4.7 4.7 0 0 0 3-.8.5.5 0 1 1 .7.7Zm-.2-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5Z"/></svg></a>
-      <a class="share-btn" href="https://api.whatsapp.com/send?text=How%20to%20Scrape%2020%20Years%20of%20Data%20From%20a%20Site%20That%20Paginates%20by%20Date%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhow-i-scraped-nse-insider-filings%2F" target="_blank" rel="noopener" aria-label="Share on WhatsApp" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Zm0 1.7a7.3 7.3 0 1 1-3.7 13.6l-.3-.2-2.7.7.7-2.6-.2-.3A7.3 7.3 0 0 1 12 4.7Zm4.2 9.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1-.6.7-.7.9-.3.2-.5.1a6 6 0 0 1-1.8-1.1 6.6 6.6 0 0 1-1.2-1.6c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 2 4.5 4.5 0 0 0 1 2.4 10.2 10.2 0 0 0 3.9 3.4c1.8.7 1.8.5 2.2.4a2.3 2.3 0 0 0 1.5-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"/></svg></a>
+      <a class="share-btn" href="https://www.reddit.com/submit?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhow-i-scraped-nse-insider-filings%2F&title=How%20to%20Scrape%20a%20Site%20That%20Paginates%20by%20Date" target="_blank" rel="noopener" aria-label="Share on Reddit" title="Share on Reddit"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M22 12.1a2.1 2.1 0 0 0-3.6-1.5 10.3 10.3 0 0 0-5.2-1.6l.9-4.2 2.9.6a1.5 1.5 0 1 0 .2-1.2l-3.4-.7a.6.6 0 0 0-.7.5l-1 4.7a10.4 10.4 0 0 0-5.3 1.6 2.1 2.1 0 1 0-2.3 3.4 3.8 3.8 0 0 0 0 .6c0 3 3.6 5.5 8 5.5s8-2.5 8-5.5a3.8 3.8 0 0 0 0-.6 2.1 2.1 0 0 0 1.5-2Zm-13.6 1.4a1.5 1.5 0 1 1 1.5 1.5 1.5 1.5 0 0 1-1.5-1.5Zm8.3 4a5.6 5.6 0 0 1-3.7 1.1 5.6 5.6 0 0 1-3.7-1.1.5.5 0 1 1 .7-.7 4.7 4.7 0 0 0 3 .8 4.7 4.7 0 0 0 3-.8.5.5 0 1 1 .7.7Zm-.2-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5Z"/></svg></a>
+      <a class="share-btn" href="https://api.whatsapp.com/send?text=How%20to%20Scrape%20a%20Site%20That%20Paginates%20by%20Date%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fhow-i-scraped-nse-insider-filings%2F" target="_blank" rel="noopener" aria-label="Share on WhatsApp" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Zm0 1.7a7.3 7.3 0 1 1-3.7 13.6l-.3-.2-2.7.7.7-2.6-.2-.3A7.3 7.3 0 0 1 12 4.7Zm4.2 9.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1-.6.7-.7.9-.3.2-.5.1a6 6 0 0 1-1.8-1.1 6.6 6.6 0 0 1-1.2-1.6c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 2 4.5 4.5 0 0 0 1 2.4 10.2 10.2 0 0 0 3.9 3.4c1.8.7 1.8.5 2.2.4a2.3 2.3 0 0 0 1.5-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"/></svg></a>
     </div>
     </div>
-    <p class="post-head__dek">The endpoint only answers 180 days at a time, and the answers are not final. Windowing, deduplication that deleted rows, and why one source was never going to be enough.</p>
+    <p class="post-head__dek">The endpoint returns 180 days at a time and the data changes after publication. Windowing, dedup, and what broke.</p>
   </div>
   <figure class="post-hero">
     <img src="/images/blog/scraping.jpg" alt="" width="1000" height="563" fetchpriority="high" decoding="async">
   </figure>
 
-  <p>Plenty of public archives are only reachable a slice at a time: give me a start date and an end date, and I will give you what falls between them. Twenty years of history then means a few hundred requests, a way to remember where you stopped, and a way to notice when an answer was incomplete. This is that job, done against one real source.</p>
+  <p>Plenty of public archives paginate by date: give me a start date and an end date, and I will give you what falls between them. Twenty years of history then means a few hundred requests, a way to remember where you stopped, and a way to notice when an answer was incomplete. This is that job, done against one real source.</p>
 
   <p>When a company director buys or sells shares in their own company, they have to tell the exchange. In India those disclosures are public, and the National Stock Exchange serves them from what it calls its PIT endpoint — PIT being Prohibition of Insider Trading, the regulation that requires the disclosure in the first place. I wanted all of them, going back twenty years, in one file I could keep up to date.</p>
 
   <p>The endpoint will absolutely give you insider filings. What it will not do is tell you when it has given you fewer than you asked for. That single property shaped every design decision below, and it is the reason this took three attempts to get right.</p>
 
-  <h2>Why you cannot just ask for twenty years</h2>
+  <h2>Why an endpoint that paginates by date forces windowing</h2>
 
   <p>The obvious first attempt is one request covering 2005 to today. It fails, but it fails in three different ways depending on how wide the range is, and only one of them is obvious.</p>
 
@@ -233,13 +233,13 @@ return parts[0].str.cat(parts[1:], sep='|')</code></pre>
 
   <h2>NSE is a month or two behind itself</h2>
 
-  <p>Collecting the history turned out to be the easy half. The harder problem is that a filing takes roughly 30 to 60 days to appear in NSE's searchable history after it is disclosed. For a twenty-year backfill that does not matter. For anything current it means the most recent two months of my dataset were always incomplete — and, again, nothing in the response says so. The data looks finished because there is no marker for "still arriving".</p>
+  <p>Collecting the history turned out to be the easy half. The harder problem is that a filing takes roughly 30 to 60 days to appear in NSE's searchable history after it is disclosed. For a twenty-year backfill that does not matter. For anything current it means the most recent two months of the dataset were always incomplete — and, again, nothing in the response says so. The data looks finished because there is no marker for "still arriving".</p>
 
-  <p>The only fix is a second source that publishes sooner, so the pipeline supplements the last 60 days from one, maps it onto NSE's column layout, and merges it against what NSE has already given. That merge is only safe because of the normalisation above: without it, the same filing from two sources produces two different keys and you end up with a dataset that is duplicated everywhere the sources overlap, which is worse than having one source.</p>
+  <p>The only fix is a second source that publishes sooner, so the pipeline supplements the last 60 days from one, maps it onto NSE's column layout, and merges it against what NSE has already given. That merge is only safe because of the normalisation above. Without it, the same filing from two sources produces two different keys. You end up with a dataset duplicated everywhere the sources overlap, which is worse than having one source.</p>
 
   <p>That second source did not want to be read, in two specific ways worth knowing about because neither is obvious.</p>
 
-  <p>First, it started returning HTTP 405 errors through Cloudflare. Rotating the browser identity in the request headers changed nothing, because the block was not reading the headers — it was fingerprinting the TLS handshake, the way the encrypted connection itself is opened, which differs between a Python HTTP library and a real browser no matter what the headers claim. <a href="https://pypi.org/project/curl-cffi/" target="_blank" rel="noopener">curl_cffi</a> opens the connection the way Chrome does, which gets past it; the full stack of blocking layers is in <a href="/blog/why-scrapers-get-blocked/">why your scraper gets blocked</a>. But the more expensive part of that failure was the reporting: a fully blocked run finished successfully with zero new rows, which is exactly what a genuinely quiet day looks like. It now prints an explicit pass or fail summary, so "blocked" and "nothing new" can never again look identical.</p>
+  <p>First, it started returning HTTP 405 errors through Cloudflare. Rotating the browser identity in the request headers changed nothing. The block was not reading the headers. It was fingerprinting the TLS handshake — the way the encrypted connection itself is opened, which differs between a Python HTTP library and a real browser no matter what the headers claim. <a href="https://pypi.org/project/curl-cffi/" target="_blank" rel="noopener">curl_cffi</a> opens the connection the way Chrome does, which gets past it; the full stack of blocking layers is in <a href="/blog/why-scrapers-get-blocked/">why your scraper gets blocked</a>. But the more expensive part of that failure was the reporting: a fully blocked run finished successfully with zero new rows, which is exactly what a genuinely quiet day looks like. It now prints an explicit pass or fail summary, so "blocked" and "nothing new" can never again look identical.</p>
 
   <p>Second, the free tier caps a response at 200 records per window and does not mention it. Ask for a month over a busy period and you get 200 records and no truncation flag anywhere in the response — the same silent shortfall as NSE's, from a completely different system. The supplement now fetches one day at a time, because a single day almost never exceeds 200 filings. Also, one IP address will not survive a full historical crawl of that source, so it runs through a rotating pool of proxies.</p>
 
@@ -251,9 +251,9 @@ return parts[0].str.cat(parts[1:], sep='|')</code></pre>
 
   <p><strong>Treat "nothing new" as a claim that needs evidence.</strong> It is the correct answer often enough to be unremarkable and wrong often enough to be dangerous — it was the visible symptom of both the Cloudflare block and the 200-row cap. Anything that can legitimately return nothing has to be able to say whether it looked and found nothing, or never got to look.</p>
 
-  <p><strong>Decide what happens when a filing is corrected.</strong> If a company amends a past disclosure, my key sees a record it already holds and drops the correction. That was never a decision; it is a side effect of using set membership, and for a compliance-adjacent dataset it is the gap that bothers me most.</p>
+  <p><strong>Decide what happens when a filing is corrected.</strong> If a company amends a past disclosure, the key sees a record it already holds and drops the correction. That was never a decision; it is a side effect of using set membership, and for a compliance-adjacent dataset it is the gap that bothers me most.</p>
 
-  <p>The full list of what has broken across these pipelines is in <a href="/blog/a-year-of-ingestion-bugs/">a year of ingestion bugs</a>, the guards that make repeat runs safe are in <a href="/blog/building-resumable-etl-pipelines/">making pipeline reruns converge</a>, and the wider system is on the <a href="/projects/market-data-pipeline/">market-data platform</a> page.</p>
+  <p>The full list of what has broken across these pipelines is in <a href="/blog/a-year-of-ingestion-bugs/">common data ingestion bugs</a>, the guards that make repeat runs safe are in <a href="/blog/building-resumable-etl-pipelines/">how to make an ETL pipeline safe to rerun</a>.</p>
 
   <h2>References and further reading</h2>
 
@@ -272,14 +272,19 @@ return parts[0].str.cat(parts[1:], sep='|')</code></pre>
     <li><a href="https://docs.python.org/3/library/urllib.robotparser.html" target="_blank" rel="noopener">Python robotparser</a> and <a href="https://www.rfc-editor.org/rfc/rfc9309.html" target="_blank" rel="noopener">RFC 9309</a> — what a crawler is expected to respect, in three lines of code and one short standard.</li>
   </ul>
 
-  <h3>Related work of mine</h3>
+  <h3>Related posts</h3>
 
   <ul>
     <li><a href="/blog/why-scrapers-get-blocked/">Why your scraper gets blocked</a> — the four things that refuse a scraper (headers, TLS fingerprint, IP address, behaviour) and what fixes each.</li>
-    <li><a href="/blog/building-resumable-etl-pipelines/">Why rerunning a pipeline should fix data</a> — how to make a long backfill safe to interrupt and rerun.</li>
-    <li><a href="/blog/a-year-of-ingestion-bugs/">A year of ingestion bugs</a> — a year of real pipeline failures sorted by cause, including the ones a job like this produces.</li>
+    <li><a href="/blog/building-resumable-etl-pipelines/">How to make an ETL pipeline safe to rerun</a> — how to make a long backfill safe to interrupt and rerun.</li>
+    <li><a href="/blog/a-year-of-ingestion-bugs/">Common data ingestion bugs</a> — a year of real pipeline failures sorted by cause, including the ones a job like this produces.</li>
     <li><a href="/blog/playwright-vs-selenium/">Playwright vs Selenium</a> — when a scrape needs a real browser and when a plain HTTP request is enough.</li>
-    <li><a href="/projects/market-data-pipeline/">Market data platform</a> — the project page for the platform this dataset feeds.</li>
+  </ul>
+
+  <h3>My own projects</h3>
+
+  <ul>
+    <li><a href="/projects/market-data-pipeline/">Market data platform</a> — the platform this dataset feeds.</li>
   </ul>
 </article>
 
@@ -293,9 +298,9 @@ return parts[0].str.cat(parts[1:], sep='|')</code></pre>
         </div>
         <div class="post-card__body">
           <div class="tag-row"><span class="tag">Testing</span><span class="tag">Data engineering</span></div>
-          <h3 class="post-card__title">How to Test a Data Pipeline: 92 Passing Tests, 3 Broken Features</h3>
+          <h3 class="post-card__title">How to Test a Data Pipeline: What Tests Miss</h3>
           <div class="byline"><span class="byline__date">August 2026</span></div>
-          <p class="post-card__excerpt">A green suite proved the code did what it was written to do, and nothing about whether the product worked. What I test instead now, including the control run that has to come first.</p>
+          <p class="post-card__excerpt">92 tests passed while three features were broken. What I test now, and the control run that comes first.</p>
         </div>
       </a>
       <a class="post-card post-card--sm" href="/blog/a-year-of-ingestion-bugs/">
@@ -304,9 +309,9 @@ return parts[0].str.cat(parts[1:], sep='|')</code></pre>
         </div>
         <div class="post-card__body">
           <div class="tag-row"><span class="tag">Data engineering</span><span class="tag">Reliability</span></div>
-          <h3 class="post-card__title">A Year of Ingestion Bugs: What Actually Broke in 32 Data Pipelines</h3>
+          <h3 class="post-card__title">Data Ingestion Bugs and How to Catch Them</h3>
           <div class="byline"><span class="byline__date">August 2026</span></div>
-          <p class="post-card__excerpt">Roughly 30 bugs across a year of collecting Indian market data, sorted by cause. Eight of them produced no error message at all, and those are the ones worth reading about.</p>
+          <p class="post-card__excerpt">About 30 bugs from a year of market-data pipelines, sorted by cause. Eight threw no error at all.</p>
         </div>
       </a>
       <a class="post-card post-card--sm" href="/blog/local-llm-vs-api/">
@@ -315,9 +320,9 @@ return parts[0].str.cat(parts[1:], sep='|')</code></pre>
         </div>
         <div class="post-card__body">
           <div class="tag-row"><span class="tag">LLMs</span><span class="tag">Infrastructure</span></div>
-          <h3 class="post-card__title">Local LLM vs API: The Numbers From Running Both on a 6GB GPU</h3>
+          <h3 class="post-card__title">Local LLM vs API: When to Run Your Own Model</h3>
           <div class="byline"><span class="byline__date">July 2026</span></div>
-          <p class="post-card__excerpt">A 7B model on a laptop GPU against a hosted 70B on a free tier. Four times slower, no daily cap, and one measurement that turned out to be answering a different question.</p>
+          <p class="post-card__excerpt">A 7B model on a 6GB GPU against a hosted 70B: 6s vs 1.6s, no daily cap, and which one to reach for.</p>
         </div>
       </a>
     </div>
