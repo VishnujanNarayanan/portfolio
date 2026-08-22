@@ -2328,24 +2328,22 @@ function makeTypeIn(host, runs, opts) {
       var strip = rail ? parseFloat(getComputedStyle(rail).minWidth) : 90;     // = --strip
       // The open panel's basis is strip + --cw (the CSS `.wpanel.is-open{flex-basis:calc(--strip + --cw)}`),
       // NOT the content's own (wider) clamped width — otherwise the JS "open" overshoots the real settled width.
-      // The panel opens by exactly the TEXT COLUMN's own width, and the divider/text are inset by a
-      // whole closed-panel width. Both are published as custom properties so the CSS stays declarative:
-      //   closed width = (W - cw) / N     (every panel grows by the same share of the free space)
-      //   open width   = closed + cw      → text at left:closed ends flush with the panel's right edge
-      // Reading --cw from the stylesheet instead would leave the column wider than the panel opens,
-      // so the last words were clipped by .wpanel's overflow:hidden.
-      var contentEl = panels[0].querySelector(".wpanel__content");
-      var cw = contentEl ? contentEl.getBoundingClientRect().width : 0;
-      if (!cw) cw = parseFloat(getComputedStyle(section).getPropertyValue("--cw")) || 230;
-      // NUDGE sets the line (and the text) a touch further right than the bare closed width, so the
-      // band reads as a deliberate margin rather than as the panel seam. It is added to BOTH the
-      // gutter and the open panel's growth, which keeps the column flush: open = closed + cw, and
-      // text right edge = gutter + content = (closed + NUDGE) + content = open.
-      var NUDGE = 16;
-      cw += NUDGE;
-      var gutter = Math.max(strip, (G.W - cw) / N + NUDGE);   // never narrower than the strip itself
+      // --gutter: how far in the divider + text sit from the open panel's left edge. It is a CLOSED
+      // panel's settled width — (W - cw)/N, since every panel grows by the same share of the free
+      // space — plus a small NUDGE so the band reads as a margin rather than as the panel seam.
+      // --cw is deliberately NOT written to: it sets how far a panel opens, so changing it would
+      // widen every open panel and narrow every closed one. The accordion's proportions stay exactly
+      // as designed; only the line and the text move. --shift is what the text column gives back in
+      // width, so its RIGHT edge does not move and nothing visible before can be clipped now.
+      var cw = parseFloat(getComputedStyle(section).getPropertyValue("--cw")) || 230;
+      // INSET is how much of the way from --strip to a closed panel's full width the line sits.
+      // 1 = flush with the closed width (+NUDGE); 0.75 is where it reads best — halfway read as
+      // too far left, flush as too far right.
+      var NUDGE = 4, INSET = 0.75;
+      var full = (G.W - cw) / N + NUDGE;                 // a closed panel's settled width, plus the nudge
+      var gutter = Math.max(strip, strip + (full - strip) * INSET);
       section.style.setProperty("--gutter", gutter.toFixed(2) + "px");
-      section.style.setProperty("--cw", cw.toFixed(2) + "px");
+      section.style.setProperty("--shift", (gutter - strip).toFixed(2) + "px");
       G.openBasis = strip + cw;                          // the open panel's extra basis (main accordion)
       G.per = G.W / N;                                   // equal width (Part-1 end)
       G.stripW = (G.W - G.openBasis) / N;                // a closed strip's final width (accordion)

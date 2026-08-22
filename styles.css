@@ -455,7 +455,7 @@ header .header__nav-left a{color:#050419;font-size:16px}
 /* The open panel's width is strip + --cw (main.js uses --cw for its geometry), so in a
    dense stack the content column has to be exactly --cw — the default clamp reaches 360px
    on a wide screen, which is wider than a dense panel opens and would clip the last words. */
-.writing--dense .wpanel__content{width:clamp(250px,22.4vw,322px)}
+.writing--dense .wpanel__content{width:calc(clamp(250px,22.4vw,322px) - var(--shift,0px))}
 .writing--dense .wpanel__vert{font-size:clamp(17px,1.5vw,27px);top:18px}
 .writing--dense .wpanel__num{font-size:clamp(30px,3vw,54px);bottom:16px}
 .wpanel__vert{position:absolute;left:calc(var(--gutter,var(--strip)) / 2);top:22px;transform:translateX(-50%) rotate(180deg);will-change:opacity;
@@ -471,9 +471,11 @@ header .header__nav-left a{color:#050419;font-size:16px}
    it's out of the flex flow: the panel's width animating open/closed never reflows or resizes the
    text. Opening/closing ONLY fades it in/out. Clipped by the panel's overflow:hidden while closed. */
 .wpanel__content{position:absolute;left:var(--gutter,var(--strip));top:0;bottom:0;z-index:2;
-  width:clamp(322px,32vw,470px);box-sizing:border-box;   /* FIXED width (vw-stable) so the text wraps the same the whole way — opening no longer re-flows it; it just slides in. */
+  width:calc(clamp(322px,32vw,470px) - var(--shift,0px));box-sizing:border-box;   /* FIXED width (vw-stable) so the text wraps the same the whole way — opening no longer re-flows it; it just slides in. */
   display:flex;flex-direction:column;justify-content:space-between;gap:20px;   /* heading anchored TOP, description anchored BOTTOM */
-  padding:clamp(32px,3vw,52px) clamp(28px,2.6vw,44px);
+  /* Asymmetric: the LEFT inset is small so the text sits close to the divider line (the line is
+     the margin now — a second large gap after it read as a drift). Right/top/bottom unchanged. */
+  padding:clamp(32px,3vw,52px) clamp(28px,2.6vw,44px) clamp(32px,3vw,52px) clamp(12px,1.15vw,18px);
   pointer-events:none;opacity:0;transform:translateX(104px);   /* parked further off to the RIGHT (clipped by the panel) while closed — longer slide-in */
   transition:opacity .5s ease-in-out .12s, transform .7s cubic-bezier(.32,0,.16,1) .05s}
 .wpanel.is-open .wpanel__content{opacity:1;transform:translateX(0);pointer-events:auto}   /* slides left into place */
