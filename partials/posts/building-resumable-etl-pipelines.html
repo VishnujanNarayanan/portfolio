@@ -1,12 +1,12 @@
-  <p>I run 32 scripts that download Indian market data — prices, company announcements, insider filings — and most of them run on a schedule, unattended. The rule I hold all of them to is simple to state: running a script again must leave the data better than before, or at least no worse. Fill in a gap, correct a bad row, otherwise change nothing.</p>
+  <p>A pipeline is safe to rerun when running it twice leaves the data no worse than running it once. That is easy to say and easy to get wrong. The examples here come from 32 scripts that download Indian market data — prices, company announcements, insider filings — most of them running unattended on a schedule. The rule I hold all of them to is simple to state: running a script again must leave the data better than before, or at least no worse. Fill in a gap, correct a bad row, otherwise change nothing.</p>
 
   <p>That sounds like it should be the default. It is not. I have broken it four separate ways, and every time the result was a dataset that looked completely normal. This is what each break was, and what stops it now.</p>
 
-  <h2>Why a rerun is where the danger is</h2>
+  <h2>What “safe to rerun” has to mean</h2>
 
   <p>A script that downloads data once is easy. You run it, you look at the output, you can see whether it worked. The second run is different, because now the script has to decide what it already has and what it still needs — and it makes that decision by reading data that a previous run wrote.</p>
 
-  <p>Every one of my pipelines works out where to continue by looking at the data itself: it reads the file, finds the newest row, and asks the source for everything after that. No separate progress file, no database of what has been done. If a run is interrupted, the next one just reads the file and carries on. That is a genuinely good property — there is no progress file to get out of step with reality, because reality is the file.</p>
+  <p>Every one of these pipelines works out where to continue by looking at the data itself: it reads the file, finds the newest row, and asks the source for everything after that. No separate progress file, no database of what has been done. If a run is interrupted, the next one just reads the file and carries on. That is a genuinely good property — there is no progress file to get out of step with reality, because reality is the file.</p>
 
   <p>It also means <strong>every row you write is an instruction to your future self.</strong> Write a bad row and you have not just stored bad data, you have told the next run to start from the wrong place. That single fact explains three of the four failures below.</p>
 
@@ -58,23 +58,23 @@ start = df[df["Close"].notna()]["Date"].max()</code></pre>
 
   <h2>Break four: going too fast and writing the wreckage</h2>
 
-  <p>All of the above assumes the source keeps answering properly. Rate limits are their own subject — a refusal that clears in seconds and a quota that is finished for the month arrive as the same status code, which I unpicked in <a href="/blog/http-429-retry-logic/">what a 429 really means</a>. Here the problem is worse than a refusal: when you hit a rate limit you often do not get a clean refusal — you get a partial or empty response, which is precisely how bad rows end up in the file in the first place. So backing off is not politeness here, it is a data-quality control.</p>
+  <p>All of the above assumes the source keeps answering properly. Rate limits are their own subject — a refusal that clears in seconds and a quota that is finished for the month arrive as the same status code, which I unpicked in <a href="/blog/http-429-retry-logic/">what a 429 really means</a>. Here the problem is worse than a refusal. Hit a rate limit and you often do not get a clean refusal at all: you get a partial or empty response. That is precisely how bad rows end up in the file in the first place. So backing off is not politeness here, it is a data-quality control.</p>
 
-  <p>The price downloader adjusts its own speed. It starts with five downloads running at once, drops one whenever the source returns an error, and adds one back after fifteen requests in a row succeed. Individual requests get three attempts with a widening wait between them, and a ten-second cut-off. It speeds up when the source is healthy and slows down the moment it pushes back, without me picking a fixed delay that is either too slow on a good day or too aggressive on a bad one.</p>
+  <p>The script that downloads daily prices adjusts its own speed. It starts with five downloads running at once, drops one whenever the source returns an error, and adds one back after fifteen requests in a row succeed. Individual requests get three attempts with a widening wait between them, and a ten-second cut-off. It speeds up when the source is healthy and slows down the moment it pushes back, without me picking a fixed delay that is either too slow on a good day or too aggressive on a bad one.</p>
 
   <h2>The case I still cannot handle</h2>
 
   <p>Everything above makes reruns recover from <em>my</em> mistakes. None of it helps when the source changes a value it already gave me.</p>
 
-  <p>If a company corrects a filing it submitted last month, my duplicate check looks at the corrected row, recognises the key, decides it already has that record, and throws the correction away. Converging on a stable dataset and accepting corrections pull in opposite directions, and I picked one without ever really deciding to. For prices it mostly works out, because adjustments for stock splits and similar events get recalculated anyway. For filings it is a genuine hole.</p>
+  <p>If a company corrects a filing it submitted last month, the duplicate check looks at the corrected row, recognises the key, decides it already has that record, and throws the correction away. Converging on a stable dataset and accepting corrections pull in opposite directions, and I picked one without ever really deciding to. For prices it mostly works out, because adjustments for stock splits and similar events get recalculated anyway. For filings it is a genuine hole.</p>
 
-  <p>The gap I have not closed is telling "the source had nothing new" apart from "the source refused to answer" — the failure mode that recurs most often across all of these pipelines, because both outcomes are indistinguishable in the output. I wrote up the whole accounting of that in <a href="/blog/a-year-of-ingestion-bugs/">a year of ingestion bugs</a>. The fix for both problems is probably the same thing: re-download data I already have on a schedule and compare it against what I stored. That is the next thing I want to build.</p>
+  <p>The gap still open is telling "the source had nothing new" apart from "the source refused to answer". It is the failure mode that recurs most often across these pipelines, because both outcomes look identical in the output. I wrote up the whole accounting of that in <a href="/blog/a-year-of-ingestion-bugs/">common data ingestion bugs</a>. The fix for both problems is probably the same thing: re-download data I already have on a schedule and compare it against what I stored. That is the next thing I want to build.</p>
 
   <h2>References and further reading</h2>
 
   <p><a href="https://jepsen.io/analyses" target="_blank" rel="noopener">Jepsen</a> tests databases by deliberately breaking them and then checking whether the data survived. The reports are worth reading even if you never touch distributed systems, because they are the clearest demonstration of the pattern behind this whole post: a system reporting success while quietly losing or duplicating writes.</p>
 
-  <p>If you are building this on a scheduler rather than by hand, <a href="https://airflow.apache.org/docs/apache-airflow/stable/best-practices.html" target="_blank" rel="noopener">Airflow's best practices</a> state the same rule as a requirement — every task must be idempotent and re-runnable for its data interval — and its <a href="https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html" target="_blank" rel="noopener">run and backfill model</a> is the vocabulary for the windowing described above.</p>
+  <p>If you are building this on a scheduler rather than by hand, <a href="https://airflow.apache.org/docs/apache-airflow/stable/best-practices.html" target="_blank" rel="noopener">Airflow's best practices</a> state the same rule as a requirement: every task must be idempotent and re-runnable for its data interval. Its <a href="https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html" target="_blank" rel="noopener">run and backfill model</a> is the vocabulary for the windowing described above.</p>
 
   <h3>Doing each piece properly</h3>
 
@@ -88,12 +88,17 @@ start = df[df["Close"].notna()]["Date"].max()</code></pre>
     <li><a href="https://tenacity.readthedocs.io/en/latest/" target="_blank" rel="noopener">tenacity</a> — retries and backoff you do not have to write, for the "going too fast" section.</li>
   </ul>
 
-  <h3>Related work of mine</h3>
+  <h3>Related posts</h3>
 
   <ul>
-    <li><a href="/blog/a-year-of-ingestion-bugs/">A year of ingestion bugs</a> — a year of real pipeline failures sorted by cause, which is where these rules came from.</li>
-    <li><a href="/blog/how-i-scraped-nse-insider-filings/">Scraping 20 years from a date-windowed endpoint</a> — a walkthrough of pulling two decades out of an endpoint that only answers a few months at a time.</li>
+    <li><a href="/blog/a-year-of-ingestion-bugs/">Common data ingestion bugs</a> — a year of real pipeline failures sorted by cause, which is where these rules came from.</li>
+    <li><a href="/blog/how-i-scraped-nse-insider-filings/">How to scrape a site that paginates by date</a> — a walkthrough of pulling two decades out of an endpoint that only answers a few months at a time.</li>
     <li><a href="/blog/how-to-test-a-data-pipeline/">How to test a data pipeline</a> — how to test resume behaviour: stop a run part-way and check that the next one repairs it.</li>
     <li><a href="/blog/http-429-retry-logic/">What a 429 really means</a> — how to tell a rate limit that clears by itself from one that never will, and what each means for a retry.</li>
-    <li><a href="/projects/market-data-pipeline/">Market data platform</a> — the project page for the system these rules were written for.</li>
+  </ul>
+
+  <h3>My own projects</h3>
+
+  <ul>
+    <li><a href="/projects/market-data-pipeline/">Market data platform</a> — the collection system these rules were written for.</li>
   </ul>

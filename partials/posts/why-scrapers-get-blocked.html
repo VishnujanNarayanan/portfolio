@@ -1,4 +1,4 @@
-  <p>A stock-data site I collect from started answering my script with <code>405 Method Not Allowed</code>. Nothing had changed on my side. The advice you find first — rotate your user agent, add some headers — could not have worked, because the site was not reading my headers. It was looking at the shape of the encrypted connection itself, which is decided before a single header is sent.</p>
+  <p>A scraper gets blocked in four different ways, and from the outside they look almost identical. A stock-data site started answering the collection script with <code>405 Method Not Allowed</code>. Nothing had changed on the client side. The advice you find first — rotate your user agent, add some headers — could not have worked, because the site was not reading the headers. It was looking at the shape of the encrypted connection itself, which is decided before a single header is sent.</p>
 
   <p>Blocking is not one thing, and that is the whole difficulty. There are four separate layers at which a site can decide you are not welcome, they produce similar-looking failures, and a fix aimed at the wrong layer does nothing at all. This is each layer, what it looks like from the outside, and what actually stopped it in my own collection scripts.</p>
 
@@ -6,7 +6,7 @@
 
   <p>When that 405 started, my run reported success. It fetched, it caught the error, it logged it somewhere nobody was reading, and it finished with zero new rows — which is exactly what a quiet day looks like. The data simply stopped growing.</p>
 
-  <p>Anything that can legitimately return nothing has to be able to tell <em>the source had nothing</em> apart from <em>I was prevented from finding out</em>. Before any of the fixes below, the change that mattered was an explicit pass/fail count printed at the end of every run, so a block shows up as a block. Three of the bugs in my <a href="/blog/a-year-of-ingestion-bugs/">year of ingestion bugs</a> were the same shape.</p>
+  <p>Anything that can legitimately return nothing has to be able to tell <em>the source had nothing</em> apart from <em>I was prevented from finding out</em>. Before any of the fixes below, the change that mattered was an explicit pass/fail count printed at the end of every run, so a block shows up as a block. Three of the bugs in my <a href="/blog/a-year-of-ingestion-bugs/">common data ingestion bugs</a> were the same shape.</p>
 
   <h2>Layer 1 — what you say: headers</h2>
 
@@ -27,7 +27,7 @@
 
   <p>This is the layer that produced the 405, and the one most people have not heard of.</p>
 
-  <p>Before any HTTP request happens, your program and the server negotiate an encrypted connection. In that opening message your side lists which encryption methods it supports, in a particular order, with particular extensions. Python's networking library makes that list differently from Chrome. The pattern is stable enough to be summarised as a fingerprint — the common form is called <a href="https://github.com/salesforce/ja3" target="_blank" rel="noopener">JA3</a>, now largely superseded by <a href="https://github.com/FoxIO-LLC/ja4" target="_blank" rel="noopener">JA4</a> — and a bot-mitigation service can compare it against what a real Chrome produces before it has read one byte of your request. You can see your own in about two seconds: fetch <a href="https://tls.browserleaks.com/json" target="_blank" rel="noopener">tls.browserleaks.com/json</a> from your script and then from your browser, and compare the fingerprint fields.</p>
+  <p>Before any HTTP request happens, your program and the server negotiate an encrypted connection. In that opening message your side lists which encryption methods it supports, in a particular order, with particular extensions. Python's networking library makes that list differently from Chrome. The pattern is stable enough to be summarised as a fingerprint. The common form is called <a href="https://github.com/salesforce/ja3" target="_blank" rel="noopener">JA3</a>, now largely superseded by <a href="https://github.com/FoxIO-LLC/ja4" target="_blank" rel="noopener">JA4</a> — and a bot-mitigation service can compare it against what a real Chrome produces before it has read one byte of your request. You can see your own in about two seconds: fetch <a href="https://tls.browserleaks.com/json" target="_blank" rel="noopener">tls.browserleaks.com/json</a> from your script and then from your browser, and compare the fingerprint fields.</p>
 
   <p>So a request claiming to be Chrome, whose handshake is Python's, is caught by a check that never looks at the claim. You cannot fix this with headers, and you cannot fix it by trying harder in the same library. What fixes it is making the handshake itself match:</p>
 
@@ -43,7 +43,7 @@ resp = cffi_requests.get(url, headers=HEADERS, impersonate="chrome131")</code></
 
   <h2>Layer 3 — where you connect from: the address</h2>
 
-  <p>Once your handshake looks right and your headers look right, the next thing a site has is your IP address, and it knows two things about it: whether it belongs to a home connection or a data centre, and how it has behaved recently.</p>
+  <p>Once your handshake and headers look right, the next thing a site has is your IP address. It knows two things about it: whether it belongs to a home connection or a data centre, and how it has behaved recently.</p>
 
   <p>Both of my clearest blocks were at this layer. The insider-filings supplement, after enough requests, started getting Cloudflare's "confirm you are human" wall — served as ordinary-looking HTML with a 403, 405, 429 or 503 attached. Detecting it needs both signals, because the status alone is ambiguous and the page alone is just text:</p>
 
@@ -54,11 +54,11 @@ def looks_blocked(status_code, text=""):
     """True if a response is a Cloudflare block/challenge rather than real content."""
     return status_code in BLOCK_STATUS or any(m in text for m in CHALLENGE_MARKERS)</code></pre>
 
-  <p>The response to that is rotation: a pool of proxy addresses, a fixed number of requests taken through each before moving to the next, and a fresh batch pulled and tested when the pool wears out. Mine leases 10 requests per address, pauses 30 to 90 seconds between batches of 20, and validates every candidate address against the real site before trusting it — free proxy lists are mostly dead entries, so the validation pass is not optional.</p>
+  <p>The response to that is rotation: a pool of proxy addresses, with a fixed number of requests taken through each before moving on. A fresh batch is pulled and tested when the pool wears out. One working set of numbers: 10 requests per address, a pause of 30 to 90 seconds between batches of 20, and every candidate address validated against the real site before it is trusted. Free proxy lists are mostly dead entries, so the validation pass is not optional.</p>
 
   <p>Two honest caveats, because this is the layer where advice gets irresponsible. First, free proxies are unreliable, frequently slower than not scraping at all, and you have no idea who operates them, which makes them unfit for anything carrying credentials. Second, rotation treats a symptom. If a site blocks your address after 200 requests, the reason is usually the rate rather than the identity, and pacing the run is the fix that keeps working when rotation stops.</p>
 
-  <p>The other case is more interesting because rotation was not available. My book-catalogue app runs on a hosting provider and fetches pages from a retailer on demand. The retailer blocks data-centre addresses, which is every address the app has. Rotating within a data centre does not help when the data centre is the thing being scored. The change was to move the fetch to the one address the site had no reason to distrust — the visitor's own browser, which loads the page and hands the result back to the API. That path is open source in <a href="https://github.com/VishnujanNarayanan/product-explorer" target="_blank" rel="noopener">product-explorer</a>, and the <a href="/projects/product-explorer/">project page</a> covers why the app fetches on demand at all. The commit message is the summary: <em>scrape from the visitor's browser, because ours is the address being blocked</em>.</p>
+  <p>The other case is more interesting because rotation was not available. A book-catalogue app runs on a hosting provider and fetches pages from a retailer on demand. The retailer blocks data-centre addresses, which is every address the app has. Rotating within a data centre does not help when the data centre is the thing being scored. The change was to move the fetch to the one address the site had no reason to distrust — the visitor's own browser, which loads the page and hands the result back to the API. The trade-off is that the fetch now depends on a client being present, so it only works for an app that is scraping in response to a user action in the first place. The commit message is the summary: <em>scrape from the visitor's browser, because ours is the address being blocked</em>.</p>
 
   <h2>Layer 4 — whether you look like a person</h2>
 
@@ -72,7 +72,7 @@ Object.defineProperty(navigator, 'hardwareConcurrency', {get: () => 8});</code><
 
   <p>The other half of this layer is behaviour, and it is the half that actually decides. A real session has irregular gaps, does not request 400 pages in perfect 1.0-second intervals, and does not run at 03:00 for exactly the same duration every night. Jittered pauses and batch breaks cost almost nothing and remove the most obvious pattern you present.</p>
 
-  <p>Where I have needed the strongest measures — a couple of sources that check hard — the answer was to stop hiding: run the browser visibly rather than headless, log in once by hand, and save the session to a file so later runs start already authenticated. That is described in <a href="/blog/playwright-vs-selenium/">Playwright vs Selenium</a>.</p>
+  <p>Where the strongest measures are needed — a couple of sources check hard — the answer is to stop hiding. Run the browser visibly rather than headless, log in once by hand, and save the session to a file so later runs start already authenticated. That is described in <a href="/blog/playwright-vs-selenium/">Playwright vs Selenium</a>.</p>
 
   <h2>The block that is not a block</h2>
 
@@ -127,11 +127,17 @@ Object.defineProperty(navigator, 'hardwareConcurrency', {get: () => 8});</code><
     <li><a href="https://www.eff.org/deeplinks/2022/04/scraping-public-websites-still-isnt-crime-court-appeals-declares" target="_blank" rel="noopener">EFF on hiQ v. LinkedIn</a> — the US appeals ruling that scraping publicly available data is not "unauthorised access" under the computer-crime statute. Context, not legal advice: it says nothing about contract terms, copyright, or other jurisdictions.</li>
   </ul>
 
-  <h3>Related work of mine</h3>
+  <h3>Related posts</h3>
 
   <ul>
     <li><a href="/blog/playwright-vs-selenium/">Playwright vs Selenium</a> — whether you need a browser at all, and what changes between the two.</li>
     <li><a href="/blog/http-429-retry-logic/">What a 429 really means</a> — the refusal that clears by itself, and the retry logic that makes it worse.</li>
-    <li><a href="/blog/how-i-scraped-nse-insider-filings/">Scraping 20 years from a date-windowed endpoint</a> — these defences met on a real public archive, including a row cap that returns success while quietly hiding data.</li>
-    <li><a href="/projects/market-data-pipeline/">Market data platform</a> and <a href="/projects/product-explorer/">Product Explorer</a> — the project pages for the two systems the examples come from.</li>
+    <li><a href="/blog/how-i-scraped-nse-insider-filings/">How to scrape a site that paginates by date</a> — these defences met on a real public archive, including a row cap that returns success while quietly hiding data.</li>
+  </ul>
+
+  <h3>My own projects</h3>
+
+  <ul>
+    <li><a href="/projects/market-data-pipeline/">Market data platform</a> — the collection system the first set of examples comes from.</li>
+    <li><a href="/projects/product-explorer/">Product Explorer</a> — the on-demand catalogue app behind the data-centre-IP example.</li>
   </ul>

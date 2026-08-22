@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Blog — Vishnujan Narayanan</title>
-<meta name="description" content="Writing on data engineering, web scraping and applied ML — testing data pipelines, why scrapers get blocked, Playwright vs Selenium, HTTP 429 retry handling, and local LLMs vs hosted APIs.">
+<meta name="description" content="Writing on data engineering and web scraping: testing pipelines, why scrapers get blocked, Playwright vs Selenium, HTTP 429 retries, and local LLMs vs APIs.">
 <meta name="author" content="Vishnujan Narayanan">
 <link rel="icon" href="../favicon.ico?v=2" sizes="any">
 <link rel="icon" type="image/png" href="../favicon-512.png?v=2" sizes="512x512">
@@ -136,14 +136,14 @@
     </div>
     <div class="feature-card__body">
       <div class="tag-row"><span class="tag">Featured</span><span class="tag">Data engineering</span><span class="tag">Reliability</span></div>
-      <h2 class="feature-card__title">A Year of Ingestion Bugs: What Actually Broke in 32 Data Pipelines</h2>
+      <h2 class="feature-card__title">Data Ingestion Bugs and How to Catch Them</h2>
       <div class="byline">
         <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
         <span class="byline__name">Vishnujan Narayanan</span>
         <span class="byline__sep" aria-hidden="true">·</span>
         <span class="byline__date">August 2026</span>
       </div>
-      <p class="feature-card__excerpt">Roughly 30 bugs across a year of collecting Indian market data, sorted by cause. Eight of them produced no error message at all, and those are the ones worth reading about.</p>
+      <p class="feature-card__excerpt">About 30 bugs from a year of market-data pipelines, sorted by cause. Eight threw no error at all.</p>
     </div>
   </a>
 
@@ -154,14 +154,14 @@
       </div>
       <div class="post-card__body">
         <div class="tag-row"><span class="tag">Testing</span><span class="tag">Data engineering</span></div>
-        <h2 class="post-card__title">How to Test a Data Pipeline: 92 Passing Tests, 3 Broken Features</h2>
+        <h2 class="post-card__title">How to Test a Data Pipeline: What Tests Miss</h2>
         <div class="byline">
           <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
           <span class="byline__name">Vishnujan Narayanan</span>
           <span class="byline__sep" aria-hidden="true">·</span>
           <span class="byline__date">August 2026</span>
         </div>
-        <p class="post-card__excerpt">A green suite proved the code did what it was written to do, and nothing about whether the product worked. What I test instead now, including the control run that has to come first.</p>
+        <p class="post-card__excerpt">92 tests passed while three features were broken. What I test now, and the control run that comes first.</p>
       </div>
     </a>
     <a class="post-card" href="/blog/how-i-scraped-nse-insider-filings/">
@@ -170,14 +170,14 @@
       </div>
       <div class="post-card__body">
         <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Data engineering</span></div>
-        <h2 class="post-card__title">How to Scrape 20 Years of Data From a Site That Paginates by Date</h2>
+        <h2 class="post-card__title">How to Scrape a Site That Paginates by Date</h2>
         <div class="byline">
           <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
           <span class="byline__name">Vishnujan Narayanan</span>
           <span class="byline__sep" aria-hidden="true">·</span>
           <span class="byline__date">August 2026</span>
         </div>
-        <p class="post-card__excerpt">The endpoint only answers 180 days at a time, and the answers are not final. Windowing, deduplication that deleted rows, and why one source was never going to be enough.</p>
+        <p class="post-card__excerpt">The endpoint returns 180 days at a time and the data changes after publication. Windowing, dedup, and what broke.</p>
       </div>
     </a>
     <a class="post-card" href="/blog/local-llm-vs-api/">
@@ -186,14 +186,14 @@
       </div>
       <div class="post-card__body">
         <div class="tag-row"><span class="tag">LLMs</span><span class="tag">Infrastructure</span></div>
-        <h2 class="post-card__title">Local LLM vs API: The Numbers From Running Both on a 6GB GPU</h2>
+        <h2 class="post-card__title">Local LLM vs API: When to Run Your Own Model</h2>
         <div class="byline">
           <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
           <span class="byline__name">Vishnujan Narayanan</span>
           <span class="byline__sep" aria-hidden="true">·</span>
           <span class="byline__date">July 2026</span>
         </div>
-        <p class="post-card__excerpt">A 7B model on a laptop GPU against a hosted 70B on a free tier. Four times slower, no daily cap, and one measurement that turned out to be answering a different question.</p>
+        <p class="post-card__excerpt">A 7B model on a 6GB GPU against a hosted 70B: 6s vs 1.6s, no daily cap, and which one to reach for.</p>
       </div>
     </a>
     <a class="post-card" href="/blog/building-resumable-etl-pipelines/">
@@ -202,14 +202,14 @@
       </div>
       <div class="post-card__body">
         <div class="tag-row"><span class="tag">ETL</span><span class="tag">Data engineering</span></div>
-        <h2 class="post-card__title">Why Rerunning a Pipeline Should Fix Data, Not Corrupt It</h2>
+        <h2 class="post-card__title">How to Make an ETL Pipeline Safe to Rerun</h2>
         <div class="byline">
           <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
           <span class="byline__name">Vishnujan Narayanan</span>
           <span class="byline__sep" aria-hidden="true">·</span>
           <span class="byline__date">July 2026</span>
         </div>
-        <p class="post-card__excerpt">A rerun is supposed to leave the dataset better than it found it. Four ways I broke that rule, the guard added for each, and the one case where it still is not guaranteed.</p>
+        <p class="post-card__excerpt">A rerun should fix data, not corrupt it. Four ways I broke that rule, and the guard added for each.</p>
       </div>
     </a>
     <a class="post-card" href="/blog/http-429-retry-logic/">
@@ -218,14 +218,14 @@
       </div>
       <div class="post-card__body">
         <div class="tag-row"><span class="tag">APIs</span><span class="tag">Reliability</span></div>
-        <h2 class="post-card__title">What a 429 Really Means: Retry Logic That Makes Things Worse</h2>
+        <h2 class="post-card__title">HTTP 429: What It Means and How to Retry</h2>
         <div class="byline">
           <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
           <span class="byline__name">Vishnujan Narayanan</span>
           <span class="byline__sep" aria-hidden="true">·</span>
           <span class="byline__date">July 2026</span>
         </div>
-        <p class="post-card__excerpt">The same status code covers &quot;wait three seconds&quot; and &quot;this account is finished for the month&quot;. Treating them alike ended three runs early. The three-class taxonomy that fixed it.</p>
+        <p class="post-card__excerpt">One status code, three meanings — wait, stop, or out of quota. Telling them apart, and honouring Retry-After.</p>
       </div>
     </a>
     <a class="post-card" href="/blog/minute-level-stock-prediction/">
@@ -234,14 +234,14 @@
       </div>
       <div class="post-card__body">
         <div class="tag-row"><span class="tag">Quant / ML</span><span class="tag">Machine learning</span></div>
-        <h2 class="post-card__title">Can You Predict Stock Prices Minute by Minute? What 9.4M Ticks Showed</h2>
+        <h2 class="post-card__title">Can You Predict Stock Prices Minute by Minute?</h2>
         <div class="byline">
           <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
           <span class="byline__name">Vishnujan Narayanan</span>
           <span class="byline__sep" aria-hidden="true">·</span>
           <span class="byline__date">July 2026</span>
         </div>
-        <p class="post-card__excerpt">61.4% right against a 46.8% baseline looks like an edge, until you notice it answered 70 times out of 3,100. The two ways I nearly convinced myself it worked.</p>
+        <p class="post-card__excerpt">61.4% accuracy against a 46.8% baseline — on 70 of 3,100 minutes. How I nearly fooled myself.</p>
       </div>
     </a>
     <a class="post-card" href="/blog/why-scrapers-get-blocked/">
@@ -250,14 +250,14 @@
       </div>
       <div class="post-card__body">
         <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Reliability</span></div>
-        <h2 class="post-card__title">Why Your Scraper Gets Blocked (and What Actually Fixes It)</h2>
+        <h2 class="post-card__title">Why Your Scraper Gets Blocked and How to Fix It</h2>
         <div class="byline">
           <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
           <span class="byline__name">Vishnujan Narayanan</span>
           <span class="byline__sep" aria-hidden="true">·</span>
           <span class="byline__date">July 2026</span>
         </div>
-        <p class="post-card__excerpt">Rotating user agents fixes almost nothing. A walk down the stack — IP, TLS fingerprint, browser signals, behaviour — with what each block looks like and what stopped it.</p>
+        <p class="post-card__excerpt">Rotating user agents fixes almost nothing. The four layers that block you: IP, TLS, browser, behaviour.</p>
       </div>
     </a>
     <a class="post-card" href="/blog/playwright-vs-selenium/">
@@ -266,14 +266,14 @@
       </div>
       <div class="post-card__body">
         <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Tooling</span></div>
-        <h2 class="post-card__title">Playwright vs Selenium: What Changed When I Moved 12 Scrapers Over</h2>
+        <h2 class="post-card__title">Playwright vs Selenium: Which to Use and When</h2>
         <div class="byline">
           <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
           <span class="byline__name">Vishnujan Narayanan</span>
           <span class="byline__sep" aria-hidden="true">·</span>
           <span class="byline__date">June 2026</span>
         </div>
-        <p class="post-card__excerpt">Two years of running both against sites that did not want to be read. Where Playwright genuinely wins, where the difference is nothing, and the case where neither one helps.</p>
+        <p class="post-card__excerpt">Moved 12 scrapers from Selenium to Playwright. Where it actually helped, and where it changed nothing.</p>
       </div>
     </a>
   </div>
