@@ -946,7 +946,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    the video reaches fullscreen — then shrinks/fades back out as the edge zoom-out
    begins so it never floats over the sections below. */
 .gh-reveal{position:fixed;inset:0;z-index:3;display:flex;align-items:flex-end;justify-content:flex-start;padding:clamp(20px,3.5vh,56px) clamp(12px,2.2vw,40px);pointer-events:none;opacity:0;overflow:hidden;transform-origin:50% 50%;will-change:opacity,transform}
-.gh-card{display:flex;flex-direction:column;width:min(440px,86vw);height:65vh;border-radius:14px;background:#010409;border:1px solid #30363d;box-shadow:0 24px 70px rgba(0,0,0,.5);color:#e6edf3;font-family:var(--font-ui,Inter,system-ui,sans-serif);text-decoration:none;overflow:hidden;transform-origin:50% 100%;will-change:transform}
+.gh-card{display:flex;flex-direction:column;width:min(380px,80vw);height:65vh;border-radius:14px;background:#010409;border:1px solid #30363d;box-shadow:0 24px 70px rgba(0,0,0,.5);color:#e6edf3;font-family:var(--font-ui,Inter,system-ui,sans-serif);text-decoration:none;overflow:hidden;transform-origin:50% 100%;will-change:transform}
 .gh-card__head{display:flex;flex-direction:column;gap:10px;padding:22px 26px 16px;background:#010409}
 .gh-card__body{display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0;padding:16px 26px 22px;background:#0d1117}
 .gh-card__headrow{display:flex;align-items:center;justify-content:space-between;gap:16px}
@@ -1030,6 +1030,10 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .soc-card--github .soc-card__brand{color:#e6edf3}
 .soc-card--github .soc-card__handle{color:#e6edf3}
 .soc-card--github .soc-card__desc{color:#7d8590;opacity:1}
+.soc-card__gh-contrib{display:flex;flex-direction:column;gap:calc(.4 * var(--u));margin-top:calc(.9 * var(--u));padding-top:calc(.8 * var(--u));border-top:1px solid #21262d}
+.soc-card__gh-label{font-size:calc(.62 * var(--u));font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#7d8590}
+.soc-card__gh-label b{color:#39d353;font-weight:800;font-size:calc(.72 * var(--u))}
+.soc-card__gh-chart svg{width:100%;height:auto;display:block}
 .soc-card__repos{list-style:none;margin:calc(.9 * var(--u)) 0 0;padding:calc(.8 * var(--u)) 0 0;display:flex;flex-direction:column;gap:calc(.35 * var(--u));font-size:calc(.82 * var(--u));color:#58a6ff;border-top:1px solid #21262d}
 .soc-card__repos li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .soc-card__repos li::before{content:"\2022";color:#39d353;margin-right:calc(.5 * var(--u))}
@@ -1049,7 +1053,9 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .soc-card--linkedin .soc-card__desc{color:#2c2c2c;opacity:1;margin-top:calc(.4 * var(--u));font-size:calc(.9 * var(--u));line-height:1.4;font-weight:500}
 .soc-card__li-loc{margin-top:calc(.55 * var(--u));font-size:calc(.78 * var(--u));color:#8a8a8a}
 .soc-card__li-conn{margin-top:calc(.3 * var(--u));font-size:calc(.82 * var(--u));font-weight:600;color:#0a66c2}
-.soc-card--linkedin .soc-card__cta{margin-top:auto;color:#0a66c2}
+.soc-card--linkedin .soc-card__cta{margin-top:auto;align-self:flex-start;color:#0a66c2;border:calc(.11 * var(--u)) solid #0a66c2;border-radius:999px;padding:calc(.32 * var(--u)) calc(.95 * var(--u));gap:calc(.35 * var(--u));font-weight:600}
+.soc-card__li-cta-ico{width:calc(1.15 * var(--u));height:calc(1.15 * var(--u));flex:0 0 auto}
+.soc-card--linkedin:hover .soc-card__cta{text-decoration:none;background:rgba(10,102,194,.08)}
 
 /* Instagram — gradient header over a white profile body with stats + a photo grid */
 .soc-card--instagram{padding:0;background:#fff;color:#1a1a1a;border:1px solid #e6e6e8;justify-content:flex-start}
@@ -1080,7 +1086,59 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .soc-card--substack .soc-card__cta{margin-top:auto;padding-top:calc(1 * var(--u));color:#ff6719}
 
 /* Per-brand palettes */
-.soc-card--email{background:linear-gradient(155deg,#3b3f47 0%,#16181d 100%);border:1px solid #2a2d34}
+/* YouTube — channel page */
+.soc-card--youtube{padding:0;background:#fff;color:#0f0f0f;border:1px solid #e6e6e8;justify-content:flex-start}
+.soc-card__yt-head{flex:0 0 auto;display:flex;align-items:center;gap:calc(.5 * var(--u));padding:calc(1.1 * var(--u)) calc(1.3 * var(--u));background:#ff0000}
+.soc-card__yt-head .soc-card__logo{width:calc(2 * var(--u));height:calc(2 * var(--u))}
+.soc-card__yt-head .soc-card__brand{color:#fff;font-size:calc(1.15 * var(--u));font-weight:700;letter-spacing:-.04em}
+.soc-card__yt-body{flex:1 1 auto;min-height:0;padding:calc(1.3 * var(--u)) calc(1.3 * var(--u)) calc(1.5 * var(--u));display:flex;flex-direction:column}
+.soc-card__yt-avatar{width:calc(4.4 * var(--u));height:calc(4.4 * var(--u));border-radius:50%;object-fit:cover;border:1px solid #eee;background:#eee;margin:0 0 calc(.8 * var(--u))}
+.soc-card--youtube .soc-card__handle{color:#0f0f0f;font-size:calc(1.2 * var(--u));font-weight:700;line-height:1.15}
+.soc-card__yt-handle{margin-top:calc(.2 * var(--u));font-size:calc(.8 * var(--u));color:#606060}
+.soc-card--youtube .soc-card__desc{color:#606060;opacity:1;margin-top:calc(.6 * var(--u));font-size:calc(.84 * var(--u));line-height:1.45}
+.soc-card--youtube .soc-card__cta{margin-top:auto;align-self:flex-start;background:#ff0000;color:#fff;border-radius:999px;padding:calc(.45 * var(--u)) calc(1.2 * var(--u));font-size:calc(.88 * var(--u))}
+.soc-card--youtube:hover .soc-card__cta{text-decoration:none;background:#cc0000}
+
+/* DEV Community — profile card */
+.soc-card--devto{padding:0;background:#fff;color:#0a0a0a;border:1px solid #e6e6e8;justify-content:flex-start}
+.soc-card__dv-head{flex:0 0 auto;display:flex;align-items:center;gap:calc(.6 * var(--u));padding:calc(1.05 * var(--u)) calc(1.3 * var(--u));background:#0a0a0a}
+.soc-card__dv-mark{display:inline-flex;align-items:center;justify-content:center;background:#fff;color:#0a0a0a;border-radius:calc(.35 * var(--u));padding:calc(.1 * var(--u)) calc(.4 * var(--u));font-size:calc(1.1 * var(--u));font-weight:800;letter-spacing:-.05em;line-height:1.15}
+.soc-card__dv-head .soc-card__brand{color:#fff;font-size:calc(1.05 * var(--u));font-weight:500}
+.soc-card__dv-body{flex:1 1 auto;min-height:0;padding:calc(1.3 * var(--u)) calc(1.3 * var(--u)) calc(1.5 * var(--u));display:flex;flex-direction:column}
+.soc-card__dv-avatar{width:calc(4.4 * var(--u));height:calc(4.4 * var(--u));border-radius:50%;object-fit:cover;border:calc(.18 * var(--u)) solid #0a0a0a;background:#eee;margin-bottom:calc(.8 * var(--u))}
+.soc-card--devto .soc-card__handle{color:#0a0a0a;font-size:calc(1.2 * var(--u));font-weight:700;line-height:1.15}
+.soc-card__dv-handle{margin-top:calc(.15 * var(--u));font-size:calc(.82 * var(--u));color:#717171}
+.soc-card--devto .soc-card__desc{color:#3d3d3d;opacity:1;margin-top:calc(.6 * var(--u));font-size:calc(.86 * var(--u));line-height:1.45}
+.soc-card--devto .soc-card__cta{margin-top:auto;align-self:flex-start;background:#3b49df;color:#fff;border-radius:calc(.4 * var(--u));padding:calc(.45 * var(--u)) calc(1.2 * var(--u));font-size:calc(.88 * var(--u))}
+.soc-card--devto:hover .soc-card__cta{text-decoration:none;background:#2f3bbd}
+
+/* Email — Gmail compose window */
+.soc-card--email{padding:0;background:#fff;color:#1a1a1a;border:1px solid #e6e6e8;justify-content:flex-start}
+.soc-card__em-head{flex:0 0 auto;display:flex;align-items:center;gap:calc(.55 * var(--u));padding:calc(1.05 * var(--u)) calc(1.3 * var(--u));background:#404040}
+.soc-card__em-head .soc-card__logo{width:calc(1.7 * var(--u));height:calc(1.7 * var(--u))}
+.soc-card__em-head .soc-card__brand{color:#fff;font-size:calc(1.05 * var(--u));font-weight:500;letter-spacing:0}
+.soc-card__em-body{flex:1 1 auto;min-height:0;padding:calc(.5 * var(--u)) calc(1.2 * var(--u)) calc(1.4 * var(--u));display:flex;flex-direction:column}
+.soc-card__em-field{display:flex;align-items:baseline;gap:calc(.5 * var(--u));padding:calc(.6 * var(--u)) 0;border-bottom:1px solid #ececec;min-width:0}
+.soc-card__em-label{flex:0 0 auto;font-size:calc(.78 * var(--u));color:#8a8a8a}
+.soc-card__em-val{min-width:0;font-size:calc(.78 * var(--u));font-weight:600;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.soc-card--email .soc-card__desc{color:#3a3a3a;opacity:1;margin-top:calc(.9 * var(--u));font-size:calc(.84 * var(--u));line-height:1.5}
+.soc-card__em-caret{display:inline-block;width:calc(.1 * var(--u));height:calc(.95 * var(--u));margin-left:calc(.15 * var(--u));background:#1a1a1a;vertical-align:text-bottom;animation:soc-caret 1.1s steps(1) infinite}
+@keyframes soc-caret{0%,49%{opacity:1}50%,100%{opacity:0}}
+.soc-card__em-bar{margin-top:auto;display:flex;align-items:center;gap:calc(.9 * var(--u))}
+.soc-card__em-tools{display:flex;align-items:center;gap:calc(.75 * var(--u));color:#5f6368}
+.soc-card__em-tools svg{width:calc(1.05 * var(--u));height:calc(1.05 * var(--u))}
+.soc-card__em-trash{width:calc(1.05 * var(--u));height:calc(1.05 * var(--u));margin-left:auto;color:#5f6368;flex:0 0 auto}
+.soc-card--email .soc-card__cta{align-self:flex-start;background:#0b57d0;color:#fff;border-radius:999px;padding:calc(.45 * var(--u)) calc(1.2 * var(--u));font-size:calc(.88 * var(--u))}
+.soc-card--email:hover .soc-card__cta{text-decoration:none;background:#0a4bb8}
+@media (prefers-reduced-motion:reduce){.soc-card__em-caret{animation:none}}
+
+/* Right half of the fan (slots 5-7): the action button hangs bottom-RIGHT so it
+   reads with the cards' outward tilt instead of pointing back into the stack. */
+.callout-socials-card-w:nth-child(n+5) .soc-card__cta{align-self:flex-end}
+.callout-socials-card-w:nth-child(n+5) .soc-card__em-bar{justify-content:flex-end}
+.callout-socials-card-w:nth-child(n+5) .soc-card__em-bar .soc-card__cta{order:3}
+.callout-socials-card-w:nth-child(n+5) .soc-card__em-tools{order:2}
+.callout-socials-card-w:nth-child(n+5) .soc-card__em-trash{order:1;margin-left:0;margin-right:auto}
 
 .callout-socials-intro-w{margin-top:1rem;row-gap:1.25rem;flex-flow:column;justify-content:flex-start;align-items:center;display:flex}
 .callout-socials-follow{font-family:var(--font-ui),sans-serif;font-size:clamp(1.25rem,2.6vw,1.75rem);font-weight:500;color:var(--color-text);background-color:var(--color-highlight);color:var(--color-text-light);padding:.05em .35em}
@@ -1111,6 +1169,8 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
   .soc-card--linkedin .soc-card__desc{font-size:.52rem;margin-top:.25rem}
   .soc-card__li-loc{font-size:.44rem;margin-top:.3rem}
   .soc-card__li-conn{font-size:.48rem}
+  .soc-card--linkedin .soc-card__cta{padding:.2rem .5rem;gap:.18rem;border-width:.06rem}
+  .soc-card__li-cta-ico{width:.6rem;height:.6rem}
   .soc-card__ig-head{padding:.55rem .6rem;gap:.3rem}
   .soc-card__ig-head .soc-card__logo{width:.95rem;height:.95rem}
   .soc-card__ig-head .soc-card__brand{font-size:.62rem}
@@ -1130,6 +1190,44 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
   .soc-card__ss-handle{font-size:.46rem}
   .soc-card--substack .soc-card__desc{font-size:.5rem;margin-top:.3rem}
   .soc-card__repos{font-size:.5rem;gap:.15rem;margin-top:.4rem;padding-top:.4rem}
+  .soc-card__gh-contrib{margin-top:.4rem;padding-top:.4rem;gap:.2rem}
+  .soc-card__gh-label{font-size:.36rem}
+  .soc-card__gh-label b{font-size:.42rem}
+  .soc-card__em-head{padding:.55rem .6rem;gap:.3rem}
+  .soc-card__em-head .soc-card__logo{width:.95rem;height:.95rem}
+  .soc-card__em-head .soc-card__brand{font-size:.58rem}
+  .soc-card__em-body{padding:.25rem .6rem .7rem}
+  .soc-card__em-field{padding:.32rem 0;gap:.28rem}
+  .soc-card__em-label,.soc-card__em-val{font-size:.44rem}
+  .soc-card--email .soc-card__desc{font-size:.48rem;margin-top:.45rem}
+  .soc-card__em-caret{height:.5rem;width:.06rem}
+  .soc-card--email .soc-card__cta{padding:.28rem .7rem;font-size:.5rem}
+  .soc-card__em-bar{gap:.45rem}
+  .soc-card__em-tools{gap:.35rem}
+  .soc-card__em-tools svg,.soc-card__em-trash{width:.6rem;height:.6rem}
+  .soc-card__yt-head{padding:.55rem .6rem;gap:.28rem}
+  .soc-card__yt-head .soc-card__logo{width:1.1rem;height:1.1rem}
+  .soc-card__yt-head .soc-card__brand{font-size:.62rem}
+  .soc-card__yt-body{padding:.7rem .7rem .8rem}
+  .soc-card__yt-avatar{width:2.2rem;height:2.2rem;margin:0 0 .4rem}
+  .soc-card--youtube .soc-card__handle{font-size:.62rem}
+  .soc-card__yt-handle{font-size:.44rem}
+  .soc-card--youtube .soc-card__desc{font-size:.48rem;margin-top:.3rem}
+  .soc-card--youtube .soc-card__cta{padding:.28rem .7rem;font-size:.5rem}
+  .soc-card__dv-head{padding:.55rem .6rem;gap:.3rem}
+  .soc-card__dv-mark{font-size:.58rem;padding:.05rem .22rem;border-radius:.2rem}
+  .soc-card__dv-head .soc-card__brand{font-size:.55rem}
+  .soc-card__dv-body{padding:.7rem .7rem .8rem}
+  .soc-card__dv-avatar{width:2.2rem;height:2.2rem;margin-bottom:.4rem;border-width:.1rem}
+  .soc-card--devto .soc-card__handle{font-size:.62rem}
+  .soc-card__dv-handle{font-size:.46rem}
+  .soc-card--devto .soc-card__desc{font-size:.5rem;margin-top:.3rem}
+  .soc-card--devto .soc-card__cta{padding:.28rem .7rem;font-size:.5rem;border-radius:.25rem}
+  .callout-socials-card-w:nth-child(n+5) .soc-card__cta{align-self:flex-start}
+  .callout-socials-card-w:nth-child(n+5) .soc-card__em-bar{justify-content:flex-start}
+  .callout-socials-card-w:nth-child(n+5) .soc-card__em-bar .soc-card__cta{order:0}
+  .callout-socials-card-w:nth-child(n+5) .soc-card__em-tools{order:0}
+  .callout-socials-card-w:nth-child(n+5) .soc-card__em-trash{order:0;margin-left:auto;margin-right:0}
   .s.is-callout-socials{padding:4rem 1.25rem}
 }
 
