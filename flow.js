@@ -635,13 +635,13 @@
     [ // 03 Deploys & Uptime
       { k: "p", n: "Functional Task Manager", d: "Scala 3 cross-compiled by sbt and shipped to Vercel as static JS.", t: ["Scala.js", "sbt", "Vercel"], href: "https://task-manager-using-functional-progr.vercel.app/", ext: true },
       { k: "p", n: "Job Application Bot", d: "Dockerized pipeline on AWS & GCP, Postgres on Neon.", t: ["Docker", "AWS", "GCP"], href: "https://github.com/VishnujanNarayanan/Job_Application_Bot", ext: true },
-      { k: "b", n: "A Year of Ingestion Bugs", d: "~30 bugs across a year of collection, sorted by cause. Eight threw no error at all.", t: ["Data engineering", "Reliability"], href: "/blog/a-year-of-ingestion-bugs/" },
+      { k: "b", n: "Common Data Ingestion Bugs", d: "~30 bugs across a year of collection, sorted by cause. Eight threw no error at all.", t: ["Data engineering", "Reliability"], href: "/blog/a-year-of-ingestion-bugs/" },
       { k: "b", n: "How to Test a Data Pipeline", d: "92 passing tests, 3 broken features, and the checks that would have caught them.", t: ["Testing", "CI"], href: "/blog/how-to-test-a-data-pipeline/" }
     ],
     [ // 04 APIs & Apps
       { k: "p", n: "DekhLaw API", d: "~30 Express endpoints, JWT auth, and Twilio voice orchestration.", t: ["Express", "Twilio", "JWT"] },
       { k: "p", n: "Law Firm Website", d: "Next.js 14 site — 14 routes, Resend lead capture, full SEO.", t: ["Next.js", "TypeScript", "Resend"], href: "https://smartnperfectlegal.legal/", ext: true },
-      { k: "b", n: "What a 429 Really Means", d: "Transient, permanent, exhausted — the retry logic that keeps a scheduled run alive.", t: ["APIs", "Reliability"], href: "/blog/http-429-retry-logic/" },
+      { k: "b", n: "HTTP 429 and Retry Logic", d: "Transient, permanent, exhausted — the retry logic that keeps a scheduled run alive.", t: ["APIs", "Reliability"], href: "/blog/http-429-retry-logic/" },
       { k: "b", n: "Local LLM vs API", d: "A 7B model on a 6GB GPU against a hosted 70B — latency, quotas, structured output.", t: ["LLMs", "APIs"], href: "/blog/local-llm-vs-api/" }
     ]
   ];

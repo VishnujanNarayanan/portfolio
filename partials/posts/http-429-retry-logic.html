@@ -9,7 +9,7 @@
 
   <h2>What a retry loop is, and the assumption inside it</h2>
 
-  <p>Programs that call other people's services fail intermittently — a connection drops, a server is briefly busy — so the standard response is to try again after a pause, doubling the pause each time: 2 seconds, then 4, then 8, then give up. That is exponential backoff, and it is close to free to write — or to get for nothing from <a href="https://tenacity.readthedocs.io/en/latest/" target="_blank" rel="noopener">tenacity</a> in Python, or <a href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.util.html" target="_blank" rel="noopener">urllib3's <code>Retry</code></a> if you are already using <code>requests</code>:</p>
+  <p>Programs that call other people's services fail intermittently: a connection drops, a server is briefly busy. The standard response is to try again after a pause, doubling the pause each time — 2 seconds, then 4, then 8, then give up. That is exponential backoff, and it is close to free to write — or to get for nothing from <a href="https://tenacity.readthedocs.io/en/latest/" target="_blank" rel="noopener">tenacity</a> in Python, or <a href="https://urllib3.readthedocs.io/en/stable/reference/urllib3.util.html" target="_blank" rel="noopener">urllib3's <code>Retry</code></a> if you are already using <code>requests</code>:</p>
 
   <pre><code>except Exception as exc:
     if attempt &lt; attempts:
@@ -94,9 +94,9 @@ time.sleep(wait)
 if hinted is None:
     delay = min(delay * 2, max_delay)   # exponential only when guessing</code></pre>
 
-  <p>Two details worth copying. Add a small margin — half a second — because retrying on the exact boundary is routinely a hair early. And cap what you will honour: a stated wait of an hour is a daily quota in disguise, so above 60 seconds the hint is ignored and the request is classified as exhaustion instead of blocking the run on it.</p>
+  <p>Two details worth copying. Add a small margin — half a second — because retrying on the exact boundary is routinely a hair early. And cap what you will honour. A stated wait of an hour is a daily quota in disguise. Above 60 seconds the hint is ignored and the request is classified as exhaustion, rather than blocking the run on it.</p>
 
-  <p>Where the header is available rather than a sentence, this is the same idea: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After" target="_blank" rel="noopener"><code>Retry-After</code></a> is a standard response header defined in <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after" target="_blank" rel="noopener">RFC 9110</a>, and reading it is strictly better than guessing, because the server knows when its own window reopens and you do not. It accepts either a number of seconds or an HTTP date, so parse both.</p>
+  <p>Where the header is available rather than a sentence, this is the same idea: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After" target="_blank" rel="noopener"><code>Retry-After</code></a> is a standard response header defined in <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after" target="_blank" rel="noopener">RFC 9110</a>. Reading it is strictly better than guessing: the server knows when its own window reopens and you do not. It accepts either a number of seconds or an HTTP date, so parse both.</p>
 
   <h2>"Should I stop?" needs "and", not "or"</h2>
 
@@ -109,7 +109,7 @@ if budget_failures and not any_transient:
     raise LLMBudgetError(summary)   # nothing will serve; stop the batch
 raise LLMError(summary)             # this item failed; the next may not</code></pre>
 
-  <p>My first attempt at this rule required <em>all</em> failures to be budget errors, which is wrong in the other direction: a retired model on the primary plus a capped fallback would then keep going, item after item, with nothing able to answer. Both mistakes are one word apart, which is the argument for writing the rule as an explicit statement about the list of failures rather than as flags accumulated inside a loop, and for having a test that names both directions.</p>
+  <p>The first attempt at this rule required <em>all</em> failures to be budget errors. That is wrong in the other direction: a retired model on the primary, plus a capped fallback, would keep going item after item with nothing able to answer. Both mistakes are one word apart. That is the argument for writing the rule as an explicit statement about the list of failures, rather than as flags accumulated inside a loop — and for a test that names both directions.</p>
 
   <h2>What I would build on day one now</h2>
 
@@ -152,11 +152,16 @@ raise LLMError(summary)             # this item failed; the next may not</code><
     <li><a href="https://console.groq.com/docs/rate-limits" target="_blank" rel="noopener">Groq's rate-limit documentation</a> — a concrete example of per-minute and per-day quotas sitting behind the same status, which is the ambiguity the whole post is about.</li>
   </ul>
 
-  <h3>Related work of mine</h3>
+  <h3>Related posts</h3>
 
   <ul>
     <li><a href="/blog/local-llm-vs-api/">Local LLM vs API</a> — what a daily cap costs you in practice, and how a fallback chain between providers is put together.</li>
     <li><a href="/blog/why-scrapers-get-blocked/">Why your scraper gets blocked</a> — the refusals that look like rate limiting but are not, and what actually causes them.</li>
-    <li><a href="/blog/building-resumable-etl-pipelines/">Why rerunning a pipeline should fix data</a> — what a run that was partly refused has to leave behind so the next one can finish the job.</li>
-    <li><a href="https://github.com/VishnujanNarayanan/Job_Application_Bot" target="_blank" rel="noopener">Job_Application_Bot</a> (source) — the repository the examples come from: the classifier, the retry loop and the provider chain.</li>
+    <li><a href="/blog/building-resumable-etl-pipelines/">How to make an ETL pipeline safe to rerun</a> — what a run that was partly refused has to leave behind so the next one can finish the job.</li>
+  </ul>
+
+  <h3>My own projects</h3>
+
+  <ul>
+    <li><a href="https://github.com/VishnujanNarayanan/Job_Application_Bot" target="_blank" rel="noopener">Job_Application_Bot</a> — source for the examples here: the classifier, the retry loop and the provider chain.</li>
   </ul>
