@@ -95,13 +95,17 @@ const SVG = {
   share: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4"/><path d="m15.4 6.5-6.8 4"/></svg>',
 };
 
-// The <title> carries the author suffix only when it still fits inside 70 characters —
-// past that a search result truncates, and the name is the part that gets cut. These
-// headlines are long by design (they lead with the search phrase), so most drop it; the
-// name is still on the page, in the OG site_name, and in the Article JSON-LD.
+// Every page carries the author suffix, so a search for the name returns the whole site
+// with one consistent shape rather than a mix of branded and unbranded results. Titles in
+// posts.json are kept short enough (<= 48 chars) that title + suffix stays inside 70 and
+// the name is not what gets truncated. The check below fails the build instead of silently
+// dropping the brand, which is how four posts lost it before.
 function pageTitle(p) {
   const withAuthor = `${p.title} — ${AUTHOR}`;
-  return withAuthor.length <= 70 ? withAuthor : p.title;
+  if (withAuthor.length > 70) {
+    throw new Error(`title too long for the author suffix (${withAuthor.length} > 70): ${p.title}`);
+  }
+  return withAuthor;
 }
 
 const tagRow = (p) => `<div class="tag-row">${p.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>`;

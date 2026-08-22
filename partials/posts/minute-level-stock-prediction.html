@@ -1,12 +1,12 @@
-  <p>I wanted to know whether the price of a stock would be higher or lower one minute from now. I had 9.4 million raw records from the National Stock Exchange to work with, covering 31 large Indian companies. This is what I built, what it scored, and the two ways I nearly convinced myself it worked.</p>
+  <p>Can you predict stock prices minute by minute? The question here was narrow: will this stock be higher or lower one minute from now? I had 9.4 million raw records from the National Stock Exchange to work with, covering 31 large Indian companies. This is what I built, what it scored, and the two ways I nearly convinced myself it worked.</p>
 
-  <p>Here is the headline, stated the way it should be stated. On my test data, prices went up in 46.8% of minutes. That is the number a model has to beat, because a program that ignores every input and always guesses "up" is right 46.8% of the time — scikit-learn will build you that program in one line as a <a href="https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html" target="_blank" rel="noopener">DummyClassifier</a>, and every result should be quoted against it. My best setup was right 61.4% of the time — which sounds like a real result until you see that it only made that guess 70 times out of 3,100 opportunities.</p>
+  <p>Here is the headline, stated the way it should be stated. On my test data, prices went up in 46.8% of minutes. That is the number a model has to beat. A program that ignores every input and always guesses "up" is right 46.8% of the time. scikit-learn will build you that program in one line as a <a href="https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html" target="_blank" rel="noopener">DummyClassifier</a>, and every result should be quoted against it. My best setup was right 61.4% of the time — which sounds like a real result until you see that it only made that guess 70 times out of 3,100 opportunities.</p>
 
   <h2>Turning 9.4 million records into something you can model</h2>
 
   <p>The raw data comes in two kinds. Trades are records of shares actually changing hands — 2.9 million of them. Quotes are the prices buyers and sellers were advertising at a moment in time, whether or not anyone accepted — 6.4 million of those. Together, 9.4 million rows across 31 companies, one file each.</p>
 
-  <p>You cannot usefully predict anything from individual records at that level. Most of what you see minute-to-minute at tick resolution is the mechanics of how an exchange matches orders, not information about where the price is going. So the first job is to zoom out: I grouped every record by company and by minute, and collapsed each group into a single row holding the open, high, low and close price for that minute, the total volume traded, and the average gap between buying and selling prices.</p>
+  <p>You cannot usefully predict anything from individual records at that level. Most of what you see minute-to-minute at tick resolution is the mechanics of how an exchange matches orders, not information about where the price is going. So the first job is to zoom out. Every record is grouped by company and by minute, and each group collapses into a single row: the open, high, low and close price for that minute, the total volume traded, and the average gap between buying and selling prices.</p>
 
   <p>That leaves about 11,600 rows. Going from 9.4 million records to 11,600 is not just making the file smaller — it is a decision that you believe something predictable happens on a one-minute timescale and that anything faster is noise. It is the most consequential choice in the whole project, and it gets made before any modelling starts.</p>
 
@@ -27,9 +27,9 @@
   <pre><code>train = merged.groupby('company').apply(lambda x: x.iloc[:-100]).reset_index(drop=True)
 test  = merged.groupby('company').apply(lambda x: x.iloc[-100:]).reset_index(drop=True)</code></pre>
 
-  <p>31 companies with 100 minutes each is the 3,100 test rows from the opening. Splitting by time rather than at random matters here: neighbouring minutes share features that are calculated from rolling windows of recent history, so a randomly chosen test row would usually have its own immediate neighbours sitting in the training data. The model would effectively have seen the answer.</p>
+  <p>31 companies with 100 minutes each is the 3,100 test rows from the opening. Splitting by time rather than at random matters here. Neighbouring minutes share features calculated from rolling windows of recent history. A randomly chosen test row would usually have its own immediate neighbours sitting in the training data. The model would effectively have seen the answer.</p>
 
-  <p>The features themselves are averages and volatility of price and volume over the previous 3, 5, 10 and 20 minutes, calculated per company so no window ever spans two stocks, and always looking backwards so none can see the future.</p>
+  <p>The features are averages and volatility of price and volume over the previous 3, 5, 10 and 20 minutes. They are calculated per company, so no window ever spans two stocks, and always backwards, so none can see the future.</p>
 
   <p>So the obvious traps are handled. The two that actually caught me are quieter.</p>
 
@@ -42,7 +42,7 @@ test  = merged.groupby('company').apply(lambda x: x.iloc[-100:]).reset_index(dro
     precision = precision_score(y_test, preds, zero_division=0)
     print(f"Threshold: {threshold}, Precision: {precision:.4f}, Trades: {preds.sum()}")</code></pre>
 
-  <p>At the middle setting the model acted 1,149 times and was right 47.95% of the time — effectively identical to the 46.8% you get by always guessing "up", which is the reading that should carry the most weight in the whole table. Raising the confidence level to 0.6 gave 50.8% over 327 attempts. Pushing higher made it <em>worse</em> than always guessing up, so this was never a quality dial being turned up; it was a shrinking sample.</p>
+  <p>At the middle setting the model acted 1,149 times and was right 47.95% of the time. That is effectively identical to the 46.8% you get by always guessing "up". It is the reading that should carry the most weight in the whole table. Raising the confidence level to 0.6 gave 50.8% over 327 attempts. Pushing higher made it <em>worse</em> than always guessing up, so this was never a quality dial being turned up; it was a shrinking sample.</p>
 
   <p>The best result, 61.4%, came from a random forest with the level set at 0.63. That figure is arithmetically correct and still misleading, because I chose 0.63 by looking at how it scored on the very data I was using to judge it. Held-back data only measures whether a model generalises for as long as you make no decisions based on it. The moment you tune anything against it, it starts measuring how many things you tried. Nothing in my code leaked a future price — the leak was in my process.</p>
 
@@ -57,9 +57,9 @@ Confusion Matrix:
 Predicted 1 count: 70
 Actual 1 count: 1451</code></pre>
 
-  <p>The model committed 70 times out of 3,100 minutes. It was right 43 times and wrong 27. If it had no skill at all you would expect about 33 right out of 70, so 43 is high — but with numbers this small that is roughly the margin you would get from coin flips going your way, and I had already tried several confidence levels, which makes finding one good-looking result much less impressive than it sounds.</p>
+  <p>The model committed 70 times out of 3,100 minutes. It was right 43 times and wrong 27. If it had no skill at all you would expect about 33 right out of 70, so 43 is high. But with numbers this small, that is roughly the margin coin flips give you when they fall your way. Several confidence levels had already been tried, which makes one good-looking result much less impressive than it sounds.</p>
 
-  <p>The other direction of that grid is more damning. There were 1,451 minutes where the price actually rose, and the model stayed silent for 1,408 of them. It catches about 3% of what it is looking for. What I had was not a model that predicts the market 61% of the time; it was a model that declines to answer 97.7% of the time and, on the small remainder, has an edge I cannot tell apart from luck.</p>
+  <p>The other direction of that grid is more damning. There were 1,451 minutes where the price actually rose, and the model stayed silent for 1,408 of them. It catches about 3% of what it is looking for. This is not a model that predicts the market 61% of the time. It is a model that declines to answer 97.7% of the time and, on the small remainder, has an edge indistinguishable from luck.</p>
 
   <h2>The test that settled it</h2>
 
@@ -77,7 +77,7 @@ Actual 1 count: 1451</code></pre>
 
   <p><strong>Match the test period to how often the model acts.</strong> If a setting only fires 70 times across the whole test window, the window is too short to judge it. Either use more data or restrict yourself to settings that produce enough decisions to measure.</p>
 
-  <p>The data pipeline underneath this is the part I would reuse without changes. It is described on the <a href="/projects/nse-stock-prediction/">minute-level stock prediction</a> page, and the ingestion approach it shares with my other market data work is in <a href="/blog/building-resumable-etl-pipelines/">making pipeline reruns converge</a>.</p>
+  <p>The data pipeline underneath a negative result is still worth keeping: minute bars, a resumable backfill and a feature set are reusable whatever the model concludes. The ingestion pattern that makes repeated backfills safe is in <a href="/blog/building-resumable-etl-pipelines/">how to make an ETL pipeline safe to rerun</a>.</p>
 
   <h2>References and further reading</h2>
 
@@ -94,12 +94,17 @@ Actual 1 count: 1451</code></pre>
     <li><a href="https://scikit-learn.org/stable/modules/cross_validation.html#time-series-split" target="_blank" rel="noopener">scikit-learn on cross-validation for time series</a> — why a random split leaks when neighbouring rows share rolling-window features.</li>
   </ul>
 
-  <h3>Related work of mine</h3>
+  <h3>Related posts</h3>
 
   <ul>
-    <li><a href="/projects/nse-stock-prediction/">Minute-level stock prediction</a> — the project page, with the pipeline and feature set in more detail.</li>
-    <li><a href="/blog/building-resumable-etl-pipelines/">Why rerunning a pipeline should fix data</a> — how the price data underneath a study like this gets collected, and re-collected safely.</li>
+    <li><a href="/blog/building-resumable-etl-pipelines/">How to make an ETL pipeline safe to rerun</a> — how the price data underneath a study like this gets collected, and re-collected safely.</li>
     <li><a href="/blog/how-to-test-a-data-pipeline/">How to test a data pipeline</a> — measuring how much a result moves on its own before comparing it to anything, in a testing setting.</li>
-    <li><a href="https://github.com/VishnujanNarayanan/Trader_sentiment_analysis" target="_blank" rel="noopener">Trader sentiment analysis</a> (source) — a smaller study on the same kind of data, with the baseline stated up front.</li>
-    <li><a href="/projects/fraud-detection/">Fraud detection</a> — the project page for a model that does beat its baseline by a wide margin; the contrast with this one is the interesting part.</li>
+  </ul>
+
+  <h3>My own projects</h3>
+
+  <ul>
+    <li><a href="/projects/nse-stock-prediction/">Minute-level stock prediction</a> — the pipeline and feature set behind this study, in more detail.</li>
+    <li><a href="https://github.com/VishnujanNarayanan/Trader_sentiment_analysis" target="_blank" rel="noopener">Trader sentiment analysis</a> — a smaller study on the same kind of data, with the baseline stated up front.</li>
+    <li><a href="/projects/fraud-detection/">Fraud detection</a> — a model that does beat its baseline by a wide margin; the contrast with this one is the interesting part.</li>
   </ul>

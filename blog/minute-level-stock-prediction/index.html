@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Can You Predict Stock Prices Minute by Minute? What 9.4M Ticks Showed</title>
+<title>Can You Predict Stock Prices Minute by Minute? — Vishnujan Narayanan</title>
 <meta name="description" content="Minute-level stock prediction on 9.4M NSE ticks: the baseline that matters, threshold tuning that leaks, sample size, and the backtest that settled it.">
 <meta name="author" content="Vishnujan Narayanan">
 <meta property="article:author" content="https://www.linkedin.com/in/vishnujan-narayanan">
@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" href="../../apple-touch-icon.png?v=2">
 <link rel="canonical" href="https://vishnujan.dev/blog/minute-level-stock-prediction/">
 <meta name="robots" content="index, follow, max-image-preview:large">
-<meta property="og:title" content="Can You Predict Stock Prices Minute by Minute? What 9.4M Ticks Showed">
+<meta property="og:title" content="Can You Predict Stock Prices Minute by Minute?">
 <meta property="og:description" content="61.4% precision against a 46.8% base rate — and why that was not an edge.">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Vishnujan Narayanan">
@@ -24,9 +24,9 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:type" content="image/jpeg">
-<meta property="og:image:alt" content="Can You Predict Stock Prices Minute by Minute? What 9.4M Ticks Showed">
+<meta property="og:image:alt" content="Can You Predict Stock Prices Minute by Minute?">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Can You Predict Stock Prices Minute by Minute? What 9.4M Ticks Showed">
+<meta name="twitter:title" content="Can You Predict Stock Prices Minute by Minute?">
 <meta name="twitter:description" content="61.4% precision against a 46.8% base rate — and why that was not an edge.">
 <meta name="twitter:image" content="https://vishnujan.dev/images/blog/share-intraday-model.jpg">
 <!-- Roboto Flex is the nav reel's font (styles.css @font-face). Preloaded so it is in
@@ -39,8 +39,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../styles.css">
 <script>document.documentElement.classList.remove("no-js");</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"Can You Predict Stock Prices Minute by Minute? What 9.4M Ticks Showed","item":"https://vishnujan.dev/blog/minute-level-stock-prediction/"}]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Can You Predict Stock Prices Minute by Minute? What 9.4M Ticks Showed","description":"Minute-level stock prediction on 9.4M NSE ticks: the baseline that matters, threshold tuning that leaks, sample size, and the backtest that settled it.","image":"https://vishnujan.dev/images/blog/share-intraday-model.jpg","datePublished":"2026-07-10","dateModified":"2026-07-10","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/minute-level-stock-prediction/"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://vishnujan.dev/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://vishnujan.dev/blog/"},{"@type":"ListItem","position":3,"name":"Can You Predict Stock Prices Minute by Minute?","item":"https://vishnujan.dev/blog/minute-level-stock-prediction/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Can You Predict Stock Prices Minute by Minute?","description":"Minute-level stock prediction on 9.4M NSE ticks: the baseline that matters, threshold tuning that leaks, sample size, and the backtest that settled it.","image":"https://vishnujan.dev/images/blog/share-intraday-model.jpg","datePublished":"2026-07-10","dateModified":"2026-07-10","author":{"@type":"Person","name":"Vishnujan Narayanan","url":"https://vishnujan.dev/"},"publisher":{"@type":"Person","name":"Vishnujan Narayanan"},"mainEntityOfPage":"https://vishnujan.dev/blog/minute-level-stock-prediction/"}</script>
 </head>
 <body class="subpage-body post-body blog-body">
 <div class="mobile-nav__overlay"></div>
@@ -132,11 +132,11 @@
   </button>
   <span class="post-rail__toast" data-share-toast hidden>Link copied</span>
 </aside>
-<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>Can You Predict Stock Prices Minute by Minute? What 9.4M Ticks Showed</nav>
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span><a href="/blog/">Blog</a><span>›</span>Can You Predict Stock Prices Minute by Minute?</nav>
 <article class="article">
   <div class="post-head">
     <div class="tag-row"><span class="tag">Quant / ML</span><span class="tag">Machine learning</span></div>
-    <h1>Can you predict stock prices minute by minute? What 9.4M ticks showed</h1>
+    <h1>Can you predict stock prices minute by minute?</h1>
     <div class="post-head__foot">
     <div class="byline byline--lg">
         <img class="byline__avatar" src="/images/blog/avatar-vj.jpg" alt="" width="96" height="96" loading="lazy" decoding="async">
@@ -145,29 +145,29 @@
         <span class="byline__date">July 2026</span>
       </div>
 <div class="share-row">
-      <a class="share-btn" href="mailto:?subject=Can%20You%20Predict%20Stock%20Prices%20Minute%20by%20Minute%3F%20What%209.4M%20Ticks%20Showed&body=Can%20You%20Predict%20Stock%20Prices%20Minute%20by%20Minute%3F%20What%209.4M%20Ticks%20Showed%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F" aria-label="Share by email" title="Share by email"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
-      <a class="share-btn" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F&text=Can%20You%20Predict%20Stock%20Prices%20Minute%20by%20Minute%3F%20What%209.4M%20Ticks%20Showed" target="_blank" rel="noopener" aria-label="Share on X" title="Share on X"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.2 3h3.3l-7.2 8.2L21.8 21h-6.6l-4.3-5.6L5.9 21H2.6l7.7-8.8L2.5 3h6.8l3.9 5.2L17.2 3Zm-1.2 16h1.8L8.1 4.8H6.2L16 19Z"/></svg></a>
+      <a class="share-btn" href="mailto:?subject=Can%20You%20Predict%20Stock%20Prices%20Minute%20by%20Minute%3F&body=Can%20You%20Predict%20Stock%20Prices%20Minute%20by%20Minute%3F%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F" aria-label="Share by email" title="Share by email"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></a>
+      <a class="share-btn" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F&text=Can%20You%20Predict%20Stock%20Prices%20Minute%20by%20Minute%3F" target="_blank" rel="noopener" aria-label="Share on X" title="Share on X"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17.2 3h3.3l-7.2 8.2L21.8 21h-6.6l-4.3-5.6L5.9 21H2.6l7.7-8.8L2.5 3h6.8l3.9 5.2L17.2 3Zm-1.2 16h1.8L8.1 4.8H6.2L16 19Z"/></svg></a>
       <a class="share-btn" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F" target="_blank" rel="noopener" aria-label="Share on LinkedIn" title="Share on LinkedIn"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M6.9 8.6H4.2V20h2.7V8.6ZM5.5 4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2ZM20 13.4c0-2.9-1.6-4.3-3.6-4.3-1.7 0-2.4.9-2.8 1.5V8.6H10.9c0 .8 0 11.4 0 11.4h2.7v-6.4c0-.3 0-.6.1-.8.3-.6.8-1.2 1.7-1.2 1.2 0 1.7.9 1.7 2.2V20H20v-6.6Z"/></svg></a>
       <a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F" target="_blank" rel="noopener" aria-label="Share on Facebook" title="Share on Facebook"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M14.5 8.5V6.9c0-.7.2-1.1 1.2-1.1h1.5V3.1C16.8 3 16 3 15.1 3c-2 0-3.4 1.2-3.4 3.5v2H9.3V11h2.4v8h2.8v-8h2.3l.4-2.5h-2.7Z"/></svg></a>
-      <a class="share-btn" href="https://www.reddit.com/submit?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F&title=Can%20You%20Predict%20Stock%20Prices%20Minute%20by%20Minute%3F%20What%209.4M%20Ticks%20Showed" target="_blank" rel="noopener" aria-label="Share on Reddit" title="Share on Reddit"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M22 12.1a2.1 2.1 0 0 0-3.6-1.5 10.3 10.3 0 0 0-5.2-1.6l.9-4.2 2.9.6a1.5 1.5 0 1 0 .2-1.2l-3.4-.7a.6.6 0 0 0-.7.5l-1 4.7a10.4 10.4 0 0 0-5.3 1.6 2.1 2.1 0 1 0-2.3 3.4 3.8 3.8 0 0 0 0 .6c0 3 3.6 5.5 8 5.5s8-2.5 8-5.5a3.8 3.8 0 0 0 0-.6 2.1 2.1 0 0 0 1.5-2Zm-13.6 1.4a1.5 1.5 0 1 1 1.5 1.5 1.5 1.5 0 0 1-1.5-1.5Zm8.3 4a5.6 5.6 0 0 1-3.7 1.1 5.6 5.6 0 0 1-3.7-1.1.5.5 0 1 1 .7-.7 4.7 4.7 0 0 0 3 .8 4.7 4.7 0 0 0 3-.8.5.5 0 1 1 .7.7Zm-.2-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5Z"/></svg></a>
-      <a class="share-btn" href="https://api.whatsapp.com/send?text=Can%20You%20Predict%20Stock%20Prices%20Minute%20by%20Minute%3F%20What%209.4M%20Ticks%20Showed%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F" target="_blank" rel="noopener" aria-label="Share on WhatsApp" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Zm0 1.7a7.3 7.3 0 1 1-3.7 13.6l-.3-.2-2.7.7.7-2.6-.2-.3A7.3 7.3 0 0 1 12 4.7Zm4.2 9.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1-.6.7-.7.9-.3.2-.5.1a6 6 0 0 1-1.8-1.1 6.6 6.6 0 0 1-1.2-1.6c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 2 4.5 4.5 0 0 0 1 2.4 10.2 10.2 0 0 0 3.9 3.4c1.8.7 1.8.5 2.2.4a2.3 2.3 0 0 0 1.5-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"/></svg></a>
+      <a class="share-btn" href="https://www.reddit.com/submit?url=https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F&title=Can%20You%20Predict%20Stock%20Prices%20Minute%20by%20Minute%3F" target="_blank" rel="noopener" aria-label="Share on Reddit" title="Share on Reddit"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M22 12.1a2.1 2.1 0 0 0-3.6-1.5 10.3 10.3 0 0 0-5.2-1.6l.9-4.2 2.9.6a1.5 1.5 0 1 0 .2-1.2l-3.4-.7a.6.6 0 0 0-.7.5l-1 4.7a10.4 10.4 0 0 0-5.3 1.6 2.1 2.1 0 1 0-2.3 3.4 3.8 3.8 0 0 0 0 .6c0 3 3.6 5.5 8 5.5s8-2.5 8-5.5a3.8 3.8 0 0 0 0-.6 2.1 2.1 0 0 0 1.5-2Zm-13.6 1.4a1.5 1.5 0 1 1 1.5 1.5 1.5 1.5 0 0 1-1.5-1.5Zm8.3 4a5.6 5.6 0 0 1-3.7 1.1 5.6 5.6 0 0 1-3.7-1.1.5.5 0 1 1 .7-.7 4.7 4.7 0 0 0 3 .8 4.7 4.7 0 0 0 3-.8.5.5 0 1 1 .7.7Zm-.2-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5Z"/></svg></a>
+      <a class="share-btn" href="https://api.whatsapp.com/send?text=Can%20You%20Predict%20Stock%20Prices%20Minute%20by%20Minute%3F%20https%3A%2F%2Fvishnujan.dev%2Fblog%2Fminute-level-stock-prediction%2F" target="_blank" rel="noopener" aria-label="Share on WhatsApp" title="Share on WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3Zm0 1.7a7.3 7.3 0 1 1-3.7 13.6l-.3-.2-2.7.7.7-2.6-.2-.3A7.3 7.3 0 0 1 12 4.7Zm4.2 9.1c-.2-.1-1.3-.7-1.5-.7s-.4-.1-.5.1-.6.7-.7.9-.3.2-.5.1a6 6 0 0 1-1.8-1.1 6.6 6.6 0 0 1-1.2-1.6c-.1-.2 0-.4.1-.5l.4-.4a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.4a.9.9 0 0 0-.6.3 2.6 2.6 0 0 0-.8 2 4.5 4.5 0 0 0 1 2.4 10.2 10.2 0 0 0 3.9 3.4c1.8.7 1.8.5 2.2.4a2.3 2.3 0 0 0 1.5-1.1 1.9 1.9 0 0 0 .1-1.1c0-.1-.2-.2-.4-.3Z"/></svg></a>
     </div>
     </div>
-    <p class="post-head__dek">61.4% right against a 46.8% baseline looks like an edge, until you notice it answered 70 times out of 3,100. The two ways I nearly convinced myself it worked.</p>
+    <p class="post-head__dek">61.4% accuracy against a 46.8% baseline — on 70 of 3,100 minutes. How I nearly fooled myself.</p>
   </div>
   <figure class="post-hero">
     <img src="/images/blog/intraday-model.jpg" alt="" width="1000" height="563" fetchpriority="high" decoding="async">
   </figure>
 
-  <p>I wanted to know whether the price of a stock would be higher or lower one minute from now. I had 9.4 million raw records from the National Stock Exchange to work with, covering 31 large Indian companies. This is what I built, what it scored, and the two ways I nearly convinced myself it worked.</p>
+  <p>Can you predict stock prices minute by minute? The question here was narrow: will this stock be higher or lower one minute from now? I had 9.4 million raw records from the National Stock Exchange to work with, covering 31 large Indian companies. This is what I built, what it scored, and the two ways I nearly convinced myself it worked.</p>
 
-  <p>Here is the headline, stated the way it should be stated. On my test data, prices went up in 46.8% of minutes. That is the number a model has to beat, because a program that ignores every input and always guesses "up" is right 46.8% of the time — scikit-learn will build you that program in one line as a <a href="https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html" target="_blank" rel="noopener">DummyClassifier</a>, and every result should be quoted against it. My best setup was right 61.4% of the time — which sounds like a real result until you see that it only made that guess 70 times out of 3,100 opportunities.</p>
+  <p>Here is the headline, stated the way it should be stated. On my test data, prices went up in 46.8% of minutes. That is the number a model has to beat. A program that ignores every input and always guesses "up" is right 46.8% of the time. scikit-learn will build you that program in one line as a <a href="https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html" target="_blank" rel="noopener">DummyClassifier</a>, and every result should be quoted against it. My best setup was right 61.4% of the time — which sounds like a real result until you see that it only made that guess 70 times out of 3,100 opportunities.</p>
 
   <h2>Turning 9.4 million records into something you can model</h2>
 
   <p>The raw data comes in two kinds. Trades are records of shares actually changing hands — 2.9 million of them. Quotes are the prices buyers and sellers were advertising at a moment in time, whether or not anyone accepted — 6.4 million of those. Together, 9.4 million rows across 31 companies, one file each.</p>
 
-  <p>You cannot usefully predict anything from individual records at that level. Most of what you see minute-to-minute at tick resolution is the mechanics of how an exchange matches orders, not information about where the price is going. So the first job is to zoom out: I grouped every record by company and by minute, and collapsed each group into a single row holding the open, high, low and close price for that minute, the total volume traded, and the average gap between buying and selling prices.</p>
+  <p>You cannot usefully predict anything from individual records at that level. Most of what you see minute-to-minute at tick resolution is the mechanics of how an exchange matches orders, not information about where the price is going. So the first job is to zoom out. Every record is grouped by company and by minute, and each group collapses into a single row: the open, high, low and close price for that minute, the total volume traded, and the average gap between buying and selling prices.</p>
 
   <p>That leaves about 11,600 rows. Going from 9.4 million records to 11,600 is not just making the file smaller — it is a decision that you believe something predictable happens on a one-minute timescale and that anything faster is noise. It is the most consequential choice in the whole project, and it gets made before any modelling starts.</p>
 
@@ -188,9 +188,9 @@
   <pre><code>train = merged.groupby('company').apply(lambda x: x.iloc[:-100]).reset_index(drop=True)
 test  = merged.groupby('company').apply(lambda x: x.iloc[-100:]).reset_index(drop=True)</code></pre>
 
-  <p>31 companies with 100 minutes each is the 3,100 test rows from the opening. Splitting by time rather than at random matters here: neighbouring minutes share features that are calculated from rolling windows of recent history, so a randomly chosen test row would usually have its own immediate neighbours sitting in the training data. The model would effectively have seen the answer.</p>
+  <p>31 companies with 100 minutes each is the 3,100 test rows from the opening. Splitting by time rather than at random matters here. Neighbouring minutes share features calculated from rolling windows of recent history. A randomly chosen test row would usually have its own immediate neighbours sitting in the training data. The model would effectively have seen the answer.</p>
 
-  <p>The features themselves are averages and volatility of price and volume over the previous 3, 5, 10 and 20 minutes, calculated per company so no window ever spans two stocks, and always looking backwards so none can see the future.</p>
+  <p>The features are averages and volatility of price and volume over the previous 3, 5, 10 and 20 minutes. They are calculated per company, so no window ever spans two stocks, and always backwards, so none can see the future.</p>
 
   <p>So the obvious traps are handled. The two that actually caught me are quieter.</p>
 
@@ -203,7 +203,7 @@ test  = merged.groupby('company').apply(lambda x: x.iloc[-100:]).reset_index(dro
     precision = precision_score(y_test, preds, zero_division=0)
     print(f"Threshold: {threshold}, Precision: {precision:.4f}, Trades: {preds.sum()}")</code></pre>
 
-  <p>At the middle setting the model acted 1,149 times and was right 47.95% of the time — effectively identical to the 46.8% you get by always guessing "up", which is the reading that should carry the most weight in the whole table. Raising the confidence level to 0.6 gave 50.8% over 327 attempts. Pushing higher made it <em>worse</em> than always guessing up, so this was never a quality dial being turned up; it was a shrinking sample.</p>
+  <p>At the middle setting the model acted 1,149 times and was right 47.95% of the time. That is effectively identical to the 46.8% you get by always guessing "up". It is the reading that should carry the most weight in the whole table. Raising the confidence level to 0.6 gave 50.8% over 327 attempts. Pushing higher made it <em>worse</em> than always guessing up, so this was never a quality dial being turned up; it was a shrinking sample.</p>
 
   <p>The best result, 61.4%, came from a random forest with the level set at 0.63. That figure is arithmetically correct and still misleading, because I chose 0.63 by looking at how it scored on the very data I was using to judge it. Held-back data only measures whether a model generalises for as long as you make no decisions based on it. The moment you tune anything against it, it starts measuring how many things you tried. Nothing in my code leaked a future price — the leak was in my process.</p>
 
@@ -218,9 +218,9 @@ Confusion Matrix:
 Predicted 1 count: 70
 Actual 1 count: 1451</code></pre>
 
-  <p>The model committed 70 times out of 3,100 minutes. It was right 43 times and wrong 27. If it had no skill at all you would expect about 33 right out of 70, so 43 is high — but with numbers this small that is roughly the margin you would get from coin flips going your way, and I had already tried several confidence levels, which makes finding one good-looking result much less impressive than it sounds.</p>
+  <p>The model committed 70 times out of 3,100 minutes. It was right 43 times and wrong 27. If it had no skill at all you would expect about 33 right out of 70, so 43 is high. But with numbers this small, that is roughly the margin coin flips give you when they fall your way. Several confidence levels had already been tried, which makes one good-looking result much less impressive than it sounds.</p>
 
-  <p>The other direction of that grid is more damning. There were 1,451 minutes where the price actually rose, and the model stayed silent for 1,408 of them. It catches about 3% of what it is looking for. What I had was not a model that predicts the market 61% of the time; it was a model that declines to answer 97.7% of the time and, on the small remainder, has an edge I cannot tell apart from luck.</p>
+  <p>The other direction of that grid is more damning. There were 1,451 minutes where the price actually rose, and the model stayed silent for 1,408 of them. It catches about 3% of what it is looking for. This is not a model that predicts the market 61% of the time. It is a model that declines to answer 97.7% of the time and, on the small remainder, has an edge indistinguishable from luck.</p>
 
   <h2>The test that settled it</h2>
 
@@ -238,7 +238,7 @@ Actual 1 count: 1451</code></pre>
 
   <p><strong>Match the test period to how often the model acts.</strong> If a setting only fires 70 times across the whole test window, the window is too short to judge it. Either use more data or restrict yourself to settings that produce enough decisions to measure.</p>
 
-  <p>The data pipeline underneath this is the part I would reuse without changes. It is described on the <a href="/projects/nse-stock-prediction/">minute-level stock prediction</a> page, and the ingestion approach it shares with my other market data work is in <a href="/blog/building-resumable-etl-pipelines/">making pipeline reruns converge</a>.</p>
+  <p>The data pipeline underneath a negative result is still worth keeping: minute bars, a resumable backfill and a feature set are reusable whatever the model concludes. The ingestion pattern that makes repeated backfills safe is in <a href="/blog/building-resumable-etl-pipelines/">how to make an ETL pipeline safe to rerun</a>.</p>
 
   <h2>References and further reading</h2>
 
@@ -255,14 +255,19 @@ Actual 1 count: 1451</code></pre>
     <li><a href="https://scikit-learn.org/stable/modules/cross_validation.html#time-series-split" target="_blank" rel="noopener">scikit-learn on cross-validation for time series</a> — why a random split leaks when neighbouring rows share rolling-window features.</li>
   </ul>
 
-  <h3>Related work of mine</h3>
+  <h3>Related posts</h3>
 
   <ul>
-    <li><a href="/projects/nse-stock-prediction/">Minute-level stock prediction</a> — the project page, with the pipeline and feature set in more detail.</li>
-    <li><a href="/blog/building-resumable-etl-pipelines/">Why rerunning a pipeline should fix data</a> — how the price data underneath a study like this gets collected, and re-collected safely.</li>
+    <li><a href="/blog/building-resumable-etl-pipelines/">How to make an ETL pipeline safe to rerun</a> — how the price data underneath a study like this gets collected, and re-collected safely.</li>
     <li><a href="/blog/how-to-test-a-data-pipeline/">How to test a data pipeline</a> — measuring how much a result moves on its own before comparing it to anything, in a testing setting.</li>
-    <li><a href="https://github.com/VishnujanNarayanan/Trader_sentiment_analysis" target="_blank" rel="noopener">Trader sentiment analysis</a> (source) — a smaller study on the same kind of data, with the baseline stated up front.</li>
-    <li><a href="/projects/fraud-detection/">Fraud detection</a> — the project page for a model that does beat its baseline by a wide margin; the contrast with this one is the interesting part.</li>
+  </ul>
+
+  <h3>My own projects</h3>
+
+  <ul>
+    <li><a href="/projects/nse-stock-prediction/">Minute-level stock prediction</a> — the pipeline and feature set behind this study, in more detail.</li>
+    <li><a href="https://github.com/VishnujanNarayanan/Trader_sentiment_analysis" target="_blank" rel="noopener">Trader sentiment analysis</a> — a smaller study on the same kind of data, with the baseline stated up front.</li>
+    <li><a href="/projects/fraud-detection/">Fraud detection</a> — a model that does beat its baseline by a wide margin; the contrast with this one is the interesting part.</li>
   </ul>
 </article>
 
@@ -276,9 +281,9 @@ Actual 1 count: 1451</code></pre>
         </div>
         <div class="post-card__body">
           <div class="tag-row"><span class="tag">Testing</span><span class="tag">Data engineering</span></div>
-          <h3 class="post-card__title">How to Test a Data Pipeline: 92 Passing Tests, 3 Broken Features</h3>
+          <h3 class="post-card__title">How to Test a Data Pipeline: What Tests Miss</h3>
           <div class="byline"><span class="byline__date">August 2026</span></div>
-          <p class="post-card__excerpt">A green suite proved the code did what it was written to do, and nothing about whether the product worked. What I test instead now, including the control run that has to come first.</p>
+          <p class="post-card__excerpt">92 tests passed while three features were broken. What I test now, and the control run that comes first.</p>
         </div>
       </a>
       <a class="post-card post-card--sm" href="/blog/a-year-of-ingestion-bugs/">
@@ -287,9 +292,9 @@ Actual 1 count: 1451</code></pre>
         </div>
         <div class="post-card__body">
           <div class="tag-row"><span class="tag">Data engineering</span><span class="tag">Reliability</span></div>
-          <h3 class="post-card__title">A Year of Ingestion Bugs: What Actually Broke in 32 Data Pipelines</h3>
+          <h3 class="post-card__title">Data Ingestion Bugs and How to Catch Them</h3>
           <div class="byline"><span class="byline__date">August 2026</span></div>
-          <p class="post-card__excerpt">Roughly 30 bugs across a year of collecting Indian market data, sorted by cause. Eight of them produced no error message at all, and those are the ones worth reading about.</p>
+          <p class="post-card__excerpt">About 30 bugs from a year of market-data pipelines, sorted by cause. Eight threw no error at all.</p>
         </div>
       </a>
       <a class="post-card post-card--sm" href="/blog/how-i-scraped-nse-insider-filings/">
@@ -298,9 +303,9 @@ Actual 1 count: 1451</code></pre>
         </div>
         <div class="post-card__body">
           <div class="tag-row"><span class="tag">Web scraping</span><span class="tag">Data engineering</span></div>
-          <h3 class="post-card__title">How to Scrape 20 Years of Data From a Site That Paginates by Date</h3>
+          <h3 class="post-card__title">How to Scrape a Site That Paginates by Date</h3>
           <div class="byline"><span class="byline__date">August 2026</span></div>
-          <p class="post-card__excerpt">The endpoint only answers 180 days at a time, and the answers are not final. Windowing, deduplication that deleted rows, and why one source was never going to be enough.</p>
+          <p class="post-card__excerpt">The endpoint returns 180 days at a time and the data changes after publication. Windowing, dedup, and what broke.</p>
         </div>
       </a>
     </div>
