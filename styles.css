@@ -344,6 +344,12 @@ header .header__nav-left a{color:#050419;font-size:16px}
    ============================================================ */
 .writing{
   --strip:clamp(64px,7vw,108px);     /* collapsed strip width */
+  /* --gutter: how far in the divider + text sit from the open panel's left edge. Set from
+     main.js to a CLOSED panel's settled width, so the open panel shows a full strip-width
+     band before the line rather than the bare --strip (which read as a sliver hard against
+     the edge). Falls back to --strip if the JS never runs. --cw is set alongside it to the
+     content column's own width, so open width = gutter + text and the column lands exactly
+     inside the panel instead of being clipped by overflow:hidden. */
   --cw:230px;                        /* fixed width a panel opens by — a constant px (no vw) so the open text column never resizes with the viewport. Smaller = narrower open panel; the freed width spreads to every closed strip via flex-grow. */
   --h:clamp(540px,82vh,880px);
   position:relative;z-index:2;background:transparent;color:#fff;
@@ -449,14 +455,14 @@ header .header__nav-left a{color:#050419;font-size:16px}
 /* The open panel's width is strip + --cw (main.js uses --cw for its geometry), so in a
    dense stack the content column has to be exactly --cw — the default clamp reaches 360px
    on a wide screen, which is wider than a dense panel opens and would clip the last words. */
-.writing--dense .wpanel__content{width:clamp(250px,22.4vw,322px)}
+.writing--dense .wpanel__content{width:calc(clamp(250px,22.4vw,322px) - var(--shift,0px))}
 .writing--dense .wpanel__vert{font-size:clamp(17px,1.5vw,27px);top:18px}
 .writing--dense .wpanel__num{font-size:clamp(30px,3vw,54px);bottom:16px}
-.wpanel__vert{position:absolute;left:calc(var(--strip) / 2);top:22px;transform:translateX(-50%) rotate(180deg);will-change:opacity;
+.wpanel__vert{position:absolute;left:calc(var(--gutter,var(--strip)) / 2);top:22px;transform:translateX(-50%) rotate(180deg);will-change:opacity;
   writing-mode:vertical-rl;font-family:"Inter",sans-serif;font-weight:500;
   font-size:clamp(26px,2.4vw,42px);line-height:1;letter-spacing:-.01em;text-transform:uppercase;white-space:nowrap;
   color:rgba(255,255,255,.78)}
-.wpanel__num{position:absolute;left:calc(var(--strip) / 2);right:auto;bottom:20px;
+.wpanel__num{position:absolute;left:calc(var(--gutter,var(--strip)) / 2);right:auto;bottom:20px;
   transform:translateX(-50%) rotate(180deg);writing-mode:vertical-rl;will-change:opacity;
   font-family:"Inter",sans-serif;font-weight:700;font-size:clamp(42px,4.4vw,76px);line-height:.82;
   letter-spacing:-.04em;color:#4d8bff}
@@ -464,10 +470,12 @@ header .header__nav-left a{color:#050419;font-size:16px}
 /* Content — pinned ABSOLUTELY at a fixed place (just right of the strip) with a FIXED width, so
    it's out of the flex flow: the panel's width animating open/closed never reflows or resizes the
    text. Opening/closing ONLY fades it in/out. Clipped by the panel's overflow:hidden while closed. */
-.wpanel__content{position:absolute;left:var(--strip);top:0;bottom:0;z-index:2;
-  width:clamp(322px,32vw,470px);box-sizing:border-box;   /* FIXED width (vw-stable) so the text wraps the same the whole way — opening no longer re-flows it; it just slides in. */
+.wpanel__content{position:absolute;left:var(--gutter,var(--strip));top:0;bottom:0;z-index:2;
+  width:calc(clamp(322px,32vw,470px) - var(--shift,0px));box-sizing:border-box;   /* FIXED width (vw-stable) so the text wraps the same the whole way — opening no longer re-flows it; it just slides in. */
   display:flex;flex-direction:column;justify-content:space-between;gap:20px;   /* heading anchored TOP, description anchored BOTTOM */
-  padding:clamp(32px,3vw,52px) clamp(28px,2.6vw,44px);
+  /* Asymmetric: the LEFT inset is small so the text sits close to the divider line (the line is
+     the margin now — a second large gap after it read as a drift). Right/top/bottom unchanged. */
+  padding:clamp(32px,3vw,52px) clamp(28px,2.6vw,44px) clamp(32px,3vw,52px) clamp(12px,1.15vw,18px);
   pointer-events:none;opacity:0;transform:translateX(104px);   /* parked further off to the RIGHT (clipped by the panel) while closed — longer slide-in */
   transition:opacity .5s ease-in-out .12s, transform .7s cubic-bezier(.32,0,.16,1) .05s}
 .wpanel.is-open .wpanel__content{opacity:1;transform:translateX(0);pointer-events:auto}   /* slides left into place */
@@ -475,7 +483,7 @@ header .header__nav-left a{color:#050419;font-size:16px}
 /* Thin vertical divider just LEFT of the text (between the rail and the content), like the
    line in the reference's open panel. It enters from the left and settles slightly to the
    right as the panel opens. On the panel (not the content) so it moves independently. */
-.wpanel::after{content:"";position:absolute;left:var(--strip);top:0;bottom:0;width:2px;z-index:3;
+.wpanel::after{content:"";position:absolute;left:var(--gutter,var(--strip));top:0;bottom:0;width:2px;z-index:3;
   background:rgba(255,255,255,.22);pointer-events:none;
   opacity:0;transform:translateX(-22px);
   transition:opacity .5s ease-in-out .12s, transform .7s cubic-bezier(.32,0,.16,1) .05s}
