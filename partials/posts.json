@@ -3,7 +3,7 @@
     "slug": "playwright-vs-selenium",
     "title": "Playwright vs Selenium: Which to Use and When",
     "h1": "Playwright vs Selenium: which to use and when",
-    "dek": "Moved 12 scrapers from Selenium to Playwright. Where it actually helped, and where it changed nothing.",
+    "dek": "Twelve scrapers moved from Selenium to Playwright. Where it helped, and where it changed nothing.",
     "description": "Playwright vs Selenium compared on real scrapers: waits, session reuse, async, headless detection, and the one blocking problem no browser tool solves.",
     "shareDescription": "Waits, session reuse, async, headless detection — and the one blocking problem neither tool solves.",
     "tags": [
@@ -63,7 +63,7 @@
     "slug": "how-to-test-a-data-pipeline",
     "title": "How to Test a Data Pipeline: What Tests Miss",
     "h1": "How to test a data pipeline: what tests miss",
-    "dek": "92 tests passed while three features were broken. What I test now, and the control run that comes first.",
+    "dek": "92 tests passed while three features were broken. What to test instead, and the control run that comes first.",
     "description": "How to test a data pipeline: why unit tests miss silent failures, measuring a source's noise floor first, and kill-and-resume scenario tests.",
     "shareDescription": "Why a green suite missed three live failures, and the tests that would have caught them.",
     "tags": [
@@ -110,7 +110,7 @@
     "slug": "building-resumable-etl-pipelines",
     "title": "How to Make an ETL Pipeline Safe to Rerun",
     "h1": "How to make an ETL pipeline safe to rerun",
-    "dek": "A rerun should fix data, not corrupt it. Four ways I broke that rule, and the guard added for each.",
+    "dek": "A rerun should fix data, not corrupt it. Four ways that rule breaks, and the guard for each.",
     "description": "Idempotent, resumable ETL: incremental loads, resume points that survive bad rows, anti-join dedup, and reruns that heal gaps instead of corrupting data.",
     "shareDescription": "Incremental loads, adaptive backoff, and reruns that heal gaps instead of corrupting history.",
     "tags": [
@@ -125,7 +125,7 @@
     "slug": "minute-level-stock-prediction",
     "title": "Can You Predict Stock Prices Minute by Minute?",
     "h1": "Can you predict stock prices minute by minute?",
-    "dek": "61.4% accuracy against a 46.8% baseline — on 70 of 3,100 minutes. How I nearly fooled myself.",
+    "dek": "61.4% accuracy against a 46.8% baseline — on 70 of 3,100 minutes. Why that is not an edge.",
     "description": "Minute-level stock prediction on 9.4M NSE ticks: the baseline that matters, threshold tuning that leaks, sample size, and the backtest that settled it.",
     "shareDescription": "61.4% precision against a 46.8% base rate — and why that was not an edge.",
     "tags": [
