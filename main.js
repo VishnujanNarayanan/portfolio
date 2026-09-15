@@ -2908,7 +2908,7 @@ function makeTypeIn(host, runs, opts) {
     // img=card image (cycles the 4 flow placeholders). Content from master_profile.yaml.
     // n=name, d=desc, t=visible card tags, h=subpage, live=deployed demo,
     // code=GitHub (omitted when the repo is private), img=card image. The card
-    // click resolves h → live → code; the notch button resolves live → code,
+    // click resolves live → h → code; the notch button resolves live → code,
     // reading "View demo" or "View code" to match.
     // tools = full tech stack (from master_profile.yaml, fuller than the visible tags)
     // and dom = domain(s) — both drive the side-panel "Filter by" facets.
@@ -2917,7 +2917,6 @@ function makeTypeIn(host, runs, opts) {
       { n: "Product Explorer", d: "Full-stack TypeScript app scraping a book catalog into PostgreSQL, served via Next.js with real-time WebSocket scraping.", t: ["TypeScript", "NestJS", "PostgreSQL", "Redis"], tools: ["TypeScript", "NestJS", "Next.js", "PostgreSQL", "Redis", "WebSockets"], dom: ["Scraping", "Backend", "Full-Stack", "Data"], h: "/projects/product-explorer/", live: "https://product-explorer-two.vercel.app", code: "https://github.com/VishnujanNarayanan/product-explorer", img: "images/projects/product-explorer-poster.jpg", video: "images/projects/product-explorer.mp4" },
       { n: "DekhLaw Legal-Emergency Platform", d: "Solo-built production legal-emergency platform — ~30 Express endpoints over PostgreSQL with JWT auth, a real-time Twilio call-dispatch engine, and Haversine lawyer matching, deployed on Railway and Vercel.", t: ["Node.js", "Express", "PostgreSQL", "Twilio"], tools: ["Node.js", "Express", "PostgreSQL", "SQLite", "Twilio", "JWT", "Cloudinary", "Railway", "Vercel"], dom: ["Full-Stack", "Backend", "DevOps"], live: "https://dekhlaw-webite.vercel.app", img: "images/projects/dekhlaw-poster.jpg", video: "images/projects/dekhlaw.mp4" },
       { n: "Law Firm Website", d: "Production law-firm marketing site in Next.js 14 + TypeScript — 14 routes, Resend-backed lead capture, Zod-validated forms, and full SEO/JSON-LD, designed and shipped solo.", t: ["Next.js", "TypeScript", "Tailwind", "Framer Motion"], tools: ["Next.js", "React", "TypeScript", "Tailwind", "Framer Motion", "Resend", "Zod", "Vercel"], dom: ["Full-Stack", "Frontend"], live: "https://www.smartnperfectlegal.legal/", img: "images/projects/law-firm-poster.jpg", video: "images/projects/law-firm.mp4" },
-      { n: "Portfolio Website", d: "This site — a hand-built static portfolio with a WebGL hero, a scroll-driven canvas contour field, and build-time generators that render the project cards, footer and blog pages into static HTML so crawlers see them without running JavaScript.", t: ["JavaScript", "three.js", "WebGL", "Canvas"], tools: ["JavaScript", "three.js", "WebGL", "Canvas", "Node.js", "Vercel"], dom: ["Frontend"], live: "https://vishnujan-narayanan.vercel.app/", code: "https://github.com/VishnujanNarayanan/portfolio", img: "images/projects/portfolio-site.jpg" },
       { n: "Job Application Bot", d: "Autonomous job-search bot — scrapes Indeed, Glassdoor, and LinkedIn listings, scores them against a master profile, and builds a tailored resume per match with an LLM, rendered on demand via FastAPI.", t: ["Python", "FastAPI", "Playwright", "LLM"], tools: ["Python", "FastAPI", "Playwright", "PostgreSQL", "spaCy", "Gemini", "Docker", "AWS", "GCP"], dom: ["Backend", "Scraping", "ML", "NLP", "DevOps"], code: "https://github.com/VishnujanNarayanan/Job_Application_Bot", img: "images/projects/job-bot-poster.jpg", video: "images/projects/job-bot.mp4" },
       { n: "Fraud Transaction Detection", d: "Fraud-detection model on 6.4M transactions — 95% caught at 0.995 ROC-AUC despite a 0.13% fraud rate.", t: ["Python", "scikit-learn", "pandas"], tools: ["Python", "scikit-learn", "pandas", "NumPy", "SciPy"], dom: ["ML", "Data", "Finance"], h: "/projects/fraud-detection/", live: "https://vishnujannarayanan.github.io/Fraud_Transaction_Detection/", code: "https://github.com/VishnujanNarayanan/Fraud_Transaction_Detection", img: "images/projects/fraud-detection.jpg" },
       { n: "Minute-Level Stock Prediction", d: "Intraday price-direction system over 9.4M NSE ticks, raising next-minute precision from 0.51 to 0.61.", t: ["Python", "scikit-learn", "Backtesting"], tools: ["Python", "scikit-learn", "pandas", "Backtesting"], dom: ["ML", "Quant", "Finance", "Data"], h: "/projects/nse-stock-prediction/", code: "https://github.com/VishnujanNarayanan/minute-level-stock-prediction", img: "images/projects/nse-stock-prediction.jpg" },
@@ -2943,7 +2942,7 @@ function makeTypeIn(host, runs, opts) {
     // its repo in the flow until someone edited both places. Resolved here once —
     // subpage, then live demo, then repo — so every surface agrees.
     window.__PROJECT_MEDIA = PROJECTS.reduce(function (m, p) {
-      var href = p.h || p.live || p.code || "";
+      var href = p.live || p.h || p.code || "";
       m[p.n] = {
         img: p.img,
         video: p.video || null,
@@ -3003,10 +3002,10 @@ function makeTypeIn(host, runs, opts) {
     // image base, notched frame, hover-reveal wipe (clip-path ellipse), blue accent.
     function projectsHtml() {
       var rows = PROJECTS.map(function (p, n) {
-        // Media links to the case-study subpage if one exists, then the live demo,
+        // Media links to the live demo when there is one, then the case-study subpage,
         // and only falls back to GitHub when the project has neither. The repo stays
         // reachable either way — the "View code" notch button still points at it.
-        var primary = p.h || p.live || p.code || "";
+        var primary = p.live || p.h || p.code || "";
         // Anything off-site opens in a new tab. Tested on the resolved URL rather than
         // on "is this p.code", because p.h is a site-relative path for most projects
         // but an absolute live-demo URL for the ones with no sub-page.
