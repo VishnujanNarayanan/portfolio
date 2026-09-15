@@ -610,6 +610,17 @@
     "DekhLaw API": "DekhLaw Legal-Emergency Platform",
     "Fraud Detection": "Fraud Transaction Detection"
   };
+  // Where a flow card points. Project cards inherit the link from the registry that
+  // main.js publishes, so reordering a zone or dropping in a new project carries the
+  // right destination with it — the href below is only a fallback for a card the
+  // registry does not know (a blog post, or a project not in PROJECTS).
+  function linkFor(c) {
+    if (c.k === "b") return { href: c.href || "", ext: !!c.ext };
+    var r = (window.__PROJECT_MEDIA || {})[MEDIA_ALIAS[c.n] || c.n];
+    if (r && r.href) return { href: r.href, ext: !!r.ext };
+    return { href: c.href || "", ext: !!c.ext };
+  }
+
   function mediaFor(c) {
     // Blog cards resolve their cover from window.__BLOG_MEDIA, which gen-post.mjs
     // emits from partials/posts.json keyed by href. Changing which post a zone shows
@@ -623,28 +634,33 @@
       video: (m && m.video) || c.video || null
     };
   }
+  // Project entries carry NO href: linkFor() resolves it by name from the registry
+  // main.js publishes, so reordering a zone or dropping a project into one brings the
+  // right destination with it and there is nothing to keep in sync. Blog entries keep
+  // their own href — they are not projects. Name must match PROJECTS (or map through
+  // MEDIA_ALIAS above).
   var CARD_DATA = [
     [ // 01 Anti-Bot Scraping
-      { k: "p", n: "Market Data Platform", d: "28-pipeline NSE ingestion layer feeding 12+ datasets.", t: ["Python", "Playwright", "ETL"], href: "/projects/market-data-pipeline/" },
-      { k: "p", n: "Job Application Bot", d: "Scrapes Indeed, Glassdoor & LinkedIn; tailors a resume per match.", t: ["Python", "Playwright", "FastAPI"], href: "https://github.com/VishnujanNarayanan/Job_Application_Bot", ext: true },
-      { k: "p", n: "Product Explorer", d: "Crawlee/Playwright scraper streaming a catalog over WebSockets.", t: ["Crawlee", "Playwright", "NestJS"], href: "/projects/product-explorer/" },
+      { k: "p", n: "Market Data Platform", d: "28-pipeline NSE ingestion layer feeding 12+ datasets.", t: ["Python", "Playwright", "ETL"] },
+      { k: "p", n: "Job Application Bot", d: "Scrapes Indeed, Glassdoor & LinkedIn; tailors a resume per match.", t: ["Python", "Playwright", "FastAPI"] },
+      { k: "p", n: "Product Explorer", d: "Crawlee/Playwright scraper streaming a catalog over WebSockets.", t: ["Crawlee", "Playwright", "NestJS"] },
       { k: "b", n: "Scraping 20 Years of NSE Filings", d: "Beating bot defenses to backfill two decades of insider filings.", t: ["Scraping", "Playwright"], href: "/blog/how-i-scraped-nse-insider-filings/" }
     ],
     [ // 02 Resilient ETL & ML
-      { k: "p", n: "Fraud Detection", d: "95% of fraud caught at 0.995 ROC-AUC on 6.4M transactions.", t: ["scikit-learn", "pandas"], href: "/projects/fraud-detection/" },
-      { k: "p", n: "Minute-Level Stock Prediction", d: "Next-minute price direction over 9.4M NSE ticks.", t: ["scikit-learn", "Backtesting"], href: "/projects/nse-stock-prediction/" },
-      { k: "p", n: "Semantic Quote Retrieval", d: "Fine-tuned embeddings + FAISS over ~2,500 quotes.", t: ["FAISS", "PyTorch", "Streamlit"], href: "https://github.com/VishnujanNarayanan/Quotes_Retrieval", ext: true },
+      { k: "p", n: "Fraud Detection", d: "95% of fraud caught at 0.995 ROC-AUC on 6.4M transactions.", t: ["scikit-learn", "pandas"] },
+      { k: "p", n: "Minute-Level Stock Prediction", d: "Next-minute price direction over 9.4M NSE ticks.", t: ["scikit-learn", "Backtesting"] },
+      { k: "p", n: "Semantic Quote Retrieval", d: "Fine-tuned embeddings + FAISS over ~2,500 quotes.", t: ["FAISS", "PyTorch", "Streamlit"] },
       { k: "b", n: "Resumable ETL Pipelines", d: "Incremental loads, adaptive backoff, and reruns that repair gaps.", t: ["ETL", "Python"], href: "/blog/building-resumable-etl-pipelines/" }
     ],
     [ // 03 Deploys & Uptime
-      { k: "p", n: "Functional Task Manager", d: "Scala 3 cross-compiled by sbt and shipped to Vercel as static JS.", t: ["Scala.js", "sbt", "Vercel"], href: "https://task-manager-using-functional-progr.vercel.app/", ext: true },
-      { k: "p", n: "Job Application Bot", d: "Dockerized pipeline on AWS & GCP, Postgres on Neon.", t: ["Docker", "AWS", "GCP"], href: "https://github.com/VishnujanNarayanan/Job_Application_Bot", ext: true },
+      { k: "p", n: "Functional Task Manager", d: "Scala 3 cross-compiled by sbt and shipped to Vercel as static JS.", t: ["Scala.js", "sbt", "Vercel"] },
+      { k: "p", n: "Job Application Bot", d: "Dockerized pipeline on AWS & GCP, Postgres on Neon.", t: ["Docker", "AWS", "GCP"] },
       { k: "b", n: "Common Data Ingestion Bugs", d: "~30 bugs across a year of collection, sorted by cause. Eight threw no error at all.", t: ["Data engineering", "Reliability"], href: "/blog/a-year-of-ingestion-bugs/" },
       { k: "b", n: "How to Test a Data Pipeline", d: "92 passing tests, 3 broken features, and the checks that would have caught them.", t: ["Testing", "CI"], href: "/blog/how-to-test-a-data-pipeline/" }
     ],
     [ // 04 APIs & Apps
       { k: "p", n: "DekhLaw API", d: "~30 Express endpoints, JWT auth, and Twilio voice orchestration.", t: ["Express", "Twilio", "JWT"] },
-      { k: "p", n: "Law Firm Website", d: "Next.js 14 site — 14 routes, Resend lead capture, full SEO.", t: ["Next.js", "TypeScript", "Resend"], href: "https://smartnperfectlegal.legal/", ext: true },
+      { k: "p", n: "Law Firm Website", d: "Next.js 14 site — 14 routes, Resend lead capture, full SEO.", t: ["Next.js", "TypeScript", "Resend"] },
       { k: "b", n: "HTTP 429 and Retry Logic", d: "Transient, permanent, exhausted — the retry logic that keeps a scheduled run alive.", t: ["APIs", "Reliability"], href: "/blog/http-429-retry-logic/" },
       { k: "b", n: "Local LLM vs API", d: "A 7B model on a 6GB GPU against a hosted 70B — latency, quotas, structured output.", t: ["LLMs", "APIs"], href: "/blog/local-llm-vs-api/" }
     ]
@@ -662,8 +678,9 @@
         ? '<video class="proj-card__img proj-card__video" src="' + mv.video + '" poster="' + mv.img +
           '" muted loop playsinline preload="none" aria-hidden="true"></video>'
         : '<img class="proj-card__img" src="' + mv.img + '" alt="" loading="lazy" decoding="async">';
-    var openA = c.href ? '<a class="proj-card__media" href="' + c.href + '"' + (c.ext ? ' target="_blank" rel="noopener"' : "") + ">" : '<span class="proj-card__media">';
-    var closeA = c.href ? "</a>" : "</span>";
+    var lk = linkFor(c);
+    var openA = lk.href ? '<a class="proj-card__media" href="' + lk.href + '"' + (lk.ext ? ' target="_blank" rel="noopener"' : "") + ">" : '<span class="proj-card__media">';
+    var closeA = lk.href ? "</a>" : "</span>";
     return '<div class="proj-card flow-pcard' + (c.k === "b" ? " proj-card--blog" : "") + '" data-card="' + i + '">' +
       openA + face +
         '<span class="proj-card__reveal"><span class="proj-card__desc">' + esc(c.d) + "</span></span>" +
