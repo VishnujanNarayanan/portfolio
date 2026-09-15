@@ -2938,8 +2938,18 @@ function makeTypeIn(host, runs, opts) {
     // Market Data Platform were both stale that way). Publish a name-keyed registry
     // instead; flow.js reads it and carries no media paths of its own, so adding a
     // video here reaches every surface that shows the project.
+    // The link travels with the media for the same reason: the flow cards used to
+    // hardcode their own href, so a project that gained a deployment kept pointing at
+    // its repo in the flow until someone edited both places. Resolved here once —
+    // subpage, then live demo, then repo — so every surface agrees.
     window.__PROJECT_MEDIA = PROJECTS.reduce(function (m, p) {
-      m[p.n] = { img: p.img, video: p.video || null };
+      var href = p.h || p.live || p.code || "";
+      m[p.n] = {
+        img: p.img,
+        video: p.video || null,
+        href: href,
+        ext: /^https?:/i.test(href)
+      };
       return m;
     }, {});
 
