@@ -42,14 +42,14 @@
   var CD_CERTS = "~/portfolio-website/certificates";   // cwd the header command is typed from (came from `cd certificates`)
   var CD_BLOGS  = "~/portfolio-website/blogs";              // landing prompt dir after the blog handover
   var LINE_LEAD  = "cd certificates";                   // lead-in row: typed from home across the video zoom-out
-  var LINE_CD    = "cd ../highlights && cat scraping";  // header row: typed from ~/certificates across the flow approach
-  var LINE_REV   = "cd highlights && cat scraping";     // reverse morph target (from home): `cd certificates` ↔ this on scroll up/down
+  var LINE_CD    = "cd ../highlights && cat scope";  // header row: typed from ~/certificates across the flow approach
+  var LINE_REV   = "cd highlights && cat scope";     // reverse morph target (from home): `cd certificates` ↔ this on scroll up/down
   var LINE_UP    = "cd ..";                             // last zone types this (done as the zone-4 cards fly out)
   var LINE_BLOG  = "cd blogs";                          // flow→blog: enter the blog dir (spawned when the cards fly out)
   // Two back-strings — the `../` differs by the line's prompt/cwd, exactly like the hero side
   // (LINE_REV `cd highlights…` from home vs LINE_CD `cd ../highlights…` from ~/certificates):
-  var LINE_BLOG_BACK_PRE  = "cd highlights && cat rest-apis";    // PRE-commit morph of `cd blogs` (its prompt is ~/portfolio-website$ → no `../`)
-  var LINE_BLOG_BACK_POST = "cd ../highlights && cat rest-apis"; // POST-commit reverse, typed INTO the blogs$ line (~/…/blogs$ → needs `../`)
+  var LINE_BLOG_BACK_PRE  = "cd highlights && cat launch";    // PRE-commit morph of `cd blogs` (its prompt is ~/portfolio-website$ → no `../`)
+  var LINE_BLOG_BACK_POST = "cd ../highlights && cat launch"; // POST-commit reverse, typed INTO the blogs$ line (~/…/blogs$ → needs `../`)
   var cdStack = flow.querySelector(".flow__cd-stack");
   var flowCd = flow.querySelector(".flow__cd");   // CLI wrapper — carries the scroll-darkened colour vars
   var writingEl = document.getElementById("blog"); // the writing/blog section — drives the exit approach
@@ -98,7 +98,7 @@
     return { row: row, cmd: row.querySelector(".flow__cd-cmd") };
   }
   var leadRow = cdStack ? makeRow(CD_HOME) : null;  // row -1: `~$ cd certificates` — the lead-in (types over the zoom-out)
-  var cdHead = cdStack ? makeRow(CD_CERTS) : null;  // row 0: `~/certificates$ cd ../highlights && cat scraping`
+  var cdHead = cdStack ? makeRow(CD_CERTS) : null;  // row 0: `~/certificates$ cd ../highlights && cat scope`
   if (cdHead) cdHead.row.style.display = "none";    // header stays hidden until the lead-in finishes
   var domLines = [];                                 // appended command rows, oldest→newest (append-only log)
   function renderStack() {                            // newest row = cur, one above = prev, rest = past; scroll up
@@ -198,13 +198,13 @@
      threshold forward starts a fresh empty line typing the next command; crossing back
      un-spawns it (the zone ahead is empty) and re-activates the previous, committed line. */
   // The 4 highlight domains are numbered 1..4 and rendered as `cat <word>`. The terminal
-  // is already `cd`'d into scraping (domain 1 = the highlights we're on), so the FORWARD
-  // reveal starts at domain 2 (etl-ml) — see domFwdTarget (z+2). Keeping the NUMBER-based
+  // is already `cd`'d into scope (domain 1 = the highlights we're on), so the FORWARD
+  // reveal starts at domain 2 (prototype) — see domFwdTarget (z+2). Keeping the NUMBER-based
   // direction-aware logic from main means each zone knows its forward target (z+2) and
   // backward target (z), so reversing untypes and retypes the correct neighbour with a
   // MINIMAL edit — just more untyping than before, since the words share only `cat ` and
   // then diverge (unlike the old single-digit `cat domain N`).
-  var DOMAIN_WORDS = { 1: "scraping", 2: "etl-ml", 3: "infra-ops", 4: "rest-apis" };
+  var DOMAIN_WORDS = { 1: "scope", 2: "prototype", 3: "features", 4: "launch" };
   var DOM_PER_CHAR = 0.06;   // global-scroll units per char for the reversal correction (min pace)
   var domFrom = "", domTarget = "", domBoundary = 0, domBack = 0, domFwd = 0;
   var domDisp = "", domActiveZ = -1, domDirState = 1, domStartG = 0, domEndG = 0, domLastG = null, domDir = 1;
@@ -247,11 +247,11 @@
   // ONE append-only stack, ONE element (moved to <body> and positioned manually below), NO
   // separate hero terminal and NO handoff: the lead row types `cd certificates` from home across
   // the video zoom-out; when that finishes the header row appears and types `cd ../highlights &&
-  // cat scraping` across the flow approach; then the zone engine appends `cat <domain>` lines.
+  // cat scope` across the flow approach; then the zone engine appends `cat <domain>` lines.
   var started = false;
   // Reversal (restored): once the section has been pinned, scrolling back UP out of the pin
   // appends a fresh `cd certificates` line UNDER the last (`cd ..`) and types it as you go up; if
-  // you reverse DOWN it minimal-edit-morphs `cd certificates` → `cd highlights && cat scraping`
+  // you reverse DOWN it minimal-edit-morphs `cd certificates` → `cd highlights && cat scope`
   // (keeping the shared `cd ` prefix). A LOCAL swap so it never touches the zone engine globals.
   var apDir = 1, apLastP = null, apStartP = 0, certLine = null;
   // Re-lead: a FRESH `cd certificates` line popped when the return trip crosses the line
@@ -313,7 +313,7 @@
         // `cd certificates` line — the return-trip mirror of the first-run lead-in — instead
         // of only morphing the existing one. It types `cd certificates` with the video zoom
         // while up in that region, then hands off to the reversal morph (→ `cd highlights &&
-        // cat scraping`) when you scroll forward back past the line. Movements that DON'T reach
+        // cat scope`) when you scroll forward back past the line. Movements that DON'T reach
         // this line never touch it — the reversal morph below is left exactly as it was.
         if (apPrevHeroPB === null) apPrevHeroPB = heroPB;
         var crossBackThr = apPrevHeroPB >= 0.999 && heroPB < 0.999;   // crossed the "starts moving up" line going up
@@ -331,7 +331,7 @@
             // you scroll (nothing to untype — the `cd certificates` already happened, above).
             leadLine.cmd.textContent = "";
           } else {
-            // Scrolled forward back past the line → type `cd ../highlights && cat scraping`
+            // Scrolled forward back past the line → type `cd ../highlights && cat scope`
             // (LINE_CD) FROM THE START with the approach, exactly like the first-run header;
             // finishes at the pin. Reversing back up past the line empties it again.
             leadLine.cmd.textContent = LINE_CD.slice(0, Math.round(clamp(approachP, 0, 1) * LINE_CD.length));
@@ -345,7 +345,7 @@
           var pp = apStartP > 1e-6 ? clamp((apStartP - approachP) / apStartP, 0, 1) : 1;
           // Direction flip → re-swap toward that direction's target, anchored at the current pp:
           // scrolling UP heads to `cd certificates` (pp→1), reversing DOWN morphs back to
-          // `cd highlights && cat scraping` (pp→0), untyping only past the shared `cd ` prefix.
+          // `cd highlights && cat scope` (pp→0), untyping only past the shared `cd ` prefix.
           if (apDir < 0 && certDir !== -1) { certDir = -1; certSet(certDisp, LINE_LEAD); certAnchorPP = pp; certEndPP = 1; }
           else if (apDir >= 0 && certDir !== 1) { certDir = 1; certSet(certDisp, LINE_REV); certAnchorPP = pp; certEndPP = 0; }
           var cspan = certEndPP - certAnchorPP;
@@ -376,8 +376,8 @@
     if (z !== domActiveZ) {
       // Threshold crossed — PRINT a fresh new line UNDER the last and type the whole
       // command from empty toward this zone's DIRECTION-AWARE target (dirTarget): forward
-      // types the forward domain (e.g. zone 1 → `cat etl-ml`), backward the backward one
-      // (count DOWN — zone 3 → `cat etl-ml`, zone 2 → `cat scraping`). The two boundary zones
+      // types the forward domain (e.g. zone 1 → `cat prototype`), backward the backward one
+      // (count DOWN — zone 3 → `cat prototype`, zone 2 → `cat scope`). The two boundary zones
       // type `cd ..` toward the OUTSIDE (zone 1 back, last zone forward) — held empty until
       // the zone centre, then typed over the second half (see below).
       // Going back appends below just like forward; the stack only ever scrolls up.
@@ -430,16 +430,16 @@
 
      Commit-then-spawn, exactly like the hero-side cert reversal (see driveTerminal):
       • PRE-COMMIT (threshold NOT yet reached): the `cd blogs` line is still live, so
-        reversing MORPHS IT IN PLACE → `cd highlights && cat rest-apis` (no `../` — it sits
+        reversing MORPHS IT IN PLACE → `cd highlights && cat launch` (no `../` — it sits
         at the ~/portfolio-website$ prompt).
       • COMMIT (threshold reached forward): `cd blogs` freezes, the blogs$ prompt spawns.
       • POST-COMMIT: the committed `cd blogs` is never edited — reversing types the back
-        command `cd ../highlights && cat rest-apis` INTO that same blogs$ line (no extra
+        command `cd ../highlights && cat launch` INTO that same blogs$ line (no extra
         line), and re-forwarding untypes it. */
   var HP_BLOG_END = 0.5;   // `cd blogs` finishes AS the blog panels fly in (bp = 1)
   var blogHO = null;       // { blogRow, promptRow, committed } while the handover is live
   var lastHp = -1;         // last hp — for the change-gate + the scroll direction
-  // Minimal-edit morph for the PRE-COMMIT `cd blogs` ↔ `cd ../highlights && cat rest-apis`
+  // Minimal-edit morph for the PRE-COMMIT `cd blogs` ↔ `cd ../highlights && cat launch`
   // swap (its own state so it never collides with the zone engine or the cert reversal).
   var blogFrom = "", blogTarget = "", blogBnd = 0, blogBk = 0, blogFw = 0;
   var blogDisp = "", blogDir = 1, blogAnchor = 0, blogEnd = 1;
@@ -484,7 +484,7 @@
       blogDisp = ""; blogDir = 1; blogSwap("", LINE_BLOG); blogAnchor = 0; blogEnd = 1;
     }
     if (!blogHO.committed) {
-      // PRE-COMMIT — the cd blogs line morphs in place (cd blogs ↔ cd highlights && cat rest-apis).
+      // PRE-COMMIT — the cd blogs line morphs in place (cd blogs ↔ cd highlights && cat launch).
       if (dir < 0 && blogDir !== -1) { blogDir = -1; blogSwap(blogDisp, LINE_BLOG_BACK_PRE); blogAnchor = bp; blogEnd = 0; }
       else if (dir >= 0 && blogDir !== 1) { blogDir = 1; blogSwap(blogDisp, LINE_BLOG); blogAnchor = bp; blogEnd = 1; }
       var span = blogEnd - blogAnchor;
@@ -640,29 +640,29 @@
   // their own href — they are not projects. Name must match PROJECTS (or map through
   // MEDIA_ALIAS above).
   var CARD_DATA = [
-    [ // 01 Anti-Bot Scraping
-      { k: "p", n: "Market Data Platform", d: "28-pipeline NSE ingestion layer feeding 12+ datasets.", t: ["Python", "Playwright", "ETL"] },
-      { k: "p", n: "Job Application Bot", d: "Scrapes Indeed, Glassdoor & LinkedIn; tailors a resume per match.", t: ["Python", "Playwright", "FastAPI"] },
-      { k: "p", n: "Product Explorer", d: "Crawlee/Playwright scraper streaming a catalog over WebSockets.", t: ["Crawlee", "Playwright", "NestJS"] },
-      { k: "b", n: "Scraping 20 Years of NSE Filings", d: "Beating bot defenses to backfill two decades of insider filings.", t: ["Scraping", "Playwright"], href: "/blog/how-i-scraped-nse-insider-filings/" }
+    [ // 01 From Idea to Scope
+      { k: "p", n: "Trader Sentiment Analysis", d: "Testing an idea with data before building it: does contrarian trading pay?", t: ["pandas", "SciPy", "Streamlit"] },
+      { k: "p", n: "Job Application Bot", d: "Started from a real pain: 200 applicants a role. Scoped to scrape, score, tailor.", t: ["Product", "Python", "LLM"] },
+      { k: "b", n: "Predicting Stocks by the Minute", d: "9.4M ticks, an honest baseline, and the backtest that said: don't build this.", t: ["Validation", "ML"], href: "/blog/minute-level-stock-prediction/" },
+      { k: "b", n: "Local LLM vs API", d: "Build or buy? A 7B model on a 6GB GPU against a hosted 70B, on cost, speed and quotas.", t: ["LLMs", "Trade-offs"], href: "/blog/local-llm-vs-api/" }
     ],
-    [ // 02 Resilient ETL & ML
-      { k: "p", n: "Fraud Detection", d: "95% of fraud caught at 0.995 ROC-AUC on 6.4M transactions.", t: ["scikit-learn", "pandas"] },
-      { k: "p", n: "Minute-Level Stock Prediction", d: "Next-minute price direction over 9.4M NSE ticks.", t: ["scikit-learn", "Backtesting"] },
-      { k: "p", n: "Semantic Quote Retrieval", d: "Fine-tuned embeddings + FAISS over ~2,500 quotes.", t: ["FAISS", "PyTorch", "Streamlit"] },
-      { k: "b", n: "Resumable ETL Pipelines", d: "Incremental loads, adaptive backoff, and reruns that repair gaps.", t: ["ETL", "Python"], href: "/blog/building-resumable-etl-pipelines/" }
-    ],
-    [ // 03 Deploys & Uptime
-      { k: "p", n: "Functional Task Manager", d: "Scala 3 cross-compiled by sbt and shipped to Vercel as static JS.", t: ["Scala.js", "sbt", "Vercel"] },
-      { k: "p", n: "Job Application Bot", d: "Dockerized pipeline on AWS & GCP, Postgres on Neon.", t: ["Docker", "AWS", "GCP"] },
-      { k: "b", n: "Common Data Ingestion Bugs", d: "~30 bugs across a year of collection, sorted by cause. Eight threw no error at all.", t: ["Data engineering", "Reliability"], href: "/blog/a-year-of-ingestion-bugs/" },
-      { k: "b", n: "How to Test a Data Pipeline", d: "92 passing tests, 3 broken features, and the checks that would have caught them.", t: ["Testing", "CI"], href: "/blog/how-to-test-a-data-pipeline/" }
-    ],
-    [ // 04 APIs & Apps
+    [ // 02 Fast, Testable Prototype
+      { k: "p", n: "Product Explorer", d: "From a brief to a live full-stack app: scraper, Postgres, Next.js UI.", t: ["Next.js", "NestJS", "PostgreSQL"] },
       { k: "p", n: "DekhLaw API", d: "~30 Express endpoints, JWT auth, and Twilio voice orchestration.", t: ["Express", "Twilio", "JWT"] },
-      { k: "p", n: "Law Firm Website", d: "Next.js 14 site — 14 routes, Resend lead capture, full SEO.", t: ["Next.js", "TypeScript", "Resend"] },
-      { k: "b", n: "HTTP 429 and Retry Logic", d: "Transient, permanent, exhausted — the retry logic that keeps a scheduled run alive.", t: ["APIs", "Reliability"], href: "/blog/http-429-retry-logic/" },
-      { k: "b", n: "Local LLM vs API", d: "A 7B model on a 6GB GPU against a hosted 70B — latency, quotas, structured output.", t: ["LLMs", "APIs"], href: "/blog/local-llm-vs-api/" }
+      { k: "p", n: "Semantic Quote Retrieval", d: "Search by meaning, not keywords: fine-tuned embeddings + FAISS, demo on Streamlit.", t: ["FAISS", "PyTorch", "Streamlit"] },
+      { k: "p", n: "Functional Task Manager", d: "Scala 3 cross-compiled by sbt and shipped to Vercel as static JS.", t: ["Scala.js", "sbt", "Vercel"] }
+    ],
+    [ // 03 Data, AI & Features
+      { k: "p", n: "Market Data Platform", d: "28-pipeline NSE ingestion layer feeding 12+ datasets.", t: ["Python", "Playwright", "ETL"] },
+      { k: "p", n: "Fraud Detection", d: "95% of fraud caught at 0.995 ROC-AUC on 6.4M transactions.", t: ["scikit-learn", "pandas"] },
+      { k: "p", n: "Support Ticket Classifier", d: "Routes support tickets by issue type and pulls out the key details.", t: ["scikit-learn", "NLTK", "Gradio"] },
+      { k: "b", n: "Common Data Ingestion Bugs", d: "~30 bugs across a year of collection, sorted by cause. Eight threw no error at all.", t: ["Bug fixes", "Reliability"], href: "/blog/a-year-of-ingestion-bugs/" }
+    ],
+    [ // 04 Launch & Iterate
+      { k: "p", n: "Law Firm Website", d: "Live client site on Next.js 14: 14 routes, Resend lead capture, full SEO.", t: ["Next.js", "TypeScript", "Resend"] },
+      { k: "p", n: "Binance Futures Trading Bot", d: "Live API, kept warm and patched in production when ad-blockers broke its docs.", t: ["FastAPI", "Docker", "Render"] },
+      { k: "p", n: "Job Application Bot", d: "Dockerized pipeline on AWS & GCP, Postgres on Neon.", t: ["Docker", "AWS", "GCP"] },
+      { k: "b", n: "How to Test a Data Pipeline", d: "92 passing tests, 3 broken features, and the checks that would have caught them.", t: ["Testing", "CI"], href: "/blog/how-to-test-a-data-pipeline/" }
     ]
   ];
   function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
@@ -1019,7 +1019,7 @@
     // in place; release at the pin so zone 1 enters at the exact terminal threshold.
     var globalRaw = !inPlace ? -1 : (total > 0 ? clamp((-rect.top) / total * N - 0.5, -1, N) : 0);
     // Terminal (ONE element/stack): the lead row types `cd certificates` over the video zoom-out
-    // (heroPB), the header types `cd ../highlights && cat scraping` over the approach, then the
+    // (heroPB), the header types `cd ../highlights && cat scope` over the approach, then the
     // zone lines append in the pin. positionTerminal rides the single element park→rest→away.
     var yeHero = window.__heroY ? window.__heroY(window.scrollY, vh) : window.scrollY;
     var heroPB = clamp((yeHero - vh) / vh, 0, 1);
