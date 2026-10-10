@@ -68,8 +68,8 @@ const MARQUEE_TRACKS = [0, 1]
 
 // The footer headline. Blog pages ask for the subscription the card below it
 // takes; every other page keeps the site's line.
-const FOOTER_HEADLINE_DEFAULT = `          <span class="lfooter__hl-row">Data in.</span>
-          <span class="lfooter__hl-row"><span class="is-hl">Products</span> out.</span>`;
+const FOOTER_HEADLINE_DEFAULT = `          <span class="lfooter__hl-row">With great ideas comes</span>
+          <span class="lfooter__hl-row"><span class="is-hl">great software.</span></span>`;
 const FOOTER_HEADLINE_BLOG = `          <span class="lfooter__hl-row">Subscribe to my</span>
           <span class="lfooter__hl-row"><span class="is-hl">Newsletter</span></span>`;
 

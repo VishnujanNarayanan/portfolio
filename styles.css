@@ -306,8 +306,10 @@ header .header__nav-left a{color:#050419;font-size:16px}
 .hero .hero__bg{position:absolute;inset:0;z-index:0;background:rgb(208,225,235)}
 .flow .flow__sky{background:transparent!important}
 
-/* Flow titles over the dark shader background → white */
-.flow .flow-panel__title{color:var(--flow-title-col,#4d8bff)}
+/* Flow titles: light blue over the dark zones (1-2), deep blue over the light zones
+   (3-4, set inline by flow.js), with one accent word in the hero's bright blue */
+.flow .flow-panel__title{color:var(--flow-title-col,#9cc3ff)}
+.flow .flow-panel__title .flow-panel__accent{color:var(--color-highlight)}
 
 /* Journey wheel/spine → bright blue (over the dark flow background) */
 .flow-journey__line{stroke:rgba(var(--journey-rgb,77,139,255),.25)}
@@ -374,7 +376,7 @@ header .header__nav-left a{color:#050419;font-size:16px}
 .writing__pad{flex:0 0 clamp(120px,26vw,520px);align-self:stretch;position:relative;z-index:2;display:flex;align-items:flex-start;padding:calc(50vh - var(--h)/2) clamp(20px,3vw,56px) 0}
 .writing__intro{max-width:360px}
 .writing__eyebrow{display:inline-block;font-family:var(--font-ui);font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#26a269;margin-bottom:14px}
-.writing__title{font-family:"Inter",sans-serif;font-weight:600;font-size:clamp(40px,5vw,68px);line-height:.98;letter-spacing:-.03em;color:#1b2236;margin:0}
+.writing__title{font-family:"Inter",sans-serif;font-weight:600;font-size:clamp(40px,5vw,68px);line-height:.98;letter-spacing:-.03em;color:var(--color-highlight);margin:0}
 .writing__desc{margin:18px 0 0;font-size:clamp(14px,1.1vw,16px);line-height:1.6;color:rgba(27,34,54,.8);max-width:34ch}
 
 /* Strip group fills the remaining width on the right. Collapsed panels SHARE that width
@@ -730,6 +732,9 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 /* Phase 2 is TIMED (fired by .terminal.is-revealing, not scroll-scrubbed):
    the pre-lines collapse+fade so SELECT eases to the top, then (transition-delay)
    the project cards come into picture. Reverses when the class is removed. */
+/* the pinned `mysql> SELECT * FROM projects;` line reads as the section's heading */
+.term-sel{font-size:17px;line-height:1.5;font-weight:500}
+@media (max-width:820px){.term-sel{font-size:13px}}
 .term-pre{flex:0 0 auto;overflow:hidden;max-height:60vh;opacity:1;will-change:max-height,opacity;transition:max-height .6s cubic-bezier(.4,0,.2,1),opacity .45s ease}
 .terminal.is-revealing .term-pre{max-height:0;opacity:0}
 /* Result fills the remaining body height so the cards viewport can clip + pan.
@@ -759,7 +764,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 /* Panel appears with the SAME rise+fade as the cards (Lando reveal), keyed off the
    LATCHED .is-revealing class (same as the cards) so once it appears it STAYS — it
    does not vanish when you scroll back up. */
-.term-side{position:relative;flex:0 0 clamp(220px,21vw,330px);align-self:flex-start;max-height:calc(100vh - var(--header-height) - 64px);overflow-y:auto;overscroll-behavior:contain;border:1px solid rgba(124,208,255,.22);border-left:0;border-radius:0 10px 10px 0;background:transparent;min-height:240px;opacity:0;transform:translateY(64px);will-change:opacity,transform;transition:opacity .9s cubic-bezier(.19,1,.22,1) .5s,transform .9s cubic-bezier(.19,1,.22,1) .5s}
+.term-side{position:relative;flex:0 0 clamp(250px,24vw,360px);align-self:flex-start;max-height:calc(100vh - var(--header-height) - 64px);overflow-y:auto;overscroll-behavior:contain;border:1px solid rgba(124,208,255,.22);border-left:0;border-radius:0 10px 10px 0;background:transparent;min-height:240px;opacity:0;transform:translateY(64px);will-change:opacity,transform;transition:opacity .9s cubic-bezier(.19,1,.22,1) .5s,transform .9s cubic-bezier(.19,1,.22,1) .5s}
 .term-side-contours{position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:0 10px 10px 0}
 .term-side .filter{position:relative;z-index:1}
 .terminal.is-revealing .term-side{opacity:1;transform:none}
@@ -769,7 +774,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .term-side::-webkit-scrollbar{width:8px}
 .term-side::-webkit-scrollbar-thumb{background:rgba(124,208,255,.35);border-radius:8px;border:2px solid transparent;background-clip:content-box}
 .term-side::-webkit-scrollbar-thumb:hover{background:rgba(124,208,255,.55);background-clip:content-box}
-@media (max-width:1100px){.term-side{flex-basis:clamp(190px,26vw,290px)}}
+@media (max-width:1100px){.term-side{flex-basis:clamp(230px,29vw,320px)}}
 @media (max-width:820px){.term-pgrid{flex-direction:column;margin-left:-18px;margin-right:-18px;overflow:visible}.term-side{flex:0 0 auto;width:100%;min-height:0;max-height:none;overflow:visible;translate:none;border-left:1px solid rgba(124,208,255,.22);border-radius:0}}
 /* hidden by the side-panel filter */
 .proj-card.is-filtered-out{display:none}
@@ -788,12 +793,20 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .filter__item:hover{color:#eaf0ff}
 .filter__cb{position:absolute;opacity:0;width:0;height:0}
 .filter__box{flex:0 0 auto;width:14px;height:14px;border:1px solid rgba(124,208,255,.45);border-radius:4px;position:relative;transition:background .2s,border-color .2s}
-.filter__cb:checked+.filter__box{background:#4d8bff;border-color:#4d8bff}
-.filter__cb:checked+.filter__box:after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #0d1628;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.filter__item:hover .filter__box{border-color:var(--color-highlight)}   /* hover: bright-blue outline */
+.filter__cb:checked+.filter__box{background:var(--color-highlight);border-color:var(--color-highlight)}
+.filter__cb:checked+.filter__box:after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
 .filter__cb:focus-visible+.filter__box{outline:2px solid #7fd0ff;outline-offset:2px}
 .filter__item .filter__label{flex:1 1 auto}
 .filter__cb:checked~.filter__label{color:#eaf0ff}
 .filter__n{flex:0 0 auto;font-size:11px;color:#6b76a0;font-variant-numeric:tabular-nums}
+/* No per-option counts. Tools in two columns so the sidebar isn't a long scroll; a name
+   that doesn't fit wraps (at the hyphen if it has one) — never truncated */
+.filter__n{display:none}
+.filter__group[data-group="tools"] .filter__items{display:grid;grid-template-columns:1fr 1fr;column-gap:6px}
+.filter__group[data-group="tools"] .filter__item{padding-left:10px;min-width:0;gap:7px;align-items:flex-start}
+.filter__group[data-group="tools"] .filter__item .filter__box{margin-top:2px}
+.filter__label{min-width:0;overflow-wrap:anywhere;line-height:1.35}
 .filter__clear{margin-top:10px;align-self:flex-start;background:none;border:1px solid rgba(124,208,255,.4);border-radius:999px;color:#bfe0ff;font:inherit;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;padding:6px 13px;cursor:pointer;transition:color .25s,background .25s,border-color .25s}
 .filter__clear:hover{color:#0d1628;background:#4d8bff;border-color:#4d8bff}
 /* Each card pops in with the zone-title APPEAR animation, copied EXACTLY from
@@ -812,11 +825,12 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
    past the bottom-right notch. Polygon = the frame path's notch as % of the 407×411
    viewBox: shelf top y=371.983→90.5%, ledge x=263.329→64.7%, bevel x=210.862→51.8%. */
 .proj-card__media{position:absolute;inset:0;overflow:hidden;clip-path:polygon(0 0,100% 0,100% 90.5%,64.7% 90.5%,51.8% 100%,0 100%)}
-.proj-card__img{width:100%;height:100%;object-fit:cover;filter:saturate(.92) brightness(.78);transition:transform .7s cubic-bezier(.19,1,.22,1),filter .5s}
+.proj-card__img{width:100%;height:100%;object-fit:cover;filter:saturate(.95) brightness(.88);transition:transform .7s cubic-bezier(.19,1,.22,1),filter .5s}
 .proj-card:hover .proj-card__img{transform:scale(1.06);filter:saturate(1.05) brightness(1.03)}
-/* Inverted: blue reveal panel is OPEN by default (blue tint), and the SAME wipe
-   animation closes it on hover/active to expose the full-colour photo. */
-.proj-card__reveal{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;padding:22px;background:linear-gradient(160deg,rgba(28,31,42,.72),rgba(56,61,80,.92));/* Lid edge = a parabola: depth at x is A*((x-50)/50)^2, so the single number A is the
+/* Inverted: the reveal panel is OPEN by default — a mild tint over the photo, darker
+   only at the bottom behind the description — and the SAME wipe animation closes it
+   on hover/active to expose the full-colour photo. */
+.proj-card__reveal{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;padding:22px;background:linear-gradient(to top,rgba(20,23,34,.8) 0%,rgba(28,31,42,.48) 32%,rgba(28,31,42,.34) 55%,rgba(28,31,42,.3) 100%);/* Lid edge = a parabola: depth at x is A*((x-50)/50)^2, so the single number A is the
    curviness. A was 14%, which bowed hard enough to read as a scallop; 6% keeps the
    curve legible without the pronounced dip. Recompute all four intermediate pairs
    from A if you change it — they are not independent. */
@@ -827,7 +841,7 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .proj-card__frame{position:absolute;inset:0;pointer-events:none;z-index:10}
 .proj-card__frame svg{width:100%;height:100%;display:block}
 .proj-card__frame.is-base{color:rgba(124,208,255,.26)}
-.proj-card__frame.is-overlay{color:#4d8bff;opacity:0;transition:opacity .4s ease}
+.proj-card__frame.is-overlay{color:var(--color-highlight);opacity:0;transition:opacity .4s ease}
 .proj-card:hover .proj-card__frame.is-overlay,.proj-card:focus-within .proj-card__frame.is-overlay{opacity:1}
 /* label pinned bottom (title left, index accent right), above the image, below reveal-text */
 /* Title block sits on the taller LEFT portion of the notched frame (the bottom
@@ -838,7 +852,10 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 /* "View code" button sits IN the bottom-right notch (the cut space the image used to
    spill into) — anchored to that corner and sized to fit the notch band (~9.5% tall). */
 .proj-card__code{position:absolute;right:-1%;bottom:-0.75%;z-index:11;display:inline-flex;align-items:center;gap:4px;padding:4px 11px;font-family:var(--font-ui);font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#bfe0ff;background:rgba(13,22,40,.7);border:1px solid rgba(124,208,255,.4);border-radius:999px;text-decoration:none;pointer-events:auto;transition:color .3s,background .3s,border-color .3s}
-.proj-card__code:hover{color:#0d1628;background:#4d8bff;border-color:#4d8bff}
+/* hovering the CARD lights the button: outline + text go bright blue; hovering the
+   button itself still fills it (more specific, so it wins while both apply) */
+.proj-card:hover .proj-card__code,.proj-card:focus-within .proj-card__code,.proj-card.is-active .proj-card__code{color:var(--color-highlight);border-color:var(--color-highlight)}
+.proj-card .proj-card__code:hover{color:#fff;background:var(--color-highlight);border-color:var(--color-highlight)}
 .term-result__meta{margin-top:16px;color:#7e88aa;font-size:13px;opacity:0;transition:opacity .4s ease}
 .terminal.is-revealing .term-result__meta{opacity:1;transition-delay:var(--meta-d,1s)}
 @media (prefers-reduced-motion:reduce){.term-result__meta{opacity:1;transition:none}}
@@ -993,8 +1010,8 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 @media (max-width:820px){.skills-curve{display:none}}
 /* Blank dark breathing room below the projects terminal, before the curved
    seam + Skills section — so the transition doesn't feel congested. */
-.projects-tail{position:relative;z-index:1;height:clamp(132px,25.2vh,276px);background-color:#0f1628}
-@media (max-width:820px){.projects-tail{height:72px}}
+.projects-tail{position:relative;z-index:1;height:clamp(66px,12.6vh,138px);background-color:#0f1628}
+@media (max-width:820px){.projects-tail{height:36px}}
 
 /* ============================================================
    What's Up — On Socials (Lando fanned-card spread)
@@ -1425,11 +1442,11 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 /* Class-driven activation = the same look as a :hover, so text-hover and card-hover
    both light the card up: zoom/darken the image, wipe the reveal open, blue border. */
 .proj-card.is-active .proj-card__img{transform:scale(1.06);filter:saturate(1.05) brightness(1.03)}
-.proj-card.is-active .proj-card__shot{filter:brightness(.78)}
+.proj-card.is-active .proj-card__shot{filter:brightness(.88)}
 .proj-card.is-active .proj-card__reveal{clip-path:polygon(0% 100%,12.5% 100%,25% 100%,37.5% 100%,50% 100%,62.5% 100%,75% 100%,87.5% 100%,100% 100%,100% 100%,0% 100%);transition:clip-path .65s cubic-bezier(.19,1,.22,1)}
-/* Activation and hover brighten the ring to cyan and round both it and the media.
+/* Activation and hover turn the ring the hero's bright blue and round both it and the media.
    .is-active is how flow.js mirrors hover from the text list, so the two must match. */
-.flow-pcard.is-active::after,.flow-pcard:hover::after{border-color:#7cd0ff;border-radius:6.388%}
+.flow-pcard.is-active::after,.flow-pcard:hover::after{border-color:var(--color-highlight);border-radius:6.388%}
 .flow-pcard.is-active .proj-card__media,.flow-pcard:hover .proj-card__media{border-radius:6.388%}
 
 @media (max-width:820px){
@@ -1537,8 +1554,8 @@ html.boot-active #boot-loader{display:flex}
 .reel-char{display:inline-block;position:relative;overflow:hidden;vertical-align:top}
 .reel-char__col{display:block;position:relative;transition:transform .2s var(--ease-default);transition-delay:var(--hd-rev,0s);will-change:transform}
 .reel-char__a{display:block;color:inherit}
-.reel-char__c{display:block;position:absolute;left:0;top:100%;width:100%;color:#3ddc84}
-.flow-panel--light .reel-char__c{color:#26a269}
+.reel-char__c{display:block;position:absolute;left:0;top:100%;width:100%;color:#9cc3ff}   /* zones 1-2: the light title blue */
+.flow-panel--light .reel-char__c{color:#231d7a}   /* zones 3-4: the deep title blue */
 .flow-panel__item.is-active .reel-char__col,.flow-panel__item:hover .reel-char__col,.flow-panel__item:focus-visible .reel-char__col{transform:translateY(-100%);transition-delay:var(--hd,0s)}
 @media (prefers-reduced-motion:reduce){.reel-char__col{transition:none}}
 
@@ -1592,17 +1609,16 @@ html.boot-active #boot-loader{display:flex}
   -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
   -webkit-mask-position:center;mask-position:center;
 }
-/* static contour lines inside the box (Lando blobs pattern, recoloured blue) */
-.lfooter__pattern{
-  position:absolute;inset:0;width:100%;height:100%;
-  object-fit:cover;opacity:.14;pointer-events:none;
-}
+
+/* contour lines inside the box (images/footer-contours.webp: light-blue lines on
+   transparent), faint and behind the content */
+.lfooter__pattern{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.22;pointer-events:none}
 
 /* inner content column */
 .lfooter__inner{
   position:absolute;inset:0;
   display:flex;flex-direction:column;
-  padding:clamp(56px,6.5vw,110px) clamp(28px,6vw,110px) 0;
+  padding:clamp(84px,9vw,150px) clamp(28px,6vw,110px) 0;   /* headline sits a little lower */
 }
 
 /* big headline */
@@ -1611,30 +1627,28 @@ html.boot-active #boot-loader{display:flex}
   font-weight:700;text-transform:uppercase;
   letter-spacing:clamp(-1px,-.3vw,-4px);
   line-height:.96;
-  font-size:clamp(34px,6.6vw,112px);
+  font-size:clamp(30px,4.6vw,76px);
 }
 .lfooter__hl-row{display:block}
-.lfooter__headline .is-hl{color:var(--lf-sky-bright)}
+.lfooter__headline .is-hl{color:var(--color-highlight)}
 
-/* left / right columns */
+/* left / right columns — each centre-aligned */
 .lfooter__cols{
   display:flex;justify-content:space-between;align-items:flex-start;
-  gap:24px;margin-top:auto;margin-bottom:clamp(128px,16vw,265px);
+  gap:24px;margin-top:auto;margin-bottom:clamp(100px,12.5vw,210px);
+  padding:0 clamp(20px,5vw,90px);                  /* columns drawn in toward the centre */
 }
-.lfooter__col{display:flex;flex-direction:column;gap:6px}
-.lfooter__col--right{text-align:right;align-items:flex-end}
+.lfooter__col{display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center}
 .lfooter__col-label{
   font-size:12px;letter-spacing:1.5px;text-transform:uppercase;
   color:var(--lf-dim);margin-bottom:10px;
 }
 .lfooter__navlink{
   font-weight:700;text-transform:uppercase;letter-spacing:.3px;
-  font-size:clamp(18px,1.9vw,30px);line-height:1.18;color:#f4f8ff;
+  font-size:clamp(17px,1.7vw,27px);line-height:1.18;color:#f4f8ff;
   transition:color .25s ease,transform .25s ease;width:max-content;
 }
-.lfooter__col--right .lfooter__navlink{align-self:flex-end}
-.lfooter__navlink:hover{transform:translateX(2px)}
-.lfooter__col--right .lfooter__navlink:hover{transform:translateX(-2px)}
+.lfooter__navlink:hover{transform:translateY(-2px)}
 
 /* portrait cutout — bottom-centre of the box, like the reference's helmet
    (above the marquee, below the email pill; clipped by the notched mask) */
@@ -1663,7 +1677,7 @@ html.boot-active #boot-loader{display:flex}
 }
 @keyframes lf-mq{to{transform:translateX(-100%)}}
 
-/* email pill — sits on the bottom-centre tab of the mask */
+/* email pill — bottom centre of the box */
 .lfooter__email{
   position:absolute;left:50%;bottom:20px;transform:translateX(-50%);
   z-index:3;
@@ -1675,21 +1689,10 @@ html.boot-active #boot-loader{display:flex}
   font-family:var(--font-ui),sans-serif;
   font-weight:500;text-transform:uppercase;letter-spacing:var(--tracking-wide);font-size:var(--text-sm);
   padding:14px 26px;border-radius:999px;
-  transition:background .25s ease,transform .25s ease;
+  transition:background .25s ease,color .25s ease,transform .25s ease;
 }
-.lfooter__email:hover{background:#aed6ff;transform:translateX(-50%) translateY(-2px)}
+.lfooter__email:hover{background:var(--color-highlight);color:#fff;transform:translateX(-50%) translateY(-2px)}
 
-/* legal row — in the gradient shelves either side of the bottom tab */
-.lfooter__bottom{
-  position:absolute;left:12px;right:12px;bottom:4px;
-  display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
-  font-size:12px;letter-spacing:.2px;color:var(--lf-ink);
-  pointer-events:none;
-}
-.lfooter__copy{font-size:clamp(9px,.68vw,12px);white-space:nowrap}  /* must fit the mask's left shelf (18% wide), which scales with vw */
-.lfooter__legal{display:flex;gap:22px}
-.lfooter__legal a{color:var(--lf-ink);pointer-events:auto;transition:color .25s ease}
-.lfooter__legal a:hover{color:var(--lf-sky)}
 
 @media (prefers-reduced-motion:reduce){
   .lfooter__mq-track{animation:none}
@@ -1698,16 +1701,15 @@ html.boot-active #boot-loader{display:flex}
 @media (max-width:820px){
   .lfooter{padding:12px 12px 0;--lf-lead:clamp(70px,14vh,140px)}
   .lfooter__clip{aspect-ratio:auto;-webkit-mask-image:none;mask-image:none;border-radius:22px}
-  .lfooter__inner{position:static;padding:36px 22px 0}
-  .lfooter__headline{font-size:clamp(30px,9vw,44px);letter-spacing:-1px}
-  .lfooter__cols{flex-direction:row;gap:18px;margin-top:34px;margin-bottom:0}
-  .lfooter__navlink{font-size:18px}
+  .lfooter__inner{position:static;padding:52px 22px 0}
+  .lfooter__headline{font-size:clamp(24px,7vw,34px);letter-spacing:-.5px}
+  .lfooter__cols{flex-direction:row;gap:18px;margin-top:34px;margin-bottom:0;padding:0}
+  .lfooter__navlink{font-size:17px}
   .lfooter__me{display:none}   /* no room in the stacked mobile layout */
   .lfooter__mq{position:static;margin-top:36px;padding-bottom:30px}
   .lfooter__mq-track i{width:26px;height:26px}
   .lfooter__email{position:static;transform:none;width:max-content;margin:18px auto 0;display:flex}
   .lfooter__email:hover{transform:translateY(-2px)}
-  .lfooter__bottom{position:static;flex-direction:column;align-items:flex-start;gap:10px;padding:14px 10px 16px}
 }
 
 /* ---- Blog post chrome (2026-08-10) -------------------------------------------
@@ -2000,7 +2002,7 @@ html.boot-active #boot-loader{display:flex}
 .lreel{display:inline-block;overflow:hidden;vertical-align:bottom;white-space:pre}
 .lreel__col{display:block;position:relative;will-change:transform;
   transition:transform .42s var(--ease-default);transition-delay:var(--rd,0s)}
-.lreel__b{display:block;position:absolute;left:0;top:100%;color:var(--lf-sky-bright)}
+.lreel__b{display:block;position:absolute;left:0;top:100%;color:var(--color-highlight)}
 .lfooter__navlink:hover .lreel__col,
 .lfooter__navlink:focus-visible .lreel__col{transform:translateY(-100%)}
 
@@ -2008,7 +2010,7 @@ html.boot-active #boot-loader{display:flex}
   /* No roll: fall back to the flat colour change the reel replaced. */
   .lreel__col{transition:none}
   .lfooter__navlink:hover .lreel__col{transform:none}
-  .lfooter__navlink:hover{color:var(--lf-sky-bright)}
+  .lfooter__navlink:hover{color:var(--color-highlight)}
 }
 
 /* ---- Blog pages sit on the Skills field's blue (2026-08-12) -------------------
@@ -2151,34 +2153,86 @@ header.is-hero .header__nav-left a .nav-char__c{color:#050419}
 html{overflow-x:clip}
 
 
-/* Two-part hero (founder positioning): the greeting is the attention grab, the
-   "what I do" block beside it explains. Side by side on desktop, stacked below.
-   Colours follow the flow panels further down: labels and the accent word in
-   --color-highlight, body in the dark ink. Both columns start on the same label
-   line so the halves balance. Inner blocks are <p>/<a>, not spans, so the mobile
-   rule that inlines .hero__subtitle span does not collapse them. The hero is
-   pointer-events:none, so the CTA opts back in; it rides off-screen on scroll. */
+/* Hero (founder positioning): greeting line, value-prop headline, then a lead
+   and the two actions. Colours follow the flow panels further down: name and
+   accent line in --color-highlight, body in the dark ink. Inner blocks are
+   <p>/<a>, not spans, so the mobile rule that inlines .hero__subtitle span does
+   not collapse them. The hero is pointer-events:none, so the button and strip opt back in;
+   they ride off-screen on scroll. */
 .hero .hero__title-name{color:var(--color-highlight)}
+/* Greeting: a readable intro line, not a small-caps label, so the name is seen. */
+.hero .hero__title .hero__title-name{font-size:clamp(28px,2.6vw,38px);letter-spacing:-.01em;text-transform:none;font-weight:400;line-height:1.2;margin-bottom:28px;color:var(--color-text)}
+.hero .hero__title-name strong{font-weight:600;color:var(--color-highlight)}
 .hero .hero__title .hero__accent{color:var(--color-highlight)}
 .hero .hero__subtitle p{margin:0}
-.hero .hero__eyebrow{font-family:var(--font-ui);font-size:13px;font-weight:500;line-height:1.2;letter-spacing:.2em;text-transform:uppercase;color:var(--color-highlight);margin-bottom:20px}
 .hero .hero__lead{font-size:var(--text-lg);line-height:1.35;font-weight:500;color:var(--color-text)}
-.hero .hero__proof{margin-top:var(--space-lg);font-size:var(--text-base);line-height:1.5;color:var(--color-text-muted)}
-.hero .hero__cta{display:inline-flex;gap:.4em;margin-top:var(--space-xl);padding-bottom:6px;border-bottom:1px solid currentColor;color:var(--color-highlight);text-decoration:none;font-size:var(--text-base);font-weight:500;pointer-events:auto}
-.hero .hero__cta span{display:inline;transition:transform .3s cubic-bezier(.16,1,.3,1)}
-.hero .hero__cta:hover span{transform:translateX(4px)}
+/* Value-prop headline: the line carries the message, so it is sized to read as a
+   sentence (not a 96px greeting). Lead is body weight. */
+.hero .hero__title{font-size:64px;line-height:1.04;letter-spacing:-2.4px}
+.hero .hero__lead{font-size:20px;line-height:1.5;font-weight:400}
+.hero .hero__subtitle .hero__actions{display:flex;flex-wrap:wrap;align-items:center;gap:28px;margin-top:var(--space-xl)}
+.hero .hero__btn{display:inline-flex;align-items:center;height:48px;padding:0 24px;border-radius:999px;background:var(--color-highlight);color:#fff;text-decoration:none;font-size:16px;font-weight:500;pointer-events:auto;transition:background-color .2s ease}
+.hero .hero__btn:hover{background:#2a24b8}
+/* Stage strip (spec -> prototype -> features -> launch). Terminal-style line below
+   types the active stage's description; main.js heroStages() drives it. */
+.hero .hero__stages{margin-top:var(--space-2xl);pointer-events:auto}
+.hero .hero__steps{display:flex;flex-wrap:wrap;align-items:center;list-style:none;font-family:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.hero .hero__steps li{display:flex;align-items:center}
+.hero .hero__arrow{margin:0 18px;color:rgba(5,4,25,.35);font-size:22px}
+.hero .hero__step{font:inherit;font-size:24px;font-weight:500;color:rgba(5,4,25,.55);background:none;cursor:pointer;padding:6px 0;border-bottom:1px solid transparent;transition:color .2s ease,border-color .2s ease}
+.hero .hero__step:hover,.hero .hero__step.is-active{color:var(--color-highlight);border-bottom-color:currentColor}
+.hero .hero__step{border-bottom-width:2px}
+.hero .hero__type{margin-top:18px;min-height:1.5em;font-family:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:20px;line-height:1.5;color:var(--color-text)}
+.hero .hero__type:before{content:"> ";color:var(--color-highlight)}
+.hero .hero__typed{font:inherit}
+.hero .hero__caret{display:inline-block;width:.55em;height:1.1em;margin-left:2px;vertical-align:-.2em;background:var(--color-highlight);animation:heroCaret 1s steps(1) infinite}
+@keyframes heroCaret{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.hero .hero__caret{animation:none}}
+/* Entrance: only the greeting + headline (.hero__title) do the 3D swing-in. The
+   subtitle block itself no longer animates in; its pieces start empty and fade up
+   one after another once the headline has landed (1.4s), each --i a 180ms step.
+   heroStages() in main.js waits for the last one before it starts typing. The
+   leave/return-on-scroll rules still move the subtitle as one block. */
+.hero .hero__subtitle{opacity:1;transform:none;transition:opacity .35s cubic-bezier(.2,0,0,1),transform .35s cubic-bezier(.2,0,0,1)}
+.hero .hero__seq{opacity:0;transform:translateY(10px);transition:opacity .5s ease,transform .6s cubic-bezier(.16,1,.3,1)}
+.hero.show .hero__seq{opacity:1;transform:none;transition-delay:calc(1.4s + var(--i) * .18s)}
+@media (prefers-reduced-motion:reduce){.hero.show .hero__seq{transition-delay:0s}}
+/* Strip words + arrows: the footer/socials link reel (buildLinkReel). They wait
+   below their clip until heroStages() adds .is-in, then roll up letter by letter;
+   hover rolls the same column up again to the clone. 3-class selectors so the
+   hero's ".hero .hero__subtitle span" rules don't restyle the reel spans. */
+.hero .hero__steps .pill-char{display:inline-block;position:relative;overflow:hidden;vertical-align:bottom;white-space:pre}
+.hero .hero__steps .pill-char__col{display:block;position:relative;transition:transform .42s var(--ease-default);transition-delay:var(--hd,0s);will-change:transform}
+.hero .hero__steps .pill-char__face{display:block;position:relative}
+.hero .hero__steps .pill-char__c{display:block;position:absolute;left:0;top:100%;color:inherit}
+.hero .hero__steps li:not(.is-in) .pill-char__col{transform:translateY(100%)}
+.hero .hero__steps .hero__step:hover .pill-char__col,.hero .hero__steps .hero__step:focus-visible .pill-char__col{transform:translateY(-100%)}
+/* Desktop: one left-aligned editorial column. Headline runs full width on two
+   lines; lead, button and stage strip stack under it on the same left edge. */
 @media (min-width:1025px){
-  .hero .hero__content{flex:1;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start;align-content:center;column-gap:var(--space-3xl);width:min(1120px,100% - 2 * var(--space-3xl));padding-top:0;text-align:left}
-  .hero .hero__subtitle{max-width:460px}
+  .hero .hero__content{flex:1;display:grid;grid-template-columns:minmax(0,1fr);align-content:start;row-gap:clamp(24px,5vh,48px);width:min(1200px,100% - 2 * var(--space-3xl));padding-top:clamp(96px,16vh,200px);text-align:left}
+  .hero .hero__title{font-size:clamp(52px,min(6vw,10vh),88px);letter-spacing:-.035em;line-height:1.02}
+  .hero .hero__subtitle{max-width:none}
+  .hero .hero__lead{max-width:600px}
+  .hero .hero__subtitle .hero__actions{margin-top:clamp(20px,4vh,32px)}
+  .hero .hero__stages{margin-top:clamp(24px,5vh,40px)}
 }
 @media (max-width:1024px){
+  .hero .hero__title{font-size:52px;letter-spacing:-1.8px}
+  .hero .hero__content{flex:1;align-self:stretch;align-items:flex-start;justify-content:flex-start;text-align:left;padding:clamp(110px,16vh,160px) 24px 0}
+  .hero .hero__subtitle .hero__actions{justify-content:flex-start}
   .hero .hero__subtitle{max-width:560px}
   .hero .hero__lead{font-size:var(--text-base)}
-  .hero .hero__proof{font-size:16px}
-  .hero .hero__cta{margin-top:var(--space-lg)}
+  .hero .hero__subtitle .hero__actions{margin-top:var(--space-lg)}
 }
 @media (max-width:820px){
+  .hero .hero__title{font-size:38px;letter-spacing:-1.2px}
+  .hero .hero__title .hero__title-name{font-size:24px;margin-bottom:16px}
   .hero .hero__subtitle{max-width:340px}
-  .hero .hero__eyebrow{margin-bottom:12px}
-  .hero .hero__proof{display:none}
+  .hero .hero__lead{font-size:16px}
+  .hero .hero__actions{gap:20px}
+  .hero .hero__stages{margin-top:var(--space-xl)}
+  .hero .hero__arrow{margin:0 8px;font-size:16px}
+  .hero .hero__step{font-size:17px}
+  .hero .hero__type{font-size:15px;margin-top:12px}
 }

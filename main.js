@@ -2019,8 +2019,8 @@ function makeTypeIn(host, runs, opts) {
     // and it drifts slowly — so when the cursor repel is idle it's resampled every OTHER
     // frame. Repel active → full rate so the bubble tracks the pointer. A rows/cols change
     // (resize) forces a resample so strokeIso never reads a stale-sized grid.
-    var frameNo = 0, fieldRows = -1, fieldCols = -1;
     var sideCvEl = null;                                 // cached ".term-side-contours" lookup
+    var frameNo = 0, fieldRows = -1, fieldCols = -1;
     function frame(now) {
       var dt = last ? Math.min((now - last) / 1000, 0.05) : 0; last = now;
       t += dt * 0.5;                                     // drift speed
@@ -3100,8 +3100,16 @@ function makeTypeIn(host, runs, opts) {
     // there alone under a finished grid. A layout read, so it is measured with the rest
     // of the geometry rather than per frame.
     var sideLead = 0;
+    var SIDE_EARLY = 0.3;    // full grid: start moving this fraction of the viewport height sooner
     function measureSideLead() {
-      sideLead = sideEl ? Math.max(0, panEl.scrollHeight - sideEl.offsetHeight) : 0;
+      sideLead = sideEl ? Math.max(0, panEl.scrollHeight - sideEl.offsetHeight - window.innerHeight * SIDE_EARLY) : 0;
+    }
+    // Re-measure whenever the card stack or the panel actually changes size. sizeSection()
+    // alone can run before the grid has laid out — e.g. coming back from /blog/, where the
+    // intro is skipped — and a too-small lead set the panel moving almost at once.
+    if (sideEl && window.ResizeObserver) {
+      var sideRO = new ResizeObserver(function () { measureSideLead(); if (typeof panCards === "function") panCards(); });
+      sideRO.observe(panEl); sideRO.observe(sideEl);
     }
 
     // Stagger the card pop-in along the anti-diagonal (row+col): the top-left card
@@ -3689,7 +3697,9 @@ function makeTypeIn(host, runs, opts) {
       // without this the pin is that much too short and their last row can never scroll fully
       // into view. Uses the MAX (threshold) offset so the pin length stays constant
       // rather than shifting under the mapping as the offset closes.
-      var ov = panEl.scrollHeight - viewEl.clientHeight + staggerCardH() * COL_OFFSET_FRAC;
+      // Halved: the offset has closed (COL_CLOSE_AT) well before the run ends, so the full
+      // allowance left a blank band under the last row; half still clears the stagger.
+      var ov = panEl.scrollHeight - viewEl.clientHeight + staggerCardH() * COL_OFFSET_FRAC * 0.5;
       return ov > 0 ? ov + PAN_PAD : 0;                 // 0 when the cards already fit
     }
     // Size the section so the PINNED scroll length == the card overflow: more projects
@@ -4498,6 +4508,71 @@ function makeTypeIn(host, runs, opts) {
   dlg.addEventListener("close", function () {
     if (window.__lenis && typeof window.__lenis.start === "function") window.__lenis.start();
   });
+})();
+
+/* ---- Hero stage strip ------------------------------------------------------
+   spec -> prototype -> features -> launch. The line under the strip types out the
+   active stage's data-desc, holds, then moves to the next stage on its own. On
+   devices that hover, pointing at a stage jumps straight to it and holds the
+   cycle until the pointer leaves; a tap/click (any device) does the same. Typing
+   is skipped under reduced motion: the line is just swapped. The first line waits
+   for the hero's staggered fade-in (styles.css .hero__seq) to reach the strip. */
+(function heroStages() {
+  var steps = document.querySelectorAll(".hero__step");
+  var out = document.querySelector(".hero__typed");
+  if (!steps.length || !out) return;
+  var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var TYPE_MS = 32, HOLD_MS = 2600;
+  var cur = -1, timer = 0, held = false, typing = false;
+
+  function show(i) {
+    clearTimeout(timer);
+    cur = i;
+    for (var k = 0; k < steps.length; k++) steps[k].classList.toggle("is-active", k === i);
+    var text = steps[i].getAttribute("data-desc") || "";
+    if (reduce) { out.textContent = text; return next(); }
+    var n = 0;
+    typing = true;
+    out.textContent = "";
+    (function type() {
+      out.textContent = text.slice(0, ++n);
+      if (n < text.length) timer = setTimeout(type, TYPE_MS);
+      else { typing = false; next(); }
+    })();
+  }
+  function next() {
+    if (held) return 0;
+    return (timer = setTimeout(function () { show((cur + 1) % steps.length); }, HOLD_MS));
+  }
+
+  var canHover = matchMedia("(hover: hover)").matches;
+  Array.prototype.forEach.call(steps, function (btn, i) {
+    if (canHover) {
+      btn.addEventListener("mouseenter", function () { held = true; if (i !== cur) show(i); });
+      btn.addEventListener("mouseleave", function () { held = false; if (!typing) next(); });  // mid-type: the typer schedules it
+    }
+    btn.addEventListener("click", function () { if (i !== cur) show(i); });
+  });
+
+  // Words + arrows get the site's link reel and roll in one by one once the headline
+  // has landed — the same 1.4s + 180ms steps as the .hero__seq fades around them
+  // (lead = 0, button = 1, strip items = 2..8, typed line = 9).
+  var items = document.querySelectorAll(".hero__steps li");
+  Array.prototype.forEach.call(steps, buildLinkReel);
+  Array.prototype.forEach.call(document.querySelectorAll(".hero__arrow"), buildLinkReel);
+  function reelIn() {
+    Array.prototype.forEach.call(items, function (li, k) {
+      if (reduce) li.classList.add("is-in");
+      else setTimeout(function () { li.classList.add("is-in"); }, 1400 + (k + 2) * 180);
+    });
+  }
+
+  var START_MS = reduce ? 0 : 3200;                  // ~ last .hero__seq delay (1.4s + 9 x .18s) + fade
+  var start = function () {
+    reelIn();
+    timer = setTimeout(function () { if (cur < 0) show(0); }, START_MS);   // a click may beat it
+  };  // a click may beat it
+  if (window.__bootReady && window.__bootReady.then) window.__bootReady.then(start); else start();
 })();
 
 /* ---- Sub-page header pills (2026-08-11) --------------------------------------

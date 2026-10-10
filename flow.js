@@ -1492,8 +1492,8 @@
     document.body.appendChild(dbg);
   }
   // Text colours are set once per zone (NOT scroll-lerped): zones 1-2 keep the
-  // dark-bg colours (bright blue title, white index/sub via CSS defaults); zones
-  // 3-4, which sit over the lightened bg, are set to their final deep-blue / grey
+  // dark-bg colours (light-blue title, bright-blue accent word, white index/sub via CSS
+  // defaults); zones 3-4, which sit over the lightened bg, are set to deep blue / grey
   // so each title POPS UP already in that colour when its zone appears.
   (function setupZoneText() {
     panels.forEach(function (panel, pi) {
@@ -1502,10 +1502,10 @@
         if (list) lightSubs.push(list);                  // ul colour cascades to the items (color:inherit)
         return;
       }
-      panel.classList.add("flow-panel--light");          // light-bg zones: darker CLI green on the reel hover
+      panel.classList.add("flow-panel--light");          // light-bg zones: deep-blue reel hover text (styles.css)
       var ttl = panel.querySelector(".flow-panel__title");
       var idx = panel.querySelector(".flow-panel__index");
-      if (ttl) ttl.style.color = "#231d7a";              // deep blue (darker than #3932DC)
+      if (ttl) ttl.style.color = "#231d7a";              // deep blue (darker than #3932DC); accent word stays bright blue (CSS)
       if (idx) idx.style.color = "#231d7a";
       if (list) list.style.color = "#3a3a42";            // dark grey (distinct from the navy heading)
     });
