@@ -13,8 +13,8 @@
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="format-detection" content="telephone=no">
-<title>Vishnujan Narayanan | Full-Stack Developer for Founders — Idea to Working Product</title>
-<meta name="description" content="Vishnujan Narayanan is a full-stack developer who takes startup ideas end to end: scoping, prototype, data and AI features, launch, and keeping it running.">
+<title>Vishnujan Narayanan | Product Engineer for Early-Stage Companies</title>
+<meta name="description" content="Vishnujan Narayanan is a product engineer for early-stage companies: scoping, prototyping, data and AI features, launch, and running it in production.">
 <meta name="author" content="Vishnujan Narayanan">
 <link rel="icon" href="favicon.ico?v=3" sizes="any">
 <link rel="icon" type="image/png" href="favicon-512.png?v=3" sizes="512x512">
@@ -26,8 +26,8 @@
      as long as ANY method passes — do not remove this line. -->
 <meta name="google-site-verification" content="CNOd3KfYuPcEfd-j4JSvi6wlwkw3cUkAfZ3ds4zmN2E">
 <meta name="robots" content="index, follow, max-image-preview:large">
-<meta property="og:title" content="Vishnujan Narayanan | Full-Stack Developer for Founders — Idea to Working Product">
-<meta property="og:description" content="Got a startup idea? I take it end to end — from scope to a working product people can use: the app, the APIs, the data and the AI behind it.">
+<meta property="og:title" content="Vishnujan Narayanan | Product Engineer for Early-Stage Companies">
+<meta property="og:description" content="Product engineer for early-stage companies. I scope, build and run web apps, data pipelines and AI features, from spec to production.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Vishnujan Narayanan">
 <meta property="og:locale" content="en_US">
@@ -39,7 +39,7 @@
 <meta property="og:image:alt" content="Vishnujan Narayanan — logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Vishnujan Narayanan | Data Engineer — Ingestion &amp; Market Data">
-<meta name="twitter:description" content="Got a startup idea? I take it end to end — from scope to a working product people can use: the app, the APIs, the data and the AI behind it.">
+<meta name="twitter:description" content="Product engineer for early-stage companies. I scope, build and run web apps, data pipelines and AI features, from spec to production.">
 <meta name="twitter:image" content="https://vishnujan.dev/og-logo.jpg">
 <!-- Roboto Flex is the nav reel's font (styles.css @font-face). Preloaded so it is in
      flight before the stylesheet finishes parsing and is ready for the FIRST paint —
@@ -305,12 +305,26 @@
     <section class="hero">
       <div class="hero__bg"></div>
       <div class="hero__content">
-        <h1 class="hero__title"><span class="hero__title-name">Vishnujan Narayanan</span><span>Hi, I&rsquo;m</span><span class="hero__accent">Vishnujan.</span></h1>
+        <h1 class="hero__title"><span class="hero__title-name">Hi, I&rsquo;m <strong>Vishnujan Narayanan</strong>.</span><span>Your friendly neighbourhood</span><span class="hero__accent">developer.</span></h1>
         <div class="hero__subtitle">
-          <p class="hero__eyebrow">What I do</p>
-          <p class="hero__lead">I build apps for people with startup ideas. You tell me what you want, I build it and stay on to fix whatever breaks.</p>
-          <p class="hero__proof">Some of it is live right now: a law firm&rsquo;s website, a legal-emergency app with voice calls, and a bot that tailors resumes to job posts.</p>
-          <a class="hero__cta" href="mailto:narayanan.vishnujan@gmail.com?subject=Got%20a%20project%20in%20mind">Tell me your idea <span aria-hidden="true">&rarr;</span></a>
+          <p class="hero__lead hero__seq" style="--i:0">I scope, build and run software for early-stage companies: web apps, data pipelines and AI features.</p>
+          <p class="hero__actions hero__seq" style="--i:1"><a class="hero__btn" href="mailto:narayanan.vishnujan@gmail.com?subject=Project%20enquiry">Discuss your project</a></p>
+          <!-- Stage strip: auto-types each stage's line; hover (desktop) jumps to it.
+               Lead/button/typed line fade in after the headline (.hero__seq, --i); the
+               words and arrows reel up from below one by one (heroStages, .is-in).
+               No <span>s in here: the hero's subtitle span rules would restyle them. -->
+          <div class="hero__stages">
+            <ol class="hero__steps" aria-label="How I build">
+              <li><button type="button" class="hero__step" data-desc="turn your ideas into a clear plan">spec</button></li>
+              <li class="hero__arrow" aria-hidden="true">&rarr;</li>
+              <li><button type="button" class="hero__step" data-desc="something real in your hands, in weeks">prototype</button></li>
+              <li class="hero__arrow" aria-hidden="true">&rarr;</li>
+              <li><button type="button" class="hero__step" data-desc="add the features your users will pay for">features</button></li>
+              <li class="hero__arrow" aria-hidden="true">&rarr;</li>
+              <li><button type="button" class="hero__step" data-desc="get your product launched, then improved with real customer feedback">launch</button></li>
+            </ol>
+            <p class="hero__type hero__seq" style="--i:9" aria-live="polite"><code class="hero__typed"></code><i class="hero__caret" aria-hidden="true"></i></p>
+          </div>
         </div>
       </div>
       <div class="hero__scroll-btn"><span><span class="hsbtn-in">scroll to see how I build</span></span></div>
@@ -336,7 +350,7 @@
       <article class="flow-panel" data-panel="0" data-screen-label="From Idea to Scope">
         <div class="flow-panel__content">
           <span class="flow-panel__index">01</span>
-          <h2 class="flow-panel__title">From Idea<br>to Scope</h2>
+          <h2 class="flow-panel__title">From <span class="flow-panel__accent">Idea</span><br>to Scope</h2>
           <ul class="flow-panel__list">
             <li><a class="flow-panel__item" data-card="0" href="https://trader-sentiment-demo.streamlit.app/" target="_blank" rel="noopener">Trader Sentiment Analysis</a></li>
             <li><a class="flow-panel__item" data-card="1" href="https://github.com/VishnujanNarayanan/Job_Application_Bot" target="_blank" rel="noopener">Job Application Bot</a></li>
@@ -349,7 +363,7 @@
       <article class="flow-panel" data-panel="1" data-screen-label="Fast, Testable Prototype">
         <div class="flow-panel__content">
           <span class="flow-panel__index">02</span>
-          <h2 class="flow-panel__title">Fast, Testable<br>Prototype</h2>
+          <h2 class="flow-panel__title">Fast, Testable<br><span class="flow-panel__accent">Prototype</span></h2>
           <ul class="flow-panel__list">
             <li><a class="flow-panel__item" data-card="0" href="/projects/product-explorer/">Product Explorer</a></li>
             <li><span class="flow-panel__item" data-card="1">DekhLaw API</span></li>
@@ -362,7 +376,7 @@
       <article class="flow-panel" data-panel="2" data-screen-label="Data, AI &amp; Features">
         <div class="flow-panel__content">
           <span class="flow-panel__index">03</span>
-          <h2 class="flow-panel__title">Data, AI<br>&amp; Features</h2>
+          <h2 class="flow-panel__title">Data, <span class="flow-panel__accent">AI</span><br>&amp; Features</h2>
           <ul class="flow-panel__list">
             <li><a class="flow-panel__item" data-card="0" href="/projects/market-data-pipeline/">Market Data Platform</a></li>
             <li><a class="flow-panel__item" data-card="1" href="/projects/fraud-detection/">Fraud Detection</a></li>
@@ -375,7 +389,7 @@
       <article class="flow-panel" data-panel="3" data-screen-label="Launch &amp; Iterate">
         <div class="flow-panel__content">
           <span class="flow-panel__index">04</span>
-          <h2 class="flow-panel__title">Launch<br>&amp; Iterate</h2>
+          <h2 class="flow-panel__title"><span class="flow-panel__accent">Launch</span><br>&amp; Iterate</h2>
           <ul class="flow-panel__list">
             <li><a class="flow-panel__item" data-card="0" href="https://smartnperfectlegal.legal/" target="_blank" rel="noopener">Law Firm Website</a></li>
             <li><a class="flow-panel__item" data-card="1" href="https://binance-futures-bot-api-giyj.onrender.com" target="_blank" rel="noopener">Binance Futures Trading Bot</a></li>
@@ -855,14 +869,14 @@
 <footer class="lfooter" id="contact">
 
   <div class="lfooter__layout">
-    <!-- Dark notched box (Lando footer mask) with static contour pattern inside -->
+    <!-- Dark box (top notch only), plain fill -->
     <div class="lfooter__clip">
-      <img class="lfooter__pattern" src="/images/footer-blobs.svg" alt="" aria-hidden="true" loading="lazy" decoding="async">
+      <img class="lfooter__pattern" src="/images/footer-contours.webp" alt="" aria-hidden="true" loading="lazy" decoding="async">
 
       <div class="lfooter__inner">
         <h2 class="lfooter__headline">
-          <span class="lfooter__hl-row">Data in.</span>
-          <span class="lfooter__hl-row"><span class="is-hl">Products</span> out.</span>
+          <span class="lfooter__hl-row">With great ideas comes</span>
+          <span class="lfooter__hl-row"><span class="is-hl">great software.</span></span>
         </h2>
 
         <div class="lfooter__cols">
@@ -972,19 +986,11 @@
       <img class="lfooter__me" src="/images/footer-me2.webp" alt="Vishnujan Narayanan" loading="lazy" decoding="async">
     </div>
 
-    <!-- Pill in the bottom-centre tab of the notched box -->
+    <!-- Pill at the bottom centre of the box -->
     <!-- No trailing arrow: main.js splits this into per-letter reel clips on load, and a
          glyph that is not a letter reels along with them. -->
     <a class="lfooter__email" href="mailto:narayanan.vishnujan@gmail.com">Email me</a>
 
-    <!-- Legal row sits in the gradient shelves either side of the bottom tab -->
-    <div class="lfooter__bottom">
-      <span class="lfooter__copy">© 2026 Vishnujan Narayanan. All rights reserved</span>
-      <div class="lfooter__legal">
-        <a href="https://github.com/VishnujanNarayanan" target="_blank" rel="me noopener">GitHub</a>
-        <a href="https://www.linkedin.com/in/vishnujan-narayanan" target="_blank" rel="me noopener">LinkedIn</a>
-      </div>
-    </div>
   </div>
 </footer>
 <!-- END generated: footer -->
