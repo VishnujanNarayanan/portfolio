@@ -600,22 +600,24 @@
       </filter>
     </svg>
 
-    <!-- ===== Product canvas — Lando Collabs treatment ===== -->
-    <!-- Section 1: editorial hero — product title + sweep script + description -->
+    <!-- ===== Workflow canvas — Lando Collabs treatment ===== -->
+    <!-- Section 1: editorial hero — the build workflow, title + tagline + description.
+         Media on the right is still the QuickForge preview; swap in a pipeline run-log
+         screenshot (same scrolling chat-window frame) when it exists. -->
     <section class="brand-teaser" id="skills">
       <div class="skills-curve" aria-hidden="true"><svg class="skills-curve__svg" viewBox="0 0 100 100" preserveAspectRatio="none"><path class="skills-curve__path" d="M0 0 L100 0 Q50 0 0 0 Z"></path></svg></div>
       <div class="brand-teaser__inner">
         <!-- left: title + tagline + description, stacked -->
         <div class="brand-teaser__copy reveal">
-          <p class="bt-eyebrow"><span class="bt-eyebrow__dash" aria-hidden="true"></span>The Product</p>
-          <h2 class="brand-teaser__title"><span class="bt-sans">Quick</span><span class="bt-serif">Forge</span></h2>
-          <p class="bt-tagline">Fresh postings.<span>Instant alerts.</span>Tailored r&eacute;sum&eacute;, every time.</p>
-          <p class="brand-teaser__desc">QuickForge monitors job listings in real time, scores every posting against your profile, and delivers a tailored r&eacute;sum&eacute; for each match &mdash; send quality applications before quantity shows up.</p>
+          <p class="bt-eyebrow"><span class="bt-eyebrow__dash" aria-hidden="true"></span>The Workflow</p>
+          <h2 class="brand-teaser__title"><span class="bt-sans">Pipe</span><span class="bt-serif">Line</span></h2>
+          <p class="bt-tagline">Ingest &amp; store.<span>Serve.</span>Ship &amp; run.</p>
+          <p class="brand-teaser__desc">Every product I build runs on the same data backbone: scrapers and APIs feed it, PostgreSQL holds it, FastAPI serves it, Docker and CI/CD ship it. This is that workflow, stage by stage, with the work that proves it.</p>
         </div>
         <!-- right: product image + connected chat window (header on top, messages
              scrolling through a fixed window beneath it) -->
         <div class="brand-teaser__media reveal">
-          <img class="bt-media-main" src="images/product_image.webp" alt="QuickForge product preview" loading="lazy" decoding="async">
+          <img class="bt-media-main" src="images/product_image.webp" alt="QuickForge, a product built on this workflow" loading="lazy" decoding="async">
           <div class="bt-chat" aria-hidden="true">
             <img class="bt-chat__head" src="images/heading_area.webp" alt="" decoding="async">
             <div class="bt-chat__window">
@@ -627,7 +629,7 @@
       </div>
     </section>
 
-    <!-- Section 2: pain points + coming soon -->
+    <!-- Section 2: the four workflow stages + the product built on them -->
     <section class="brand-manifesto">
       <div class="brand-manifesto__inner">
 
@@ -635,51 +637,68 @@
         <div class="bm-row reveal">
           <div class="bm-row__left">
             <span class="bm-num" aria-hidden="true">01</span>
-            <h2 class="bm-headline">No callbacks?<br><em>Your resume isn&rsquo;t talking their language.</em></h2>
-            <p class="bm-body">Recruiters get 200+ per role. Generic gets filtered before a human looks. Your experience isn&rsquo;t the problem.</p>
+            <h3 class="bm-headline">Sources change<br><em>without telling you.</em></h3>
+            <p class="bm-body">Ingest. Sites paginate, rate-limit and rename fields without warning. A pipeline that trusts its source fails silently.</p>
           </div>
           <div class="bm-row__right">
-            <span class="bm-solve-label">The fix</span>
-            <p class="bm-solve-text">The bot reads the JD and selects the exact bullets, title and skill framing that match it. Every application speaks that role&rsquo;s specific language. Automatically. Every time.</p>
+            <span class="bm-solve-label">How I handle it</span>
+            <p class="bm-solve-text">Python and Playwright scrapers with retry logic that reads what a 429 actually means, and a schema check on every load. 28 pipelines across ~1,665 listed companies.</p>
+            <p class="bm-proof">See it: <a href="/projects/market-data-pipeline/">Market Data Platform</a> &middot; <a href="/blog/http-429-retry-logic/">HTTP 429 retries</a></p>
           </div>
         </div>
 
         <div class="bm-divider" aria-hidden="true"></div>
-
         <!-- 02 -->
         <div class="bm-row bm-row--flip reveal">
           <div class="bm-row__left">
             <span class="bm-num" aria-hidden="true">02</span>
-            <h2 class="bm-headline">Applicant&nbsp;#847.<br><em>Window closed 3 hours ago.</em></h2>
-            <p class="bm-body">Recruiters stop reading after the first 50. The window is under an hour from posting. You can&rsquo;t watch three boards while that window opens and shuts.</p>
+            <h3 class="bm-headline">A rerun should<br><em>repair data, not corrupt it.</em></h3>
+            <p class="bm-body">Store. Jobs crash halfway. Backfills overlap. If a second run doubles rows, nobody trusts the numbers again.</p>
           </div>
           <div class="bm-row__right">
-            <span class="bm-solve-label">The fix</span>
-            <p class="bm-solve-text">The bot monitors Indeed, Glassdoor and LinkedIn continuously. The moment a match posts, you get a Telegram ping with the apply link and a tailored r&eacute;sum&eacute; ready to go. First wave, not after it.</p>
+            <span class="bm-solve-label">How I handle it</span>
+            <p class="bm-solve-text">PostgreSQL with idempotent upserts and incremental, resumable loads, so any job can be killed and rerun safely.</p>
+            <p class="bm-proof">See it: <a href="/blog/building-resumable-etl-pipelines/">Resumable ETL</a> &middot; <a href="/blog/how-i-scraped-nse-insider-filings/">Scraping NSE filings</a></p>
           </div>
         </div>
 
         <div class="bm-divider" aria-hidden="true"></div>
-
         <!-- 03 -->
         <div class="bm-row reveal">
           <div class="bm-row__left">
             <span class="bm-num" aria-hidden="true">03</span>
-            <h2 class="bm-headline">Tweaking the same<br><em>r&eacute;sum&eacute;. Again.</em></h2>
-            <p class="bm-body">10 roles a day is 10 tailoring sessions. You&rsquo;re spending more time in Word than applying. And the rushed ones always look it.</p>
+            <h3 class="bm-headline">Data nobody can query<br><em>is dead weight.</em></h3>
+            <p class="bm-body">Serve. The pipeline is only worth something once a product, a model or a person can reach what it collected.</p>
           </div>
           <div class="bm-row__right">
-            <span class="bm-solve-label">The fix</span>
-            <p class="bm-solve-text">You write your bullets once. The bot selects the right ones per role, every time. Your master profile becomes every tailored r&eacute;sum&eacute; you&rsquo;ll ever need.</p>
+            <span class="bm-solve-label">How I handle it</span>
+            <p class="bm-solve-text">FastAPI services in front of the data, Redis for the hot paths, pgvector when search has to understand meaning.</p>
+            <p class="bm-proof">See it: <a href="/projects/fraud-detection/">Fraud Scoring App</a> &middot; <a href="/projects/product-explorer/">Bookshop Website</a></p>
           </div>
         </div>
 
-        <!-- Coming Soon footer -->
+        <div class="bm-divider" aria-hidden="true"></div>
+        <!-- 04 -->
+        <div class="bm-row bm-row--flip reveal">
+          <div class="bm-row__left">
+            <span class="bm-num" aria-hidden="true">04</span>
+            <h3 class="bm-headline">Green tests<br><em>don&rsquo;t mean good data.</em></h3>
+            <p class="bm-body">Ship &amp; run. Code passes CI and still loads garbage. Eight of about 30 real ingestion bugs threw no error at all.</p>
+          </div>
+          <div class="bm-row__right">
+            <span class="bm-solve-label">How I handle it</span>
+            <p class="bm-solve-text">Docker images, CI/CD on every push, jobs running on Linux and AWS, and data checks that catch the failures that stay quiet.</p>
+            <p class="bm-proof">See it: <a href="/blog/a-year-of-ingestion-bugs/">Ingestion bugs</a> &middot; <a href="/blog/how-to-test-a-data-pipeline/">Testing a pipeline</a></p>
+          </div>
+        </div>
+
+        <!-- Lab footer: the product this workflow is shipping now -->
         <div class="bm-coming-soon reveal">
-          <span class="bm-cs-eyebrow"><span class="bm-cs-dot"></span>In development &middot; Lab 01</span>
-          <p class="bm-cs-label">Coming <em>soon</em></p>
+          <span class="bm-cs-eyebrow"><span class="bm-cs-dot"></span>Built on this stack &middot; Lab 01</span>
+          <p class="bm-cs-label">Quick<em>Forge</em></p>
+          <p class="bm-cs-desc">Real-time job ingestion, pgvector matching and Telegram alerts: the same four stages, applied to a product. In development.</p>
           <div class="bm-cs-chips">
-            <span class="brand-chip">Python</span><span class="brand-chip">FastAPI</span><span class="brand-chip">Postgres + pgvector</span><span class="brand-chip">Playwright</span><span class="brand-chip">Telegram</span>
+            <span class="brand-chip">Python</span><span class="brand-chip">Playwright</span><span class="brand-chip">PostgreSQL + pgvector</span><span class="brand-chip">FastAPI</span><span class="brand-chip">Redis</span><span class="brand-chip">Docker</span><span class="brand-chip">CI/CD</span><span class="brand-chip">AWS</span><span class="brand-chip">Linux</span><span class="brand-chip">Telegram</span>
           </div>
         </div>
 
