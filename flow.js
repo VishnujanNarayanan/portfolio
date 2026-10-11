@@ -649,7 +649,7 @@
       { k: "p", n: "Quote Search by Meaning", d: "Search by meaning, not keywords: fine-tuned embeddings + FAISS, demo on Streamlit.", t: ["FAISS", "PyTorch", "Streamlit"] },
       { k: "p", n: "Student Task Planner Web App", d: "Scala 3 cross-compiled by sbt and shipped to Vercel as static JS.", t: ["Scala.js", "sbt", "Vercel"] }
     ],
-    [ // 03 Data, AI & Features
+    [ // 03 Data, AI & Backend
       { k: "p", n: "Market Data Platform", d: "28-pipeline NSE ingestion layer feeding 12+ datasets.", t: ["Python", "Playwright", "ETL"] },
       { k: "p", n: "Payment Fraud Scoring App", d: "95% of fraud caught at 0.995 ROC-AUC on 6.4M transactions.", t: ["scikit-learn", "pandas"] },
       { k: "p", n: "Customer Complaint Routing Tool", d: "Routes support tickets by issue type and pulls out the key details.", t: ["scikit-learn", "NLTK", "Gradio"] },
