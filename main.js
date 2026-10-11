@@ -2019,8 +2019,8 @@ function makeTypeIn(host, runs, opts) {
     // and it drifts slowly — so when the cursor repel is idle it's resampled every OTHER
     // frame. Repel active → full rate so the bubble tracks the pointer. A rows/cols change
     // (resize) forces a resample so strokeIso never reads a stale-sized grid.
-    var frameNo = 0, fieldRows = -1, fieldCols = -1;
     var sideCvEl = null;                                 // cached ".term-side-contours" lookup
+    var frameNo = 0, fieldRows = -1, fieldCols = -1;
     function frame(now) {
       var dt = last ? Math.min((now - last) / 1000, 0.05) : 0; last = now;
       t += dt * 0.5;                                     // drift speed
@@ -2914,26 +2914,26 @@ function makeTypeIn(host, runs, opts) {
     // and dom = domain(s) — both drive the side-panel "Filter by" facets.
     var PROJECTS = [
       { n: "Market Data Platform", d: "28-pipeline NSE market-data ingestion layer feeding 12+ datasets into a partitioned store.", t: ["Python", "pandas", "ETL", "SQL"], tools: ["Python", "pandas", "NumPy", "SQL", "ETL"], dom: ["Data", "Finance"], h: "/projects/market-data-pipeline/", img: "images/projects/market-data-poster.jpg" },
-      { n: "Product Explorer", d: "Full-stack TypeScript app scraping a book catalog into PostgreSQL, served via Next.js with real-time WebSocket scraping.", t: ["TypeScript", "NestJS", "PostgreSQL", "Redis"], tools: ["TypeScript", "NestJS", "Next.js", "PostgreSQL", "Redis", "WebSockets"], dom: ["Scraping", "Backend", "Full-Stack", "Data"], h: "/projects/product-explorer/", live: "https://product-explorer-two.vercel.app", code: "https://github.com/VishnujanNarayanan/product-explorer", img: "images/projects/product-explorer-poster.jpg", video: "images/projects/product-explorer.mp4" },
+      { n: "Second-Hand Bookshop Website", d: "Full-stack TypeScript app scraping a book catalog into PostgreSQL, served via Next.js with real-time WebSocket scraping.", t: ["TypeScript", "NestJS", "PostgreSQL", "Redis"], tools: ["TypeScript", "NestJS", "Next.js", "PostgreSQL", "Redis", "WebSockets"], dom: ["Scraping", "Backend", "Full-Stack", "Data"], h: "/projects/product-explorer/", live: "https://product-explorer-two.vercel.app", code: "https://github.com/VishnujanNarayanan/product-explorer", img: "images/projects/product-explorer-poster.jpg", video: "images/projects/product-explorer.mp4" },
       { n: "DekhLaw Legal-Emergency Platform", d: "Solo-built production legal-emergency platform — ~30 Express endpoints over PostgreSQL with JWT auth, a real-time Twilio call-dispatch engine, and Haversine lawyer matching, deployed on Railway and Vercel.", t: ["Node.js", "Express", "PostgreSQL", "Twilio"], tools: ["Node.js", "Express", "PostgreSQL", "SQLite", "Twilio", "JWT", "Cloudinary", "Railway", "Vercel"], dom: ["Full-Stack", "Backend", "DevOps"], live: "https://dekhlaw-webite.vercel.app", img: "images/projects/dekhlaw-poster.jpg", video: "images/projects/dekhlaw.mp4" },
       { n: "Law Firm Website", d: "Production law-firm marketing site in Next.js 14 + TypeScript — 14 routes, Resend-backed lead capture, Zod-validated forms, and full SEO/JSON-LD, designed and shipped solo.", t: ["Next.js", "TypeScript", "Tailwind", "Framer Motion"], tools: ["Next.js", "React", "TypeScript", "Tailwind", "Framer Motion", "Resend", "Zod", "Vercel"], dom: ["Full-Stack", "Frontend"], live: "https://www.smartnperfectlegal.legal/", img: "images/projects/law-firm-poster.jpg", video: "images/projects/law-firm.mp4" },
-      { n: "Job Application Bot", d: "Autonomous job-search bot — scrapes Indeed, Glassdoor, and LinkedIn listings, scores them against a master profile, and builds a tailored resume per match with an LLM, rendered on demand via FastAPI.", t: ["Python", "FastAPI", "Playwright", "LLM"], tools: ["Python", "FastAPI", "Playwright", "PostgreSQL", "spaCy", "Gemini", "Docker", "AWS", "GCP"], dom: ["Backend", "Scraping", "ML", "NLP", "DevOps"], code: "https://github.com/VishnujanNarayanan/Job_Application_Bot", img: "images/projects/job-bot-poster.jpg", video: "images/projects/job-bot.mp4" },
-      { n: "Fraud Transaction Detection", d: "Fraud-detection model on 6.4M transactions — 95% caught at 0.995 ROC-AUC despite a 0.13% fraud rate.", t: ["Python", "scikit-learn", "pandas"], tools: ["Python", "scikit-learn", "pandas", "NumPy", "SciPy"], dom: ["ML", "Data", "Finance"], h: "/projects/fraud-detection/", live: "https://vishnujannarayanan.github.io/Fraud_Transaction_Detection/", code: "https://github.com/VishnujanNarayanan/Fraud_Transaction_Detection", img: "images/projects/fraud-detection.jpg" },
-      { n: "Minute-Level Stock Prediction", d: "Intraday price-direction system over 9.4M NSE ticks, raising next-minute precision from 0.51 to 0.61.", t: ["Python", "scikit-learn", "Backtesting"], tools: ["Python", "scikit-learn", "pandas", "Backtesting"], dom: ["ML", "Quant", "Finance", "Data"], h: "/projects/nse-stock-prediction/", code: "https://github.com/VishnujanNarayanan/minute-level-stock-prediction", img: "images/projects/nse-stock-prediction.jpg" },
-      { n: "Trader Sentiment Analysis", d: "Quantified how Bitcoin Fear & Greed sentiment drives trader PnL across 211K crypto trades, with a contrarian sentiment-gated signal.", t: ["Python", "pandas", "SciPy", "Statistics"], tools: ["Python", "pandas", "SciPy", "Matplotlib"], dom: ["Finance", "Quant", "Data"], live: "https://trader-sentiment-demo.streamlit.app/", code: "https://github.com/VishnujanNarayanan/Trader_sentiment_analysis", img: "images/projects/trader-sentiment.jpg" },
-      { n: "Support Ticket Classifier", d: "NLP pipeline for support tickets — issue-type classification and rule-based entity extraction, served via a Gradio app. Urgency scored at chance and is reported, not claimed.", t: ["Python", "scikit-learn", "NLTK", "Gradio"], tools: ["Python", "scikit-learn", "NLTK", "Gradio"], dom: ["ML", "NLP"], live: "https://ticket-classifier-demonstration.streamlit.app/", code: "https://github.com/VishnujanNarayanan/ticket-classifier-nlp", img: "images/projects/ticket-classifier-poster.jpg", video: "images/projects/ticket-classifier.mp4" },
-      { n: "Semantic Quote Retrieval", d: "Semantic quote search — fine-tuned sentence embeddings + FAISS index over ~2,500 quotes, served through Streamlit.", t: ["Python", "FAISS", "PyTorch", "Streamlit"], tools: ["Python", "FAISS", "PyTorch", "sentence-transformers", "Streamlit"], dom: ["ML", "NLP"], live: "https://quotes-demo.streamlit.app/", code: "https://github.com/VishnujanNarayanan/Quotes_Retrieval", img: "images/projects/quote-retrieval-poster.jpg", video: "images/projects/quote-retrieval.mp4" },
-      { n: "Age & Gender Classifier", d: "Multi-task CNN predicting age and gender from a face photo, trained on 10,000+ UTKFace images with face detection and alignment.", t: ["Python", "TensorFlow", "Keras", "OpenCV"], tools: ["Python", "TensorFlow", "Keras", "OpenCV"], dom: ["ML", "Computer Vision"], live: "https://age-gender-classifier.onrender.com", code: "https://github.com/VishnujanNarayanan/Image_classifier", img: "images/projects/age-gender-poster.jpg", video: "images/projects/age-gender.mp4" },
-      { n: "Neural Network From Scratch", d: "Feed-forward classifier built in pure NumPy — 97.4% accuracy / 0.995 ROC-AUC on Breast-Cancer-Wisconsin, with hand-derived backprop.", t: ["Python", "NumPy"], tools: ["Python", "NumPy"], dom: ["ML"], live: "https://huggingface.co/spaces/Vishnujann/nn-from-scratch-breast-cancer", code: "https://github.com/VishnujanNarayanan/Neural_net_from_scratch", img: "images/projects/neural-net-scratch.jpg" },
-      { n: "Linear Regression From Scratch", d: "Linear regression built end to end in pure NumPy — hand-derived gradient descent and a closed-form solver, validated vs scikit-learn.", t: ["Python", "NumPy"], tools: ["Python", "NumPy", "scikit-learn"], dom: ["ML"], code: "https://github.com/VishnujanNarayanan/Linear_regression_from_scratch", img: "images/projects/linear-regression-scratch.jpg" },
-      { n: "Binance Futures Trading Bot", d: "CLI trading bot placing market, limit, and stop-limit orders and managing positions on the Binance USDT-M Futures Testnet.", t: ["Python", "python-binance", "CLI"], tools: ["Python", "python-binance", "CLI"], dom: ["Finance", "Backend"], live: "https://binance-futures-bot-api-giyj.onrender.com", code: "https://github.com/VishnujanNarayanan/binance-futures-trading-bot", img: "images/projects/trading-bot-1.jpg", imgs: ["images/projects/trading-bot-1.jpg", "images/projects/trading-bot-2.jpg", "images/projects/trading-bot-3.jpg", "images/projects/trading-bot-4.jpg"] },
-      { n: "Functional Task Manager", d: "Browser task planner written in Scala 3 and compiled to JavaScript — state is one immutable Var, the UI a pure projection of it, with no manual DOM manipulation.", t: ["Scala 3", "Scala.js", "Laminar"], tools: ["Scala", "Scala.js", "Laminar", "sbt", "Vercel"], dom: ["Frontend", "Functional Programming"], live: "https://task-manager-using-functional-progr.vercel.app/", code: "https://github.com/VishnujanNarayanan/task_manager_using_functional_programming", img: "images/projects/task-manager-poster.jpg", video: "images/projects/task-manager.mp4" },
+      { n: "Job Matching and Resume Builder", d: "Autonomous job-search bot — scrapes Indeed, Glassdoor, and LinkedIn listings, scores them against a master profile, and builds a tailored resume per match with an LLM, rendered on demand via FastAPI.", t: ["Python", "FastAPI", "Playwright", "LLM"], tools: ["Python", "FastAPI", "Playwright", "PostgreSQL", "spaCy", "Gemini", "Docker", "AWS", "GCP"], dom: ["Backend", "Scraping", "ML", "NLP", "DevOps"], code: "https://github.com/VishnujanNarayanan/Job_Application_Bot", img: "images/projects/job-bot-poster.jpg", video: "images/projects/job-bot.mp4" },
+      { n: "Payment Fraud Scoring App", d: "Fraud-detection model on 6.4M transactions — 95% caught at 0.995 ROC-AUC despite a 0.13% fraud rate.", t: ["Python", "scikit-learn", "pandas"], tools: ["Python", "scikit-learn", "pandas", "NumPy", "SciPy"], dom: ["ML", "Data", "Finance"], h: "/projects/fraud-detection/", live: "https://vishnujannarayanan.github.io/Fraud_Transaction_Detection/", code: "https://github.com/VishnujanNarayanan/Fraud_Transaction_Detection", img: "images/projects/fraud-detection.jpg" },
+      { n: "Stock Price Movement Predictor", d: "Intraday price-direction system over 9.4M NSE ticks, raising next-minute precision from 0.51 to 0.61.", t: ["Python", "scikit-learn", "Backtesting"], tools: ["Python", "scikit-learn", "pandas", "Backtesting"], dom: ["ML", "Quant", "Finance", "Data"], h: "/projects/nse-stock-prediction/", code: "https://github.com/VishnujanNarayanan/minute-level-stock-prediction", img: "images/projects/nse-stock-prediction.jpg" },
+      { n: "Crypto Mood vs Trader Profit Study", d: "Quantified how Bitcoin Fear & Greed sentiment drives trader PnL across 211K crypto trades, with a contrarian sentiment-gated signal.", t: ["Python", "pandas", "SciPy", "Statistics"], tools: ["Python", "pandas", "SciPy", "Matplotlib"], dom: ["Finance", "Quant", "Data"], live: "https://trader-sentiment-demo.streamlit.app/", code: "https://github.com/VishnujanNarayanan/Trader_sentiment_analysis", img: "images/projects/trader-sentiment.jpg" },
+      { n: "Customer Complaint Routing Tool", d: "NLP pipeline for support tickets — issue-type classification and rule-based entity extraction, served via a Gradio app. Urgency scored at chance and is reported, not claimed.", t: ["Python", "scikit-learn", "NLTK", "Gradio"], tools: ["Python", "scikit-learn", "NLTK", "Gradio"], dom: ["ML", "NLP"], live: "https://ticket-classifier-demonstration.streamlit.app/", code: "https://github.com/VishnujanNarayanan/ticket-classifier-nlp", img: "images/projects/ticket-classifier-poster.jpg", video: "images/projects/ticket-classifier.mp4" },
+      { n: "Quote Search by Meaning", d: "Semantic quote search — fine-tuned sentence embeddings + FAISS index over ~2,500 quotes, served through Streamlit.", t: ["Python", "FAISS", "PyTorch", "Streamlit"], tools: ["Python", "FAISS", "PyTorch", "sentence-transformers", "Streamlit"], dom: ["ML", "NLP"], live: "https://quotes-demo.streamlit.app/", code: "https://github.com/VishnujanNarayanan/Quotes_Retrieval", img: "images/projects/quote-retrieval-poster.jpg", video: "images/projects/quote-retrieval.mp4" },
+      { n: "Face Photo Age and Gender Predictor", d: "Multi-task CNN predicting age and gender from a face photo, trained on 10,000+ UTKFace images with face detection and alignment.", t: ["Python", "TensorFlow", "Keras", "OpenCV"], tools: ["Python", "TensorFlow", "Keras", "OpenCV"], dom: ["ML", "Computer Vision"], live: "https://age-gender-classifier.onrender.com", code: "https://github.com/VishnujanNarayanan/Image_classifier", img: "images/projects/age-gender-poster.jpg", video: "images/projects/age-gender.mp4" },
+      { n: "Breast Cancer Diagnosis Model", d: "Feed-forward classifier built in pure NumPy — 97.4% accuracy / 0.995 ROC-AUC on Breast-Cancer-Wisconsin, with hand-derived backprop.", t: ["Python", "NumPy"], tools: ["Python", "NumPy"], dom: ["ML"], live: "https://huggingface.co/spaces/Vishnujann/nn-from-scratch-breast-cancer", code: "https://github.com/VishnujanNarayanan/Neural_net_from_scratch", img: "images/projects/neural-net-scratch.jpg" },
+      { n: "Trend Prediction Model", d: "Linear regression built end to end in pure NumPy — hand-derived gradient descent and a closed-form solver, validated vs scikit-learn.", t: ["Python", "NumPy"], tools: ["Python", "NumPy", "scikit-learn"], dom: ["ML"], code: "https://github.com/VishnujanNarayanan/Linear_regression_from_scratch", img: "images/projects/linear-regression-scratch.jpg" },
+      { n: "Crypto Futures Trading Tool", d: "CLI trading bot placing market, limit, and stop-limit orders and managing positions on the Binance USDT-M Futures Testnet.", t: ["Python", "python-binance", "CLI"], tools: ["Python", "python-binance", "CLI"], dom: ["Finance", "Backend"], live: "https://binance-futures-bot-api-giyj.onrender.com", code: "https://github.com/VishnujanNarayanan/binance-futures-trading-bot", img: "images/projects/trading-bot-1.jpg", imgs: ["images/projects/trading-bot-1.jpg", "images/projects/trading-bot-2.jpg", "images/projects/trading-bot-3.jpg", "images/projects/trading-bot-4.jpg"] },
+      { n: "Student Task Planner Web App", d: "Browser task planner written in Scala 3 and compiled to JavaScript — state is one immutable Var, the UI a pure projection of it, with no manual DOM manipulation.", t: ["Scala 3", "Scala.js", "Laminar"], tools: ["Scala", "Scala.js", "Laminar", "sbt", "Vercel"], dom: ["Frontend", "Functional Programming"], live: "https://task-manager-using-functional-progr.vercel.app/", code: "https://github.com/VishnujanNarayanan/task_manager_using_functional_programming", img: "images/projects/task-manager-poster.jpg", video: "images/projects/task-manager.mp4" },
     ];
 
     // PROJECTS is the single source of truth for a project's card media. The flow
     // section renders its own cards from its own list, and used to repeat img/video
     // there — so a project that gained a real capture kept a stock placeholder in the
-    // flow until someone remembered to edit both places (the Job Application Bot and
+    // flow until someone remembered to edit both places (the Job Matching and Resume Builder and
     // Market Data Platform were both stale that way). Publish a name-keyed registry
     // instead; flow.js reads it and carries no media paths of its own, so adding a
     // video here reaches every surface that shows the project.
@@ -3093,15 +3093,41 @@ function makeTypeIn(host, runs, opts) {
     var panEl = projEl.querySelector(".term-cards-pan");
     var viewEl = projEl.querySelector(".term-cards-view");
     var sideEl = projEl.querySelector(".term-side");
-    // How much further down the card content runs than the filter panel's box. The
-    // panel holds still for exactly this much of the pan — the stretch where there are
-    // still rows below the fold — and then travels with the cards, so the last row and
-    // the foot of the panel leave the viewport together instead of the panel sitting
-    // there alone under a finished grid. A layout read, so it is measured with the rest
-    // of the geometry rather than per frame.
-    var sideLead = 0;
+    // HARD RULE: the filter panel holds still until every card is on screen, then
+    // travels up with the grid, its foot level with the foot of the LAST ROW. sideLead
+    // is how far the cards must pan before the last visible row's bottom edge rises to
+    // the panel's bottom edge; panSide() moves the panel by whatever the pan exceeds it.
+    // Measured from layout offsets, which ignore every transform — the pan, the column
+    // stagger, the panel's own 64px entrance slide — so it is exact at any moment, with
+    // no head start and no reliance on the pan's scrollHeight (which also counts the
+    // meta line and spacing). lastRowOdd: the last row has a card in an offset column,
+    // so the column stagger (curColOff) is still pushing that row lower.
+    var sideLead = 0, lastRowOdd = false, curColOff = 0;
+    function layoutTop(el) { var t = 0; while (el) { t += el.offsetTop; el = el.offsetParent; } return t; }
     function measureSideLead() {
-      sideLead = sideEl ? Math.max(0, panEl.scrollHeight - sideEl.offsetHeight) : 0;
+      if (!sideEl) { sideLead = 0; return; }
+      var panTop = layoutTop(panEl);
+      var sideBottom = layoutTop(sideEl) + sideEl.offsetHeight - panTop;
+      var cols = (getComputedStyle(gridEl).gridTemplateColumns || "").split(" ").filter(Boolean).length || 1;
+      var lastBottom = 0, n = 0;
+      cardEls.forEach(function (el) {
+        if (el.classList.contains("is-filtered-out")) return;
+        var b = layoutTop(el) + el.offsetHeight - panTop;
+        if (b > lastBottom) lastBottom = b;
+        n++;
+      });
+      // Visible cards fill the grid in order, so the last row is the trailing (partial or full) row.
+      var inLast = n ? (n % cols || cols) : 0;
+      lastRowOdd = false;
+      for (var k = n - inLast; k < n; k++) if ((k % cols) % 2) lastRowOdd = true;
+      sideLead = Math.max(0, lastBottom - sideBottom);
+    }
+    // Re-measure whenever the card stack or the panel actually changes size. sizeSection()
+    // alone can run before the grid has laid out — e.g. coming back from /blog/, where the
+    // intro is skipped — and a too-small lead set the panel moving almost at once.
+    if (sideEl && window.ResizeObserver) {
+      var sideRO = new ResizeObserver(function () { measureSideLead(); if (typeof panCards === "function") panCards(); });
+      sideRO.observe(panEl); sideRO.observe(sideEl);
     }
 
     // Stagger the card pop-in along the anti-diagonal (row+col): the top-left card
@@ -3689,7 +3715,9 @@ function makeTypeIn(host, runs, opts) {
       // without this the pin is that much too short and their last row can never scroll fully
       // into view. Uses the MAX (threshold) offset so the pin length stays constant
       // rather than shifting under the mapping as the offset closes.
-      var ov = panEl.scrollHeight - viewEl.clientHeight + staggerCardH() * COL_OFFSET_FRAC;
+      // Halved: the offset has closed (COL_CLOSE_AT) well before the run ends, so the full
+      // allowance left a blank band under the last row; half still clears the stagger.
+      var ov = panEl.scrollHeight - viewEl.clientHeight + staggerCardH() * COL_OFFSET_FRAC * 0.5;
       return ov > 0 ? ov + PAN_PAD : 0;                 // 0 when the cards already fit
     }
     // Size the section so the PINNED scroll length == the card overflow: more projects
@@ -3781,6 +3809,7 @@ function makeTypeIn(host, runs, opts) {
       // wise lift the offset columns above their neighbours.
       var frac = Math.max(0, Math.min(COL_OFFSET_MAX, (1 - p / COL_CLOSE_AT) * COL_OFFSET_FRAC));
       var off = null, vi = 0;
+      curColOff = frac * (cardEls[0] ? cardEls[0].offsetHeight : 0);
       for (var i = 0; i < cardEls.length; i++) {
         var el = cardEls[i];
         if (el.classList.contains("is-filtered-out")) { el.style.translate = ""; continue; }
@@ -3790,6 +3819,7 @@ function makeTypeIn(host, runs, opts) {
       }
     }
     function clearColumnOffset() {
+      curColOff = 0;
       cardEls.forEach(function (el) { el.style.translate = ""; });
     }
     // Map the pinned scroll to a vertical PAN of the cards layer inside its clipped
@@ -3821,7 +3851,7 @@ function makeTypeIn(host, runs, opts) {
       var past = Math.min(1, Math.max(0, travel / range));
       var cardPan = past * range;
       panEl.style.transform = "translateY(" + (-cardPan + mom).toFixed(1) + "px)";
-      panSide(Math.max(0, cardPan - sideLead));
+      panSide(Math.max(0, cardPan - sideLead - (lastRowOdd ? curColOff : 0)));
     }
     function update() {
       raf = 0;
@@ -3943,7 +3973,7 @@ function makeTypeIn(host, runs, opts) {
 })();
 
 /* ============================================================
-   Check Out My Socials: scroll-driven fanned-card spread.
+   Swing By And Say Hi On Socials: scroll-driven fanned-card spread.
    Cards start stacked at centre (pushed down 10rem, upright) and
    fan out into a symmetric peacock spread as the section scrolls
    into view. Pure function of scroll → reverses on scroll-up.
@@ -4078,12 +4108,12 @@ function makeTypeIn(host, runs, opts) {
   }
   /* ---- Socials copy: type, then reel, then highlight -----------------------------
      Three beats, each on its own line of scroll:
-       1. the HEADING ("Check Out" / "My Socials") types in, a beat EARLIER than the
+       1. the HEADING ("Swing By And Say Hi" / "On Socials") types in, a beat EARLIER than the
           cards fan out, so the words are already being written as the spread starts;
        2. scrolling on, the FOLLOW line types;
        3. the moment that line finishes, the three social LINKS reel in from nothing —
           the same per-letter roll the nav does on load — and the blue highlight sweeps
-          across "My Socials" and the follow line, left to right, like a text selection
+          across "On Socials" and the follow line, left to right, like a text selection
           being dragged over them. Until then there is NO blue behind either line.
      Skipped on mobile and under reduced motion, where the fan does not run either:
      the two lines keep their plain CSS background and the links are simply there. */
@@ -4102,7 +4132,7 @@ function makeTypeIn(host, runs, opts) {
   const followEl = document.querySelector(".callout-socials-follow");
   // hold 120: the cursor travels with the heading while it types and is gone almost the
   // instant it stops. It used to sit there for the default beat and a bit — and once the
-  // highlight swept "My Socials" the text (and so the cursor, which is currentColor) went
+  // highlight swept "On Socials" the text (and so the cursor, which is currentColor) went
   // white, leaving a white block parked at the end of the line.
   const headType = !staged || !headEl ? null : makeTypeIn(headEl, [
     { el: headEl.querySelector(".callout-socials-heading__line:not(.is-hl)"), step: HEAD_STEP },
@@ -4500,6 +4530,175 @@ function makeTypeIn(host, runs, opts) {
   });
 })();
 
+/* ---- Hero stage strip ------------------------------------------------------
+   A small shell session in the flow terminal's style (vishnu@portfolio:~/…$).
+   Once the panel has faded in, `ls` types and the four stages reel in as its
+   output. Then each stage runs `cat <stage>`: the command types, its data-desc
+   prints whole as the output, and a fresh empty prompt waits for the next stage.
+   Like the flow terminal the log is append-only: older entries scroll up, fade,
+   and are pruned. The bar under the active stage fills over the stage's whole time
+   on screen, counting down to the next stage. On devices that hover, pointing at a
+   stage jumps to it and holds the cycle; leaving restarts the countdown at 4x speed. A
+   tap/click jumps too. Jumping while a `cat` is still unprinted backspaces it (in a
+   third of the typing time) to the shared `cat ` and types the new stage over it.
+   Reduced motion: no typing, every line is set whole. */
+(function heroStages() {
+  var steps = document.querySelectorAll(".hero__step");
+  var panel = document.querySelector(".hero__stages");
+  var stack = document.querySelector(".hero__log-stack");
+  var lsRow = document.querySelector(".hero__row--ls");
+  if (!steps.length || !panel || !stack || !lsRow) return;
+  var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var CMD_MS = 95, CAT_TOTAL_MS = 1100, UNTYPE_MS = CAT_TOTAL_MS / 3, OUT_GAP_MS = 180, HOLD_MS = 3200, KEEP = 9;  // every `cat` takes CAT_TOTAL_MS to type, whatever its length
+  // One stage's full time on screen: type the command, print, then hold. The countdown
+  // bar spans all of it. Hovering off restarts it at 4x speed (a quarter of the time): the
+  // visitor has already read that stage, so it moves on sooner.
+  var STAGE_MS = reduce ? HOLD_MS : CAT_TOTAL_MS + OUT_GAP_MS + HOLD_MS;
+  var cur = -1, timer = 0, holdTimer = 0, held = false, typing = false, prompt = null;
+  var inCmd = false;                                 // a `cat` is on the prompt but its output has not printed yet
+  var PROMPT = '<b class="hs-usr">vishnu@portfolio</b>:<b class="hs-path">~/how-i-build</b>$ ';
+
+  // Type `text` into `el` from character `from` on, then call done. Reduced motion sets it whole.
+  function type(el, text, ms, done, from) {
+    if (reduce) { el.textContent = text; return done(); }
+    var n = from || 0;
+    if (n >= text.length) { el.textContent = text; return done(); }
+    (function tick() {
+      el.textContent = text.slice(0, ++n);
+      if (n < text.length) timer = setTimeout(tick, ms); else done();
+    })();
+  }
+  // Backspace `el` down to `keep` characters in UNTYPE_MS total, however many go.
+  function untype(el, keep, done) {
+    var t = el.textContent, n = t.length;
+    if (reduce || n <= keep) { el.textContent = t.slice(0, keep); return done(); }
+    var ms = UNTYPE_MS / (n - keep);
+    (function tick() {
+      el.textContent = t.slice(0, --n);
+      if (n > keep) timer = setTimeout(tick, ms); else done();
+    })();
+  }
+  function caretTo(el) {
+    var old = panel.querySelectorAll(".hero__caret");
+    for (var k = 0; k < old.length; k++) old[k].parentNode.removeChild(old[k]);
+    if (!el) return;
+    var c = document.createElement("i"); c.className = "hero__caret"; c.setAttribute("aria-hidden", "true");
+    el.appendChild(c);
+  }
+  function newPrompt() {
+    var row = document.createElement("p");
+    row.className = "hero__row";
+    row.innerHTML = PROMPT + '<code class="hero__cmd"></code>';
+    stack.appendChild(row);
+    while (stack.children.length > KEEP) stack.removeChild(stack.firstChild);
+    caretTo(row);
+    return (prompt = row);
+  }
+  function bar(i, ms) {
+    var b = steps[i];
+    b.classList.remove("is-timing");
+    void b.offsetWidth;                                // restart the fill
+    b.style.setProperty("--stage-ms", ms + "ms");
+    b.classList.add("is-timing");
+  }
+
+  // `timer` drives typing; `holdTimer` is the countdown to the next stage. Keeping them
+  // apart means a hover can always cancel the countdown without stopping the typing.
+  function show(i) {
+    clearTimeout(timer);
+    clearTimeout(holdTimer);
+    cur = i;
+    for (var k = 0; k < steps.length; k++) {
+      steps[k].classList.toggle("is-active", k === i);
+      steps[k].classList.remove("is-timing");
+    }
+    // A `cat` still on the prompt (typing, or typed but not yet printed) is backspaced
+    // to the part it shares with the new one and retyped, rather than left cut off.
+    var morph = inCmd && prompt;
+    if (!morph && (!prompt || prompt.querySelector(".hero__cmd").textContent)) newPrompt();
+    var older = stack.children;
+    for (var o = 0; o < older.length; o++) if (older[o] !== prompt) older[o].classList.add("is-old");
+    var row = prompt, cmd = row.querySelector(".hero__cmd");
+    countdown();
+    typing = true;
+    inCmd = true;
+    caretTo(row);
+    var line = "cat " + names[i], have = cmd.textContent, keep = 0;
+    while (keep < have.length && keep < line.length && have[keep] === line[keep]) keep++;
+    untype(cmd, keep, function () { type(cmd, line, CAT_TOTAL_MS / line.length, function () {
+      // Output prints whole, as a real command's would; only the command types.
+      caretTo(null);
+      timer = setTimeout(function () {
+        var outEl = document.createElement("p");
+        outEl.className = "hero__out";
+        outEl.textContent = steps[i].getAttribute("data-desc") || "";
+        stack.appendChild(outEl);
+        typing = false;
+        inCmd = false;
+        newPrompt();
+      }, reduce ? 0 : OUT_GAP_MS);
+    }, keep); });
+  }
+  function countdown(ms) {
+    clearTimeout(holdTimer);
+    if (held) return;
+    ms = ms || STAGE_MS;
+    bar(cur, ms);
+    holdTimer = setTimeout(function () { show((cur + 1) % steps.length); }, ms);
+  }
+
+  // buildLinkReel below doubles each label (face + clone), so the stage name for
+  // `cat <stage>` is read once, before that.
+  steps = Array.prototype.slice.call(steps);
+  var names = steps.map(function (btn) { return btn.textContent.trim(); });
+  var ready = false;                                 // hover/tap wait for `ls` and the reel-in
+
+  var canHover = matchMedia("(hover: hover)").matches;
+  steps.forEach(function (btn, i) {
+    if (canHover) {
+      btn.addEventListener("mouseenter", function () {
+        if (!ready) return;
+        held = true; panel.classList.add("is-held");
+        if (i !== cur) show(i);
+        else clearTimeout(holdTimer);                  // hovering the active stage cancels its countdown
+      });
+      btn.addEventListener("mouseleave", function () { if (!ready) return; held = false; panel.classList.remove("is-held"); countdown(STAGE_MS / 4); });
+    }
+    btn.addEventListener("click", function () { if (ready && i !== cur) show(i); });
+  });
+
+  // Words + arrows get the site's link reel and roll in one by one as the output of `ls`.
+  var items = document.querySelectorAll(".hero__steps li");
+  steps.forEach(buildLinkReel);
+  Array.prototype.forEach.call(document.querySelectorAll(".hero__arrow"), buildLinkReel);
+
+  // `ls` waits for the window-open animation (styles.css heroWindowOpen) to finish,
+  // then lets the cursor blink for a beat so the eye lands on the panel first.
+  var BLINK_MS = reduce ? 0 : 1200;
+  var REEL_STEP = reduce ? 0 : 140;
+  var begun = false;
+  function begin() {
+    if (begun) return;
+    begun = true;
+    timer = setTimeout(function () {
+      var ls = lsRow.querySelector(".hero__cmd");
+      caretTo(lsRow);
+      type(ls, "ls", CMD_MS * 1.5, function () {
+        caretTo(null);
+        Array.prototype.forEach.call(items, function (li, k) {
+          if (reduce) li.classList.add("is-in");
+          else setTimeout(function () { li.classList.add("is-in"); }, 200 + k * REEL_STEP);
+        });
+        timer = setTimeout(function () { ready = true; show(0); }, reduce ? 0 : 200 + items.length * REEL_STEP + 1000);
+      });
+    }, BLINK_MS);
+  }
+  panel.addEventListener("animationend", function (e) { if (e.animationName === "heroWindowOpen") begin(); });
+  // Fallback in case the animation never runs (display:none, an engine skipping it).
+  var start = function () { if (reduce) begin(); else setTimeout(begin, 6000); };
+  if (window.__bootReady && window.__bootReady.then) window.__bootReady.then(start); else start();
+})();
+
 /* ---- Sub-page header pills (2026-08-11) --------------------------------------
    On the homepage the hero block builds the per-letter reel on both CTA pills as
    part of the zoom-out choreography. Sub-pages have no .hero, so that block never
@@ -4872,8 +5071,22 @@ function makeTypeIn(host, runs, opts) {
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { if (window.__socialsPlay) window.__socialsPlay(true); });
     });
+    navToLightWorld();
   });
 })();
+
+/* Socials and the footer both sit on the light background, so the header must read
+   black there. Their links JUMP, skipping every scroll threshold that would normally
+   roll it black (the hero zoom-out, the flow zones), so a click from a dark stretch left
+   the nav and pills white. Roll it to the light world here with the usual per-letter
+   reel, and tell flow.js, so scrolling back into a dark zone still flips it white. */
+function navToLightWorld() {
+  var hdr = document.querySelector("header");
+  if (hdr && !hdr.classList.contains("header--on-light")) {
+    if (window.__navLight) window.__navLight(true); else hdr.classList.add("header--on-light");
+  }
+  if (window.__flowNavOn) window.__flowNavOn(true);
+}
 
 /* ---- Contact goes to the BOTTOM of the page (2026-08-14) -----------------------
    #contact is the footer's own id, so the browser's native jump parks the footer's TOP
@@ -4899,6 +5112,7 @@ function makeTypeIn(host, runs, opts) {
     if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { immediate: true, force: true });
     window.scrollTo(0, y);                       // also move the real scroller, in case Lenis is absent
     if (history.replaceState) { try { history.replaceState(null, "", "#contact"); } catch (err) {} }
+    navToLightWorld();
   });
 })();
 
