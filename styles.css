@@ -2320,3 +2320,9 @@ html{overflow-x:clip}
 .proj-card__img[src*="task-manager"],.proj-card__img[src*="law-firm"]{--media-drop:4%}
 .proj-card__img[src*="trading-bot"],.proj-card__img[src*="trader-sentiment"],.proj-card__img[src*="fraud-detection"],.proj-card__img[src*="nse-stock-prediction"],.proj-card__img[src*="linear-regression-scratch"],.proj-card__img[src*="neural-net-scratch"]{--media-drop:-2%;--media-zoom:1.04}
 /* Lifting above 0 would open a gap at the bottom edge; the small zoom covers it. */
+
+/* Scroll cue: off-centre, on the headline's left edge (the desktop content column is
+   min(1200px, 100% - 2*space-3xl) wide and centred), and lifted off the bottom.
+   Never closer than --space-md to the viewport edge. */
+.hero .hero__scroll-btn{left:max(var(--space-md),calc((100% - min(1200px,100% - 2 * var(--space-3xl))) / 2));transform:none;padding:0;bottom:clamp(72px,11vh,120px)}
+@media (max-width:820px){.hero .hero__scroll-btn{left:var(--space-md);bottom:clamp(56px,9vh,88px)}}
