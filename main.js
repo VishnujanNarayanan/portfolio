@@ -848,7 +848,7 @@ function makeTypeIn(host, runs, opts) {
      in updateHeroExit (kept in sync by formula, not by sharing state). */
   (function () {
     var layer = document.querySelector(".cert-layer");
-    if (!layer) return;
+    if (!layer || layer.hidden) return;   // CTA switched off in index.html
     // The visible letters are a FILLED path; they're uncovered by a mask made of the traced
     // centre-line PEN PATH, split into ordered strokes (writing order). We measure each
     // stroke and reveal them in sequence by cumulative length, so the ink is laid down by a

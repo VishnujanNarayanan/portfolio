@@ -234,7 +234,9 @@
          transform (set in main.js); the stroke is laid down letter-by-letter via
          stroke-dashoffset scrubbed to scroll (writes in the back half of the zoom-out,
          un-writes on scroll-up). SVG is decorative; the link carries real text. -->
-    <div class="cert-layer">
+    <!-- Hidden for now: remove `hidden` to bring back the handwritten CTA (and the
+         click-the-video-to-open-certificates behaviour, which main.js skips while hidden). -->
+    <div class="cert-layer" hidden>
       <a class="cert-cta" href="#certificates" aria-label="Check out my Certificates">
         <span class="visually-hidden">Check out my Certificates</span>
         <svg class="cert-cta__svg" viewBox="0 0 397 192" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
