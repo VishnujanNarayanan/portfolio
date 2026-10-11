@@ -2326,3 +2326,25 @@ html{overflow-x:clip}
    Never closer than --space-md to the viewport edge. */
 .hero .hero__scroll-btn{left:max(var(--space-md),calc((100% - min(1200px,100% - 2 * var(--space-3xl))) / 2));transform:none;padding:0;bottom:clamp(72px,11vh,120px)}
 @media (max-width:820px){.hero .hero__scroll-btn{left:var(--space-md);bottom:clamp(56px,9vh,88px)}}
+
+/* Centred hero: the name is the headline, "Your friendly neighbourhood developer."
+   a smaller line under it, and the terminal window centred below with room around it.
+   Placed last so it wins over the earlier left-aligned desktop layout. */
+.hero .hero__content{text-align:center;justify-items:center;align-items:center}
+.hero .hero__title{font-size:clamp(28px,min(3vw,5vh),44px);letter-spacing:-.02em;line-height:1.15}
+.hero .hero__title .hero__title-name{font-size:clamp(48px,min(5.6vw,9.5vh),88px);letter-spacing:-.03em;line-height:1.05;margin-bottom:clamp(14px,2vh,22px)}
+.hero .hero__subtitle{display:flex;flex-direction:column;align-items:center;max-width:none;width:100%}
+.hero .hero__stages{width:min(720px,100%);margin:clamp(40px,8vh,88px) auto 0;justify-self:center}
+@media (min-width:821px){
+  .hero .hero__title span:not(.hero__title-name){display:inline}
+  .hero .hero__title .hero__accent{margin-left:.28em}
+}
+@media (max-width:1024px){
+  .hero .hero__title{font-size:28px;letter-spacing:-.5px}
+  .hero .hero__title .hero__title-name{font-size:44px}
+}
+@media (max-width:480px){
+  .hero .hero__title{font-size:22px}
+  .hero .hero__title .hero__title-name{font-size:34px}
+  .hero .hero__stages{margin-top:var(--space-xl)}
+}
