@@ -2345,16 +2345,21 @@ html{overflow-x:clip}
 /* ---------- Premium hero pass ----------
    Aurora background and a two-tone Inter headline. */
 
-/* Background: one colour, lit softly (no contour lines in the hero). The site's light
-   blue as a single tonal field: a broad pool of light where the headline and terminal
-   sit, a gentle window-light wash from the top right, and corners that fall off a
-   few shades darker. Low contrast, no shapes, no motion; fine grain keeps it from
-   looking flat or banding. */
+/* Background: one colour family with real tonal range (no contour lines in the hero).
+   Asymmetric light, as in the references: a large soft light mass from the top right,
+   a fainter mist bottom-left, two soft window-light beams falling diagonally, and the
+   opposite corners sinking into a deeper blue-grey. No shapes, no motion; fine grain
+   on ::after keeps it photographic rather than flat. */
 .hero .hero__bg{overflow:hidden;
-  background:radial-gradient(60% 55% at 50% 38%,rgba(255,255,255,.55),transparent 72%),
-             radial-gradient(55% 60% at 88% 0%,rgba(255,255,255,.45),transparent 70%),
-             radial-gradient(140% 110% at 50% 35%,transparent 45%,rgba(32,62,98,.22) 100%),
-             #d3e2ec}
+  background:radial-gradient(70% 85% at 88% 0%,rgba(255,255,255,.88),rgba(255,255,255,.35) 40%,transparent 68%),
+             radial-gradient(45% 50% at 50% 30%,rgba(255,255,255,.35),transparent 75%),
+             radial-gradient(48% 55% at 0% 100%,rgba(255,255,255,.4),transparent 70%),
+             radial-gradient(60% 60% at 0% 0%,rgba(38,66,104,.32),transparent 70%),
+             radial-gradient(65% 65% at 100% 100%,rgba(38,66,104,.36),transparent 72%),
+             #b9cddd}
+.hero .hero__bg::before{content:"";position:absolute;inset:-10%;pointer-events:none;
+  background:linear-gradient(118deg,transparent 34%,rgba(255,255,255,.22) 42%,transparent 50%,transparent 54%,rgba(255,255,255,.14) 60%,transparent 67%);
+  filter:blur(24px)}
 .hero .hero__bg #hero-contours{display:none}
 .hero .hero__bg::after{content:"";position:absolute;inset:0;pointer-events:none;
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:220px 220px}
