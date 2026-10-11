@@ -5334,3 +5334,96 @@ function navToLightWorld() {
   }
   update();
 })();
+
+/* ---------- Continuous site background (homepage) ----------
+   One document-tall layer (#site-bg) behind every section from the hero to the footer,
+   so the lighting never restarts at a section edge: it scrolls with the page as a single
+   canvas. Built from the real section positions and rebuilt whenever the page height
+   changes.
+     tone   dark (#0a0f1d) until the flow, ramping to the light blue (#b9cddd) across
+            the zones on the same schedule as window.__flowLight (lt 0 at 20% of the
+            flow's pinned scroll, 1 at 80%), then light through blog → footer. The
+            projects run is dark too, but its own solid fill covers it.
+     light  soft light masses every ~1.15 viewports, alternating right / left, each
+            tinted for the tone at its height (white on light, dim periwinkle on dark),
+            with a deeper shade mass on the opposite side between them.
+     grain  two fine noise tiles on top (dark specks + light specks). */
+(function siteBg() {
+  var flow = document.querySelector(".flow");
+  if (!flow) return;                                   // homepage only
+  var el = document.createElement("div");
+  el.id = "site-bg";
+  el.setAttribute("aria-hidden", "true");
+  var vanta = document.getElementById("vanta-bg");
+  if (vanta && vanta.parentNode) vanta.parentNode.insertBefore(el, vanta.nextSibling);
+  else document.body.insertBefore(el, document.body.firstChild);
+
+  var DARK = [10, 15, 29], LIGHT = [185, 205, 221];
+  var GRAIN = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
+  var GRAIN_L = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
+  function mix(a, b, t) { return Math.round(a + (b - a) * t); }
+  function rgb(t) { return "rgb(" + mix(DARK[0], LIGHT[0], t) + "," + mix(DARK[1], LIGHT[1], t) + "," + mix(DARK[2], LIGHT[2], t) + ")"; }
+  function docTop(node) { return node.getBoundingClientRect().top + (window.scrollY || 0); }
+
+  function build() {
+    var vh = window.innerHeight, H = document.documentElement.scrollHeight;
+    var fTop = docTop(flow), fH = flow.offsetHeight, total = Math.max(fH - vh, 1);
+    var D0 = fTop + 0.2 * total + 0.5 * vh;            // viewport centre when lt = 0
+    var L1 = fTop + 0.8 * total + 0.5 * vh;            // viewport centre when lt = 1
+    if (L1 <= D0) L1 = D0 + vh;
+    var feat = document.querySelector(".features"), tail = document.querySelector(".projects-tail");
+    var pTop = feat ? docTop(feat) : Infinity;
+    var pEnd = tail ? docTop(tail) + tail.offsetHeight : (feat ? pTop + feat.offsetHeight : Infinity);
+    function tone(y) {
+      if (y >= pTop && y < pEnd) return 0;
+      if (y <= D0) return 0;
+      if (y >= L1) return 1;
+      var t = (y - D0) / (L1 - D0);
+      return t * t * (3 - 2 * t);
+    }
+    // Base tone: dark → ramp → light, hard dark band for the projects run.
+    var base = "linear-gradient(180deg," + rgb(0) + " 0px," + rgb(0) + " " + Math.round(D0) + "px,";
+    for (var k = 1; k <= 6; k++) {                      // eased ramp as a few stops
+      var y = D0 + (L1 - D0) * k / 6;
+      base += rgb(tone(y)) + " " + Math.round(y) + "px,";
+    }
+    if (isFinite(pTop)) {
+      base += rgb(1) + " " + Math.round(pTop) + "px," + rgb(0) + " " + Math.round(pTop) + "px," +
+              rgb(0) + " " + Math.round(pEnd) + "px," + rgb(1) + " " + Math.round(pEnd) + "px,";
+    }
+    base += rgb(1) + " " + H + "px)";
+    // Light and shade masses along the whole length.
+    var layers = [], step = vh * 1.15, i = 0;
+    for (var yy = vh * 0.1; yy < H + vh; yy += step, i++) {
+      var right = i % 2 === 0, t2 = tone(yy);
+      var la = (0.06 + 0.72 * t2).toFixed(3);         // white on light, faint on dark
+      var lc = t2 > 0.5 ? "255,255,255" : "120,142,225";
+      layers.push("radial-gradient(" + Math.round(window.innerWidth * 0.7) + "px " + Math.round(vh * 0.85) + "px at " +
+        (right ? "88%" : "12%") + " " + Math.round(yy) + "px,rgba(" + lc + "," + la + "),rgba(" + lc + "," + (la * 0.4).toFixed(3) + ") 40%,transparent 68%)");
+      var sy = yy + step * 0.5, t3 = tone(sy);
+      var sa = (0.55 - 0.25 * t3).toFixed(3);
+      var sc = t3 > 0.5 ? "38,66,104" : "0,0,0";
+      layers.push("radial-gradient(" + Math.round(window.innerWidth * 0.6) + "px " + Math.round(vh * 0.7) + "px at " +
+        (right ? "4%" : "96%") + " " + Math.round(sy) + "px,rgba(" + sc + "," + sa + "),transparent 70%)");
+    }
+    el.style.height = H + "px";
+    el.style.background = [GRAIN, GRAIN_L].concat(layers, [base]).join(",");
+    el.style.backgroundSize = ["220px 220px", "260px 260px"].concat(layers.map(function () { return "100% 100%"; }), ["100% 100%"]).join(",");
+    el.style.backgroundRepeat = ["repeat", "repeat"].concat(layers.map(function () { return "no-repeat"; }), ["no-repeat"]).join(",");
+  }
+
+  var queued = false, lastKey = "";
+  function queue() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(function () {
+      queued = false;
+      var key = window.innerWidth + "x" + window.innerHeight + ":" + document.documentElement.scrollHeight;
+      if (key !== lastKey) { lastKey = key; build(); }
+    });
+  }
+  queue();
+  window.addEventListener("resize", queue, { passive: true });
+  window.addEventListener("load", queue);
+  if ("ResizeObserver" in window) new ResizeObserver(queue).observe(document.body);
+})();

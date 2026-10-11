@@ -2383,22 +2383,27 @@ html{overflow-x:clip}
     #b9cddd;
   --bg-light-size:220px 220px,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%;
   --bg-dark:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-    linear-gradient(118deg,transparent 34%,rgba(150,170,255,.06) 42%,transparent 50%,transparent 54%,rgba(150,170,255,.04) 60%,transparent 67%),
-    radial-gradient(70% 85% at 88% 0%,rgba(118,142,230,.3),rgba(90,110,200,.12) 40%,transparent 68%),
-    radial-gradient(45% 50% at 50% 30%,rgba(90,110,190,.1),transparent 75%),
-    radial-gradient(48% 55% at 0% 100%,rgba(100,140,215,.13),transparent 70%),
-    radial-gradient(60% 60% at 0% 0%,rgba(2,4,12,.55),transparent 70%),
-    radial-gradient(65% 65% at 100% 100%,rgba(2,4,12,.6),transparent 72%),
-    #131b31;
+    linear-gradient(118deg,transparent 34%,rgba(150,170,255,.04) 42%,transparent 50%,transparent 54%,rgba(150,170,255,.025) 60%,transparent 67%),
+    radial-gradient(70% 85% at 88% 0%,rgba(100,124,210,.2),rgba(70,90,180,.07) 40%,transparent 68%),
+    radial-gradient(45% 50% at 50% 30%,rgba(80,100,180,.06),transparent 75%),
+    radial-gradient(48% 55% at 0% 100%,rgba(90,125,200,.08),transparent 70%),
+    radial-gradient(60% 60% at 0% 0%,rgba(0,0,0,.6),transparent 70%),
+    radial-gradient(65% 65% at 100% 100%,rgba(0,0,0,.65),transparent 72%),
+    #0a0f1d;
   --bg-dark-size:220px 220px,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%;
 }
 #vanta-bg{background:var(--bg-dark);background-size:var(--bg-dark-size)}
-#bg-contours{background:var(--bg-light);background-size:var(--bg-light-size);opacity:0}
-#writing-contours,.section-contours--light{background:var(--bg-light);background-size:var(--bg-light-size)}
-.section-contours--dark{background:var(--bg-dark);background-size:var(--bg-dark-size)}
-.projects-tail{background-color:transparent}
-.s.is-callout-socials,.lfooter,.blog-body .lfooter{background:var(--bg-light);background-size:var(--bg-light-size);background-attachment:fixed}
+/* Homepage: ONE continuous background (#site-bg, built by the siteBg IIFE in main.js)
+   runs the full document height behind every section, so nothing restarts at a
+   section edge. The per-section layers are therefore transparent, except the
+   projects section, which keeps its solid near-black navy. */
+#site-bg{position:absolute;left:0;top:0;width:100%;z-index:-1;pointer-events:none}
+#bg-contours{display:none}
+#writing-contours,.section-contours--light{background:none}
+.section-contours--dark{background:#0f1628}
+.brand-teaser,.brand-manifesto,.s.is-callout-socials,.lfooter,.blog-body .lfooter{background:transparent}
+.projects-tail{background-color:#0f1628}
 .lfooter__clip{background:var(--bg-dark);background-size:var(--bg-dark-size)}
 .lfooter__pattern{display:none}
+/* Subpages have no #site-bg: the light composition, fixed to the viewport. */
 .blog-body,.subpage-body{background:var(--bg-light);background-size:var(--bg-light-size);background-attachment:fixed}
-
