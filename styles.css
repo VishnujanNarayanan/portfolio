@@ -2345,24 +2345,10 @@ html{overflow-x:clip}
 /* ---------- Premium hero pass ----------
    Aurora background and a two-tone Inter headline. */
 
-/* Background: one colour family with real tonal range (no contour lines in the hero).
-   Asymmetric light, as in the references: a large soft light mass from the top right,
-   a fainter mist bottom-left, two soft window-light beams falling diagonally, and the
-   opposite corners sinking into a deeper blue-grey. No shapes, no motion; fine grain
-   on ::after keeps it photographic rather than flat. */
-.hero .hero__bg{overflow:hidden;
-  background:radial-gradient(70% 85% at 88% 0%,rgba(255,255,255,.88),rgba(255,255,255,.35) 40%,transparent 68%),
-             radial-gradient(45% 50% at 50% 30%,rgba(255,255,255,.35),transparent 75%),
-             radial-gradient(48% 55% at 0% 100%,rgba(255,255,255,.4),transparent 70%),
-             radial-gradient(60% 60% at 0% 0%,rgba(38,66,104,.32),transparent 70%),
-             radial-gradient(65% 65% at 100% 100%,rgba(38,66,104,.36),transparent 72%),
-             #b9cddd}
-.hero .hero__bg::before{content:"";position:absolute;inset:-10%;pointer-events:none;
-  background:linear-gradient(118deg,transparent 34%,rgba(255,255,255,.22) 42%,transparent 50%,transparent 54%,rgba(255,255,255,.14) 60%,transparent 67%);
-  filter:blur(24px)}
+/* Hero background: the shared light composition (--bg-light, defined with --bg-dark
+   in "Site backgrounds" at the end of this file). No contour lines. */
+.hero .hero__bg{overflow:hidden;background:var(--bg-light);background-size:var(--bg-light-size)}
 .hero .hero__bg #hero-contours{display:none}
-.hero .hero__bg::after{content:"";position:absolute;inset:0;pointer-events:none;
-  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:220px 220px}
 
 /* Headline: Inter, the name dark with the blue on the name itself, tagline in grey. */
 .hero .hero__title{font-family:"Inter",var(--font-ui),sans-serif;font-weight:500}
@@ -2373,3 +2359,46 @@ html{overflow-x:clip}
 
 /* Terminal wrapper: centred under the headline. */
 .hero .hero__object{position:relative;width:min(720px,100%);margin:clamp(40px,8vh,88px) auto 0}
+
+/* ---------- Site backgrounds ----------
+   Two compositions, one colour family each, lit softly from the top right like the
+   references: a large light mass from that corner, a lift behind the content, a faint
+   mist bottom-left, two soft diagonal window beams, the opposite corners sinking a few
+   shades deeper, and fine grain on top (first layer). No contour lines anywhere.
+     --bg-light  the site's light blue (hero, blog, workflow, socials, light subpages)
+     --bg-dark   deep navy (the dark world: hero reveal, flow zone 1, projects, footer)
+   The flow zones cross-fade dark → light: #vanta-bg carries --bg-dark, and the fixed
+   #bg-contours layer carries --bg-light with its opacity driven by window.__flowLight
+   (main.js). Viewport-sized layers (the fixed ones and the section canvases, which
+   track the viewport) keep the light in the same place on screen while scrolling, so
+   the sections read as one continuous lit surface. */
+:root{
+  --bg-light:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(118deg,transparent 34%,rgba(255,255,255,.2) 42%,transparent 50%,transparent 54%,rgba(255,255,255,.13) 60%,transparent 67%),
+    radial-gradient(70% 85% at 88% 0%,rgba(255,255,255,.88),rgba(255,255,255,.35) 40%,transparent 68%),
+    radial-gradient(45% 50% at 50% 30%,rgba(255,255,255,.35),transparent 75%),
+    radial-gradient(48% 55% at 0% 100%,rgba(255,255,255,.4),transparent 70%),
+    radial-gradient(60% 60% at 0% 0%,rgba(38,66,104,.32),transparent 70%),
+    radial-gradient(65% 65% at 100% 100%,rgba(38,66,104,.36),transparent 72%),
+    #b9cddd;
+  --bg-light-size:220px 220px,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%;
+  --bg-dark:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(118deg,transparent 34%,rgba(150,170,255,.06) 42%,transparent 50%,transparent 54%,rgba(150,170,255,.04) 60%,transparent 67%),
+    radial-gradient(70% 85% at 88% 0%,rgba(118,142,230,.3),rgba(90,110,200,.12) 40%,transparent 68%),
+    radial-gradient(45% 50% at 50% 30%,rgba(90,110,190,.1),transparent 75%),
+    radial-gradient(48% 55% at 0% 100%,rgba(100,140,215,.13),transparent 70%),
+    radial-gradient(60% 60% at 0% 0%,rgba(2,4,12,.55),transparent 70%),
+    radial-gradient(65% 65% at 100% 100%,rgba(2,4,12,.6),transparent 72%),
+    #131b31;
+  --bg-dark-size:220px 220px,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%;
+}
+#vanta-bg{background:var(--bg-dark);background-size:var(--bg-dark-size)}
+#bg-contours{background:var(--bg-light);background-size:var(--bg-light-size);opacity:0}
+#writing-contours,.section-contours--light{background:var(--bg-light);background-size:var(--bg-light-size)}
+.section-contours--dark{background:var(--bg-dark);background-size:var(--bg-dark-size)}
+.projects-tail{background-color:transparent}
+.s.is-callout-socials,.lfooter,.blog-body .lfooter{background:var(--bg-light);background-size:var(--bg-light-size);background-attachment:fixed}
+.lfooter__clip{background:var(--bg-dark);background-size:var(--bg-dark-size)}
+.lfooter__pattern{display:none}
+.blog-body,.subpage-body{background:var(--bg-light);background-size:var(--bg-light-size);background-attachment:fixed}
+

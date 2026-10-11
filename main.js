@@ -1703,7 +1703,11 @@ function makeTypeIn(host, runs, opts) {
     var darkSecs = [];
     [".features", ".brand-teaser", ".brand-manifesto", ".faq"].forEach(function (sel) {
       var el = document.querySelector(sel); if (!el) return;
-      var c = document.createElement("canvas"); c.className = "section-contours";
+      var c = document.createElement("canvas");
+      // NO_LINES: the canvas is now just a viewport-tracking layer showing the shared
+      // CSS composition (styles.css "Site backgrounds"), light or dark per section.
+      c.className = "section-contours section-contours--" +
+        (sel === ".brand-teaser" || sel === ".brand-manifesto" ? "light" : "dark");
       el.insertBefore(c, el.firstChild);
       // The projects section (.features) keeps the solid backing but NO contour
       // lines (user request) — and a DARKER near-black navy fill so it reads like the
@@ -1726,6 +1730,12 @@ function makeTypeIn(host, runs, opts) {
         line: isSkills ? "rgba(57,50,220,0.5)" : "rgba(77,139,255,0.45)"
       });
     });
+    // NO_LINES: contour lines are switched off site-wide. The canvases stay as layers
+    // carrying the CSS light/dark compositions (styles.css "Site backgrounds"); this loop
+    // keeps only what is not drawing: the flow's dark → light cross-fade (#bg-contours
+    // opacity = __flowLight), the section layers tracking the viewport, and the header
+    // world flip. Set to false to bring the animated lines back.
+    var NO_LINES = true;
     var W = 0, H = 0, DPR = 1, CELL = 12, cols = 0, rows = 0, field = [];
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
     // tiny value noise (for domain-warping the field → breaks perfect circles/ovals)
@@ -1779,7 +1789,7 @@ function makeTypeIn(host, runs, opts) {
     // so the lines keep Lando's shapes/spacing but still MERGE, SPLIT, appear and vanish
     // organically like the old metaball field did.
     var SHEET_W = 1688, SHEET_H = 1056, PATHS = [];
-    fetch("images/footer-blobs.svg").then(function (r) { return r.text(); }).then(function (txt) {
+    if (!NO_LINES) fetch("images/footer-blobs.svg").then(function (r) { return r.text(); }).then(function (txt) {
       var doc = new DOMParser().parseFromString(txt, "image/svg+xml");
       doc.querySelectorAll("path[d]").forEach(function (p) {
         PATHS.push(new Path2D(p.getAttribute("d")));
@@ -2034,7 +2044,7 @@ function makeTypeIn(host, runs, opts) {
       // lumpily — Lando's curves are dead smooth, so this is just a slow large-scale sway.
       var md = Math.min(W, H), wf = 1.5 / md, warp = md * 0.02;
       frameNo++;
-      var needField = repel || (frameNo & 1) === 0 || fieldRows !== rows || fieldCols !== cols;
+      var needField = !NO_LINES && (repel || (frameNo & 1) === 0 || fieldRows !== rows || fieldCols !== cols);
       if (needField) {
       fieldRows = rows; fieldCols = cols;
       var bx = [], by = [], br = [], bw2 = [], bri2 = [], i, c, r;
@@ -2091,8 +2101,12 @@ function makeTypeIn(host, runs, opts) {
         : null;
       var lineCol = "rgba(" + Math.round(lerp(77, 57, lt)) + "," + Math.round(lerp(139, 50, lt)) +
         "," + Math.round(lerp(255, 220, lt)) + "," + lerp(0.3, 0.5, lt).toFixed(2) + ")";
-      drawContours(ctx, lineCol, bgFill);                // global: blue → inverted dark-blue on light
-      if (hctx) {                                        // hero: same blue-grey as end bg — skip once scrolled past
+      if (NO_LINES) {
+        // Cross-fade the light composition over the dark one (#vanta-bg) through the flow.
+        var ltO = lt.toFixed(3);
+        if (cv._o !== ltO) { cv._o = ltO; cv.style.opacity = ltO; }
+      } else drawContours(ctx, lineCol, bgFill);         // global: blue → inverted dark-blue on light
+      if (hctx && !NO_LINES) {                                        // hero: same blue-grey as end bg — skip once scrolled past
         var hr = hcv.getBoundingClientRect();
         if (hr.bottom > 0 && hr.top < H) drawContours(hctx, "#969ba8");
       }
@@ -2136,7 +2150,7 @@ function makeTypeIn(host, runs, opts) {
         if (window.__headerTheme) window.__headerTheme(ctaDark ? 1 : 0, true);
       }
       // Blog canvas: solid light blue (end-of-zone-4) + dark indigo lines (no gradient).
-      if (wctx && writingPin) {
+      if (wctx && writingPin && !NO_LINES) {
         var ws = rectOf(wsTop, wsH);                     // static parent: cheap visibility test
         if (ws.bottom > 0 && ws.top < H) {                // blog off-screen → no read at all
           var wr = writingPin.getBoundingClientRect();    // sticky → must be measured live
@@ -2169,6 +2183,7 @@ function makeTypeIn(host, runs, opts) {
         var ty = -sr.top, tyMax = sh - cvH;
         if (ty < 0) ty = 0; else if (ty > tyMax) ty = tyMax;
         if (sec.ty !== ty) { sec.ty = ty; sec.cv.style.transform = "translateY(" + ty + "px)"; }
+        if (NO_LINES) continue;                            // CSS composition on the canvas element
         var sg = sec.ctx;
         sg.clearRect(0, 0, W, cvH);
         sg.fillStyle = sec.fill; sg.fillRect(0, 0, W, cvH);
