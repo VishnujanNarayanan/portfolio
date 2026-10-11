@@ -2328,7 +2328,7 @@ html{overflow-x:clip}
 .hero .hero__title{font-size:clamp(28px,min(3vw,5vh),44px);letter-spacing:-.02em;line-height:1.15}
 .hero .hero__title .hero__title-name{font-size:clamp(48px,min(5.6vw,9.5vh),88px);letter-spacing:-.03em;line-height:1.05;margin-bottom:clamp(14px,2vh,22px)}
 .hero .hero__subtitle{display:flex;flex-direction:column;align-items:center;max-width:none;width:100%}
-.hero .hero__stages{text-align:left;width:min(720px,100%);margin:clamp(40px,8vh,88px) auto 0;justify-self:center}
+.hero .hero__stages{text-align:left;width:100%;margin:0;justify-self:center}
 @media (min-width:821px){
   .hero .hero__title span:not(.hero__title-name){display:inline}
   .hero .hero__title .hero__accent{margin-left:.28em}
@@ -2340,5 +2340,95 @@ html{overflow-x:clip}
 @media (max-width:480px){
   .hero .hero__title{font-size:22px}
   .hero .hero__title .hero__title-name{font-size:34px}
-  .hero .hero__stages{margin-top:var(--space-xl)}
+}
+
+/* ---------- Premium hero pass ----------
+   Light in the background (glow + vignette + grain), the terminal as a tilted glass
+   object with a soft glow, floating tool tiles / stat chips around it, a two-tone
+   Inter headline and a status pill. --mx/--my (pointer, -1..1) and --hy (scroll,
+   0..1) are set on .hero by the heroFloat IIFE in main.js. */
+
+/* Background: soft white bloom + faint blue glow where the terminal sits, under the
+   contour canvas; vignette and grain over it. */
+.hero .hero__bg::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(55% 45% at 50% 66%,rgba(255,255,255,.7),transparent 70%),
+             radial-gradient(38% 32% at 50% 74%,rgba(57,50,220,.16),transparent 70%)}
+.hero .hero__bg::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+             radial-gradient(125% 95% at 50% 42%,transparent 55%,rgba(28,46,92,.2));
+  background-size:220px 220px,100% 100%}
+
+/* Headline: Inter, the name dark with the blue on the name itself, tagline in grey. */
+.hero .hero__title{font-family:"Inter",var(--font-ui),sans-serif;font-weight:500}
+.hero .hero__title .hero__title-name{font-weight:500;letter-spacing:-.045em;color:#050419}
+.hero .hero__title-name strong{font-weight:600}
+.hero .hero__title span:not(.hero__title-name),
+.hero .hero__title .hero__accent{color:rgba(5,4,25,.4)}
+
+/* Status pill above the name */
+.hero .hero__pill{display:inline-flex;align-items:center;gap:10px;margin:0 auto clamp(18px,3vh,28px);padding:7px 16px 7px 12px;border-radius:999px;
+  font:500 13px/1 "Inter",var(--font-ui),sans-serif;letter-spacing:.01em;color:#050419;
+  background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.85);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 8px 20px -10px rgba(20,30,80,.3);
+  opacity:0;transform:translateY(8px);transition:opacity .8s ease .25s,transform .9s cubic-bezier(.16,1,.3,1) .25s}
+.hero.show .hero__pill{opacity:1;transform:none}
+.hero .hero__pill i{position:relative;width:8px;height:8px;border-radius:50%;background:#28c840}
+.hero .hero__pill i::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid #28c840;opacity:0;animation:heroPing 2.4s cubic-bezier(.2,0,0,1) 2.6s infinite}
+@keyframes heroPing{0%{opacity:.6;transform:scale(.5)}100%{opacity:0;transform:scale(1.6)}}
+
+/* Terminal as an object: perspective tilt that follows the pointer and flattens on
+   hover, a blue glow behind it, a contact shadow under it, and a glass edge. The
+   tilt lives on the wrapper so it never fights heroWindowOpen on .hero__stages. */
+.hero .hero__object{position:relative;width:min(720px,100%);margin:clamp(40px,8vh,88px) auto 0;
+  transform:perspective(1600px) rotateX(calc(6deg - var(--my,0) * 2.5deg)) rotateY(calc(var(--mx,0) * 3.5deg));
+  transition:transform .9s cubic-bezier(.16,1,.3,1)}
+.hero .hero__object:hover{transform:perspective(1600px) rotateX(0) rotateY(0)}
+.hero .hero__glow{position:absolute;inset:-28% -22%;z-index:-1;pointer-events:none;
+  background:radial-gradient(closest-side,rgba(57,50,220,.34),rgba(57,50,220,.1) 55%,transparent);
+  filter:blur(28px);opacity:0;transition:opacity 1.4s ease 2.3s}
+.hero .hero__object::after{content:"";position:absolute;left:10%;right:10%;bottom:-34px;height:44px;z-index:-1;pointer-events:none;
+  background:radial-gradient(closest-side,rgba(5,4,25,.3),transparent);filter:blur(10px);opacity:0;transition:opacity 1s ease 2.4s}
+.hero.show .hero__glow,.hero.show .hero__object::after{opacity:1}
+.hero .hero__stages{background:linear-gradient(180deg,#17164c 0%,#0b0a24 40%);border-color:rgba(255,255,255,.1);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 0 0 1px rgba(5,4,25,.22),
+             0 60px 120px -40px rgba(57,50,220,.55),0 30px 60px -30px rgba(5,4,25,.55),0 10px 20px -10px rgba(5,4,25,.32)}
+
+/* Floating satellites. Depth (--z) sets size, blur and how far each drifts. The bob
+   runs on the individual `translate` property so it composes with the transform. */
+.hero .hero__float{position:absolute;inset:0;z-index:1;pointer-events:none}
+.hero .hf{position:absolute;left:var(--x);top:var(--y);
+  transform:translate(-50%,-50%)
+            translate3d(calc(var(--mx,0) * var(--z) * 22px),calc(var(--my,0) * var(--z) * 16px - var(--hy,0) * var(--z) * 180px),0)
+            rotate(var(--r)) scale(calc(.7 + var(--z) * .3));
+  filter:blur(calc((1 - var(--z)) * 3.5px));
+  opacity:0;scale:.9;
+  transition:opacity .9s ease calc(2.5s + var(--d) * .12s),scale 1.1s cubic-bezier(.16,1,.3,1) calc(2.5s + var(--d) * .12s);
+  animation:heroBob calc(6s + var(--d) * .7s) ease-in-out calc(var(--d) * -1.3s) infinite}
+.hero.show .hf{opacity:calc(.55 + var(--z) * .45);scale:1}
+@keyframes heroBob{0%,100%{translate:0 0}50%{translate:0 -10px}}
+.hero .hf--logo,.hero .hf--chip{background:rgba(255,255,255,.68);border:1px solid rgba(255,255,255,.9);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  box-shadow:0 1px 0 rgba(255,255,255,.95) inset,0 22px 44px -20px rgba(20,30,80,.38),0 4px 10px -4px rgba(20,30,80,.16)}
+.hero .hf--logo{width:76px;height:76px;border-radius:22px;display:grid;place-items:center}
+.hero .hf--logo img{width:40px;height:40px;object-fit:contain}
+.hero .hf--logo b{position:absolute;top:calc(100% + 10px);left:50%;transform:translateX(-50%);white-space:nowrap;
+  font:500 11px/1 "Inter",var(--font-ui),sans-serif;letter-spacing:.04em;color:rgba(5,4,25,.5)}
+.hero .hf--chip{display:inline-flex;align-items:baseline;gap:8px;white-space:nowrap;padding:11px 18px;border-radius:999px;
+  font:500 14px/1 "Inter",var(--font-ui),sans-serif;color:rgba(5,4,25,.7)}
+.hero .hf--chip b{font-weight:700;font-size:17px;letter-spacing:-.02em;color:var(--color-highlight)}
+.hero .hf--card{display:flex;flex-direction:column;gap:5px;padding:13px 16px;border-radius:14px;white-space:nowrap;
+  background:linear-gradient(180deg,rgba(23,22,76,.94),rgba(11,10,36,.94));border:1px solid rgba(255,255,255,.1);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 30px 60px -24px rgba(5,4,25,.55);
+  font:12.5px/1.45 "Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#e6e6e6}
+.hero .hf--card em{font-style:normal;color:#3b8eea}
+.hero .hf--card .hf-warn{color:#febc2e}
+.hero .hf--card .hf-ok{color:#28c840}
+
+@media (max-width:1024px){.hero .hero__float{display:none}}
+@media (max-width:820px){.hero .hero__object,.hero .hero__object:hover{transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .hero .hf{animation:none;transition:none}
+  .hero .hero__object{transform:none;transition:none}
+  .hero .hero__pill i::after{animation:none}
 }
