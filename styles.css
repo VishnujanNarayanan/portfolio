@@ -1653,6 +1653,10 @@ html.boot-active #boot-loader{display:flex}
 }
 .lfooter__hl-row{display:block}
 .lfooter__headline .is-hl{color:var(--color-highlight)}
+.lfooter__role{
+  margin-top:clamp(14px,1.4vw,22px);text-align:center;
+  font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--lf-dim);
+}
 
 /* left / right columns — each centre-aligned */
 .lfooter__cols{
