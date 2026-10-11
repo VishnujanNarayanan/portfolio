@@ -2193,7 +2193,7 @@ html{overflow-x:clip}
    they ride off-screen on scroll. */
 .hero .hero__title-name{color:var(--color-highlight)}
 /* Greeting: a readable intro line, not a small-caps label, so the name is seen. */
-.hero .hero__title .hero__title-name{font-size:clamp(28px,2.6vw,38px);letter-spacing:-.01em;text-transform:none;font-weight:400;line-height:1.2;margin-bottom:28px;color:var(--color-text)}
+.hero .hero__title .hero__title-name{font-size:clamp(36px,3.6vw,54px);letter-spacing:-.01em;text-transform:none;font-weight:400;line-height:1.2;margin-bottom:28px;color:var(--color-text)}
 .hero .hero__title-name strong{font-weight:600;color:var(--color-highlight)}
 .hero .hero__title .hero__accent{color:var(--color-highlight)}
 .hero .hero__subtitle p{margin:0}
@@ -2303,7 +2303,7 @@ html{overflow-x:clip}
 }
 @media (max-width:820px){
   .hero .hero__title{font-size:38px;letter-spacing:-1.2px}
-  .hero .hero__title .hero__title-name{font-size:24px;margin-bottom:16px}
+  .hero .hero__title .hero__title-name{font-size:30px;margin-bottom:16px}
   .hero .hero__subtitle{max-width:340px}
   .hero .hero__lead{font-size:16px}
   .hero .hero__stages{margin-top:var(--space-xl)}
