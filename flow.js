@@ -602,14 +602,11 @@
   // Card media is NOT listed here. main.js publishes window.__PROJECT_MEDIA from
   // PROJECTS — the single source of truth — and mediaFor() resolves it by name, so a
   // project that gains a poster or a hover video shows it on every surface at once.
-  // Repeating img/video here is what left the Job Application Bot and Market Data
+  // Repeating img/video here is what left the Job Matching and Resume Builder and Market Data
   // Platform on a stock placeholder in the flow after their cards gained real captures.
   var FALLBACK_IMG = "images/flow/data-collection.jpg";
-  // A few flow entries use a shorter display name than the project card does.
-  var MEDIA_ALIAS = {
-    "DekhLaw API": "DekhLaw Legal-Emergency Platform",
-    "Fraud Detection": "Fraud Transaction Detection"
-  };
+  // A flow entry may use a shorter display name than its project card; map it here.
+  var MEDIA_ALIAS = {};
   // Where a flow card points. Project cards inherit the link from the registry that
   // main.js publishes, so reordering a zone or dropping in a new project carries the
   // right destination with it — the href below is only a fallback for a card the
@@ -641,27 +638,27 @@
   // MEDIA_ALIAS above).
   var CARD_DATA = [
     [ // 01 From Idea to Scope
-      { k: "p", n: "Trader Sentiment Analysis", d: "Testing an idea with data before building it: does contrarian trading pay?", t: ["pandas", "SciPy", "Streamlit"] },
-      { k: "p", n: "Job Application Bot", d: "Started from a real pain: 200 applicants a role. Scoped to scrape, score, tailor.", t: ["Product", "Python", "LLM"] },
+      { k: "p", n: "Crypto Mood vs Trader Profit Study", d: "Testing an idea with data before building it: does contrarian trading pay?", t: ["pandas", "SciPy", "Streamlit"] },
+      { k: "p", n: "Job Matching and Resume Builder", d: "Started from a real pain: 200 applicants a role. Scoped to scrape, score, tailor.", t: ["Product", "Python", "LLM"] },
       { k: "b", n: "Predicting Stocks by the Minute", d: "9.4M ticks, an honest baseline, and the backtest that said: don't build this.", t: ["Validation", "ML"], href: "/blog/minute-level-stock-prediction/" },
       { k: "b", n: "Local LLM vs API", d: "Build or buy? A 7B model on a 6GB GPU against a hosted 70B, on cost, speed and quotas.", t: ["LLMs", "Trade-offs"], href: "/blog/local-llm-vs-api/" }
     ],
     [ // 02 Fast, Testable Prototype
-      { k: "p", n: "Product Explorer", d: "From a brief to a live full-stack app: scraper, Postgres, Next.js UI.", t: ["Next.js", "NestJS", "PostgreSQL"] },
-      { k: "p", n: "DekhLaw API", d: "~30 Express endpoints, JWT auth, and Twilio voice orchestration.", t: ["Express", "Twilio", "JWT"] },
-      { k: "p", n: "Semantic Quote Retrieval", d: "Search by meaning, not keywords: fine-tuned embeddings + FAISS, demo on Streamlit.", t: ["FAISS", "PyTorch", "Streamlit"] },
-      { k: "p", n: "Functional Task Manager", d: "Scala 3 cross-compiled by sbt and shipped to Vercel as static JS.", t: ["Scala.js", "sbt", "Vercel"] }
+      { k: "p", n: "Second-Hand Bookshop Website", d: "From a brief to a live full-stack app: scraper, Postgres, Next.js UI.", t: ["Next.js", "NestJS", "PostgreSQL"] },
+      { k: "p", n: "DekhLaw Legal-Emergency Platform", d: "Express API with JWT auth and Twilio call dispatch.", t: ["Express", "Twilio", "JWT"] },
+      { k: "p", n: "Quote Search by Meaning", d: "Search by meaning, not keywords: fine-tuned embeddings + FAISS, demo on Streamlit.", t: ["FAISS", "PyTorch", "Streamlit"] },
+      { k: "p", n: "Student Task Planner Web App", d: "Scala 3 cross-compiled by sbt and shipped to Vercel as static JS.", t: ["Scala.js", "sbt", "Vercel"] }
     ],
     [ // 03 Data, AI & Features
       { k: "p", n: "Market Data Platform", d: "28-pipeline NSE ingestion layer feeding 12+ datasets.", t: ["Python", "Playwright", "ETL"] },
-      { k: "p", n: "Fraud Detection", d: "95% of fraud caught at 0.995 ROC-AUC on 6.4M transactions.", t: ["scikit-learn", "pandas"] },
-      { k: "p", n: "Support Ticket Classifier", d: "Routes support tickets by issue type and pulls out the key details.", t: ["scikit-learn", "NLTK", "Gradio"] },
+      { k: "p", n: "Payment Fraud Scoring App", d: "95% of fraud caught at 0.995 ROC-AUC on 6.4M transactions.", t: ["scikit-learn", "pandas"] },
+      { k: "p", n: "Customer Complaint Routing Tool", d: "Routes support tickets by issue type and pulls out the key details.", t: ["scikit-learn", "NLTK", "Gradio"] },
       { k: "b", n: "Common Data Ingestion Bugs", d: "~30 bugs across a year of collection, sorted by cause. Eight threw no error at all.", t: ["Bug fixes", "Reliability"], href: "/blog/a-year-of-ingestion-bugs/" }
     ],
     [ // 04 Launch & Iterate
       { k: "p", n: "Law Firm Website", d: "Live client site on Next.js 14: 14 routes, Resend lead capture, full SEO.", t: ["Next.js", "TypeScript", "Resend"] },
-      { k: "p", n: "Binance Futures Trading Bot", d: "Live API, kept warm and patched in production when ad-blockers broke its docs.", t: ["FastAPI", "Docker", "Render"] },
-      { k: "p", n: "Job Application Bot", d: "Dockerized pipeline on AWS & GCP, Postgres on Neon.", t: ["Docker", "AWS", "GCP"] },
+      { k: "p", n: "Crypto Futures Trading Tool", d: "Live API, kept warm and patched in production when ad-blockers broke its docs.", t: ["FastAPI", "Docker", "Render"] },
+      { k: "p", n: "Job Matching and Resume Builder", d: "Dockerized pipeline on AWS & GCP, Postgres on Neon.", t: ["Docker", "AWS", "GCP"] },
       { k: "b", n: "How to Test a Data Pipeline", d: "92 passing tests, 3 broken features, and the checks that would have caught them.", t: ["Testing", "CI"], href: "/blog/how-to-test-a-data-pipeline/" }
     ]
   ];
