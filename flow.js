@@ -931,6 +931,9 @@
   var darkSubs = [];   // zone 3-4 sub paragraphs; colour scroll-driven black→grey
   var lightSubs = [];  // zone 1-2 sub paragraphs; colour scroll-driven grey→white
   var navOn = false;   // top-nav reel state; fired once per threshold crossing
+  // A jump that skips this section (the Socials button) sets the nav itself; it reports
+  // here so scrolling back into a dark zone still sees a crossing and rolls the nav white.
+  window.__flowNavOn = function (v) { navOn = !!v; };
   var vh = window.innerHeight;
   var lastHitT = 0;    // loop-side hover hit-test throttle stamp
   var hoverDue = false;  // set at the end of a frame, serviced at the top of the next
