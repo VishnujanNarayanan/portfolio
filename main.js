@@ -5319,25 +5319,3 @@ function navToLightWorld() {
   }
   update();
 })();
-
-/* ---------- Hero terminal tilt ----------
-   Feeds --mx/--my (pointer position, -1..1 from centre) to the CSS tilt on
-   .hero__object. One rAF-throttled write per frame, mouse only, and nothing once the
-   hero has scrolled away or under reduced motion. */
-(function heroTilt() {
-  var hero = document.querySelector(".hero");
-  if (!hero || !hero.querySelector(".hero__object")) return;
-  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  var mx = 0, my = 0, queued = false;
-  function write() {
-    queued = false;
-    hero.style.setProperty("--mx", mx.toFixed(3));
-    hero.style.setProperty("--my", my.toFixed(3));
-  }
-  window.addEventListener("pointermove", function (e) {
-    if (e.pointerType !== "mouse" || window.scrollY > window.innerHeight) return;
-    mx = e.clientX / window.innerWidth * 2 - 1;
-    my = e.clientY / window.innerHeight * 2 - 1;
-    if (!queued) { queued = true; requestAnimationFrame(write); }
-  }, { passive: true });
-})();
