@@ -309,21 +309,28 @@
         <div class="hero__subtitle">
           <p class="hero__lead hero__seq" style="--i:0">I scope, build and run software for early-stage companies: web apps, data pipelines and AI features.</p>
           <p class="hero__actions hero__seq" style="--i:1"><a class="hero__btn" href="mailto:narayanan.vishnujan@gmail.com?subject=Project%20enquiry">Discuss your project</a></p>
-          <!-- Stage strip: auto-types each stage's line; hover (desktop) jumps to it.
-               Lead/button/typed line fade in after the headline (.hero__seq, --i); the
-               words and arrows reel up from below one by one (heroStages, .is-in).
+          <!-- Stage strip as a shell session, in the flow terminal's style: `ls` types and
+               the stages reel in as its output, then each stage runs `cat <stage>` and its
+               line types out under a fresh prompt. Hover (desktop) / tap jumps to a stage.
+               Lead and button fade in after the headline (.hero__seq, --i); the panel then
+               opens like a macOS window rising from the Dock, its cursor blinks a moment,
+               and `ls` starts. The bar under the active stage counts down to the next one.
                No <span>s in here: the hero's subtitle span rules would restyle them. -->
           <div class="hero__stages">
-            <ol class="hero__steps" aria-label="How I build">
-              <li><button type="button" class="hero__step" data-desc="turn your ideas into a clear plan">spec</button></li>
-              <li class="hero__arrow" aria-hidden="true">&rarr;</li>
-              <li><button type="button" class="hero__step" data-desc="something real in your hands, in weeks">prototype</button></li>
-              <li class="hero__arrow" aria-hidden="true">&rarr;</li>
-              <li><button type="button" class="hero__step" data-desc="add the features your users will pay for">features</button></li>
-              <li class="hero__arrow" aria-hidden="true">&rarr;</li>
-              <li><button type="button" class="hero__step" data-desc="get your product launched, then improved with real customer feedback">launch</button></li>
-            </ol>
-            <p class="hero__type hero__seq" style="--i:9" aria-live="polite"><code class="hero__typed"></code><i class="hero__caret" aria-hidden="true"></i></p>
+            <p class="hero__stages-bar" aria-hidden="true"><i></i><i></i><i></i><b>vishnu@portfolio: ~/how-i-build</b></p>
+            <div class="hero__term">
+              <p class="hero__row hero__row--ls" aria-hidden="true"><b class="hs-usr">vishnu@portfolio</b>:<b class="hs-path">~/how-i-build</b>$ <code class="hero__cmd"></code><i class="hero__caret"></i></p>
+              <ol class="hero__steps" aria-label="How I build">
+                <li><button type="button" class="hero__step" data-desc="turn your ideas into a clear plan">spec</button></li>
+                <li class="hero__arrow" aria-hidden="true">&rarr;</li>
+                <li><button type="button" class="hero__step" data-desc="something real in your hands, in weeks">prototype</button></li>
+                <li class="hero__arrow" aria-hidden="true">&rarr;</li>
+                <li><button type="button" class="hero__step" data-desc="add the features your users will pay for">features</button></li>
+                <li class="hero__arrow" aria-hidden="true">&rarr;</li>
+                <li><button type="button" class="hero__step" data-desc="get your product launched, then improved with real customer feedback">launch</button></li>
+              </ol>
+              <div class="hero__log"><div class="hero__log-stack" aria-live="polite"></div></div>
+            </div>
           </div>
         </div>
       </div>

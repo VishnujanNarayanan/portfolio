@@ -2195,21 +2195,55 @@ html{overflow-x:clip}
 .hero .hero__subtitle .hero__actions{display:flex;flex-wrap:wrap;align-items:center;gap:28px;margin-top:var(--space-xl)}
 .hero .hero__btn{display:inline-flex;align-items:center;height:48px;padding:0 24px;border-radius:999px;background:var(--color-highlight);color:#fff;text-decoration:none;font-size:16px;font-weight:500;pointer-events:auto;transition:background-color .2s ease}
 .hero .hero__btn:hover{background:#2a24b8}
-/* Stage strip (spec -> prototype -> features -> launch). Terminal-style line below
-   types the active stage's description; main.js heroStages() drives it. */
-.hero .hero__stages{margin-top:var(--space-2xl);pointer-events:auto}
-.hero .hero__steps{display:flex;flex-wrap:wrap;align-items:center;list-style:none;font-family:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+/* Stage strip (spec -> prototype -> features -> launch) in a dark terminal panel:
+   on the light hero the contrast is what gets it noticed. The active stage is a
+   filled pill whose bottom bar counts down to the next stage (main.js heroStages()
+   sets --stage-ms); hovering holds the cycle and shows the bar full. */
+.hero .hero__stages{width:min(760px,100%);margin-top:var(--space-2xl);pointer-events:auto;background:#0b0a24;border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:0 28px 60px -24px rgba(57,50,220,.55),0 2px 6px rgba(5,4,25,.18);overflow:hidden}
+.hero .hero__stages-bar{display:flex;align-items:center;gap:7px;padding:11px 18px;border-bottom:1px solid rgba(255,255,255,.08);font-family:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:rgba(252,252,252,.45)}
+.hero .hero__stages-bar i{width:10px;height:10px;border-radius:50%;background:#ff5f57}
+.hero .hero__stages-bar i:nth-child(2){background:#febc2e}
+.hero .hero__stages-bar i:nth-child(3){background:#28c840}
+.hero .hero__stages-bar b{margin-left:10px;font-weight:400}
+.hero .hero__term{padding:18px 24px 20px;font-family:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:17px;line-height:1.55;color:#e6e6e6}
+.hero .hero__row,.hero .hero__out{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+/* Commands sit back (small, dimmer); the printed output is the thing to read. */
+.hero .hero__row{font-size:15px;color:rgba(230,230,230,.75)}
+.hero .hero__term b{font-weight:400}
+.hero .hero__term .hs-usr{color:#26a269}
+.hero .hero__term .hs-path{color:#3b8eea}
+.hero .hero__cmd{font:inherit;color:#e6e6e6}
+.hero .hero__out{margin:6px 0 12px;color:#fff;font-size:23px;font-weight:500;line-height:1.35;letter-spacing:-.01em;text-shadow:0 0 18px rgba(143,139,255,.35)}
+.hero .hero__log-stack .hero__out.is-old{text-shadow:none}
+.hero .hero__steps{display:flex;flex-wrap:wrap;align-items:center;row-gap:8px;margin:10px 0 28px -14px;list-style:none}
 .hero .hero__steps li{display:flex;align-items:center}
-.hero .hero__arrow{margin:0 18px;color:rgba(5,4,25,.35);font-size:22px}
-.hero .hero__step{font:inherit;font-size:24px;font-weight:500;color:rgba(5,4,25,.55);background:none;cursor:pointer;padding:6px 0;border-bottom:1px solid transparent;transition:color .2s ease,border-color .2s ease}
-.hero .hero__step:hover,.hero .hero__step.is-active{color:var(--color-highlight);border-bottom-color:currentColor}
-.hero .hero__step{border-bottom-width:2px}
-.hero .hero__type{margin-top:18px;min-height:1.5em;font-family:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:20px;line-height:1.5;color:var(--color-text)}
-.hero .hero__type:before{content:"> ";color:var(--color-highlight)}
-.hero .hero__typed{font:inherit}
-.hero .hero__caret{display:inline-block;width:.55em;height:1.1em;margin-left:2px;vertical-align:-.2em;background:var(--color-highlight);animation:heroCaret 1s steps(1) infinite}
+.hero .hero__arrow{margin:0 12px;color:rgba(252,252,252,.3);font-size:20px}
+.hero .hero__step{position:relative;overflow:hidden;font:inherit;font-size:22px;font-weight:500;color:rgba(252,252,252,.6);background:transparent;border-radius:8px;cursor:pointer;padding:6px 14px 8px;transition:color .2s ease,background-color .25s ease}
+.hero .hero__step:hover{color:#fcfcfc}
+.hero .hero__step.is-active{color:#fff;background:var(--color-highlight)}
+.hero .hero__step::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.85);transform:scaleX(0);transform-origin:left}
+.hero .hero__step.is-active.is-timing::after{animation:heroStageBar var(--stage-ms,2600ms) linear both}
+.hero .hero__stages.is-held .hero__step.is-active::after{animation:none;transform:scaleX(1)}
+@keyframes heroStageBar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+/* The panel opens like a macOS window rising out of the Dock: it starts as a sliver
+   far below, squeezed narrow and short, then grows up into place with a slight
+   overshoot. Starts once the lead and button have faded in (.hero__seq, ~1.8s). */
+.hero .hero__stages{opacity:0;transform-origin:50% 100%}
+.hero.show .hero__stages{animation:heroWindowOpen .8s cubic-bezier(.2,.85,.25,1) 1.9s both}
+@keyframes heroWindowOpen{
+  0%{opacity:0;transform:translateY(55vh) scale(.12,.04);filter:blur(4px)}
+  35%{opacity:1;transform:translateY(18vh) scale(.45,.3);filter:blur(1.5px)}
+  75%{transform:translateY(-6px) scale(1.01,1.02);filter:blur(0)}
+  100%{opacity:1;transform:none;filter:none}
+}
+@media (prefers-reduced-motion:reduce){.hero .hero__stages,.hero.show .hero__stages{opacity:1;animation:none}}
+/* Append-only log, as in the flow terminal: a fixed window pinned to its newest line.
+   Older entries dim and scroll up under a fade; main.js prunes past the last few. */
+.hero .hero__log{height:calc(4 * 1.55em);overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;-webkit-mask-image:linear-gradient(to bottom,transparent,#000 35%);mask-image:linear-gradient(to bottom,transparent,#000 35%)}
+.hero .hero__log-stack .is-old{opacity:.4;transition:opacity .4s ease}
+.hero .hero__caret{display:inline-block;width:.55em;height:1.05em;margin-left:2px;vertical-align:-.15em;background:#d0d0d0;animation:heroCaret 1s steps(1) infinite}
 @keyframes heroCaret{50%{opacity:0}}
-@media (prefers-reduced-motion:reduce){.hero .hero__caret{animation:none}}
+@media (prefers-reduced-motion:reduce){.hero .hero__caret{animation:none}.hero .hero__step.is-active::after,.hero .hero__step.is-active.is-timing::after{animation:none;transform:scaleX(1)}}
 /* Entrance: only the greeting + headline (.hero__title) do the 3D swing-in. The
    subtitle block itself no longer animates in; its pieces start empty and fade up
    one after another once the headline has landed (1.4s), each --i a 180ms step.
@@ -2237,7 +2271,22 @@ html{overflow-x:clip}
   .hero .hero__subtitle{max-width:none}
   .hero .hero__lead{max-width:600px}
   .hero .hero__subtitle .hero__actions{margin-top:clamp(20px,4vh,32px)}
-  .hero .hero__stages{margin-top:clamp(24px,5vh,40px)}
+  .hero .hero__stages{margin-top:clamp(20px,3.5vh,32px)}
+}
+/* Wide screens: the headline spans the top; under it the lead and button take the
+   left column and the terminal panel the right, level with the lead, so the panel
+   sits in the hero's empty right half at eye level instead of below the fold. */
+@media (min-width:1280px){
+  .hero .hero__subtitle{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,640px);grid-template-rows:auto 1fr;column-gap:clamp(56px,7vw,120px);align-items:start}
+  .hero .hero__lead{grid-column:1;grid-row:1}
+  .hero .hero__subtitle .hero__actions{grid-column:1;grid-row:2}
+  /* Bleeds past the content edge into the empty right margin, up to 120px. */
+  .hero .hero__stages{grid-column:2;grid-row:1 / span 2;width:calc(100% + clamp(0px,(100vw - 1280px) / 2,120px));margin:0 calc(-1 * clamp(0px,(100vw - 1280px) / 2,120px)) 0 0;justify-self:start}
+  .hero .hero__log{height:calc(7 * 1.55em)}
+  .hero .hero__step{font-size:19px;padding:5px 12px 7px}
+  .hero .hero__steps{margin-left:-12px}
+  .hero .hero__arrow{margin:0 8px;font-size:17px}
+  .hero .hero__out{font-size:21px}
 }
 @media (max-width:1024px){
   .hero .hero__title{font-size:52px;letter-spacing:-1.8px}
@@ -2254,9 +2303,13 @@ html{overflow-x:clip}
   .hero .hero__lead{font-size:16px}
   .hero .hero__actions{gap:20px}
   .hero .hero__stages{margin-top:var(--space-xl)}
-  .hero .hero__arrow{margin:0 8px;font-size:16px}
-  .hero .hero__step{font-size:17px}
-  .hero .hero__type{font-size:15px;margin-top:12px}
+  .hero .hero__arrow{margin:0 4px;font-size:14px}
+  .hero .hero__term{padding:12px 14px 14px;font-size:12px}
+  .hero .hero__steps{margin:8px 0 20px -8px}
+  .hero .hero__step{font-size:15px;padding:4px 8px 6px}
+  .hero .hero__row{font-size:12px}
+  .hero .hero__out{font-size:16px}
+  .hero .hero__stages-bar{padding:9px 14px}
 }
 /* Per-capture nudges to the lowered card media above: each capture's empty band differs. */
 .proj-card__img[src*="dekhlaw"]{--media-drop:10%}
