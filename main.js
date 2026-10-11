@@ -5319,3 +5319,13 @@ function navToLightWorld() {
   }
   update();
 })();
+
+/* ---------- Hero background picker (temporary) ----------
+   ?bg=grid | dots | horizon | mono sets data-bg on .hero__bg so the variants in
+   styles.css can be compared live; no parameter = the aurora default. Remove once
+   one is chosen and made the default. */
+(function heroBgPick() {
+  var bg = document.querySelector(".hero__bg");
+  var pick = new URLSearchParams(window.location.search).get("bg");
+  if (bg && pick && /^(grid|dots|horizon|mono)$/.test(pick)) bg.setAttribute("data-bg", pick);
+})();

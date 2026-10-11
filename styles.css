@@ -2345,9 +2345,15 @@ html{overflow-x:clip}
 /* ---------- Premium hero pass ----------
    Aurora background and a two-tone Inter headline. */
 
-/* Background: no contour lines in the hero. A soft aurora — a pale base with large,
-   blurred blue/lavender light pools that drift very slowly — and fine grain on top. */
-.hero .hero__bg{background:#eef2f8;overflow:hidden}
+/* Background: no contour lines in the hero. Variants are picked with data-bg on
+   .hero__bg (set from ?bg= in main.js while we choose one):
+     (none)   aurora  pale base, large blurred blue/lavender pools drifting slowly
+     grid     blueprint grid fading out from the centre, faint indigo light from the top
+     dots     fine dot matrix fading out from the centre
+     horizon  white sky to soft blue, a wide indigo glow rising from the bottom edge
+     mono     plain off-white with grain only
+   Every variant keeps the fine grain on ::after. */
+.hero .hero__bg{--grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background:#eef2f8;overflow:hidden}
 .hero .hero__bg #hero-contours{display:none}
 .hero .hero__bg::before{content:"";position:absolute;inset:-20%;pointer-events:none;
   background:radial-gradient(38% 42% at 18% 22%,rgba(57,50,220,.22),transparent 70%),
@@ -2355,14 +2361,32 @@ html{overflow-x:clip}
              radial-gradient(40% 36% at 72% 88%,rgba(160,130,255,.2),transparent 70%),
              radial-gradient(36% 34% at 22% 84%,rgba(120,190,235,.28),transparent 70%);
   filter:blur(30px);animation:heroAurora 26s ease-in-out infinite alternate}
-.hero .hero__bg::after{content:"";position:absolute;inset:0;pointer-events:none;
-  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size:220px 220px}
+.hero .hero__bg::after{content:"";position:absolute;inset:0;pointer-events:none;background:var(--grain);background-size:220px 220px}
 @keyframes heroAurora{
   0%{transform:translate3d(0,0,0) scale(1) rotate(0deg)}
   50%{transform:translate3d(3%,-2%,0) scale(1.06) rotate(4deg)}
   100%{transform:translate3d(-3%,2%,0) scale(1.03) rotate(-3deg)}
 }
+
+.hero .hero__bg[data-bg="grid"]{background:linear-gradient(180deg,#f8fafd,#e7edf6)}
+.hero .hero__bg[data-bg="grid"]::before{inset:0;filter:none;animation:none;
+  background:linear-gradient(rgba(57,50,220,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(57,50,220,.09) 1px,transparent 1px);
+  background-size:56px 56px;background-position:center -1px;
+  -webkit-mask-image:radial-gradient(75% 65% at 50% 42%,#000 25%,transparent 85%);mask-image:radial-gradient(75% 65% at 50% 42%,#000 25%,transparent 85%)}
+.hero .hero__bg[data-bg="grid"]::after{background:var(--grain),radial-gradient(55% 40% at 50% 0%,rgba(57,50,220,.13),transparent 75%);background-size:220px 220px,100% 100%}
+
+.hero .hero__bg[data-bg="dots"]{background:#f4f6fa}
+.hero .hero__bg[data-bg="dots"]::before{inset:0;filter:none;animation:none;
+  background:radial-gradient(rgba(5,4,25,.2) 1px,transparent 1.5px);background-size:22px 22px;background-position:center;
+  -webkit-mask-image:radial-gradient(70% 60% at 50% 45%,#000 20%,transparent 80%);mask-image:radial-gradient(70% 60% at 50% 45%,#000 20%,transparent 80%)}
+
+.hero .hero__bg[data-bg="horizon"]{background:linear-gradient(180deg,#fbfcfe 0%,#eef2f8 55%,#dde5f2 100%)}
+.hero .hero__bg[data-bg="horizon"]::before{inset:auto -15% -48% -15%;height:85%;animation:none;
+  background:radial-gradient(closest-side,rgba(57,50,220,.34),rgba(110,160,255,.18) 55%,transparent);filter:blur(40px)}
+
+.hero .hero__bg[data-bg="mono"]{background:#f5f6f8}
+.hero .hero__bg[data-bg="mono"]::before{content:none}
+
 @media (prefers-reduced-motion:reduce){.hero .hero__bg::before{animation:none}}
 
 /* Headline: Inter, the name dark with the blue on the name itself, tagline in grey. */
