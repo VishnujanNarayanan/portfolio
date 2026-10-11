@@ -4,7 +4,7 @@
 
 Also searchable as: Data Platform Engineer, Data Engineer, Software Engineer (Data Infrastructure).
 
-Core stack: Python, SQL, PostgreSQL, Apache Airflow, Apache Spark, dbt, FastAPI, Redis, Playwright, Docker, Linux, CI/CD, AWS.
+Core stack: Python, SQL, PostgreSQL, FastAPI, Redis, Playwright, Docker, Linux, CI/CD, AWS.
 
 Contact: hello@vishnujan.dev
 
