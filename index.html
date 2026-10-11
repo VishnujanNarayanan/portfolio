@@ -304,22 +304,7 @@
 
     <section class="hero">
       <div class="hero__bg"></div>
-      <!-- Floating satellites around the terminal (decorative): tool tiles, stat chips and
-      one live log card. --x/--y place each in the viewport, --r tilts it, --z is depth
-      (0 far: smaller, blurred, slower; 1 near), --d staggers the entrance. Parallax on
-      scroll and pointer comes from the heroFloat IIFE in main.js. Hidden under 1025px. -->
-      <div class="hero__float" aria-hidden="true">
-        <div class="hf hf--logo" style="--x:14%;--y:47%;--r:-8deg;--z:.9;--d:0"><img src="images/logos/Python.svg" alt="" width="40" height="40" decoding="async"><b>Python</b></div>
-        <div class="hf hf--chip" style="--x:9%;--y:64%;--r:4deg;--z:1;--d:1"><b>28</b>pipelines in production</div>
-        <div class="hf hf--logo" style="--x:17%;--y:82%;--r:6deg;--z:.7;--d:2"><img src="images/logos/PostgresSQL.svg" alt="" width="40" height="40" decoding="async"><b>PostgreSQL</b></div>
-        <div class="hf hf--logo" style="--x:5%;--y:90%;--r:-10deg;--z:.25;--d:6"><img src="images/logos/FastAPI.svg" alt="" width="40" height="40" decoding="async"><b>FastAPI</b></div>
-        <div class="hf hf--logo" style="--x:86%;--y:45%;--r:7deg;--z:.85;--d:3"><img src="images/logos/Docker.svg" alt="" width="40" height="40" decoding="async"><b>Docker</b></div>
-        <div class="hf hf--card" style="--x:89%;--y:63%;--r:-3deg;--z:1;--d:4"><code><em>GET</em> /v1/filings</code><code class="hf-warn">429 &rarr; backoff 8s</code><code class="hf-ok">&#10003; 200 &middot; 12,408 rows</code></div>
-        <div class="hf hf--chip" style="--x:83%;--y:81%;--r:-5deg;--z:.75;--d:5"><b>~1,665</b>companies tracked</div>
-        <div class="hf hf--logo" style="--x:95%;--y:92%;--r:9deg;--z:.3;--d:7"><img src="images/logos/AWS.svg" alt="" width="40" height="40" decoding="async"><b>AWS</b></div>
-      </div>
       <div class="hero__content">
-        <p class="hero__pill"><i aria-hidden="true"></i>Available for projects &middot; Kochi, India</p>
         <h1 class="hero__title"><span class="hero__title-name">Hi, I&rsquo;m <strong>Vishnujan Narayanan</strong>.</span><span>Your friendly neighbourhood</span><span class="hero__accent">developer.</span></h1>
         <div class="hero__subtitle">
           <!-- Stage strip as a shell session, in the flow terminal's style: `ls` types and

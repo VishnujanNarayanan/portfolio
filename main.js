@@ -5320,35 +5320,24 @@ function navToLightWorld() {
   update();
 })();
 
-/* ---------- Hero float parallax ----------
-   Feeds the premium hero's CSS: --mx/--my = pointer position (-1..1 from centre) and
-   --hy = scroll progress through the hero (0..1). The floating tiles, chips and the
-   terminal's tilt read these; all motion is CSS. One rAF-throttled write per frame,
-   and nothing at all once the hero has scrolled away or under reduced motion. */
-(function heroFloat() {
+/* ---------- Hero terminal tilt ----------
+   Feeds --mx/--my (pointer position, -1..1 from centre) to the CSS tilt on
+   .hero__object. One rAF-throttled write per frame, mouse only, and nothing once the
+   hero has scrolled away or under reduced motion. */
+(function heroTilt() {
   var hero = document.querySelector(".hero");
-  if (!hero || !hero.querySelector(".hero__float")) return;
+  if (!hero || !hero.querySelector(".hero__object")) return;
   if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  var mx = 0, my = 0, hy = 0, queued = false;
+  var mx = 0, my = 0, queued = false;
   function write() {
     queued = false;
     hero.style.setProperty("--mx", mx.toFixed(3));
     hero.style.setProperty("--my", my.toFixed(3));
-    hero.style.setProperty("--hy", hy.toFixed(3));
   }
-  function queue() { if (!queued) { queued = true; requestAnimationFrame(write); } }
   window.addEventListener("pointermove", function (e) {
     if (e.pointerType !== "mouse" || window.scrollY > window.innerHeight) return;
     mx = e.clientX / window.innerWidth * 2 - 1;
     my = e.clientY / window.innerHeight * 2 - 1;
-    queue();
+    if (!queued) { queued = true; requestAnimationFrame(write); }
   }, { passive: true });
-  function onScroll() {
-    var next = Math.min(window.scrollY / window.innerHeight, 1);
-    if (next === hy) return;
-    hy = next;
-    queue();
-  }
-  window.addEventListener("scroll", onScroll, { passive: true });
-  if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
 })();
