@@ -4511,67 +4511,153 @@ function makeTypeIn(host, runs, opts) {
 })();
 
 /* ---- Hero stage strip ------------------------------------------------------
-   spec -> prototype -> features -> launch. The line under the strip types out the
-   active stage's data-desc, holds, then moves to the next stage on its own. On
-   devices that hover, pointing at a stage jumps straight to it and holds the
-   cycle until the pointer leaves; a tap/click (any device) does the same. Typing
-   is skipped under reduced motion: the line is just swapped. The first line waits
-   for the hero's staggered fade-in (styles.css .hero__seq) to reach the strip. */
+   A small shell session in the flow terminal's style (vishnu@portfolio:~/…$).
+   Once the panel has faded in, `ls` types and the four stages reel in as its
+   output. Then each stage runs `cat <stage>`: the command types, its data-desc
+   prints whole as the output, and a fresh empty prompt waits for the next stage.
+   Like the flow terminal the log is append-only: older entries scroll up, fade,
+   and are pruned. The bar under the active stage fills over the stage's whole time
+   on screen, counting down to the next stage. On devices that hover, pointing at a
+   stage jumps to it and holds the cycle; leaving restarts the countdown at 4x speed. A
+   tap/click jumps too.
+   Reduced motion: no typing, every line is set whole. */
 (function heroStages() {
   var steps = document.querySelectorAll(".hero__step");
-  var out = document.querySelector(".hero__typed");
-  if (!steps.length || !out) return;
+  var panel = document.querySelector(".hero__stages");
+  var stack = document.querySelector(".hero__log-stack");
+  var lsRow = document.querySelector(".hero__row--ls");
+  if (!steps.length || !panel || !stack || !lsRow) return;
   var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var TYPE_MS = 32, HOLD_MS = 2600;
-  var cur = -1, timer = 0, held = false, typing = false;
+  var CMD_MS = 95, CAT_TOTAL_MS = 1100, OUT_GAP_MS = 180, HOLD_MS = 3200, KEEP = 9;  // every `cat` takes CAT_TOTAL_MS to type, whatever its length
+  // One stage's full time on screen: type the command, print, then hold. The countdown
+  // bar spans all of it. Hovering off restarts it at 4x speed (a quarter of the time): the
+  // visitor has already read that stage, so it moves on sooner.
+  var STAGE_MS = reduce ? HOLD_MS : CAT_TOTAL_MS + OUT_GAP_MS + HOLD_MS;
+  var cur = -1, timer = 0, holdTimer = 0, held = false, typing = false, prompt = null;
+  var PROMPT = '<b class="hs-usr">vishnu@portfolio</b>:<b class="hs-path">~/how-i-build</b>$ ';
 
-  function show(i) {
-    clearTimeout(timer);
-    cur = i;
-    for (var k = 0; k < steps.length; k++) steps[k].classList.toggle("is-active", k === i);
-    var text = steps[i].getAttribute("data-desc") || "";
-    if (reduce) { out.textContent = text; return next(); }
+  // Type `text` into `el` a character at a time, then call done. Reduced motion sets it whole.
+  function type(el, text, ms, done) {
+    if (reduce) { el.textContent = text; return done(); }
     var n = 0;
-    typing = true;
-    out.textContent = "";
-    (function type() {
-      out.textContent = text.slice(0, ++n);
-      if (n < text.length) timer = setTimeout(type, TYPE_MS);
-      else { typing = false; next(); }
+    (function tick() {
+      el.textContent = text.slice(0, ++n);
+      if (n < text.length) timer = setTimeout(tick, ms); else done();
     })();
   }
-  function next() {
-    if (held) return 0;
-    return (timer = setTimeout(function () { show((cur + 1) % steps.length); }, HOLD_MS));
+  function caretTo(el) {
+    var old = panel.querySelectorAll(".hero__caret");
+    for (var k = 0; k < old.length; k++) old[k].parentNode.removeChild(old[k]);
+    if (!el) return;
+    var c = document.createElement("i"); c.className = "hero__caret"; c.setAttribute("aria-hidden", "true");
+    el.appendChild(c);
+  }
+  function newPrompt() {
+    var row = document.createElement("p");
+    row.className = "hero__row";
+    row.innerHTML = PROMPT + '<code class="hero__cmd"></code>';
+    stack.appendChild(row);
+    while (stack.children.length > KEEP) stack.removeChild(stack.firstChild);
+    caretTo(row);
+    return (prompt = row);
+  }
+  function bar(i, ms) {
+    var b = steps[i];
+    b.classList.remove("is-timing");
+    void b.offsetWidth;                                // restart the fill
+    b.style.setProperty("--stage-ms", ms + "ms");
+    b.classList.add("is-timing");
   }
 
-  var canHover = matchMedia("(hover: hover)").matches;
-  Array.prototype.forEach.call(steps, function (btn, i) {
-    if (canHover) {
-      btn.addEventListener("mouseenter", function () { held = true; if (i !== cur) show(i); });
-      btn.addEventListener("mouseleave", function () { held = false; if (!typing) next(); });  // mid-type: the typer schedules it
+  // `timer` drives typing; `holdTimer` is the countdown to the next stage. Keeping them
+  // apart means a hover can always cancel the countdown without stopping the typing.
+  function show(i) {
+    clearTimeout(timer);
+    clearTimeout(holdTimer);
+    cur = i;
+    for (var k = 0; k < steps.length; k++) {
+      steps[k].classList.toggle("is-active", k === i);
+      steps[k].classList.remove("is-timing");
     }
-    btn.addEventListener("click", function () { if (i !== cur) show(i); });
-  });
-
-  // Words + arrows get the site's link reel and roll in one by one once the headline
-  // has landed — the same 1.4s + 180ms steps as the .hero__seq fades around them
-  // (lead = 0, button = 1, strip items = 2..8, typed line = 9).
-  var items = document.querySelectorAll(".hero__steps li");
-  Array.prototype.forEach.call(steps, buildLinkReel);
-  Array.prototype.forEach.call(document.querySelectorAll(".hero__arrow"), buildLinkReel);
-  function reelIn() {
-    Array.prototype.forEach.call(items, function (li, k) {
-      if (reduce) li.classList.add("is-in");
-      else setTimeout(function () { li.classList.add("is-in"); }, 1400 + (k + 2) * 180);
+    // An interrupted entry stays as it was cut off, like ^C; the new one gets its own prompt.
+    if (!prompt || prompt.querySelector(".hero__cmd").textContent) newPrompt();
+    var older = stack.children;
+    for (var o = 0; o < older.length; o++) if (older[o] !== prompt) older[o].classList.add("is-old");
+    var row = prompt, cmd = row.querySelector(".hero__cmd");
+    countdown();
+    typing = true;
+    caretTo(row);
+    var line = "cat " + names[i];
+    type(cmd, line, CAT_TOTAL_MS / line.length, function () {
+      // Output prints whole, as a real command's would; only the command types.
+      caretTo(null);
+      timer = setTimeout(function () {
+        var outEl = document.createElement("p");
+        outEl.className = "hero__out";
+        outEl.textContent = steps[i].getAttribute("data-desc") || "";
+        stack.appendChild(outEl);
+        typing = false;
+        newPrompt();
+      }, reduce ? 0 : OUT_GAP_MS);
     });
   }
+  function countdown(ms) {
+    clearTimeout(holdTimer);
+    if (held) return;
+    ms = ms || STAGE_MS;
+    bar(cur, ms);
+    holdTimer = setTimeout(function () { show((cur + 1) % steps.length); }, ms);
+  }
 
-  var START_MS = reduce ? 0 : 3200;                  // ~ last .hero__seq delay (1.4s + 9 x .18s) + fade
-  var start = function () {
-    reelIn();
-    timer = setTimeout(function () { if (cur < 0) show(0); }, START_MS);   // a click may beat it
-  };  // a click may beat it
+  // buildLinkReel below doubles each label (face + clone), so the stage name for
+  // `cat <stage>` is read once, before that.
+  steps = Array.prototype.slice.call(steps);
+  var names = steps.map(function (btn) { return btn.textContent.trim(); });
+  var ready = false;                                 // hover/tap wait for `ls` and the reel-in
+
+  var canHover = matchMedia("(hover: hover)").matches;
+  steps.forEach(function (btn, i) {
+    if (canHover) {
+      btn.addEventListener("mouseenter", function () {
+        if (!ready) return;
+        held = true; panel.classList.add("is-held");
+        if (i !== cur) show(i);
+        else clearTimeout(holdTimer);                  // hovering the active stage cancels its countdown
+      });
+      btn.addEventListener("mouseleave", function () { if (!ready) return; held = false; panel.classList.remove("is-held"); countdown(STAGE_MS / 4); });
+    }
+    btn.addEventListener("click", function () { if (ready && i !== cur) show(i); });
+  });
+
+  // Words + arrows get the site's link reel and roll in one by one as the output of `ls`.
+  var items = document.querySelectorAll(".hero__steps li");
+  steps.forEach(buildLinkReel);
+  Array.prototype.forEach.call(document.querySelectorAll(".hero__arrow"), buildLinkReel);
+
+  // `ls` waits for the window-open animation (styles.css heroWindowOpen) to finish,
+  // then lets the cursor blink for a beat so the eye lands on the panel first.
+  var BLINK_MS = reduce ? 0 : 1200;
+  var REEL_STEP = reduce ? 0 : 140;
+  var begun = false;
+  function begin() {
+    if (begun) return;
+    begun = true;
+    timer = setTimeout(function () {
+      var ls = lsRow.querySelector(".hero__cmd");
+      caretTo(lsRow);
+      type(ls, "ls", CMD_MS * 1.5, function () {
+        caretTo(null);
+        Array.prototype.forEach.call(items, function (li, k) {
+          if (reduce) li.classList.add("is-in");
+          else setTimeout(function () { li.classList.add("is-in"); }, 200 + k * REEL_STEP);
+        });
+        timer = setTimeout(function () { ready = true; show(0); }, reduce ? 0 : 200 + items.length * REEL_STEP + 1600);
+      });
+    }, BLINK_MS);
+  }
+  panel.addEventListener("animationend", function (e) { if (e.animationName === "heroWindowOpen") begin(); });
+  // Fallback in case the animation never runs (display:none, an engine skipping it).
+  var start = function () { if (reduce) begin(); else setTimeout(begin, 6000); };
   if (window.__bootReady && window.__bootReady.then) window.__bootReady.then(start); else start();
 })();
 
