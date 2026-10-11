@@ -1,0 +1,26 @@
+# Vishnujan Narayanan
+
+> Data infrastructure engineer based in Kochi, India. Works where data engineering, backend and DevOps overlap: ingestion pipelines, ETL/ELT, data platforms, the backend services that feed and serve them, and the Docker and CI/CD that keep them running. No frontend focus.
+
+Also searchable as: Data Platform Engineer, Data Engineer, Software Engineer (Data Infrastructure).
+
+Core stack: Python, SQL, PostgreSQL, Apache Airflow, Apache Spark, dbt, FastAPI, Redis, Playwright, Docker, Linux, CI/CD, AWS.
+
+Contact: hello@vishnujan.dev
+
+## Projects
+
+- [Market Data Platform](https://vishnujan.dev/projects/market-data-pipeline/): a 28-pipeline NSE market-data ingestion layer in Python feeding 12+ datasets across ~1,665 listed companies, with incremental, resumable loads.
+- [Stock Price Movement Predictor](https://vishnujan.dev/projects/nse-stock-prediction/): intraday price-direction system over 9.4M NSE tick records, with leak-free labeling and a probability-thresholded backtest.
+- [Payment Fraud Scoring App](https://vishnujan.dev/projects/fraud-detection/): end-to-end fraud-detection ML pipeline on 6.4M transactions.
+- [Second-Hand Bookshop Website](https://vishnujan.dev/projects/product-explorer/): scraper that loads a book catalog into PostgreSQL, served over WebSockets.
+
+## Writing
+
+- [Blog](https://vishnujan.dev/blog/): posts on ingestion bugs, resumable ETL, testing data pipelines, HTTP 429 retry logic, and why scrapers get blocked.
+
+## Profiles
+
+- [GitHub](https://github.com/VishnujanNarayanan)
+- [LinkedIn](https://www.linkedin.com/in/vishnujan-narayanan)
+- [Substack](https://substack.com/@vishnujannarayanan)
