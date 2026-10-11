@@ -3093,16 +3093,34 @@ function makeTypeIn(host, runs, opts) {
     var panEl = projEl.querySelector(".term-cards-pan");
     var viewEl = projEl.querySelector(".term-cards-view");
     var sideEl = projEl.querySelector(".term-side");
-    // How much further down the card content runs than the filter panel's box. The
-    // panel holds still for exactly this much of the pan — the stretch where there are
-    // still rows below the fold — and then travels with the cards, so the last row and
-    // the foot of the panel leave the viewport together instead of the panel sitting
-    // there alone under a finished grid. A layout read, so it is measured with the rest
-    // of the geometry rather than per frame.
-    var sideLead = 0;
-    var SIDE_EARLY = 0.3;    // full grid: start moving this fraction of the viewport height sooner
+    // HARD RULE: the filter panel holds still until every card is on screen, then
+    // travels up with the grid, its foot level with the foot of the LAST ROW. sideLead
+    // is how far the cards must pan before the last visible row's bottom edge rises to
+    // the panel's bottom edge; panSide() moves the panel by whatever the pan exceeds it.
+    // Measured from layout offsets, which ignore every transform — the pan, the column
+    // stagger, the panel's own 64px entrance slide — so it is exact at any moment, with
+    // no head start and no reliance on the pan's scrollHeight (which also counts the
+    // meta line and spacing). lastRowOdd: the last row has a card in an offset column,
+    // so the column stagger (curColOff) is still pushing that row lower.
+    var sideLead = 0, lastRowOdd = false, curColOff = 0;
+    function layoutTop(el) { var t = 0; while (el) { t += el.offsetTop; el = el.offsetParent; } return t; }
     function measureSideLead() {
-      sideLead = sideEl ? Math.max(0, panEl.scrollHeight - sideEl.offsetHeight - window.innerHeight * SIDE_EARLY) : 0;
+      if (!sideEl) { sideLead = 0; return; }
+      var panTop = layoutTop(panEl);
+      var sideBottom = layoutTop(sideEl) + sideEl.offsetHeight - panTop;
+      var cols = (getComputedStyle(gridEl).gridTemplateColumns || "").split(" ").filter(Boolean).length || 1;
+      var lastBottom = 0, n = 0;
+      cardEls.forEach(function (el) {
+        if (el.classList.contains("is-filtered-out")) return;
+        var b = layoutTop(el) + el.offsetHeight - panTop;
+        if (b > lastBottom) lastBottom = b;
+        n++;
+      });
+      // Visible cards fill the grid in order, so the last row is the trailing (partial or full) row.
+      var inLast = n ? (n % cols || cols) : 0;
+      lastRowOdd = false;
+      for (var k = n - inLast; k < n; k++) if ((k % cols) % 2) lastRowOdd = true;
+      sideLead = Math.max(0, lastBottom - sideBottom);
     }
     // Re-measure whenever the card stack or the panel actually changes size. sizeSection()
     // alone can run before the grid has laid out — e.g. coming back from /blog/, where the
@@ -3791,6 +3809,7 @@ function makeTypeIn(host, runs, opts) {
       // wise lift the offset columns above their neighbours.
       var frac = Math.max(0, Math.min(COL_OFFSET_MAX, (1 - p / COL_CLOSE_AT) * COL_OFFSET_FRAC));
       var off = null, vi = 0;
+      curColOff = frac * (cardEls[0] ? cardEls[0].offsetHeight : 0);
       for (var i = 0; i < cardEls.length; i++) {
         var el = cardEls[i];
         if (el.classList.contains("is-filtered-out")) { el.style.translate = ""; continue; }
@@ -3800,6 +3819,7 @@ function makeTypeIn(host, runs, opts) {
       }
     }
     function clearColumnOffset() {
+      curColOff = 0;
       cardEls.forEach(function (el) { el.style.translate = ""; });
     }
     // Map the pinned scroll to a vertical PAN of the cards layer inside its clipped
@@ -3831,7 +3851,7 @@ function makeTypeIn(host, runs, opts) {
       var past = Math.min(1, Math.max(0, travel / range));
       var cardPan = past * range;
       panEl.style.transform = "translateY(" + (-cardPan + mom).toFixed(1) + "px)";
-      panSide(Math.max(0, cardPan - sideLead));
+      panSide(Math.max(0, cardPan - sideLead - (lastRowOdd ? curColOff : 0)));
     }
     function update() {
       raf = 0;
@@ -3953,7 +3973,7 @@ function makeTypeIn(host, runs, opts) {
 })();
 
 /* ============================================================
-   Check Out My Socials: scroll-driven fanned-card spread.
+   Swing By And Say Hi On Socials: scroll-driven fanned-card spread.
    Cards start stacked at centre (pushed down 10rem, upright) and
    fan out into a symmetric peacock spread as the section scrolls
    into view. Pure function of scroll → reverses on scroll-up.
@@ -4088,12 +4108,12 @@ function makeTypeIn(host, runs, opts) {
   }
   /* ---- Socials copy: type, then reel, then highlight -----------------------------
      Three beats, each on its own line of scroll:
-       1. the HEADING ("Check Out" / "My Socials") types in, a beat EARLIER than the
+       1. the HEADING ("Swing By And Say Hi" / "On Socials") types in, a beat EARLIER than the
           cards fan out, so the words are already being written as the spread starts;
        2. scrolling on, the FOLLOW line types;
        3. the moment that line finishes, the three social LINKS reel in from nothing —
           the same per-letter roll the nav does on load — and the blue highlight sweeps
-          across "My Socials" and the follow line, left to right, like a text selection
+          across "On Socials" and the follow line, left to right, like a text selection
           being dragged over them. Until then there is NO blue behind either line.
      Skipped on mobile and under reduced motion, where the fan does not run either:
      the two lines keep their plain CSS background and the links are simply there. */
@@ -4112,7 +4132,7 @@ function makeTypeIn(host, runs, opts) {
   const followEl = document.querySelector(".callout-socials-follow");
   // hold 120: the cursor travels with the heading while it types and is gone almost the
   // instant it stops. It used to sit there for the default beat and a bit — and once the
-  // highlight swept "My Socials" the text (and so the cursor, which is currentColor) went
+  // highlight swept "On Socials" the text (and so the cursor, which is currentColor) went
   // white, leaving a white block parked at the end of the line.
   const headType = !staged || !headEl ? null : makeTypeIn(headEl, [
     { el: headEl.querySelector(".callout-socials-heading__line:not(.is-hl)"), step: HEAD_STEP },
@@ -4519,7 +4539,8 @@ function makeTypeIn(host, runs, opts) {
    and are pruned. The bar under the active stage fills over the stage's whole time
    on screen, counting down to the next stage. On devices that hover, pointing at a
    stage jumps to it and holds the cycle; leaving restarts the countdown at 4x speed. A
-   tap/click jumps too.
+   tap/click jumps too. Jumping while a `cat` is still unprinted backspaces it (in a
+   third of the typing time) to the shared `cat ` and types the new stage over it.
    Reduced motion: no typing, every line is set whole. */
 (function heroStages() {
   var steps = document.querySelectorAll(".hero__step");
@@ -4528,21 +4549,33 @@ function makeTypeIn(host, runs, opts) {
   var lsRow = document.querySelector(".hero__row--ls");
   if (!steps.length || !panel || !stack || !lsRow) return;
   var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var CMD_MS = 95, CAT_TOTAL_MS = 1100, OUT_GAP_MS = 180, HOLD_MS = 3200, KEEP = 9;  // every `cat` takes CAT_TOTAL_MS to type, whatever its length
+  var CMD_MS = 95, CAT_TOTAL_MS = 1100, UNTYPE_MS = CAT_TOTAL_MS / 3, OUT_GAP_MS = 180, HOLD_MS = 3200, KEEP = 9;  // every `cat` takes CAT_TOTAL_MS to type, whatever its length
   // One stage's full time on screen: type the command, print, then hold. The countdown
   // bar spans all of it. Hovering off restarts it at 4x speed (a quarter of the time): the
   // visitor has already read that stage, so it moves on sooner.
   var STAGE_MS = reduce ? HOLD_MS : CAT_TOTAL_MS + OUT_GAP_MS + HOLD_MS;
   var cur = -1, timer = 0, holdTimer = 0, held = false, typing = false, prompt = null;
+  var inCmd = false;                                 // a `cat` is on the prompt but its output has not printed yet
   var PROMPT = '<b class="hs-usr">vishnu@portfolio</b>:<b class="hs-path">~/how-i-build</b>$ ';
 
-  // Type `text` into `el` a character at a time, then call done. Reduced motion sets it whole.
-  function type(el, text, ms, done) {
+  // Type `text` into `el` from character `from` on, then call done. Reduced motion sets it whole.
+  function type(el, text, ms, done, from) {
     if (reduce) { el.textContent = text; return done(); }
-    var n = 0;
+    var n = from || 0;
+    if (n >= text.length) { el.textContent = text; return done(); }
     (function tick() {
       el.textContent = text.slice(0, ++n);
       if (n < text.length) timer = setTimeout(tick, ms); else done();
+    })();
+  }
+  // Backspace `el` down to `keep` characters in UNTYPE_MS total, however many go.
+  function untype(el, keep, done) {
+    var t = el.textContent, n = t.length;
+    if (reduce || n <= keep) { el.textContent = t.slice(0, keep); return done(); }
+    var ms = UNTYPE_MS / (n - keep);
+    (function tick() {
+      el.textContent = t.slice(0, --n);
+      if (n > keep) timer = setTimeout(tick, ms); else done();
     })();
   }
   function caretTo(el) {
@@ -4579,16 +4612,20 @@ function makeTypeIn(host, runs, opts) {
       steps[k].classList.toggle("is-active", k === i);
       steps[k].classList.remove("is-timing");
     }
-    // An interrupted entry stays as it was cut off, like ^C; the new one gets its own prompt.
-    if (!prompt || prompt.querySelector(".hero__cmd").textContent) newPrompt();
+    // A `cat` still on the prompt (typing, or typed but not yet printed) is backspaced
+    // to the part it shares with the new one and retyped, rather than left cut off.
+    var morph = inCmd && prompt;
+    if (!morph && (!prompt || prompt.querySelector(".hero__cmd").textContent)) newPrompt();
     var older = stack.children;
     for (var o = 0; o < older.length; o++) if (older[o] !== prompt) older[o].classList.add("is-old");
     var row = prompt, cmd = row.querySelector(".hero__cmd");
     countdown();
     typing = true;
+    inCmd = true;
     caretTo(row);
-    var line = "cat " + names[i];
-    type(cmd, line, CAT_TOTAL_MS / line.length, function () {
+    var line = "cat " + names[i], have = cmd.textContent, keep = 0;
+    while (keep < have.length && keep < line.length && have[keep] === line[keep]) keep++;
+    untype(cmd, keep, function () { type(cmd, line, CAT_TOTAL_MS / line.length, function () {
       // Output prints whole, as a real command's would; only the command types.
       caretTo(null);
       timer = setTimeout(function () {
@@ -4597,9 +4634,10 @@ function makeTypeIn(host, runs, opts) {
         outEl.textContent = steps[i].getAttribute("data-desc") || "";
         stack.appendChild(outEl);
         typing = false;
+        inCmd = false;
         newPrompt();
       }, reduce ? 0 : OUT_GAP_MS);
-    });
+    }, keep); });
   }
   function countdown(ms) {
     clearTimeout(holdTimer);
@@ -4651,7 +4689,7 @@ function makeTypeIn(host, runs, opts) {
           if (reduce) li.classList.add("is-in");
           else setTimeout(function () { li.classList.add("is-in"); }, 200 + k * REEL_STEP);
         });
-        timer = setTimeout(function () { ready = true; show(0); }, reduce ? 0 : 200 + items.length * REEL_STEP + 1600);
+        timer = setTimeout(function () { ready = true; show(0); }, reduce ? 0 : 200 + items.length * REEL_STEP + 1000);
       });
     }, BLINK_MS);
   }
@@ -5033,8 +5071,22 @@ function makeTypeIn(host, runs, opts) {
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { if (window.__socialsPlay) window.__socialsPlay(true); });
     });
+    navToLightWorld();
   });
 })();
+
+/* Socials and the footer both sit on the light background, so the header must read
+   black there. Their links JUMP, skipping every scroll threshold that would normally
+   roll it black (the hero zoom-out, the flow zones), so a click from a dark stretch left
+   the nav and pills white. Roll it to the light world here with the usual per-letter
+   reel, and tell flow.js, so scrolling back into a dark zone still flips it white. */
+function navToLightWorld() {
+  var hdr = document.querySelector("header");
+  if (hdr && !hdr.classList.contains("header--on-light")) {
+    if (window.__navLight) window.__navLight(true); else hdr.classList.add("header--on-light");
+  }
+  if (window.__flowNavOn) window.__flowNavOn(true);
+}
 
 /* ---- Contact goes to the BOTTOM of the page (2026-08-14) -----------------------
    #contact is the footer's own id, so the browser's native jump parks the footer's TOP
@@ -5060,6 +5112,7 @@ function makeTypeIn(host, runs, opts) {
     if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { immediate: true, force: true });
     window.scrollTo(0, y);                       // also move the real scroller, in case Lenis is absent
     if (history.replaceState) { try { history.replaceState(null, "", "#contact"); } catch (err) {} }
+    navToLightWorld();
   });
 })();
 
