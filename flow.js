@@ -1006,9 +1006,15 @@
     // Terminal: "cd highlights" types out as the section scrolls INTO place — over
     // the approach, with rect.top travelling from ~0.85·vh down to 0. It finishes
     // exactly as the section pins (rect.top ≤ 0 = "in place"), the threshold below.
+    // ZONE1_EARLY: zone 1 is REVEALED this fraction of a viewport before the pin (cards,
+    // text, the CLI's arrival + `cd … && cat scope`, the journey wheel), so the screen
+    // isn't left empty after the hero video. Only the reveal moves: zone 1 is held at its
+    // appear point (globalRaw -0.5) until the pin, then every zone scrolls exactly as
+    // before — zones 2-4, the colour fade and the nav flip are untouched.
+    var ZONE1_EARLY = vh * 0.3;
     var TYPE_START = vh * 0.85;
-    var approachP = clamp((TYPE_START - rect.top) / TYPE_START, 0, 1);
-    var inPlace = rect.top <= 0;
+    var approachP = clamp((TYPE_START - rect.top) / (TYPE_START - ZONE1_EARLY), 0, 1);
+    var inPlace = rect.top <= ZONE1_EARLY;           // "revealed" (the real pin is rect.top <= 0)
     // Unclamped global for the IMAGE + TITLE edge motion: lets the first zone enter
     // from the right during the lead-in scroll (before the section reaches the top)
     // and the last zone keep exiting left past the section end — so every zone covers
@@ -1017,16 +1023,19 @@
     // crossing -0.5 fires its appear + image entry; at N the last zone has exited.
     // Hold every zone parked (globalRaw at its pre-entry edge) until the section is
     // in place; release at the pin so zone 1 enters at the exact terminal threshold.
-    var globalRaw = !inPlace ? -1 : (total > 0 ? clamp((-rect.top) / total * N - 0.5, -1, N) : 0);
+    var globalRaw = !inPlace ? -1 : (rect.top > 0 ? -0.5 : (total > 0 ? clamp((-rect.top) / total * N - 0.5, -1, N) : 0));
     // Terminal (ONE element/stack): the lead row types `cd certificates` over the video zoom-out
     // (heroPB), the header types `cd ../highlights && cat scope` over the approach, then the
     // zone lines append in the pin. positionTerminal rides the single element park→rest→away.
     var yeHero = window.__heroY ? window.__heroY(window.scrollY, vh) : window.scrollY;
     var heroPB = clamp((yeHero - vh) / vh, 0, 1);
-    positionTerminal(rect);
+    // The CLI's ride from park to rest finishes at the reveal instead of the pin.
+    positionTerminal(rect.top > 0
+      ? { top: Math.max(0, (rect.top - ZONE1_EARLY) * vh / (vh - ZONE1_EARLY)), bottom: rect.bottom, height: rect.height }
+      : rect);
     // Past the pin (bottom edge rising, zone-4 cards flying out) the blog handover owns the
     // stack — it types `cd ..` → `cd blogs` → blogs$; at/before the pin the zone engine does.
-    if (inPlace && rect.bottom < vh) { driveBlogHandover(rect.bottom); }
+    if (rect.top <= 0 && rect.bottom < vh) { driveBlogHandover(rect.bottom); }
     else { commitHandover(); driveTerminal(inPlace, approachP, globalRaw, heroPB); }
     var dGlobal = globalRaw - lastGlobalRaw;                         // signed scroll delta this frame (zones)
     // globalRaw is PARKED at −1 while the section isn't in place, so the frame the pin
@@ -1045,7 +1054,7 @@
     lastGlobalTime = tNow;
     lastGlobalRaw = globalRaw;
 
-    journey.classList.toggle("is-live", rect.top <= 1 && rect.bottom > vh * 0.6);
+    journey.classList.toggle("is-live", rect.top <= ZONE1_EARLY + 1 && rect.bottom > vh * 0.6);
 
     var vw = window.innerWidth;
     var trackX = -global * vw;
