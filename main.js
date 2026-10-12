@@ -5344,7 +5344,7 @@ function navToLightWorld() {
        drifts sideways instead, so the background reads horizontal and neutral, never
        "still going down". Canvas y skips the pinned stretch.
    The dark world is #vanta-bg (dark composition) laid OVER the canvas with opacity
-   1 - window.__flowLight: fully dark before and early in the flow, cross-fading in place
+   1 - lt (lt on window.__flowLight's schedule): fully dark before and early in the flow, cross-fading in place
    to the light canvas across the zones. The canvas is light everywhere except a dark band
    under the projects run (whose own solid fill covers it anyway; the band ends a quarter
    into its last screen so no dark can show past it). Light masses every ~1.15 viewports
@@ -5414,7 +5414,11 @@ function navToLightWorld() {
     var p = pin > 0 ? Math.min(Math.max((y - fTop) / pin, 0), 1) : 0;
     var t = "translate3d(" + (-p * PAN * W).toFixed(1) + "px," + (-canvasY(y)).toFixed(1) + "px,0)";
     if (t !== lastT) { lastT = t; cvs.style.transform = t; }
-    var o = (1 - (window.__flowLight || 0)).toFixed(3);
+    // Same schedule as flow.js's window.__flowLight (0 at 20% of the flow's scroll, 1 at
+    // 80%), computed from scroll here so a nav jump past the flow can't leave it stale.
+    var tot = Math.max(flow.offsetHeight - window.innerHeight, 1);
+    var lt = Math.min(Math.max(((y - fTop) / tot - 0.2) / 0.6, 0), 1);
+    var o = (1 - lt).toFixed(3);
     if (vanta && o !== lastO) { lastO = o; vanta.style.opacity = o; }
   }
 
