@@ -2393,11 +2393,12 @@ html{overflow-x:clip}
   --bg-dark-size:220px 220px,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%;
 }
 #vanta-bg{background:var(--bg-dark);background-size:var(--bg-dark-size)}
-/* Homepage: ONE continuous background (#site-bg, built by the siteBg IIFE in main.js)
-   runs the full document height behind every section, so nothing restarts at a
-   section edge. The per-section layers are therefore transparent, except the
+/* Homepage: ONE continuous background (#site-bg, built by the siteBg IIFE in main.js):
+   a fixed window panning over a tall lit canvas (vertically with the page, sideways
+   while the flow is pinned), with #vanta-bg's dark layer cross-fading over it. The per-section layers are therefore transparent, except the
    projects section, which keeps its solid near-black navy. */
-#site-bg{position:absolute;left:0;top:0;width:100%;z-index:-1;pointer-events:none}
+#site-bg{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.site-bg__canvas{position:absolute;left:0;top:0;will-change:transform}
 #bg-contours{display:none}
 #writing-contours,.section-contours--light{background:none}
 .section-contours--dark{background:#0f1628}

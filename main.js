@@ -5336,99 +5336,100 @@ function navToLightWorld() {
 })();
 
 /* ---------- Continuous site background (homepage) ----------
-   One document-tall layer (#site-bg) behind every section from the hero to the footer,
-   so the lighting never restarts at a section edge: it scrolls with the page as a single
-   canvas. Built from the real section positions and rebuilt whenever the page height
-   changes.
-     tone   dark (#0a0f1d) until the flow, ramping to the light blue (#b9cddd) across
-            the zones on the same schedule as window.__flowLight (lt 0 at 20% of the
-            flow's pinned scroll, 1 at 80%), then light through blog → footer. The
-            projects run is dark too, but its own solid fill covers it.
-     light  soft light masses every ~1.15 viewports, alternating right / left, each
-            tinted for the tone at its height (white on light, dim periwinkle on dark),
-            with a deeper shade mass on the opposite side between them.
-     grain  two fine noise tiles on top (dark specks + light specks). */
+   One continuous lit canvas behind the whole page, so the lighting never restarts at a
+   section edge. #site-bg is a fixed viewport window onto a tall inner canvas that is
+   PANNED, not scrolled:
+     - normally it moves up 1:1 with the page;
+     - while the flow is pinned (its zones travel sideways) it stops moving vertically and
+       drifts sideways instead, so the background reads horizontal and neutral, never
+       "still going down". Canvas y skips the pinned stretch.
+   The dark world is #vanta-bg (dark composition) laid OVER the canvas with opacity
+   1 - window.__flowLight: fully dark before and early in the flow, cross-fading in place
+   to the light canvas across the zones. The canvas is light everywhere except a dark band
+   under the projects run (whose own solid fill covers it anyway; the band ends a quarter
+   into its last screen so no dark can show past it). Light masses every ~1.15 viewports
+   alternate right/left with a deeper shade between; two grain tiles on top. */
 (function siteBg() {
   var flow = document.querySelector(".flow");
   if (!flow) return;                                   // homepage only
-  var el = document.createElement("div");
-  el.id = "site-bg";
-  el.setAttribute("aria-hidden", "true");
+  var win = document.createElement("div");
+  win.id = "site-bg";
+  win.setAttribute("aria-hidden", "true");
+  var cvs = document.createElement("div");
+  cvs.className = "site-bg__canvas";
+  win.appendChild(cvs);
   var vanta = document.getElementById("vanta-bg");
-  if (vanta && vanta.parentNode) vanta.parentNode.insertBefore(el, vanta.nextSibling);
-  else document.body.insertBefore(el, document.body.firstChild);
+  // Before #vanta-bg, so the dark layer (same z-index, later in the DOM) paints over it.
+  if (vanta && vanta.parentNode) vanta.parentNode.insertBefore(win, vanta);
+  else document.body.insertBefore(win, document.body.firstChild);
+  var wrap = flow.querySelector(".flow__wrapper");
 
-  var DARK = [10, 15, 29], LIGHT = [185, 205, 221];
+  var DARK = "10,15,29", LIGHT = "185,205,221", PAN = 0.22;   // PAN: sideways drift, fraction of the viewport width
   var GRAIN = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
   var GRAIN_L = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
-  function mix(a, b, t) { return Math.round(a + (b - a) * t); }
-  function rgb(t) { return "rgb(" + mix(DARK[0], LIGHT[0], t) + "," + mix(DARK[1], LIGHT[1], t) + "," + mix(DARK[2], LIGHT[2], t) + ")"; }
   function docTop(node) { return node.getBoundingClientRect().top + (window.scrollY || 0); }
+
+  var fTop = 0, pin = 0, W = 0, built = false;
+  function canvasY(y) { return y <= fTop ? y : (y <= fTop + pin ? fTop : y - pin); }
 
   function build() {
     var vh = window.innerHeight, H = document.documentElement.scrollHeight;
-    var fTop = docTop(flow), fH = flow.offsetHeight, total = Math.max(fH - vh, 1);
-    var D0 = fTop + 0.2 * total + 0.5 * vh;            // viewport centre when lt = 0
-    var L1 = fTop + 0.8 * total + 0.5 * vh;            // viewport centre when lt = 1
-    if (L1 <= D0) L1 = D0 + vh;
+    W = window.innerWidth;
+    fTop = docTop(flow);
+    pin = (wrap && getComputedStyle(wrap).position === "sticky") ? Math.max(flow.offsetHeight - vh, 0) : 0;
+    var CH = H - pin, CW = Math.round(W * (1 + PAN));
     var feat = document.querySelector(".features"), tail = document.querySelector(".projects-tail");
-    var pTop = feat ? docTop(feat) : Infinity;
-    var pEnd = tail ? docTop(tail) + tail.offsetHeight : (feat ? pTop + feat.offsetHeight : Infinity);
-    // Safety margin: switch back to light a quarter of the way into the projects run's
-    // LAST screen, not at its exact end, so no dark band can show past the projects
-    // (its own solid fill covers whatever is underneath while it is on screen).
+    var pTop = feat ? canvasY(docTop(feat)) : Infinity;
+    var pEnd = tail ? canvasY(docTop(tail) + tail.offsetHeight) : (feat ? pTop + feat.offsetHeight : Infinity);
     if (isFinite(pEnd)) pEnd = Math.max(pTop, pEnd - 0.75 * vh);
-    function tone(y) {
-      if (y >= pTop && y < pEnd) return 0;
-      if (y <= D0) return 0;
-      if (y >= L1) return 1;
-      var t = (y - D0) / (L1 - D0);
-      return t * t * (3 - 2 * t);
-    }
-    // Base tone: dark → ramp → light, hard dark band for the projects run.
-    var base = "linear-gradient(180deg," + rgb(0) + " 0px," + rgb(0) + " " + Math.round(D0) + "px,";
-    for (var k = 1; k <= 6; k++) {                      // eased ramp as a few stops
-      var y = D0 + (L1 - D0) * k / 6;
-      base += rgb(tone(y)) + " " + Math.round(y) + "px,";
-    }
+    function dark(y) { return y >= pTop && y < pEnd; }
+    var base = "rgb(" + LIGHT + ")";
     if (isFinite(pTop)) {
-      base += rgb(1) + " " + Math.round(pTop) + "px," + rgb(0) + " " + Math.round(pTop) + "px," +
-              rgb(0) + " " + Math.round(pEnd) + "px," + rgb(1) + " " + Math.round(pEnd) + "px,";
+      base = "linear-gradient(180deg,rgb(" + LIGHT + ") 0px,rgb(" + LIGHT + ") " + Math.round(pTop) + "px,rgb(" + DARK + ") " +
+        Math.round(pTop) + "px,rgb(" + DARK + ") " + Math.round(pEnd) + "px,rgb(" + LIGHT + ") " + Math.round(pEnd) + "px,rgb(" + LIGHT + ") " + CH + "px)";
     }
-    base += rgb(1) + " " + H + "px)";
-    // Light and shade masses along the whole length.
     var layers = [], step = vh * 1.15, i = 0;
-    for (var yy = vh * 0.1; yy < H + vh; yy += step, i++) {
-      var right = i % 2 === 0, t2 = tone(yy);
-      var la = (0.06 + 0.72 * t2).toFixed(3);         // white on light, faint on dark
-      var lc = t2 > 0.5 ? "255,255,255" : "120,142,225";
-      layers.push("radial-gradient(" + Math.round(window.innerWidth * 0.7) + "px " + Math.round(vh * 0.85) + "px at " +
-        (right ? "88%" : "12%") + " " + Math.round(yy) + "px,rgba(" + lc + "," + la + "),rgba(" + lc + "," + (la * 0.4).toFixed(3) + ") 40%,transparent 68%)");
-      var sy = yy + step * 0.5, t3 = tone(sy);
-      var sa = (0.55 - 0.25 * t3).toFixed(3);
-      var sc = t3 > 0.5 ? "38,66,104" : "0,0,0";
-      layers.push("radial-gradient(" + Math.round(window.innerWidth * 0.6) + "px " + Math.round(vh * 0.7) + "px at " +
-        (right ? "4%" : "96%") + " " + Math.round(sy) + "px,rgba(" + sc + "," + sa + "),transparent 70%)");
+    for (var y = vh * 0.1; y < CH + vh; y += step, i++) {
+      var right = i % 2 === 0, d = dark(y);
+      var lc = d ? "120,142,225" : "255,255,255", la = d ? 0.07 : 0.78;
+      layers.push("radial-gradient(" + Math.round(W * 0.7) + "px " + Math.round(vh * 0.85) + "px at " +
+        (right ? "86%" : "14%") + " " + Math.round(y) + "px,rgba(" + lc + "," + la + "),rgba(" + lc + "," + (la * 0.4).toFixed(3) + ") 40%,transparent 68%)");
+      var sy = y + step * 0.5, sd = dark(sy);
+      layers.push("radial-gradient(" + Math.round(W * 0.6) + "px " + Math.round(vh * 0.7) + "px at " +
+        (right ? "4%" : "96%") + " " + Math.round(sy) + "px,rgba(" + (sd ? "0,0,0" : "38,66,104") + "," + (sd ? 0.55 : 0.3) + "),transparent 70%)");
     }
-    el.style.height = H + "px";
-    el.style.background = [GRAIN, GRAIN_L].concat(layers, [base]).join(",");
-    el.style.backgroundSize = ["220px 220px", "260px 260px"].concat(layers.map(function () { return "100% 100%"; }), ["100% 100%"]).join(",");
-    el.style.backgroundRepeat = ["repeat", "repeat"].concat(layers.map(function () { return "no-repeat"; }), ["no-repeat"]).join(",");
+    cvs.style.width = CW + "px";
+    cvs.style.height = CH + "px";
+    cvs.style.background = [GRAIN, GRAIN_L].concat(layers, [base]).join(",");
+    cvs.style.backgroundSize = ["220px 220px", "260px 260px"].concat(layers.map(function () { return "100% 100%"; }), ["100% 100%"]).join(",");
+    cvs.style.backgroundRepeat = ["repeat", "repeat"].concat(layers.map(function () { return "no-repeat"; }), ["no-repeat"]).join(",");
+    built = true;
+    place();
+  }
+
+  var lastT = "", lastO = "";
+  function place() {
+    if (!built) return;
+    var y = window.scrollY || 0;
+    var p = pin > 0 ? Math.min(Math.max((y - fTop) / pin, 0), 1) : 0;
+    var t = "translate3d(" + (-p * PAN * W).toFixed(1) + "px," + (-canvasY(y)).toFixed(1) + "px,0)";
+    if (t !== lastT) { lastT = t; cvs.style.transform = t; }
+    var o = (1 - (window.__flowLight || 0)).toFixed(3);
+    if (vanta && o !== lastO) { lastO = o; vanta.style.opacity = o; }
   }
 
   var queued = false, lastKey = "";
-  function queue() {
-    if (queued) return;
-    queued = true;
-    requestAnimationFrame(function () {
-      queued = false;
-      var fe = document.querySelector(".features");
-      var key = window.innerWidth + "x" + window.innerHeight + ":" + document.documentElement.scrollHeight +
-        ":" + (fe ? fe.offsetHeight : 0);
-      if (key !== lastKey) { lastKey = key; build(); }
-    });
+  function frame() {
+    queued = false;
+    var fe = document.querySelector(".features");
+    var key = window.innerWidth + "x" + window.innerHeight + ":" + document.documentElement.scrollHeight +
+      ":" + (fe ? fe.offsetHeight : 0);
+    if (key !== lastKey) { lastKey = key; build(); } else place();
   }
+  function queue() { if (!queued) { queued = true; requestAnimationFrame(frame); } }
   queue();
+  window.addEventListener("scroll", queue, { passive: true });
+  if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", queue);
   window.addEventListener("resize", queue, { passive: true });
   window.addEventListener("load", queue);
   if ("ResizeObserver" in window) {
