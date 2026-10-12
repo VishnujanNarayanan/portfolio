@@ -269,6 +269,12 @@ function makeTypeIn(host, runs, opts) {
       var m = /[?&]go=([\w-]+)/.exec(location.search);
       return m ? "#" + m[1] : location.hash;
     })();
+    // Arriving straight into a section (a sub-page nav link → /?go=projects etc.): the hero
+    // is already scrolled off the top, so its terminal must not play the rise-from-the-Dock
+    // entrance — the keyframes start it 55vh down, which pokes it into view from the top of
+    // wherever the visitor landed. .arrive-deep shows it in place instead (styles.css), and
+    // heroStages starts its typing straight away rather than waiting on the animation.
+    if (wantHash && wantHash !== "#" && wantHash !== "#top") document.documentElement.classList.add("arrive-deep");
     var userScrolled = false;
     // pointerdown counts as "the visitor took over" too, not just scrolling. Arriving from a
     // sub-page (/?go=contact) the retries below keep re-asserting the target for ~1.5s, and a
@@ -4724,7 +4730,10 @@ function makeTypeIn(host, runs, opts) {
   }
   panel.addEventListener("animationend", function (e) { if (e.animationName === "heroWindowOpen") begin(); });
   // Fallback in case the animation never runs (display:none, an engine skipping it).
-  var start = function () { if (reduce) begin(); else setTimeout(begin, 6000); };
+  var start = function () {
+    if (reduce || document.documentElement.classList.contains("arrive-deep")) begin();   // no entrance animation to wait for
+    else setTimeout(begin, 6000);
+  };
   if (window.__bootReady && window.__bootReady.then) window.__bootReady.then(start); else start();
 })();
 
