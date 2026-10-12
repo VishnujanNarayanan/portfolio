@@ -75,6 +75,18 @@
     }
     geo.jw = (journey && journey.clientWidth) || window.innerWidth;
   }
+  // FLOW_EARLY: the whole flow timeline (zone 1 reveal, the CLI ride + typing, the
+  // journey wheel, titles/text, the colour fade) runs this fraction of a viewport
+  // EARLIER than the section's real position, so the screen isn't left empty after the
+  // hero video. Only the TOP edge shifts; the bottom edge — and with it the blog
+  // handover — stays real. main.js's site background reads window.__flowEarly to keep
+  // its dark → light cross-fade in step.
+  var FLOW_EARLY = 0.3;
+  window.__flowEarly = FLOW_EARLY;
+  function earlyRect(r) {
+    var e = window.innerHeight * FLOW_EARLY;
+    return { top: r.top - e, bottom: r.bottom, height: r.height };
+  }
   function scrollNow() { return window.scrollY || window.pageYOffset || 0; }
   // Same shape as a DOMRect for the properties this file reads (top/bottom/height).
   function flowRect() {
@@ -903,7 +915,7 @@
     var rect = flow.getBoundingClientRect();
     var top = rect.top + (window.scrollY || window.pageYOffset || 0);
     var total = flow.offsetHeight - window.innerHeight;
-    var y = top + ((i + 0.5) / N) * total;   // land at zone i's centre (global = progress·N − 0.5)
+    var y = top + ((i + 0.5) / N) * total - window.innerHeight * FLOW_EARLY;   // zone i's centre (global = progress·N − 0.5), on the early timeline
     if (window.__lenis && window.__lenis.scrollTo) window.__lenis.scrollTo(y, { duration: 1.2 });
     else window.scrollTo({ top: y, behavior: "smooth" });
   }
@@ -967,7 +979,7 @@
     if (hoverDue && performance.now() - lastHitT > 90) {
       lastHitT = performance.now(); hoverDue = false; refreshHover();
     }
-    var rect = flowRect();
+    var rect = earlyRect(flowRect());
     // Off-screen early-outs — skip the whole per-frame body when the section can't
     // be seen. Below the viewport (approaching): the fixed CLI terminal is still on
     // stage during the hero video zoom-out, so keep just it alive (approachP is 0 and

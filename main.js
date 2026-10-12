@@ -5423,7 +5423,8 @@ function navToLightWorld() {
     // Same schedule as flow.js's window.__flowLight (0 at 20% of the flow's scroll, 1 at
     // 80%), computed from scroll here so a nav jump past the flow can't leave it stale.
     var tot = Math.max(flow.offsetHeight - window.innerHeight, 1);
-    var lt = Math.min(Math.max(((y - fTop) / tot - 0.2) / 0.6, 0), 1);
+    var ey = y + window.innerHeight * (window.__flowEarly || 0);   // flow.js runs its timeline early
+    var lt = Math.min(Math.max(((ey - fTop) / tot - 0.2) / 0.6, 0), 1);
     var o = (1 - lt).toFixed(3);
     if (vanta && o !== lastO) { lastO = o; vanta.style.opacity = o; }
   }
