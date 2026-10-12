@@ -5422,7 +5422,9 @@ function navToLightWorld() {
     queued = true;
     requestAnimationFrame(function () {
       queued = false;
-      var key = window.innerWidth + "x" + window.innerHeight + ":" + document.documentElement.scrollHeight;
+      var fe = document.querySelector(".features");
+      var key = window.innerWidth + "x" + window.innerHeight + ":" + document.documentElement.scrollHeight +
+        ":" + (fe ? fe.offsetHeight : 0);
       if (key !== lastKey) { lastKey = key; build(); }
     });
   }
