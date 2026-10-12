@@ -829,7 +829,7 @@ function makeTypeIn(host, runs, opts) {
         hdrFlipped = wantFlip;
         if (ye <= 2 * vh) setHeaderTheme(wantFlip ? 1 : 0, jumped);   // timed (.3s), not scrubbed
         var hs = wantFlip ? 0.88 : 1;                        // shrink 1 ↔ 0.88 (subtle)
-        if (navLeft)  { navLeft.style.transition  = "transform .3s var(--ease-default)"; navLeft.style.transformOrigin  = "left center";  navLeft.style.transform  = "scale(" + hs + ")"; }
+        if (navLeft)  { navLeft.style.transition  = "transform .3s var(--ease-default)"; navLeft.style.transformOrigin  = "center center";  navLeft.style.transform  = "scale(" + hs + ")"; }
         if (navRight) { navRight.style.transition = "transform .3s var(--ease-default)"; navRight.style.transformOrigin = "right center"; navRight.style.transform = "scale(" + hs + ")"; }
       }
       lastFlipY = y;                              // for the jump test on the next crossing
@@ -4743,7 +4743,7 @@ function makeTypeIn(host, runs, opts) {
 (function navScaleHandoff() {
   var KEY = "vj:nav-scale";
   var groups = [
-    [document.querySelector(".header__nav-left"), "left center"],
+    [document.querySelector(".header__nav-left"), "center center"],
     [document.querySelector(".header__nav-right"), "right center"]
   ].filter(function (g) { return g[0]; });
   if (!groups.length) return;
