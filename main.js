@@ -852,6 +852,30 @@ function makeTypeIn(host, runs, opts) {
         if (navRight) { navRight.style.transition = "transform .3s var(--ease-default)"; navRight.style.transformOrigin = "right center"; navRight.style.transform = "scale(" + hs + ")"; }
       }
       lastFlipY = y;                              // for the jump test on the next crossing
+      // Back on the hero with the header still in the threshold-reel state (header--on-light:
+      // the black __b copies in front). That happens after a jump here — Contact/Socials
+      // switch it on (navToLightWorld), then Home jumps back without any threshold switching
+      // it off. On a fresh load the hero's black is the __a copy instead, which is what the
+      // zoom-out flip recolours; with __b still in front the nav stayed black until the flow
+      // took over. Once any reel has landed, hand back to the fresh-load state — same black
+      // either way, so nothing visibly moves.
+      if (!wantFlip && hdr && hdr.classList.contains("header--on-light")) {
+        if (!heroNormT) heroNormT = setTimeout(normaliseHeroHeader, 1000);
+      } else if (heroNormT) { clearTimeout(heroNormT); heroNormT = 0; }
+    }
+    var heroNormT = 0;
+    function normaliseHeroHeader() {
+      heroNormT = 0;
+      if (!hdr || !hdr.classList.contains("header--on-light") || window.scrollY >= window.innerHeight * 0.955) return;
+      var leaves = hdr.querySelectorAll(".header__nav-left a .nav-char__a,.header__nav-left a .nav-char__b,.header__ctas .pill-char__a,.header__ctas .pill-char__b,.header__ctas .pill-btn,.header__nav-left a,.header__nav-left");
+      Array.prototype.forEach.call(leaves, function (el) { el.style.transition = "none"; });
+      setHeaderTheme(0, false);                   // __a black, pills + nav pill in the light pose
+      hdr.classList.remove("header--on-light");
+      if (window.__flowNavOn) window.__flowNavOn(false);   // flow.js's reel state back to fresh-load too
+      void hdr.offsetWidth;
+      requestAnimationFrame(function () {
+        Array.prototype.forEach.call(leaves, function (el) { el.style.transition = ""; });
+      });
     }
     window.__updateHeroExit = updateHeroExit;   // cert IIFE drives this during its timed completion
     window.addEventListener("scroll", updateHeroExit, { passive: true });
