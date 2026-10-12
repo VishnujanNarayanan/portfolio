@@ -43,6 +43,18 @@ function buildLinkReel(el) {
   Array.prototype.forEach.call(document.querySelectorAll(".callout-socials-link"), buildLinkReel);
 })();
 
+/* Nav pill (the centred link group): frosted white in the light world → frosted navy in
+   the dark world. t = 0 light … 1 dark. Driven continuously by setHeaderTheme through the
+   hero zoom-out, and at the discrete world flips by __navLight — the same moment the
+   letters reel — so the text and its pill always change together. */
+function paintNavPill(t, ease) {
+  var nav = document.querySelector("header .header__nav-left");
+  if (!nav) return;
+  var c = Math.round(252 + (8 - 252) * t), g = Math.round(252 + (12 - 252) * t), b = Math.round(252 + (30 - 252) * t);
+  nav.style.transition = ease ? "background-color .5s var(--ease-default),border-color .5s var(--ease-default),transform .3s var(--ease-default)" : "transform .3s var(--ease-default)";
+  nav.style.backgroundColor = "rgba(" + c + "," + g + "," + b + "," + (0.5 + 0.1 * t).toFixed(3) + ")";
+  nav.style.borderColor = "rgba(255,255,255," + (0.75 - 0.63 * t).toFixed(3) + ")";
+}
 function buildPillReel(pill) {
   if (!pill) return null;
   var span = pill.querySelector(".pill-btn-span"); if (!span) return null;
@@ -655,6 +667,7 @@ function makeTypeIn(host, runs, opts) {
       // in the correct dark-world colour.
       var rgb = "rgb(" + c + "," + c + "," + c + ")";
       if (!ease || !rolled) {
+        paintNavPill(he, ease);                            // the pill changes whenever the text colour does
         navLinks.forEach(function (a) { a.style.transition = trans; a.style.color = rgb; });
         if (glassSpan) { glassSpan.style.transition = trans; glassSpan.style.color = rgb; }
         if (giSpan) { giSpan.style.transition = trans; giSpan.style.color = "rgb(" + c2 + "," + c2 + "," + c2 + ")"; }
@@ -2741,6 +2754,7 @@ function makeTypeIn(host, runs, opts) {
         c.clip.style.setProperty("--d", (on ? c.fd : (Dmax - c.fd)).toFixed(3) + "s");
       }
       if (header) header.classList.toggle("header--on-light", on);
+      paintNavPill(on ? 0 : 1, true);                    // pill flips with the letters
       // Hover-reel clone colour for the nav (threshold-driven, so always the opposite blue here):
       // on = light world (black text) → deep blue #231d7a (the zone-3/4 title blue); off = dark
       // world (white text) → sky blue #4d8bff. (The initial-hero same-colour reel is owned by

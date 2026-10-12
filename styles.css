@@ -2408,11 +2408,16 @@ html{overflow-x:clip}
 /* Subpages have no #site-bg: the light composition, fixed to the viewport. */
 .blog-body,.subpage-body{background:var(--bg-light);background-size:var(--bg-light-size);background-attachment:fixed}
 
-/* Header: the nav links sit on the page's centre line (Socials is one of them now);
-   Subscribe is the only pill, on the right. Centred with auto margins, not a
+/* Header: the nav links sit in a frosted pill on the page's centre line (Socials is one
+   of them now); Subscribe is the other pill, on the right. The pill's colour flips with
+   the world (paintNavPill in main.js). Centred with auto margins, not a
    transform, because main.js scales the group on scroll (from its centre). */
 @media (min-width:821px){
-  header .header__nav-left{position:absolute;left:0;right:0;width:max-content;margin:0 auto}
+  header .header__nav-left{position:absolute;left:0;right:0;width:max-content;margin:0 auto;
+    padding:3px 6px;border-radius:999px;border:1px solid rgba(255,255,255,.75);background-color:rgba(252,252,252,.5);
+    -webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%);
+    box-shadow:0 8px 24px -14px rgba(5,4,25,.35)}
+  header .header__nav-left a{padding:12px 16px}
   header .header__nav-right{margin-left:auto}
 }
 
