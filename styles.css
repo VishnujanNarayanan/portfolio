@@ -2234,9 +2234,9 @@ html{overflow-x:clip}
 @keyframes heroStageBar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 /* The panel opens like a macOS window rising out of the Dock: it starts as a sliver
    far below, squeezed narrow and short, then grows up into place with a slight
-   overshoot. Starts once the lead has faded in (.hero__seq, ~1.8s). */
+   overshoot. Starts once the lead has faded in (~1.1s after the hero shows). */
 .hero .hero__stages{opacity:0;transform-origin:50% 100%}
-.hero.show .hero__stages{animation:heroWindowOpen .8s cubic-bezier(.2,.85,.25,1) 1.9s both}
+.hero.show .hero__stages{animation:heroWindowOpen .8s cubic-bezier(.2,.85,.25,1) 1.1s both}
 @keyframes heroWindowOpen{
   0%{opacity:0;transform:translateY(55vh) scale(.12,.04);filter:blur(4px)}
   35%{opacity:1;transform:translateY(18vh) scale(.45,.3);filter:blur(1.5px)}
