@@ -43,6 +43,18 @@ function buildLinkReel(el) {
   Array.prototype.forEach.call(document.querySelectorAll(".callout-socials-link"), buildLinkReel);
 })();
 
+/* Nav pill (the centred link group): frosted white in the light world → frosted navy in
+   the dark world. t = 0 light … 1 dark. Driven continuously by setHeaderTheme through the
+   hero zoom-out, and at the discrete world flips by __navLight — the same moment the
+   letters reel — so the text and its pill always change together. */
+function paintNavPill(t, ease) {
+  var nav = document.querySelector("header .header__nav-left");
+  if (!nav) return;
+  var c = Math.round(252 + (8 - 252) * t), g = Math.round(252 + (12 - 252) * t), b = Math.round(252 + (30 - 252) * t);
+  nav.style.transition = ease ? "background-color .5s var(--ease-default),border-color .5s var(--ease-default),transform .3s var(--ease-default)" : "transform .3s var(--ease-default)";
+  nav.style.backgroundColor = "rgba(" + c + "," + g + "," + b + "," + (0.5 + 0.1 * t).toFixed(3) + ")";
+  nav.style.borderColor = "rgba(255,255,255," + (0.75 - 0.63 * t).toFixed(3) + ")";
+}
 function buildPillReel(pill) {
   if (!pill) return null;
   var span = pill.querySelector(".pill-btn-span"); if (!span) return null;
@@ -257,6 +269,12 @@ function makeTypeIn(host, runs, opts) {
       var m = /[?&]go=([\w-]+)/.exec(location.search);
       return m ? "#" + m[1] : location.hash;
     })();
+    // Arriving straight into a section (a sub-page nav link → /?go=projects etc.): the hero
+    // is already scrolled off the top, so its terminal must not play the rise-from-the-Dock
+    // entrance — the keyframes start it 55vh down, which pokes it into view from the top of
+    // wherever the visitor landed. .arrive-deep shows it in place instead (styles.css), and
+    // heroStages starts its typing straight away rather than waiting on the animation.
+    if (wantHash && wantHash !== "#" && wantHash !== "#top") document.documentElement.classList.add("arrive-deep");
     var userScrolled = false;
     // pointerdown counts as "the visitor took over" too, not just scrolling. Arriving from a
     // sub-page (/?go=contact) the retries below keep re-asserting the target for ~1.5s, and a
@@ -655,6 +673,7 @@ function makeTypeIn(host, runs, opts) {
       // in the correct dark-world colour.
       var rgb = "rgb(" + c + "," + c + "," + c + ")";
       if (!ease || !rolled) {
+        paintNavPill(he, ease);                            // the pill changes whenever the text colour does
         navLinks.forEach(function (a) { a.style.transition = trans; a.style.color = rgb; });
         if (glassSpan) { glassSpan.style.transition = trans; glassSpan.style.color = rgb; }
         if (giSpan) { giSpan.style.transition = trans; giSpan.style.color = "rgb(" + c2 + "," + c2 + "," + c2 + ")"; }
@@ -829,10 +848,34 @@ function makeTypeIn(host, runs, opts) {
         hdrFlipped = wantFlip;
         if (ye <= 2 * vh) setHeaderTheme(wantFlip ? 1 : 0, jumped);   // timed (.3s), not scrubbed
         var hs = wantFlip ? 0.88 : 1;                        // shrink 1 ↔ 0.88 (subtle)
-        if (navLeft)  { navLeft.style.transition  = "transform .3s var(--ease-default)"; navLeft.style.transformOrigin  = "left center";  navLeft.style.transform  = "scale(" + hs + ")"; }
+        if (navLeft)  { navLeft.style.transition  = "transform .3s var(--ease-default)"; navLeft.style.transformOrigin  = "center center";  navLeft.style.transform  = "scale(" + hs + ")"; }
         if (navRight) { navRight.style.transition = "transform .3s var(--ease-default)"; navRight.style.transformOrigin = "right center"; navRight.style.transform = "scale(" + hs + ")"; }
       }
       lastFlipY = y;                              // for the jump test on the next crossing
+      // Back on the hero with the header still in the threshold-reel state (header--on-light:
+      // the black __b copies in front). That happens after a jump here — Contact/Socials
+      // switch it on (navToLightWorld), then Home jumps back without any threshold switching
+      // it off. On a fresh load the hero's black is the __a copy instead, which is what the
+      // zoom-out flip recolours; with __b still in front the nav stayed black until the flow
+      // took over. Once any reel has landed, hand back to the fresh-load state — same black
+      // either way, so nothing visibly moves.
+      if (!wantFlip && hdr && hdr.classList.contains("header--on-light")) {
+        if (!heroNormT) heroNormT = setTimeout(normaliseHeroHeader, 1000);
+      } else if (heroNormT) { clearTimeout(heroNormT); heroNormT = 0; }
+    }
+    var heroNormT = 0;
+    function normaliseHeroHeader() {
+      heroNormT = 0;
+      if (!hdr || !hdr.classList.contains("header--on-light") || window.scrollY >= window.innerHeight * 0.955) return;
+      var leaves = hdr.querySelectorAll(".header__nav-left a .nav-char__a,.header__nav-left a .nav-char__b,.header__ctas .pill-char__a,.header__ctas .pill-char__b,.header__ctas .pill-btn,.header__nav-left a,.header__nav-left");
+      Array.prototype.forEach.call(leaves, function (el) { el.style.transition = "none"; });
+      setHeaderTheme(0, false);                   // __a black, pills + nav pill in the light pose
+      hdr.classList.remove("header--on-light");
+      if (window.__flowNavOn) window.__flowNavOn(false);   // flow.js's reel state back to fresh-load too
+      void hdr.offsetWidth;
+      requestAnimationFrame(function () {
+        Array.prototype.forEach.call(leaves, function (el) { el.style.transition = ""; });
+      });
     }
     window.__updateHeroExit = updateHeroExit;   // cert IIFE drives this during its timed completion
     window.addEventListener("scroll", updateHeroExit, { passive: true });
@@ -848,7 +891,7 @@ function makeTypeIn(host, runs, opts) {
      in updateHeroExit (kept in sync by formula, not by sharing state). */
   (function () {
     var layer = document.querySelector(".cert-layer");
-    if (!layer) return;
+    if (!layer || layer.hidden) return;   // CTA switched off in index.html
     // The visible letters are a FILLED path; they're uncovered by a mask made of the traced
     // centre-line PEN PATH, split into ordered strokes (writing order). We measure each
     // stroke and reveal them in sequence by cumulative length, so the ink is laid down by a
@@ -1703,7 +1746,11 @@ function makeTypeIn(host, runs, opts) {
     var darkSecs = [];
     [".features", ".brand-teaser", ".brand-manifesto", ".faq"].forEach(function (sel) {
       var el = document.querySelector(sel); if (!el) return;
-      var c = document.createElement("canvas"); c.className = "section-contours";
+      var c = document.createElement("canvas");
+      // NO_LINES: the canvas is now just a viewport-tracking layer showing the shared
+      // CSS composition (styles.css "Site backgrounds"), light or dark per section.
+      c.className = "section-contours section-contours--" +
+        (sel === ".brand-teaser" || sel === ".brand-manifesto" ? "light" : "dark");
       el.insertBefore(c, el.firstChild);
       // The projects section (.features) keeps the solid backing but NO contour
       // lines (user request) — and a DARKER near-black navy fill so it reads like the
@@ -1726,6 +1773,12 @@ function makeTypeIn(host, runs, opts) {
         line: isSkills ? "rgba(57,50,220,0.5)" : "rgba(77,139,255,0.45)"
       });
     });
+    // NO_LINES: contour lines are switched off site-wide. The canvases stay as layers
+    // carrying the CSS light/dark compositions (styles.css "Site backgrounds"); this loop
+    // keeps only what is not drawing: the flow's dark → light cross-fade (#bg-contours
+    // opacity = __flowLight), the section layers tracking the viewport, and the header
+    // world flip. Set to false to bring the animated lines back.
+    var NO_LINES = true;
     var W = 0, H = 0, DPR = 1, CELL = 12, cols = 0, rows = 0, field = [];
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
     // tiny value noise (for domain-warping the field → breaks perfect circles/ovals)
@@ -1779,7 +1832,7 @@ function makeTypeIn(host, runs, opts) {
     // so the lines keep Lando's shapes/spacing but still MERGE, SPLIT, appear and vanish
     // organically like the old metaball field did.
     var SHEET_W = 1688, SHEET_H = 1056, PATHS = [];
-    fetch("images/footer-blobs.svg").then(function (r) { return r.text(); }).then(function (txt) {
+    if (!NO_LINES) fetch("images/footer-blobs.svg").then(function (r) { return r.text(); }).then(function (txt) {
       var doc = new DOMParser().parseFromString(txt, "image/svg+xml");
       doc.querySelectorAll("path[d]").forEach(function (p) {
         PATHS.push(new Path2D(p.getAttribute("d")));
@@ -2034,7 +2087,7 @@ function makeTypeIn(host, runs, opts) {
       // lumpily — Lando's curves are dead smooth, so this is just a slow large-scale sway.
       var md = Math.min(W, H), wf = 1.5 / md, warp = md * 0.02;
       frameNo++;
-      var needField = repel || (frameNo & 1) === 0 || fieldRows !== rows || fieldCols !== cols;
+      var needField = !NO_LINES && (repel || (frameNo & 1) === 0 || fieldRows !== rows || fieldCols !== cols);
       if (needField) {
       fieldRows = rows; fieldCols = cols;
       var bx = [], by = [], br = [], bw2 = [], bri2 = [], i, c, r;
@@ -2091,8 +2144,12 @@ function makeTypeIn(host, runs, opts) {
         : null;
       var lineCol = "rgba(" + Math.round(lerp(77, 57, lt)) + "," + Math.round(lerp(139, 50, lt)) +
         "," + Math.round(lerp(255, 220, lt)) + "," + lerp(0.3, 0.5, lt).toFixed(2) + ")";
-      drawContours(ctx, lineCol, bgFill);                // global: blue → inverted dark-blue on light
-      if (hctx) {                                        // hero: same blue-grey as end bg — skip once scrolled past
+      if (NO_LINES) {
+        // Cross-fade the light composition over the dark one (#vanta-bg) through the flow.
+        var ltO = lt.toFixed(3);
+        if (cv._o !== ltO) { cv._o = ltO; cv.style.opacity = ltO; }
+      } else drawContours(ctx, lineCol, bgFill);         // global: blue → inverted dark-blue on light
+      if (hctx && !NO_LINES) {                                        // hero: same blue-grey as end bg — skip once scrolled past
         var hr = hcv.getBoundingClientRect();
         if (hr.bottom > 0 && hr.top < H) drawContours(hctx, "#969ba8");
       }
@@ -2136,7 +2193,7 @@ function makeTypeIn(host, runs, opts) {
         if (window.__headerTheme) window.__headerTheme(ctaDark ? 1 : 0, true);
       }
       // Blog canvas: solid light blue (end-of-zone-4) + dark indigo lines (no gradient).
-      if (wctx && writingPin) {
+      if (wctx && writingPin && !NO_LINES) {
         var ws = rectOf(wsTop, wsH);                     // static parent: cheap visibility test
         if (ws.bottom > 0 && ws.top < H) {                // blog off-screen → no read at all
           var wr = writingPin.getBoundingClientRect();    // sticky → must be measured live
@@ -2169,6 +2226,7 @@ function makeTypeIn(host, runs, opts) {
         var ty = -sr.top, tyMax = sh - cvH;
         if (ty < 0) ty = 0; else if (ty > tyMax) ty = tyMax;
         if (sec.ty !== ty) { sec.ty = ty; sec.cv.style.transform = "translateY(" + ty + "px)"; }
+        if (NO_LINES) continue;                            // CSS composition on the canvas element
         var sg = sec.ctx;
         sg.clearRect(0, 0, W, cvH);
         sg.fillStyle = sec.fill; sg.fillRect(0, 0, W, cvH);
@@ -2726,6 +2784,7 @@ function makeTypeIn(host, runs, opts) {
         c.clip.style.setProperty("--d", (on ? c.fd : (Dmax - c.fd)).toFixed(3) + "s");
       }
       if (header) header.classList.toggle("header--on-light", on);
+      paintNavPill(on ? 0 : 1, true);                    // pill flips with the letters
       // Hover-reel clone colour for the nav (threshold-driven, so always the opposite blue here):
       // on = light world (black text) → deep blue #231d7a (the zone-3/4 title blue); off = dark
       // world (white text) → sky blue #4d8bff. (The initial-hero same-colour reel is owned by
@@ -4695,7 +4754,10 @@ function makeTypeIn(host, runs, opts) {
   }
   panel.addEventListener("animationend", function (e) { if (e.animationName === "heroWindowOpen") begin(); });
   // Fallback in case the animation never runs (display:none, an engine skipping it).
-  var start = function () { if (reduce) begin(); else setTimeout(begin, 6000); };
+  var start = function () {
+    if (reduce || document.documentElement.classList.contains("arrive-deep")) begin();   // no entrance animation to wait for
+    else setTimeout(begin, 6000);
+  };
   if (window.__bootReady && window.__bootReady.then) window.__bootReady.then(start); else start();
 })();
 
@@ -4728,7 +4790,7 @@ function makeTypeIn(host, runs, opts) {
 (function navScaleHandoff() {
   var KEY = "vj:nav-scale";
   var groups = [
-    [document.querySelector(".header__nav-left"), "left center"],
+    [document.querySelector(".header__nav-left"), "center center"],
     [document.querySelector(".header__nav-right"), "right center"]
   ].filter(function (g) { return g[0]; });
   if (!groups.length) return;
@@ -5318,4 +5380,119 @@ function navToLightWorld() {
     }, { rootMargin: "600px 0px 600px 0px" }).observe(footer);
   }
   update();
+})();
+
+/* ---------- Continuous site background (homepage) ----------
+   One continuous lit canvas behind the whole page, so the lighting never restarts at a
+   section edge. #site-bg is a fixed viewport window onto a tall inner canvas that is
+   PANNED, not scrolled:
+     - normally it moves up 1:1 with the page;
+     - while the flow is pinned (its zones travel sideways) it stops moving vertically and
+       drifts sideways instead, so the background reads horizontal and neutral, never
+       "still going down". Canvas y skips the pinned stretch.
+   The dark world is #vanta-bg (dark composition) laid OVER the canvas with opacity
+   1 - lt (lt on window.__flowLight's schedule): fully dark before and early in the flow, cross-fading in place
+   to the light canvas across the zones. The canvas is light everywhere except a dark band
+   under the projects run (whose own solid fill covers it anyway; the band ends a quarter
+   into its last screen so no dark can show past it). Colour masses every ~1.15 viewports
+   mirror left/right (blue, lavender, aqua, pale glow); two grain tiles on top. */
+(function siteBg() {
+  var flow = document.querySelector(".flow");
+  if (!flow) return;                                   // homepage only
+  var win = document.createElement("div");
+  win.id = "site-bg";
+  win.setAttribute("aria-hidden", "true");
+  var cvs = document.createElement("div");
+  cvs.className = "site-bg__canvas";
+  win.appendChild(cvs);
+  var vanta = document.getElementById("vanta-bg");
+  // Before #vanta-bg, so the dark layer (same z-index, later in the DOM) paints over it.
+  if (vanta && vanta.parentNode) vanta.parentNode.insertBefore(win, vanta);
+  else document.body.insertBefore(win, document.body.firstChild);
+  var wrap = flow.querySelector(".flow__wrapper");
+
+  var DARK = "10,15,29", LIGHT = "201,218,246", PAN = 0.22;   // PAN: sideways drift, fraction of the viewport width
+  var GRAIN = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
+  var GRAIN_L = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
+  function docTop(node) { return node.getBoundingClientRect().top + (window.scrollY || 0); }
+
+  var fTop = 0, pin = 0, W = 0, built = false;
+  function canvasY(y) { return y <= fTop ? y : (y <= fTop + pin ? fTop : y - pin); }
+
+  function build() {
+    var vh = window.innerHeight, H = document.documentElement.scrollHeight;
+    W = window.innerWidth;
+    fTop = docTop(flow);
+    pin = (wrap && getComputedStyle(wrap).position === "sticky") ? Math.max(flow.offsetHeight - vh, 0) : 0;
+    var CH = H - pin, CW = Math.round(W * (1 + PAN));
+    var feat = document.querySelector(".features"), tail = document.querySelector(".projects-tail");
+    var pTop = feat ? canvasY(docTop(feat)) : Infinity;
+    var pEnd = tail ? canvasY(docTop(tail) + tail.offsetHeight) : (feat ? pTop + feat.offsetHeight : Infinity);
+    if (isFinite(pEnd)) pEnd = Math.max(pTop, pEnd - 0.75 * vh);
+    function dark(y) { return y >= pTop && y < pEnd; }
+    var base = "rgb(" + LIGHT + ")";
+    if (isFinite(pTop)) {
+      base = "linear-gradient(180deg,rgb(" + LIGHT + ") 0px,rgb(" + LIGHT + ") " + Math.round(pTop) + "px,rgb(" + DARK + ") " +
+        Math.round(pTop) + "px,rgb(" + DARK + ") " + Math.round(pEnd) + "px,rgb(" + LIGHT + ") " + Math.round(pEnd) + "px,rgb(" + LIGHT + ") " + CH + "px)";
+    }
+    // Colour field in the hero image's palette, one "screen" every ~1.15 viewports,
+    // mirrored left/right each time so it never visibly repeats: an electric-blue mass
+    // high on one side, lavender opposite, aqua low on the blue side, a pale glow
+    // between. Kept softer than the hero (text sits on these sections). Under the
+    // projects run the masses go dim (that band is covered by the projects fill).
+    var layers = [], step = vh * 1.15, i = 0, Wn = window.innerWidth;
+    function rg(rx, ry, x, y, stops) {
+      return "radial-gradient(" + Math.round(rx) + "px " + Math.round(ry) + "px at " + x + " " + Math.round(y) + "px," + stops + ")";
+    }
+    for (var y = 0; y < CH + vh; y += step, i++) {
+      var L = i % 2 === 0, d = dark(y + 0.4 * vh), k = d ? 0.15 : 1;
+      layers.push(rg(Wn * 0.32, vh * 0.42, "48%", y + 0.45 * vh, "rgba(236,248,248," + (0.7 * k).toFixed(2) + "),transparent 70%"));
+      layers.push(rg(Wn * 0.75, vh * 0.9, L ? "6%" : "94%", y, "rgba(31,92,255," + (0.5 * k).toFixed(2) + "),rgba(60,150,255," + (0.22 * k).toFixed(2) + ") 42%,transparent 70%"));
+      layers.push(rg(Wn * 0.65, vh * 0.8, L ? "94%" : "6%", y + 0.15 * vh, "rgba(206,202,255," + (0.75 * k).toFixed(2) + "),transparent 70%"));
+      layers.push(rg(Wn * 0.7, vh * 0.6, L ? "10%" : "90%", y + 0.9 * vh, "rgba(176,242,250," + (0.7 * k).toFixed(2) + "),transparent 70%"));
+    }
+    cvs.style.width = CW + "px";
+    cvs.style.height = CH + "px";
+    cvs.style.background = [GRAIN, GRAIN_L].concat(layers, [base]).join(",");
+    cvs.style.backgroundSize = ["220px 220px", "260px 260px"].concat(layers.map(function () { return "100% 100%"; }), ["100% 100%"]).join(",");
+    cvs.style.backgroundRepeat = ["repeat", "repeat"].concat(layers.map(function () { return "no-repeat"; }), ["no-repeat"]).join(",");
+    built = true;
+    place();
+  }
+
+  var lastT = "", lastO = "";
+  function place() {
+    if (!built) return;
+    var y = window.scrollY || 0;
+    var p = pin > 0 ? Math.min(Math.max((y - fTop) / pin, 0), 1) : 0;
+    var t = "translate3d(" + (-p * PAN * W).toFixed(1) + "px," + (-canvasY(y)).toFixed(1) + "px,0)";
+    if (t !== lastT) { lastT = t; cvs.style.transform = t; }
+    // Same schedule as flow.js's window.__flowLight (0 at 20% of the flow's scroll, 1 at
+    // 80%), computed from scroll here so a nav jump past the flow can't leave it stale.
+    var tot = Math.max(flow.offsetHeight - window.innerHeight, 1);
+    var lt = Math.min(Math.max(((y - fTop) / tot - 0.2) / 0.6, 0), 1);
+    var o = (1 - lt).toFixed(3);
+    if (vanta && o !== lastO) { lastO = o; vanta.style.opacity = o; }
+  }
+
+  var queued = false, lastKey = "";
+  function frame() {
+    queued = false;
+    var fe = document.querySelector(".features");
+    var key = window.innerWidth + "x" + window.innerHeight + ":" + document.documentElement.scrollHeight +
+      ":" + (fe ? fe.offsetHeight : 0);
+    if (key !== lastKey) { lastKey = key; build(); } else place();
+  }
+  function queue() { if (!queued) { queued = true; requestAnimationFrame(frame); } }
+  queue();
+  window.addEventListener("scroll", queue, { passive: true });
+  if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", queue);
+  window.addEventListener("resize", queue, { passive: true });
+  window.addEventListener("load", queue);
+  if ("ResizeObserver" in window) {
+    var ro = new ResizeObserver(queue);
+    ro.observe(document.body);
+    var featEl = document.querySelector(".features");
+    if (featEl) ro.observe(featEl);                    // the projects filter resizes it at runtime
+  }
 })();
