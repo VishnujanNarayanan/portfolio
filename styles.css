@@ -2407,3 +2407,12 @@ html{overflow-x:clip}
 .lfooter__pattern{display:none}
 /* Subpages have no #site-bg: the light composition, fixed to the viewport. */
 .blog-body,.subpage-body{background:var(--bg-light);background-size:var(--bg-light-size);background-attachment:fixed}
+
+/* Header: the nav links sit on the page's centre line (Socials is one of them now);
+   Subscribe is the only pill, on the right. Centred with auto margins, not a
+   transform, because main.js scales the group on scroll (from its centre). */
+@media (min-width:821px){
+  header .header__nav-left{position:absolute;left:0;right:0;width:max-content;margin:0 auto}
+  header .header__nav-right{margin-left:auto}
+}
+
