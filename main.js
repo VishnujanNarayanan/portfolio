@@ -5374,6 +5374,10 @@ function navToLightWorld() {
     var feat = document.querySelector(".features"), tail = document.querySelector(".projects-tail");
     var pTop = feat ? docTop(feat) : Infinity;
     var pEnd = tail ? docTop(tail) + tail.offsetHeight : (feat ? pTop + feat.offsetHeight : Infinity);
+    // Safety margin: switch back to light a quarter of the way into the projects run's
+    // LAST screen, not at its exact end, so no dark band can show past the projects
+    // (its own solid fill covers whatever is underneath while it is on screen).
+    if (isFinite(pEnd)) pEnd = Math.max(pTop, pEnd - 0.75 * vh);
     function tone(y) {
       if (y >= pTop && y < pEnd) return 0;
       if (y <= D0) return 0;
@@ -5425,5 +5429,10 @@ function navToLightWorld() {
   queue();
   window.addEventListener("resize", queue, { passive: true });
   window.addEventListener("load", queue);
-  if ("ResizeObserver" in window) new ResizeObserver(queue).observe(document.body);
+  if ("ResizeObserver" in window) {
+    var ro = new ResizeObserver(queue);
+    ro.observe(document.body);
+    var featEl = document.querySelector(".features");
+    if (featEl) ro.observe(featEl);                    // the projects filter resizes it at runtime
+  }
 })();
