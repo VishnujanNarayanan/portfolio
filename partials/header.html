@@ -12,7 +12,8 @@
     {{BLOG}}       '/blog/' on every page
     {{HOME_HREF}}  '#top' on the homepage (scroll to the hero), '/' elsewhere
 
-  Home sits in the primary nav as the fourth item. It used to be a separate
+  Socials is a plain nav link (it used to be a pill next to Subscribe; Subscribe is now the
+  only pill). Home sits in the primary nav as the last item. It used to be a separate
   centred nav (.header__nav-centre) absolutely positioned on the page midline;
   that was dropped along with the Skills link, so the nav is four ordinary items.
   main.js builds the per-letter hover animation by querying '.header__nav-left a',
@@ -23,11 +24,11 @@
     <a href="{{TO}}projects">Projects</a>
     <a href="{{TO}}contact">Contact</a>
     <a href="{{BLOG}}">Blog</a>
+    <a href="{{TO}}socials">Socials</a>
     <a href="{{HOME_HREF}}">Home</a>
   </nav>
   <nav class="header__nav-right" aria-label="Header actions">
     <div class="header__ctas">
-      <a href="{{TO}}socials" class="pill-btn pill-btn--glass"><span class="pill-btn-span">Socials</span></a>
       <button type="button" class="pill-btn pill-btn--dark" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button>
     </div>
     <button class="menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false">
@@ -52,9 +53,9 @@
         <li class="mobile-nav__item"><a href="{{TO}}projects">Projects</a></li>
         <li class="mobile-nav__item"><a href="{{TO}}contact">Contact</a></li>
         <li class="mobile-nav__item"><a href="{{BLOG}}">Blog</a></li>
+        <li class="mobile-nav__item"><a href="{{TO}}socials">Socials</a></li>
       </ul>
       <div class="mobile-nav__ctas">
-        <div class="mncta"><a href="{{TO}}socials" class="pill-btn pill-btn--glass mobile-nav__cta"><span class="pill-btn-span">Socials</span></a></div>
         <div class="mncta"><button type="button" class="pill-btn pill-btn--dark mobile-nav__cta" data-subscribe-open><span class="pill-btn-span">Subscribe</span></button></div>
       </div>
     </div>
