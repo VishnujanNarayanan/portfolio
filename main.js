@@ -5347,8 +5347,8 @@ function navToLightWorld() {
    1 - lt (lt on window.__flowLight's schedule): fully dark before and early in the flow, cross-fading in place
    to the light canvas across the zones. The canvas is light everywhere except a dark band
    under the projects run (whose own solid fill covers it anyway; the band ends a quarter
-   into its last screen so no dark can show past it). Light masses every ~1.15 viewports
-   alternate right/left with a deeper shade between; two grain tiles on top. */
+   into its last screen so no dark can show past it). Colour masses every ~1.15 viewports
+   mirror left/right (blue, lavender, aqua, pale glow); two grain tiles on top. */
 (function siteBg() {
   var flow = document.querySelector(".flow");
   if (!flow) return;                                   // homepage only
@@ -5364,7 +5364,7 @@ function navToLightWorld() {
   else document.body.insertBefore(win, document.body.firstChild);
   var wrap = flow.querySelector(".flow__wrapper");
 
-  var DARK = "10,15,29", LIGHT = "185,205,221", PAN = 0.22;   // PAN: sideways drift, fraction of the viewport width
+  var DARK = "10,15,29", LIGHT = "201,218,246", PAN = 0.22;   // PAN: sideways drift, fraction of the viewport width
   var GRAIN = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
   var GRAIN_L = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
   function docTop(node) { return node.getBoundingClientRect().top + (window.scrollY || 0); }
@@ -5388,15 +5388,21 @@ function navToLightWorld() {
       base = "linear-gradient(180deg,rgb(" + LIGHT + ") 0px,rgb(" + LIGHT + ") " + Math.round(pTop) + "px,rgb(" + DARK + ") " +
         Math.round(pTop) + "px,rgb(" + DARK + ") " + Math.round(pEnd) + "px,rgb(" + LIGHT + ") " + Math.round(pEnd) + "px,rgb(" + LIGHT + ") " + CH + "px)";
     }
-    var layers = [], step = vh * 1.15, i = 0;
-    for (var y = vh * 0.1; y < CH + vh; y += step, i++) {
-      var right = i % 2 === 0, d = dark(y);
-      var lc = d ? "120,142,225" : "255,255,255", la = d ? 0.07 : 0.78;
-      layers.push("radial-gradient(" + Math.round(W * 0.7) + "px " + Math.round(vh * 0.85) + "px at " +
-        (right ? "86%" : "14%") + " " + Math.round(y) + "px,rgba(" + lc + "," + la + "),rgba(" + lc + "," + (la * 0.4).toFixed(3) + ") 40%,transparent 68%)");
-      var sy = y + step * 0.5, sd = dark(sy);
-      layers.push("radial-gradient(" + Math.round(W * 0.6) + "px " + Math.round(vh * 0.7) + "px at " +
-        (right ? "4%" : "96%") + " " + Math.round(sy) + "px,rgba(" + (sd ? "0,0,0" : "38,66,104") + "," + (sd ? 0.55 : 0.3) + "),transparent 70%)");
+    // Colour field in the hero image's palette, one "screen" every ~1.15 viewports,
+    // mirrored left/right each time so it never visibly repeats: an electric-blue mass
+    // high on one side, lavender opposite, aqua low on the blue side, a pale glow
+    // between. Kept softer than the hero (text sits on these sections). Under the
+    // projects run the masses go dim (that band is covered by the projects fill).
+    var layers = [], step = vh * 1.15, i = 0, Wn = window.innerWidth;
+    function rg(rx, ry, x, y, stops) {
+      return "radial-gradient(" + Math.round(rx) + "px " + Math.round(ry) + "px at " + x + " " + Math.round(y) + "px," + stops + ")";
+    }
+    for (var y = 0; y < CH + vh; y += step, i++) {
+      var L = i % 2 === 0, d = dark(y + 0.4 * vh), k = d ? 0.15 : 1;
+      layers.push(rg(Wn * 0.32, vh * 0.42, "48%", y + 0.45 * vh, "rgba(236,248,248," + (0.7 * k).toFixed(2) + "),transparent 70%"));
+      layers.push(rg(Wn * 0.75, vh * 0.9, L ? "6%" : "94%", y, "rgba(31,92,255," + (0.5 * k).toFixed(2) + "),rgba(60,150,255," + (0.22 * k).toFixed(2) + ") 42%,transparent 70%"));
+      layers.push(rg(Wn * 0.65, vh * 0.8, L ? "94%" : "6%", y + 0.15 * vh, "rgba(206,202,255," + (0.75 * k).toFixed(2) + "),transparent 70%"));
+      layers.push(rg(Wn * 0.7, vh * 0.6, L ? "10%" : "90%", y + 0.9 * vh, "rgba(176,242,250," + (0.7 * k).toFixed(2) + "),transparent 70%"));
     }
     cvs.style.width = CW + "px";
     cvs.style.height = CH + "px";

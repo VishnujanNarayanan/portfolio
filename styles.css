@@ -2367,8 +2367,10 @@ html{overflow-x:clip}
    references: a large light mass from that corner, a lift behind the content, a faint
    mist bottom-left, two soft diagonal window beams, the opposite corners sinking a few
    shades deeper, and fine grain on top (first layer). No contour lines anywhere.
-     --bg-light  the site's light blue (hero, blog, workflow, socials, light subpages)
-     --bg-dark   deep navy (the dark world: hero reveal, flow zone 1, projects, footer)
+     --bg-light  the hero's colour field (electric blue / lavender / aqua) under a light
+                 veil — light subpages
+     --bg-dark   the same palette at night: near-black navy with an electric-blue glow
+                 top left, lavender right, a hint of aqua below (the dark world, footer box)
    The flow zones cross-fade dark → light: #vanta-bg carries --bg-dark, and the fixed
    #bg-contours layer carries --bg-light with its opacity driven by window.__flowLight
    (main.js). Viewport-sized layers (the fixed ones and the section canvases, which
@@ -2376,23 +2378,18 @@ html{overflow-x:clip}
    the sections read as one continuous lit surface. */
 :root{
   --bg-light:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-    linear-gradient(118deg,transparent 34%,rgba(255,255,255,.2) 42%,transparent 50%,transparent 54%,rgba(255,255,255,.13) 60%,transparent 67%),
-    radial-gradient(70% 85% at 88% 0%,rgba(255,255,255,.88),rgba(255,255,255,.35) 40%,transparent 68%),
-    radial-gradient(45% 50% at 50% 30%,rgba(255,255,255,.35),transparent 75%),
-    radial-gradient(48% 55% at 0% 100%,rgba(255,255,255,.4),transparent 70%),
-    radial-gradient(60% 60% at 0% 0%,rgba(38,66,104,.32),transparent 70%),
-    radial-gradient(65% 65% at 100% 100%,rgba(38,66,104,.36),transparent 72%),
-    #b9cddd;
-  --bg-light-size:220px 220px,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%;
+    linear-gradient(rgba(255,255,255,.3),rgba(255,255,255,.3)),
+    url("/images/hero-bg.webp") center/cover no-repeat,
+    #c9daf6;
+  --bg-light-size:220px 220px,100% 100%,cover;
   --bg-dark:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-    linear-gradient(118deg,transparent 34%,rgba(150,170,255,.04) 42%,transparent 50%,transparent 54%,rgba(150,170,255,.025) 60%,transparent 67%),
-    radial-gradient(70% 85% at 88% 0%,rgba(100,124,210,.2),rgba(70,90,180,.07) 40%,transparent 68%),
-    radial-gradient(45% 50% at 50% 30%,rgba(80,100,180,.06),transparent 75%),
-    radial-gradient(48% 55% at 0% 100%,rgba(90,125,200,.08),transparent 70%),
-    radial-gradient(60% 60% at 0% 0%,rgba(0,0,0,.6),transparent 70%),
-    radial-gradient(65% 65% at 100% 100%,rgba(0,0,0,.65),transparent 72%),
-    #0a0f1d;
-  --bg-dark-size:220px 220px,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%;
+    radial-gradient(70% 80% at 10% 0%,rgba(31,92,255,.36),rgba(31,92,255,.11) 40%,transparent 70%),
+    radial-gradient(60% 70% at 92% 18%,rgba(140,120,255,.2),transparent 70%),
+    radial-gradient(70% 60% at 30% 105%,rgba(40,200,235,.13),transparent 70%),
+    radial-gradient(40% 40% at 48% 42%,rgba(120,190,230,.06),transparent 75%),
+    radial-gradient(60% 60% at 100% 100%,rgba(0,0,0,.5),transparent 72%),
+    #060a18;
+  --bg-dark-size:220px 220px,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%;
 }
 #vanta-bg{background:var(--bg-dark);background-size:var(--bg-dark-size)}
 /* Homepage: ONE continuous background (#site-bg, built by the siteBg IIFE in main.js):
