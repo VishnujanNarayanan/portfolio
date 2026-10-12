@@ -47,26 +47,9 @@ function buildLinkReel(el) {
    the dark world. t = 0 light … 1 dark. Driven continuously by setHeaderTheme through the
    hero zoom-out, and at the discrete world flips by __navLight — the same moment the
    letters reel — so the text and its pill always change together. */
-var navPillDark = null;
 function paintNavPill(t, ease) {
   var nav = document.querySelector("header .header__nav-left");
   if (!nav) return;
-  // A world flip while the cursor rests on a link: that link is showing its hover copy
-  // (.nav-char__c), so the flip reel underneath would be invisible and the word would
-  // look stuck. .is-reflip (styles.css) drops it back to the face so the flip plays;
-  // it clears when the pointer leaves, and the next hover works as normal.
-  var dark = t >= 0.5;
-  if (navPillDark !== null && dark !== navPillDark) {
-    Array.prototype.forEach.call(nav.querySelectorAll("a"), function (a) {
-      if (!a.matches(":hover")) return;
-      a.classList.add("is-reflip");
-      if (!a._reflipBound) {
-        a._reflipBound = true;
-        a.addEventListener("pointerleave", function () { a.classList.remove("is-reflip"); });
-      }
-    });
-  }
-  navPillDark = dark;
   var c = Math.round(252 + (8 - 252) * t), g = Math.round(252 + (12 - 252) * t), b = Math.round(252 + (30 - 252) * t);
   nav.style.transition = ease ? "background-color .5s var(--ease-default),border-color .5s var(--ease-default),transform .3s var(--ease-default)" : "transform .3s var(--ease-default)";
   nav.style.backgroundColor = "rgba(" + c + "," + g + "," + b + "," + (0.5 + 0.1 * t).toFixed(3) + ")";
