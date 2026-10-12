@@ -657,7 +657,7 @@
       { k: "b", n: "Predicting Stocks by the Minute", d: "9.4M ticks, an honest baseline, and the backtest that said: don't build this.", t: ["Validation", "ML"], href: "/blog/minute-level-stock-prediction/" },
       { k: "b", n: "Local LLM vs API", d: "Build or buy? A 7B model on a 6GB GPU against a hosted 70B, on cost, speed and quotas.", t: ["LLMs", "Trade-offs"], href: "/blog/local-llm-vs-api/" }
     ],
-    [ // 02 Fast, Testable Prototype
+    [ // 02 Quick Prototype
       { k: "p", n: "Second-Hand Bookshop Website", d: "From a brief to a live full-stack app: scraper, Postgres, Next.js UI.", t: ["Next.js", "NestJS", "PostgreSQL"] },
       { k: "p", n: "DekhLaw Legal-Emergency Platform", d: "Express API with JWT auth and Twilio call dispatch.", t: ["Express", "Twilio", "JWT"] },
       { k: "p", n: "Quote Search by Meaning", d: "Search by meaning, not keywords: fine-tuned embeddings + FAISS, demo on Streamlit.", t: ["FAISS", "PyTorch", "Streamlit"] },
