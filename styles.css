@@ -2421,3 +2421,7 @@ html{overflow-x:clip}
   header .header__nav-right{margin-left:auto}
 }
 
+/* Arrived deep in the page (/?go=<section>, set in main.js): no hero terminal entrance —
+   it would rise into view over the section the visitor landed on. */
+.arrive-deep .hero .hero__stages,.arrive-deep .hero.show .hero__stages{animation:none;opacity:1}
+
