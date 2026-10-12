@@ -464,6 +464,23 @@
     domActiveZ = -1; domDisp = ""; domLastG = null; domDir = -1;
     renderStack();
   }
+  // JUMP BACK to the hero (Home is #top: a native, instant jump from anywhere below the
+  // flow). The append-only log assumes you scroll back THROUGH the flow, which un-types
+  // the blog handover and appends the return lines on the way; a jump skips all of that,
+  // so the stale `cd blogs` / `blogs$` rows (styled as light-zone lines, i.e. black) stayed
+  // at the bottom and the hero's `cd certificates` printed above them. Landing in the hero
+  // region after such a jump restarts the session exactly as on a fresh load.
+  function resetSession() {
+    for (var i = 0; i < domLines.length; i++) if (domLines[i].row.parentNode) domLines[i].row.parentNode.removeChild(domLines[i].row);
+    domLines.length = 0;
+    blogHO = null; blogDisp = ""; blogDir = 1; lastHp = -1;
+    started = false; apDir = 1; apLastP = null; apStartP = 0; certLine = null;
+    apPrevHeroPB = null; leadLine = null; certDisp = ""; certDir = 0;
+    domActiveZ = -1; domDisp = ""; domLastG = null; domDir = 1;
+    if (leadRow) leadRow.cmd.textContent = "";
+    if (cdHead) { cdHead.cmd.textContent = ""; cdHead.row.style.display = "none"; }
+    renderStack();
+  }
   function driveBlogHandover(flowBottom) {
     if (!cdStack || window.innerWidth <= 820) return;
     var vhh = window.innerHeight;
@@ -951,6 +968,7 @@
   // blog handover) is a pure function of scroll, so nothing eases while dormant —
   // waking on the next scroll event reproduces the exact same pose.
   var flowRaf = 0;
+  var lastLoopY = null;   // scroll position at the previous loop run — detects jumps (see resetSession)
   function schedule() { if (!flowRaf && !document.hidden) flowRaf = requestAnimationFrame(loop); }
   function loop() {
     flowRaf = 0;
@@ -965,6 +983,10 @@
       lastHitT = performance.now(); hoverDue = false; refreshHover();
     }
     var rect = flowRect();
+    var syNow = scrollNow();
+    if (lastLoopY !== null && Math.abs(syNow - lastLoopY) > vh * 1.5 && rect.top >= vh &&
+        (started || domLines.length || blogHO)) resetSession();   // jumped back up to the hero
+    lastLoopY = syNow;
     // Off-screen early-outs — skip the whole per-frame body when the section can't
     // be seen. Below the viewport (approaching): the fixed CLI terminal is still on
     // stage during the hero video zoom-out, so keep just it alive (approachP is 0 and
