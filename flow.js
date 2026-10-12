@@ -142,17 +142,14 @@
     var wantZ = "1";
     var top;
     if (rect.top > 0) {
-      // Ride from the park spot up to the resting top-left over the approach window, in
-      // lockstep with the hero video + marquee handover but ARRIVING at the pin: rideP is
-      // 0 at the marquee-lift start (rect.top = vh ⟺ ye = 2vh, so it begins moving with
-      // them — no delay) and 1 at the pin (rect.top = 0). Keyed to rect.top — the SAME
-      // clock as the header typing (approachP) and the card reveal (inPlace) — so the CLI
-      // lands top-left EXACTLY as the header finishes typing and the cards fly in.
+      // Ride from the park spot up to the resting top-left WITH the paused hero video:
+      // it starts at the same moment (rect.top = vh ⟺ ye = 2vh, the video's phase-C
+      // start) and moves 1:1 with scroll — the video's own speed — until it reaches rest,
+      // then holds there.
       // offsetHeight is read ONLY in this phase (the stack is still growing as rows type
       // in); during the pin top is a constant, so the forced layout read is skipped there.
       var parkTop = vhh - (termH = cdEl.offsetHeight) - Math.max(vhh * 0.06, 40);
-      var rideP = clamp((vhh - rect.top) / vhh, 0, 1);
-      top = parkTop - rideP * (parkTop - termREST);      // parked bottom-left → ride up, reaching rest at the pin
+      top = Math.max(termREST, parkTop - Math.max(0, vhh - rect.top));   // 1:1 with scroll, stops at rest
     }
     else if (rect.bottom >= vhh)  top = termREST;                                   // pinned through the flow section
     else {
@@ -1029,10 +1026,7 @@
     // zone lines append in the pin. positionTerminal rides the single element park→rest→away.
     var yeHero = window.__heroY ? window.__heroY(window.scrollY, vh) : window.scrollY;
     var heroPB = clamp((yeHero - vh) / vh, 0, 1);
-    // The CLI's ride from park to rest finishes at the reveal instead of the pin.
-    positionTerminal(rect.top > 0
-      ? { top: Math.max(0, (rect.top - ZONE1_EARLY) * vh / (vh - ZONE1_EARLY)), bottom: rect.bottom, height: rect.height }
-      : rect);
+    positionTerminal(rect);
     // Past the pin (bottom edge rising, zone-4 cards flying out) the blog handover owns the
     // stack — it types `cd ..` → `cd blogs` → blogs$; at/before the pin the zone engine does.
     if (rect.top <= 0 && rect.bottom < vh) { driveBlogHandover(rect.bottom); }
