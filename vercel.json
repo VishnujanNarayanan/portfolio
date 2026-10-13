@@ -1,5 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "sh scripts/build.sh",
+  "outputDirectory": "dist",
   "redirects": [
     {
       "source": "/blog/what-429-really-means",
