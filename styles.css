@@ -414,23 +414,6 @@ header .header__nav-left a{color:#050419;font-size:16px}
 .wpanel.is-open .wpanel__link{pointer-events:auto}
 .wpanel__link:focus-visible{outline:2px solid #4d8bff;outline-offset:-4px}
 
-/* Mobile / no-hover: drop the accordion — heading + plain full-width post blocks, all open */
-@media (max-width:820px){
-  .writing{display:block;overflow:visible;height:auto}
-  .writing__pin{position:static;display:block;height:auto;overflow:visible}
-  .writing__pad{display:block;padding:0 24px 8px}
-  .writing__intro{max-width:none}
-  .wstack{display:block;height:auto}
-  .wpanel{display:block;flex:none;transform:none!important;height:auto!important;align-self:auto;box-shadow:none}
-  .wpanel__rail{display:none}
-  .wpanel__content{position:static;flex:none;width:100%;opacity:1!important;padding:48px 28px;gap:16px;justify-content:flex-start}
-  .wpanel:nth-child(odd){background:#1b2236}
-  .wpanel:nth-child(even){background:#243049}
-  .wpanel__title{font-size:clamp(1.8rem,7vw,2.4rem)}
-  .wpanel__text{font-size:.95rem}
-  /* rail is hidden on mobile, so put READ back into normal flow (not the off-screen strip slot) */
-  .wpanel__link{pointer-events:auto}
-}
 
 /* ============================================================
    Dark continuous backdrop — Selected Work / Skills / Services
@@ -2280,29 +2263,74 @@ html{overflow-x:clip}
 }
 
 /* ---- Phone (<=820px): the same pinned flow as desktop, laid out vertically ----
-   The section pins for 500vh like desktop and the zone titles play the same timed
-   enter/exit (flow.js). Title + list sit at the top; the 2x2 card grid is centred in
-   the band between them and the journey spine, and swaps HORIZONTALLY at each zone
-   threshold (phoneOff in flow.js). --g is the grid's side: as wide as the screen
-   allows, shrunk to fit the height left over (content ~230px + journey 170px). */
+   The section pins for 500vh like desktop. The zone title sits at the top and changes
+   with a simple masked slide (old title slides up out of its line, the new one slides
+   up into it) driven by the flow-panel--active/--passed classes; zone 1 is there from
+   the start. The 2x2 card grid fills the width below and swaps HORIZONTALLY at each
+   zone threshold (phoneOff in flow.js). No item list, no journey spine, no hover. */
 @media (max-width:820px){
-  .flow{--g:min(calc(100vw - 40px),calc(100svh - var(--header-height) - 420px))}
-  .flow-panel__content{left:20px;right:20px;top:calc(var(--header-height) + 16px);max-width:none}
-  .flow-panel__title{font-size:clamp(34px,9.5vw,46px)}
+  .flow{--g:min(calc(100vw - 32px),calc(100svh - var(--header-height) - 216px))}
+  .flow-panel__content{left:16px;right:16px;top:calc(var(--header-height) + 16px);max-width:none;overflow:hidden;padding-bottom:.12em}
   .flow-panel__index{margin-bottom:10px}
-  .flow-panel__list{margin-top:14px;max-width:none}
-  .flow-panel__item{font-size:15px;padding:3px 0}
-  .flow-panel__cards{width:var(--g);top:calc(100% - 178px - var(--g) / 2);gap:10px}
+  .flow-panel__title{font-size:clamp(46px,13.5vw,68px);transform:translateY(105%);transition:transform .7s cubic-bezier(.16,1,.3,1)}
+  .flow-panel--passed .flow-panel__title{transform:translateY(-105%)}
+  .flow-panel--active .flow-panel__title{transform:none;transition-delay:.08s}
+  .flow-panel__list,.flow-journey{display:none}
+  .flow-panel__cards{width:var(--g);top:calc((var(--header-height) + 200px + 100%) / 2);gap:10px}
   .flow-pcard .proj-card__title{padding:8px 10px 6px;font-size:12px}
-  /* No hover on touch: taps must not leave cards or items in their hover pose. */
-  .flow-panel__item:hover{transform:none}
-  .flow-panel__item:hover .reel-char__col{transform:none}
+  /* No hover on touch: a tap must not leave a card in its hover pose (the first tap
+     sets .is-active instead — see flow.js). */
   .flow-pcard:hover::after{border-color:rgba(124,208,255,.26);border-radius:1.843%}
   .flow-pcard:hover .proj-card__media{border-radius:1.843%}
   .flow-pcard:not(.proj-card--blog):hover .proj-card__img{transform:translateY(var(--media-drop,7%)) scale(var(--media-zoom,1))}
+  .flow-pcard.is-active::after{border-color:var(--color-highlight);border-radius:6.388%}
+  .flow-pcard.is-active .proj-card__media{border-radius:6.388%}
+  .flow-pcard:not(.proj-card--blog).is-active .proj-card__img{transform:translateY(var(--media-drop,7%)) scale(calc(var(--media-zoom,1) * 1.06))}
 }
-/* Short phones: drop the item list (the cards carry the same names and links). */
-@media (max-width:820px) and (max-height:700px){
-  .flow{--g:min(calc(100vw - 40px),calc(100svh - var(--header-height) - 310px))}
-  .flow-panel__list{display:none}
+@media (max-width:820px) and (prefers-reduced-motion:reduce){
+  .flow-panel__title{transition:none}
+}
+
+/* ---- Phone: hero stage strip on ONE line ---- */
+@media (max-width:820px){
+  .hero .hero__subtitle{max-width:none}
+  .hero .hero__steps{flex-wrap:nowrap;white-space:nowrap}
+  .hero .hero__step{font-size:clamp(12px,3.6vw,15px);padding:4px 6px 6px}
+  .hero .hero__arrow{margin:0 2px;font-size:12px}
+}
+
+/* ---- Phone: blog — all nine posts on ONE screen, a vertical version of the desktop
+   accordion. Each post is a horizontal bar (number + category); the open one grows to
+   show the post. First tap opens a bar, a tap on the open bar opens the post (main.js). */
+@media (max-width:820px){
+  .writing{height:100svh;overflow:hidden}
+  .writing .writing__pin{position:relative;height:100%;display:flex;flex-direction:column;align-items:stretch;padding-top:var(--header-height);overflow:hidden;transform:none}
+  .writing .writing__pad{display:block;flex:0 0 auto;align-self:stretch;padding:14px 20px 12px;transform:none}
+  .writing .writing__intro{max-width:none}
+  .writing .writing__desc{display:none}
+  .writing .wstack{flex:1 1 auto;min-height:0;height:auto;display:flex;flex-direction:column;align-items:stretch}
+  .writing .wpanel{display:block;flex:1 1 0;min-height:0;height:auto;align-self:stretch;box-shadow:none;transform:none;transition:flex-grow .6s cubic-bezier(.32,0,.16,1)}
+  .writing .wpanel.is-open{flex-grow:5;flex-basis:0}
+  .writing .wpanel::after{display:none}
+  .writing .wpanel__rail{display:flex;align-items:center;gap:14px;height:100%;min-width:0;padding:0 20px;border-left:0;border-top:1px solid rgba(255,255,255,.08);transition:opacity .3s ease}
+  .writing .wpanel__vert,.writing .wpanel__num{position:static;left:auto;top:auto;bottom:auto;transform:none;writing-mode:horizontal-tb}
+  .writing .wpanel__num{order:-1;font-size:20px;line-height:1}
+  .writing .wpanel__vert{font-size:15px}
+  .writing .wpanel.is-open .wpanel__rail{opacity:0}
+  .writing .wpanel__content{position:absolute;inset:0;width:auto;padding:14px 20px;gap:8px;justify-content:center;opacity:0;transform:translateY(10px);pointer-events:none}
+  .writing .wpanel.is-open .wpanel__content{opacity:1;transform:none}
+  .writing .wpanel__title{font-size:clamp(1.3rem,6vw,1.7rem)}
+  .writing .wpanel__text{font-size:.9rem}
+}
+
+/* ---- Phone: projects — no Tools filter, cards two per row, all visible ---- */
+@media (max-width:820px){
+  .features{height:auto}
+  .features__sticky{position:relative;height:auto}
+  .terminal{height:auto;min-height:100svh;overflow:visible}
+  .terminal__body{overflow:visible;display:block}
+  .term-result,.term-cards-view{display:block;overflow:visible}
+  .term-side{display:none}
+  .term-pgrid{display:block;margin:0;padding-top:20px;overflow:visible}
+  .term-projects{grid-template-columns:1fr 1fr;gap:12px}
 }

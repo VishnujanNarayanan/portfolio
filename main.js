@@ -2141,7 +2141,7 @@ function makeTypeIn(host, runs, opts) {
     }
     geom();
     function frame(now) { render(now || performance.now()); requestAnimationFrame(frame); }
-    requestAnimationFrame(frame);
+    if (!window.__phone) requestAnimationFrame(frame);   // phone: static vertical accordion (below)
     window.addEventListener("resize", resize, { passive: true });
 
     // Clicking a "Read" link navigates away; pressing Back restores this page from the
@@ -2169,6 +2169,24 @@ function makeTypeIn(host, runs, opts) {
     });
     // Leaving the whole stack keeps the last-opened panel open (no reset to panel 0) —
     // hovered stays pointing at it so the open state and geometry remain consistent.
+
+    // Phone: the same accordion, vertical and on one screen (styles.css). Tap a bar to
+    // open it; the open bar's link covers it, so the next tap opens the post. Panel 0
+    // starts open, and again after Back (pageshow above clears is-open first).
+    if (window.__phone) {
+      var openPhone = function (p) { panels.forEach(function (x) { x.classList.toggle("is-open", x === p); }); };
+      openPhone(panels[0]);
+      panels.forEach(function (p) {
+        p.addEventListener("click", function (e) {
+          if (p.classList.contains("is-open")) return;
+          e.preventDefault();
+          openPhone(p);
+        });
+      });
+      window.addEventListener("pageshow", function () {
+        if (!panels.some(function (p) { return p.classList.contains("is-open"); })) openPhone(panels[0]);
+      });
+    }
   })();
 
   /* ---------- Accordion (Services + any .faq-item) ---------- */
