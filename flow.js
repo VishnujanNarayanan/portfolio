@@ -1179,6 +1179,7 @@
     if (globalRaw < -0.5 + ENTER_LATE) rawSel = -1;             // first zone not yet entered
     else if (globalRaw >= N - 0.5 - EXIT_EARLY) rawSel = N;     // last zone has exited
     else rawSel = clamp(Math.round(globalRaw), 0, N - 1);
+    if (isMobile) rawSel = clamp(rawSel, 0, N - 1);
     var active = clamp(rawSel, 0, N - 1);
     var now = Date.now();
     var P = buildPoses(vw);
@@ -1215,7 +1216,7 @@
         var b = pi < rawSel ? P.EXIT : P.APPEAR;
         return { ex: pi < rawSel ? -vw : vw * RIGHT_FRAC, sx: b.sx, tx: b.tx, ty: b.ty, ry: b.ry, rx: b.rx };
       }
-      panels.forEach(function (panel, pi) {
+      if (!isMobile) panels.forEach(function (panel, pi) {
         var a = panel._anim;
         if (pi === rawSel) {
           panel._anim = {          // the new active title enters (eased)
@@ -1245,6 +1246,7 @@
       var content = panel.querySelector(".flow-panel__content");
       if (!content) return;
       var base = (isMobile ? "" : "translateY(-58%) ") + "translateX(" + (-(pi * vw + trackX)) + "px)";
+      if (isMobile) { setSt(content, "transform", base); setSt(content, "opacity", "1"); return; }
       var a = panel._anim;
       if (a) {
         var el = now - a.t0 - a.delay;
@@ -1280,7 +1282,7 @@
     // the index into the band means those ends cross no threshold: no exit, and the edge
     // zone's grid stays visible/active. The FIRST arrival is exempt — while lastCsel is
     // still undefined/out of band the raw −1 is kept, so zone 1 plays its entry at the pin.
-    var csel = (lastCsel !== undefined && lastCsel >= 0 && lastCsel < N)
+    var csel = (isMobile || (lastCsel !== undefined && lastCsel >= 0 && lastCsel < N))
       ? clamp(cselRaw, 0, N - 1) : cselRaw;
     var F = vh / 16.658;                             // 1 world unit in px (2·(17−1)·tan(55°/2))
     // STEP 1 (flow-columns-stationary): the card grid no longer parallax-scrolls
@@ -1302,6 +1304,7 @@
     if (csel !== lastCsel) {
       var swapDir = csel > lastCsel ? 1 : -1;
       if (isMobile) {
+        if (hoverPanel && hoverIdx >= 0) { applyActive(hoverPanel, hoverIdx, false); hoverPanel = null; hoverIdx = -1; }
         if (lastCsel >= 0 && lastCsel < N) {
           var opn = panels[lastCsel];
           opn._pxFrom = phoneOff(opn, now); opn._pxTo = -swapDir * vw;
@@ -1524,6 +1527,22 @@
   /* ---------- Boot ---------- */
   // Phones run the same pinned flow as desktop (layout in styles.css' phone block);
   // only the card motion differs (phoneOff). .flow__cd stays hidden on phones.
+  if (isMobile) {
+    // Zone 1 is on screen from the start (no entrance): mark it active before the loop runs.
+    lastSel = 0;
+    panels.forEach(function (panel, pi) { panel.classList.toggle("flow-panel--active", pi === 0); });
+    // Touch has no hover: the FIRST tap on a card shows its hover state (.is-active, plays
+    // its video), the SECOND tap follows its link.
+    flow.addEventListener("click", function (e) {
+      var card = e.target.closest ? e.target.closest(".flow-pcard") : null;
+      if (!card || card.classList.contains("is-active")) return;   // second tap: navigate
+      e.preventDefault();
+      var panel = card.closest(".flow-panel"), idx = +card.getAttribute("data-card");
+      if (hoverPanel && hoverIdx >= 0) applyActive(hoverPanel, hoverIdx, false);
+      applyActive(panel, idx, true);
+      hoverPanel = panel; hoverIdx = idx;
+    });
+  }
   cdLineHeight();
   measureGeo();
   // Late layout shifts (web fonts swapping, images arriving) move sections in the
