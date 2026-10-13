@@ -1087,7 +1087,9 @@
 
     journey.classList.toggle("is-live", rect.top <= ZONE1_EARLY + 1 && rect.bottom > vh * 0.6);
 
-    var vw = window.innerWidth;
+    // Phone: the panels are 100vw wide; innerWidth can be wider if anything on the page
+    // overflows sideways, which would drift every zone after the first off to the left.
+    var vw = isMobile ? (document.documentElement.clientWidth || window.innerWidth) : window.innerWidth;
     var trackX = -global * vw;
     setSt(track, "transform", "translate3d(" + trackX + "px,0,0)");
     paintSky(global);
