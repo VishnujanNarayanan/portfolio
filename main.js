@@ -164,6 +164,23 @@ function makeTypeIn(host, runs, opts) {
 (function () {
   "use strict";
 
+  /* ---------- Phone: project cards take two taps ----------
+     Touch has no hover, so the FIRST tap on a project card shows its hover state (the
+     tap leaves :hover on the card and focus on its link, which is what the hover CSS
+     keys off) and the SECOND tap opens it. Bound at load; desktop never adds it. */
+  document.addEventListener("click", function (e) {
+    if (!window.__phone) return;
+    var a = e.target && e.target.closest ? e.target.closest(".term-projects .proj-card a") : null;
+    if (!a) return;
+    var card = a.closest(".proj-card");
+    if (card.classList.contains("is-tapped")) return;           // second tap: navigate
+    e.preventDefault();
+    Array.prototype.forEach.call(document.querySelectorAll(".term-projects .proj-card.is-tapped"),
+      function (c) { c.classList.remove("is-tapped"); });
+    card.classList.add("is-tapped");
+    try { a.focus({ preventScroll: true }); } catch (err) {}
+  });
+
   /* ---------- Phone layout (<=820px, decided once at load) ----------
      Phones skip the hero's scroll choreography: the hero is a plain first screen, and
      the office video sits under it as a normal 16:9 block (full width, landscape) with
@@ -3547,6 +3564,12 @@ function makeTypeIn(host, runs, opts) {
 
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const mq = window.matchMedia("(max-width: 820px)");
+  // Phones run the same fan as desktop (tighter, see PHONE_SPREAD) with tap-to-hover;
+  // flat() is the old narrow-window fallback (plain wrapped cards) for desktop only.
+  const phoneFan = !!window.__phone && !reduce;
+  const flat = () => mq.matches && !phoneFan;
+  const PHONE_SPREAD = 0.62;
+  if (phoneFan) document.documentElement.classList.add("soc-fan");   // CSS: keep the fan layout
 
   // px-per-rem (root font-size) for the rem-based fan offsets.
   const rem = () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
@@ -3599,7 +3622,7 @@ function makeTypeIn(host, runs, opts) {
   let _sf = 0;
   function measureSizeFactor() {
     const cw = (cards[0] && cards[0].offsetWidth) || 320; // layout width, ignores transform
-    _sf = (cw / (20 * rem())) * SPREAD;
+    _sf = (cw / (20 * rem())) * SPREAD * (phoneFan ? PHONE_SPREAD : 1);
   }
   function sizeFactor() {
     if (!_sf) measureSizeFactor();
@@ -3807,7 +3830,7 @@ function makeTypeIn(host, runs, opts) {
   // replay=true → rewind first, so a click always plays the sequence instead of landing
   // on the finished state the last visit left behind.
   function playAll(replay) {
-    if (reduce || mq.matches) return;
+    if (reduce || flat()) return;
     if (replay) rearmStage();
     if (headType) headType.start();
     playFollow();
@@ -3867,7 +3890,7 @@ function makeTypeIn(host, runs, opts) {
   const origZ = cards.map((c) => c.style.zIndex || getComputedStyle(c).zIndex || "0");
   let raf = 0, last = 0;
   function frame(ts) {
-    if (mq.matches) { clearMobile(); raf = 0; return; }
+    if (flat()) { clearMobile(); raf = 0; return; }
     const dt = Math.min(0.032, last ? (ts - last) / 1000 : 0.016);
     last = ts;
     const moving = springStep(dt);
@@ -3875,10 +3898,10 @@ function makeTypeIn(host, runs, opts) {
     raf = moving ? requestAnimationFrame(frame) : 0;
     if (!moving) last = 0;
   }
-  function kick() { if (!raf && !mq.matches) { last = 0; raf = requestAnimationFrame(frame); } }
+  function kick() { if (!raf && !flat()) { last = 0; raf = requestAnimationFrame(frame); } }
 
   function setHover(h) {
-    if (mq.matches) return;
+    if (flat()) return;
     hovered = h;
     // z-index is intentionally NOT changed on hover — the rest stacking
     // (1,2,3,10,3,2,1) holds throughout, exactly like the reference.
@@ -3899,32 +3922,45 @@ function makeTypeIn(host, runs, opts) {
     if (!nearView || ticking) return;
     ticking = true;
     requestAnimationFrame(() => {
-      if (mq.matches) clearMobile();
+      if (flat()) clearMobile();
       else { evalReveal(); kick(); }
       ticking = false;
     });
   }
 
-  cards.forEach((c, i) => c.addEventListener("pointerenter", () => setHover(i)));
-  // Leaving is NOT just leaving the layout box. The cards are absolutely positioned and
-  // transformed inside it — fanned out, dipped and rotated — so the box holds plenty of
-  // empty ground that belongs to no card, and the outermost cards hang past its edges.
-  // Sliding off a card into that empty ground fired no leave at all and the fan stayed
-  // parted. So while something IS hovered, any pointer move that is not over a card
-  // clears it; the layout's own leave stays as the cheap common case.
-  layout.addEventListener("pointerleave", () => setHover(-1));
-  document.addEventListener("pointermove", (e) => {
-    if (hovered < 0) return;                                   // nothing to clear → no work
-    const t = e.target;
-    if (!(t && t.closest && t.closest(".callout-socials-card-w"))) setHover(-1);
-  }, { passive: true });
+  if (phoneFan) {
+    // Touch: the FIRST tap on a card pops it like hover does; the SECOND tap opens it.
+    // A tap anywhere else drops the pop.
+    document.addEventListener("click", (e) => {
+      const w = e.target && e.target.closest ? e.target.closest(".callout-socials-card-w") : null;
+      const i = w ? cards.indexOf(w) : -1;
+      if (i < 0) { if (hovered >= 0) setHover(-1); return; }
+      if (hovered === i) return;                               // second tap: follow the link
+      e.preventDefault();
+      setHover(i);
+    });
+  } else {
+    cards.forEach((c, i) => c.addEventListener("pointerenter", () => setHover(i)));
+    // Leaving is NOT just leaving the layout box. The cards are absolutely positioned and
+    // transformed inside it — fanned out, dipped and rotated — so the box holds plenty of
+    // empty ground that belongs to no card, and the outermost cards hang past its edges.
+    // Sliding off a card into that empty ground fired no leave at all and the fan stayed
+    // parted. So while something IS hovered, any pointer move that is not over a card
+    // clears it; the layout's own leave stays as the cheap common case.
+    layout.addEventListener("pointerleave", () => setHover(-1));
+    document.addEventListener("pointermove", (e) => {
+      if (hovered < 0) return;                                   // nothing to clear → no work
+      const t = e.target;
+      if (!(t && t.closest && t.closest(".callout-socials-card-w"))) setHover(-1);
+    }, { passive: true });
+  }
   window.addEventListener("scroll", onScroll, { passive: true });
-  window.addEventListener("resize", () => { measureSizeFactor(); measureLayout(); if (mq.matches) clearMobile(); else { evalReveal(); kick(); } });
+  window.addEventListener("resize", () => { measureSizeFactor(); measureLayout(); if (flat()) clearMobile(); else { evalReveal(); kick(); } });
   window.addEventListener("load", () => { measureSizeFactor(); measureLayout(); });
   // The projects terminal sets .features' height from JS (at the reveal, on resize and on
   // every filter click), which shifts this section's DOCUMENT position — re-measure and
   // re-evaluate the trigger, or the fan opens against a stale position.
-  window.addEventListener("layoutshift", () => { measureLayout(); if (!mq.matches) { evalReveal(); kick(); } });
+  window.addEventListener("layoutshift", () => { measureLayout(); if (!flat()) { evalReveal(); kick(); } });
   if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", onScroll);
   if ("IntersectionObserver" in window) {
     const host = layout.closest("section") || layout;
@@ -3933,7 +3969,7 @@ function makeTypeIn(host, runs, opts) {
       if (nearView) onScroll();                    // settle the pose on the way in
     }, { rootMargin: "700px 0px 700px 0px" }).observe(host);
   }
-  if (mq.matches) clearMobile(); else { evalReveal(); kick(); }
+  if (flat()) clearMobile(); else { evalReveal(); kick(); }
 })();
 
 /* ---------- Skills: logo cluster parallax around/with the Linux logo ----------
@@ -4988,7 +5024,8 @@ function navToLightWorld() {
     }
     // Same schedule as flow.js's window.__flowLight (0 at 20% of the flow's scroll, 1 at
     // 80%), computed from scroll here so a nav jump past the flow can't leave it stale.
-    var lt = Math.min(Math.max(((y - fTop) / tot - 0.2) / 0.6, 0), 1);
+    var lf = (y - fTop) / tot;                         // phone: whole pin (matches flow.js)
+    var lt = Math.min(Math.max(plain ? lf : (lf - 0.2) / 0.6, 0), 1);
     var o = (1 - lt).toFixed(3);
     if (vanta && o !== lastO) { lastO = o; vanta.style.opacity = o; }
   }
