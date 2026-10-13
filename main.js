@@ -3568,7 +3568,7 @@ function makeTypeIn(host, runs, opts) {
   // flat() is the old narrow-window fallback (plain wrapped cards) for desktop only.
   const phoneFan = !!window.__phone && !reduce;
   const flat = () => mq.matches && !phoneFan;
-  const PHONE_SPREAD = 0.62;
+  const PHONE_SPREAD = 0.52;
   if (phoneFan) document.documentElement.classList.add("soc-fan");   // CSS: keep the fan layout
 
   // px-per-rem (root font-size) for the rem-based fan offsets.
