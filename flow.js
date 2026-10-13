@@ -1101,6 +1101,9 @@
     // position within the transition, so the nav switch, contour flip, wheel darken and
     // sub-text all land at the SAME percentage — just inside the new, narrower bracket.
     var CF_OLD0 = 0.3, CF_OLD1 = 1.0, CF_NEW0 = 0.2, CF_NEW1 = 0.8;
+    // Phone: the colour change runs over the WHOLE pin — from zone 1's start (the title is
+    // already settled there) to the end of zone 4.
+    if (isMobile) { CF_NEW0 = 0; CF_NEW1 = 1; }
     var colorP = CF_OLD0 + (progress - CF_NEW0) * (CF_OLD1 - CF_OLD0) / (CF_NEW1 - CF_NEW0);
     // Progressive lighten: dark navy world → the hero's light shade over the bracket.
     // lightT (0→1) is shared with main.js (window.__flowLight) which lightens the
