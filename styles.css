@@ -2272,7 +2272,9 @@ html{overflow-x:clip}
    zone threshold (phoneOff in flow.js). No item list, no journey spine, no hover. */
 @media (max-width:820px){
   .flow{--g:min(calc(100vw - 32px),calc(100svh - var(--header-height) - 216px))}
-  .flow-panel__content{left:16px;right:16px;top:calc(var(--header-height) + 16px);max-width:none;overflow:hidden;padding-bottom:.12em}
+  /* transform:none — the desktop translateY(-58%) centring would otherwise lift zone 1 to the
+     top of the screen until flow.js writes its own transform. */
+  .flow-panel__content{left:16px;right:16px;top:calc(var(--header-height) + 16px);max-width:none;overflow:hidden;padding-bottom:.12em;transform:none}
   .flow-panel__index{margin-bottom:10px}
   /* Inactive titles are hidden (opacity) as well as slid out: the clip box also holds the
      index line, so a slide alone left the outgoing title partly visible above the new one. */
@@ -2342,19 +2344,32 @@ html{overflow-x:clip}
 /* ---- Phone: socials — the same fanned stack as desktop (main.js runs it tighter on
    phones); first tap pops a card like hover, second tap opens it. ---- */
 @media (max-width:820px){
-  html.soc-fan .callout-socials-card-layout{flex-flow:nowrap;max-width:none;margin-bottom:2rem}
+  html.soc-fan .callout-socials-card-layout{--soc-cw:11rem;flex-flow:nowrap;max-width:none;margin-bottom:2rem}
+  /* The phone .soc-card padding (for the old wrapped cards) also hit the full-bleed
+     cards, insetting the GitHub card's dark panel inside a white frame. */
+  html.soc-fan .soc-card--github,html.soc-fan .soc-card--linkedin,html.soc-fan .soc-card--instagram,
+  html.soc-fan .soc-card--substack,html.soc-fan .soc-card--youtube{padding:0}
 }
 
 /* ---- Phone: footer — taller. Links at the top, the headline in the middle, the
    portrait at the very bottom with the Email me pill on its lower edge. ---- */
 @media (max-width:820px){
   .lfooter__layout{display:flex;flex-direction:column}
-  .lfooter__clip{display:flex;flex-direction:column;min-height:calc(100svh - 24px)}
-  .lfooter__inner{flex:1 1 auto;display:flex;flex-direction:column;padding:36px 22px 0}
-  .lfooter__cols{order:-1;margin:0;justify-content:space-around}
+  .lfooter__clip{display:flex;flex-direction:column;min-height:calc(88svh - 24px)}
+  .lfooter__inner{flex:1 1 auto;display:flex;flex-direction:column;padding:36px 22px 0;position:relative;z-index:1}
+  .lfooter__cols{order:-2;margin:0;justify-content:space-around}
+  .lfooter__role{order:-1;margin:18px 0 0}
   .lfooter__headline{margin-top:auto;font-size:clamp(34px,10vw,46px)}
-  .lfooter__role{margin-bottom:auto}
-  .lfooter__mq{margin-top:28px;padding-bottom:0}
-  .lfooter__me{display:block;position:relative;left:auto;bottom:auto;transform:none;align-self:center;width:min(78%,320px);height:auto;margin-top:24px}
-  .lfooter__clip:has(.lfooter__me) + .lfooter__email{position:relative;z-index:3;margin:-76px auto 30px}
+  .lfooter__mq{position:absolute;left:0;right:0;bottom:9%;margin:0;padding:0;z-index:0}
+  .lfooter__me{display:block;position:relative;left:auto;bottom:auto;transform:none;align-self:center;width:min(78%,320px);height:auto;margin-top:-22px;z-index:2}
+  /* left/transform reset: the desktop pill is centred with left:50% + translateX, and a
+     leftover left:50% on a relative box pushed it 50% off-screen (page wider than the phone). */
+  .lfooter__clip:has(.lfooter__me) + .lfooter__email{position:relative;left:auto;transform:none;z-index:3;margin:-76px auto 30px}
+}
+
+/* ---- Phone: nothing may widen the page. One overflowing element (the footer pill)
+   made Chrome lay the page out wider than the screen: it opened zoomed and the flow
+   zones drifted. overflow-x:clip does not create a scroll box, so sticky still works. */
+@media (max-width:820px){
+  body{overflow-x:clip}
 }
