@@ -1021,9 +1021,11 @@ header.is-hero .header__nav-left a .nav-char__c,header.is-hero .pill-char__c{col
 .callout-socials-link{font-family:var(--font-ui),sans-serif;font-size:var(--text-sm);font-weight:500;letter-spacing:var(--tracking-wide);text-transform:uppercase;color:var(--color-text);transition:color .3s ease}
 .callout-socials-link:hover{color:var(--color-highlight)}
 @media (max-width:820px){
-  .callout-socials-card-layout{height:auto;flex-flow:row wrap;gap:1rem;max-width:36rem}
+  /* Narrow DESKTOP windows: plain wrapped cards. Phones keep the fan (html.soc-fan, set
+     by socialsFan in main.js) at this card size — see the phone block at the end. */
+  html:not(.soc-fan) .callout-socials-card-layout{height:auto;flex-flow:row wrap;gap:1rem;max-width:36rem}
   .callout-socials-card-layout{--soc-cw:9rem}
-  .callout-socials-card-w{position:relative;transform:none!important;aspect-ratio:20/35;width:9rem;height:auto;border-radius:1.4rem}
+  html:not(.soc-fan) .callout-socials-card-w{position:relative;transform:none!important;aspect-ratio:20/35;width:9rem;height:auto;border-radius:1.4rem}
   .soc-card{padding:.85rem .8rem}
   .soc-card__logo{width:1.1rem;height:1.1rem}
   .soc-card__brand{font-size:.72rem}
@@ -2335,4 +2337,24 @@ html{overflow-x:clip}
   .term-side{display:none}
   .term-pgrid{display:block;margin:0;padding-top:20px;overflow:visible}
   .term-projects{grid-template-columns:1fr 1fr;gap:12px}
+}
+
+/* ---- Phone: socials — the same fanned stack as desktop (main.js runs it tighter on
+   phones); first tap pops a card like hover, second tap opens it. ---- */
+@media (max-width:820px){
+  html.soc-fan .callout-socials-card-layout{flex-flow:nowrap;max-width:none;margin-bottom:2rem}
+}
+
+/* ---- Phone: footer — taller. Links at the top, the headline in the middle, the
+   portrait at the very bottom with the Email me pill on its lower edge. ---- */
+@media (max-width:820px){
+  .lfooter__layout{display:flex;flex-direction:column}
+  .lfooter__clip{display:flex;flex-direction:column;min-height:calc(100svh - 24px)}
+  .lfooter__inner{flex:1 1 auto;display:flex;flex-direction:column;padding:36px 22px 0}
+  .lfooter__cols{order:-1;margin:0;justify-content:space-around}
+  .lfooter__headline{margin-top:auto;font-size:clamp(34px,10vw,46px)}
+  .lfooter__role{margin-bottom:auto}
+  .lfooter__mq{margin-top:28px;padding-bottom:0}
+  .lfooter__me{display:block;position:relative;left:auto;bottom:auto;transform:none;align-self:center;width:min(78%,320px);height:auto;margin-top:24px}
+  .lfooter__clip:has(.lfooter__me) + .lfooter__email{position:relative;z-index:3;margin:-76px auto 30px}
 }
