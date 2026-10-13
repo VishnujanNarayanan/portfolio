@@ -716,7 +716,7 @@
   // first hover. Mirrors wireVideos() in main.js; see the hero's loadVideo().
   (function warmFlowVideos() {
     var vids = Array.prototype.slice.call(flow.querySelectorAll(".proj-card__video"));
-    if (!vids.length || reduce) return;
+    if (!vids.length || reduce || isMobile) return;   // phone: no hover, posters only
     function prime(v) {
       if (v._warmed) return;
       v._warmed = true;
@@ -784,12 +784,14 @@
     if (panel && idx >= 0) applyActive(panel, idx, true);   // activate the new pair
     hoverPanel = panel; hoverIdx = idx;
   }
-  window.addEventListener("pointermove", function (e) {
-    hoverX = e.clientX; hoverY = e.clientY; refreshHover();
-  }, { passive: true });
-  window.addEventListener("pointerleave", function () {     // cursor left the window
-    hoverX = hoverY = -1; refreshHover();
-  }, { passive: true });
+  if (!isMobile) {                                          // phone: no hover coupling
+    window.addEventListener("pointermove", function (e) {
+      hoverX = e.clientX; hoverY = e.clientY; refreshHover();
+    }, { passive: true });
+    window.addEventListener("pointerleave", function () {     // cursor left the window
+      hoverX = hoverY = -1; refreshHover();
+    }, { passive: true });
+  }
 
   // ---- Per-letter VERTICAL REEL on the zone list text ----------------------
   // Each .flow-panel__item's letters are wrapped in a reel clip (__a on top, an
@@ -850,9 +852,22 @@
   var mSplay = 0, splayVel = 0;   // scroll-momentum column splay: held offset (rem) + its velocity
   var SPLAY_MAX = 4;              // rem clamp on the held offset (also sets the off-screen fly distance)
   var lastCsel;                   // previous active card stage — detects the zone-swap threshold
-  if (!reduce) window.addEventListener("pointermove", function (e) {
+  if (!reduce && !isMobile) window.addEventListener("pointermove", function (e) {
     mTY = e.clientY / window.innerHeight - 0.5;
   }, { passive: true });
+
+  // Phone: the 2x2 grid swaps HORIZONTALLY in place at each zone threshold (old grid
+  // slides out the side it is leaving by, the new one slides in from the other side) —
+  // no vertical fly, no splay sway, no cursor parallax. phoneOff() is the grid's live
+  // x offset in px; a reversal mid-slide picks up from wherever it is.
+  var PHONE_SWAP_MS = 520;
+  function phoneOff(pnl, now) {
+    if (pnl._exitT0 !== undefined)
+      return lerp(pnl._pxFrom || 0, pnl._pxTo || 0, smooth(clamp((now - pnl._exitT0) / PHONE_SWAP_MS, 0, 1)));
+    if (pnl._enterT0 !== undefined)
+      return lerp(pnl._pxFrom || 0, 0, smooth(clamp((now - pnl._enterT0) / PHONE_SWAP_MS, 0, 1)));
+    return 0;
+  }
 
 
   /* ---------- Journey spine: wavy path + station nodes ---------- */
@@ -1229,7 +1244,7 @@
     panels.forEach(function (panel, pi) {
       var content = panel.querySelector(".flow-panel__content");
       if (!content) return;
-      var base = "translateY(-58%) translateX(" + (-(pi * vw + trackX)) + "px)";
+      var base = (isMobile ? "" : "translateY(-58%) ") + "translateX(" + (-(pi * vw + trackX)) + "px)";
       var a = panel._anim;
       if (a) {
         var el = now - a.t0 - a.delay;
@@ -1275,16 +1290,27 @@
     // and the diagonal/lag machinery (which keys off off-band _coff) stays inert.
     // REST_X (world units, +right of centre) is the whole-grid rest position — bump it
     // to slide the columns further right. Kept inside (L_END, R_END) so g stays 0.
-    var REST_X = 6;
+    var REST_X = isMobile ? 0 : 6;                  // phone: grid centred
     // Zone-swap threshold: the OUTGOING zone's columns fly off vertically (left col up /
     // right col down on forward scroll, mirrored on backward — continuing the splay
     // direction), while the INCOMING zone's cards start at ZERO offset (like zone 1 at
     // the pin) and react to scroll fresh. Works both directions; the splay momentum is
     // reset at every crossing so each zone begins neutral.
     var CARD_EXIT_MS = 480, CARD_ENTER_MS = 700;   // exit 600→480ms: 25% faster fly-off
+    if (isMobile) CARD_EXIT_MS = CARD_ENTER_MS = PHONE_SWAP_MS;
     if (lastCsel === undefined) lastCsel = csel;
     if (csel !== lastCsel) {
       var swapDir = csel > lastCsel ? 1 : -1;
+      if (isMobile) {
+        if (lastCsel >= 0 && lastCsel < N) {
+          var opn = panels[lastCsel];
+          opn._pxFrom = phoneOff(opn, now); opn._pxTo = -swapDir * vw;
+        }
+        if (csel >= 0 && csel < N) {
+          var ipn = panels[csel];
+          ipn._pxFrom = ipn._exitT0 !== undefined ? phoneOff(ipn, now) : swapDir * vw;
+        }
+      }
       var FLY = vh / 16 + SPLAY_MAX;        // rem: full off-screen fly distance
       var splayWas = mSplay;                // splay the outgoing zone was sitting at
       // Seed the new zone's splay OPPOSITE to the travel direction (forward: left col
@@ -1340,7 +1366,8 @@
       // panel, to feed a delayed column that no longer exists — is just this constant.
       panel._cardsOn = isActive || exiting;                   // grid is visible this frame
       var pinX = -(pi * vw + trackX);
-      setSt(cardsEl, "transform", "translate(calc(-50% + " + (REST_X * F + pinX).toFixed(1) + "px),-50%)");
+      var slideX = isMobile ? phoneOff(panel, now) : 0;   // phone: horizontal swap
+      setSt(cardsEl, "transform", "translate(calc(-50% + " + (REST_X * F + pinX + slideX).toFixed(1) + "px),-50%)");
       setSt(cardsEl, "opacity", panel._cardsOn ? "1" : "0");
       // Hit-testable for the WHOLE of the active stage. This used to also require
       // |clocal| < 0.4, which left the outer fifth of every zone — the approach to each
@@ -1396,6 +1423,10 @@
       // current scroll//timers, so a skipped panel is correct again on its first visible
       // frame — nothing to catch up.
       if (!pnl._cardsOn) continue;
+      if (isMobile) {                                     // phone: cards don't sway
+        for (var km = 0; km < pnl._pcards.length; km++) setSt(pnl._pcards[km].el, "transform", "none");
+        continue;
+      }
       // yRem is PANEL-level (the enter/exit ramps live on the panel), so it is computed
       // once per panel instead of once per card.
       var yRem = p + pScroll;
@@ -1491,12 +1522,8 @@
   }
 
   /* ---------- Boot ---------- */
-  if (isMobile) {
-    // Mobile: CSS stacks the stages and pins cards in normal flow. No GL / no pin.
-    // (.flow__cd is display:none on mobile, so the terminal is skipped.)
-    paintSky(0);
-    return;
-  }
+  // Phones run the same pinned flow as desktop (layout in styles.css' phone block);
+  // only the card motion differs (phoneOff). .flow__cd stays hidden on phones.
   cdLineHeight();
   measureGeo();
   // Late layout shifts (web fonts swapping, images arriving) move sections in the
