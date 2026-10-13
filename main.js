@@ -4871,13 +4871,28 @@ function navToLightWorld() {
   var GRAIN_L = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
   function docTop(node) { return node.getBoundingClientRect().top + (window.scrollY || 0); }
 
-  var fTop = 0, pin = 0, W = 0, built = false;
+  // Phones get a plain, viewport-sized light layer instead: the page-tall canvas carries
+  // ~4 radial gradients per screen (80-100 on a long mobile page) and, being its own
+  // GPU layer, has to repaint all of them into every new strip at 2-3x DPR as you
+  // scroll. Only the dark -> light cross-fade of #vanta-bg is kept there.
+  var PHONE = window.matchMedia("(max-width: 820px)");
+  var fTop = 0, pin = 0, W = 0, tot = 1, built = false, plain = false;
   function canvasY(y) { return y <= fTop ? y : (y <= fTop + pin ? fTop : y - pin); }
 
   function build() {
     var vh = window.innerHeight, H = document.documentElement.scrollHeight;
     W = window.innerWidth;
     fTop = docTop(flow);
+    tot = Math.max(flow.offsetHeight - vh, 1);
+    plain = PHONE.matches;
+    lastT = "";
+    if (plain) {
+      cvs.style.cssText = "width:100%;height:100%;background:rgb(" + LIGHT + ");will-change:auto";
+      built = true;
+      place();
+      return;
+    }
+    cvs.style.cssText = "";
     pin = (wrap && getComputedStyle(wrap).position === "sticky") ? Math.max(flow.offsetHeight - vh, 0) : 0;
     var CH = H - pin, CW = Math.round(W * (1 + PAN));
     var feat = document.querySelector(".features"), tail = document.querySelector(".projects-tail");
@@ -4919,33 +4934,41 @@ function navToLightWorld() {
   function place() {
     if (!built) return;
     var y = window.scrollY || 0;
-    var p = pin > 0 ? Math.min(Math.max((y - fTop) / pin, 0), 1) : 0;
-    var t = "translate3d(" + (-p * PAN * W).toFixed(1) + "px," + (-canvasY(y)).toFixed(1) + "px,0)";
-    if (t !== lastT) { lastT = t; cvs.style.transform = t; }
+    if (!plain) {
+      var p = pin > 0 ? Math.min(Math.max((y - fTop) / pin, 0), 1) : 0;
+      var t = "translate3d(" + (-p * PAN * W).toFixed(1) + "px," + (-canvasY(y)).toFixed(1) + "px,0)";
+      if (t !== lastT) { lastT = t; cvs.style.transform = t; }
+    }
     // Same schedule as flow.js's window.__flowLight (0 at 20% of the flow's scroll, 1 at
     // 80%), computed from scroll here so a nav jump past the flow can't leave it stale.
-    var tot = Math.max(flow.offsetHeight - window.innerHeight, 1);
     var lt = Math.min(Math.max(((y - fTop) / tot - 0.2) / 0.6, 0), 1);
     var o = (1 - lt).toFixed(3);
     if (vanta && o !== lastO) { lastO = o; vanta.style.opacity = o; }
   }
 
-  var queued = false, lastKey = "";
+  // Rebuild when the layout may have changed (dirty: resize, load, ResizeObserver) — on
+  // desktop also whenever the page height moves. Phones skip that per-scroll height read:
+  // it forces a layout every frame, and the plain layer only needs fTop/tot, which the
+  // ResizeObserver already keeps fresh.
+  var queued = false, lastKey = "", dirty = true;
   function frame() {
     queued = false;
-    var fe = document.querySelector(".features");
-    var key = window.innerWidth + "x" + window.innerHeight + ":" + document.documentElement.scrollHeight +
-      ":" + (fe ? fe.offsetHeight : 0);
-    if (key !== lastKey) { lastKey = key; build(); } else place();
+    var key = window.innerWidth + "x" + window.innerHeight;
+    if (!PHONE.matches) {
+      var fe = document.querySelector(".features");
+      key += ":" + document.documentElement.scrollHeight + ":" + (fe ? fe.offsetHeight : 0);
+    }
+    if (dirty || key !== lastKey) { dirty = false; lastKey = key; build(); } else place();
   }
   function queue() { if (!queued) { queued = true; requestAnimationFrame(frame); } }
+  function markDirty() { dirty = true; queue(); }
   queue();
   window.addEventListener("scroll", queue, { passive: true });
   if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", queue);
-  window.addEventListener("resize", queue, { passive: true });
-  window.addEventListener("load", queue);
+  window.addEventListener("resize", markDirty, { passive: true });
+  window.addEventListener("load", markDirty);
   if ("ResizeObserver" in window) {
-    var ro = new ResizeObserver(queue);
+    var ro = new ResizeObserver(markDirty);
     ro.observe(document.body);
     var featEl = document.querySelector(".features");
     if (featEl) ro.observe(featEl);                    // the projects filter resizes it at runtime
