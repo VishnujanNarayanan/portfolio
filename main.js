@@ -1771,6 +1771,7 @@ function makeTypeIn(host, runs, opts) {
     var featuresEl = document.querySelector(".features");
     if (!featuresEl) return;
     var lightEl = document.querySelector(".brand-teaser");
+    if (window.__phone) lightEl = document.getElementById("socials") || lightEl;   // phone: skills sections hidden
     var fDoc = 0, lDoc = Infinity, dark = false, queued = false;
     function sy() { return window.scrollY || window.pageYOffset || 0; }
     function measure() {
@@ -3252,7 +3253,7 @@ function makeTypeIn(host, runs, opts) {
       panCards(); momRAF = requestAnimationFrame(animMom);
     }
     function engageStick() {
-      if (locked || window.innerWidth <= 820) return;        // no pin on mobile
+      if (locked || (window.innerWidth <= 820 && !window.__phone)) return;   // narrow desktop: no pin (phones dwell once too)
       // Land EXACTLY at the cover line (rect.top = 0) so the base pan is 0 — the cards
       // appear un-panned with full top clearance regardless of scroll overshoot/momentum.
       var vel = (lenis && typeof lenis.velocity === "number") ? lenis.velocity : scrollVel;
