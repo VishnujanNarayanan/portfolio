@@ -164,6 +164,34 @@ function makeTypeIn(host, runs, opts) {
 (function () {
   "use strict";
 
+  /* ---------- Phone layout (<=820px, decided once at load) ----------
+     Phones skip the hero's scroll choreography: the hero is a plain first screen, and
+     the office video sits under it as a normal 16:9 block (full width, landscape) with
+     the GitHub card as a plain card below it. The video and the card are MOVED here
+     into a .m-hero-media block right after the hero; desktop never runs this and keeps
+     its fixed, scroll-driven layers. Every phone-only branch below reads __phone. */
+  window.__phone = window.matchMedia("(max-width: 820px)").matches;
+  (function phoneHeroMedia() {
+    if (!window.__phone) return;
+    var hero = document.querySelector(".hero");
+    var vid = document.querySelector(".hero-video");
+    var gh = document.querySelector(".gh-reveal");
+    if (!hero || !hero.parentNode) return;
+    var box = document.createElement("div");
+    box.className = "m-hero-media";
+    if (vid) box.appendChild(vid);
+    if (gh) box.appendChild(gh);
+    hero.parentNode.insertBefore(box, hero.nextSibling);
+    // Plays only while on screen; paused (no decoding) otherwise.
+    if (!vid || !("IntersectionObserver" in window)) return;
+    new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { var p = vid.play(); if (p && p.catch) p.catch(function () {}); }
+        else vid.pause();
+      });
+    }, { threshold: 0.25 }).observe(vid);
+  })();
+
   /* ---------- Lenis smooth scroll (CDN global: Lenis) ---------- */
   var lenis = null;
   // ?nolenis — dev switch to measure what smooth scroll costs on this page. Lenis
@@ -759,14 +787,14 @@ function makeTypeIn(host, runs, opts) {
       // Phase A (0 → vh): the hero rides UP 1:1 with scroll (linear, so the video glued
       // to its bottom edge tracks it exactly). Past vh it's parked off the top.
       if (heroContent) heroContent.style.transform = "";
-      hero.style.transform = "translateY(" + (-Math.min(y, vh)) + "px)";
+      if (!window.__phone) hero.style.transform = "translateY(" + (-Math.min(y, vh)) + "px)";
       // Phases B/C act on the video once it fully covers the screen (y ≥ vh):
       //   B (vh → 2vh): zoom OUT from the centre (camera pull-back), 1 → EXIT_MIN_SCALE.
       //   C (2vh → 3vh): ride UP with the page, handing over to the flow below.
       // Effective scroll with the checkpoint dwell removed — phases B/C read this so the video
       // stays fullscreen through the dwell, then resumes exactly where it would have.
       var ye = heroY(y, vh);
-      if (heroVid) {
+      if (heroVid && !window.__phone) {   // phone: plain in-flow video (phoneHeroMedia)
         // Y: below the fold (top edge at the hero's bottom) → 0 (full screen) over phase A,
         // locked at 0 through the zoom + the dwell, then rides up off the top in phase C.
         var vTy = (ye < vh) ? (vh - ye) : -Math.max(0, ye - 2 * vh);
@@ -1483,7 +1511,7 @@ function makeTypeIn(host, runs, opts) {
      horizontally in alternating rows behind the hero video, fading in + riding up exactly as
      the logos did. Same horizontal-loop mechanics; the children are now <span> words. */
   var marquee = document.querySelector(".tool-marquee");
-  if (marquee) {
+  if (marquee && !window.__phone) {                 // phone: hidden (styles.css), no loop
     // Two rows only, like the reference. Top row = filled darker blue (bold sans); bottom row
     // = outlined contrasting serif. Each row carries its own word set + font/colour modifier.
     var ROWS = [
@@ -1658,6 +1686,7 @@ function makeTypeIn(host, runs, opts) {
     var GH_FADE_END = 0.5;                         // pB at which the handwriting starts (scrollInk) → card fully faded by here
     var GH_CARD_SHRINK = 0.4;                      // extra shrink OF THE CARD within the rectangle as it fades (1 → 0.6)
     function updateGhCard() {
+      if (window.__phone) return;                   // phone: plain card under the video
       var y = window.scrollY, vh = window.innerHeight;
       var ye = window.__heroY ? window.__heroY(y, vh) : y;   // dwell-aware effective scroll
       if (ye <= vh) {
