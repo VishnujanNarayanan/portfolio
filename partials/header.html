@@ -13,11 +13,10 @@
     {{HOME_HREF}}  '#top' on the homepage (scroll to the hero), '/' elsewhere
 
   Socials is a plain nav link (it used to be a pill next to Subscribe; Subscribe is now the
-  only pill). Home sits in the primary nav as the last item. It used to be a separate
-  centred nav (.header__nav-centre) absolutely positioned on the page midline;
-  that was dropped along with the Skills link, so the nav is four ordinary items.
-  main.js builds the per-letter hover animation by querying '.header__nav-left a',
-  which still picks Home up now that it lives in this nav.
+  only pill). The desktop nav has no Home link: the cube logo (.header__logo) at the top
+  left goes to the same place. The mobile menu keeps its Home item, since the header
+  logo is hidden at <=820px. main.js builds the per-letter hover animation by querying
+  '.header__nav-left a', so the logo stays outside that nav.
 -->
 <header class="show">
   <a href="{{HOME_HREF}}" class="header__logo" aria-label="Vishnujan Narayanan — home"><img src="/images/logo-mark-96.png" alt="" width="80" height="96" decoding="async"></a>
@@ -26,7 +25,6 @@
     <a href="{{TO}}contact">Contact</a>
     <a href="{{BLOG}}">Blog</a>
     <a href="{{TO}}socials">Socials</a>
-    <a href="{{HOME_HREF}}">Home</a>
   </nav>
   <nav class="header__nav-right" aria-label="Header actions">
     <div class="header__ctas">
