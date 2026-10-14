@@ -51,9 +51,17 @@ function paintNavPill(t, ease) {
   var nav = document.querySelector("header .header__nav-left");
   if (!nav) return;
   var c = Math.round(252 + (8 - 252) * t), g = Math.round(252 + (12 - 252) * t), b = Math.round(252 + (30 - 252) * t);
+  var bg = "rgba(" + c + "," + g + "," + b + "," + (0.5 + 0.1 * t).toFixed(3) + ")";
+  var bd = "rgba(255,255,255," + (0.75 - 0.63 * t).toFixed(3) + ")";
   nav.style.transition = ease ? "background-color .5s var(--ease-default),border-color .5s var(--ease-default),transform .3s var(--ease-default)" : "transform .3s var(--ease-default)";
-  nav.style.backgroundColor = "rgba(" + c + "," + g + "," + b + "," + (0.5 + 0.1 * t).toFixed(3) + ")";
-  nav.style.borderColor = "rgba(255,255,255," + (0.75 - 0.63 * t).toFixed(3) + ")";
+  nav.style.backgroundColor = bg;
+  nav.style.borderColor = bd;
+  // The top-left logo wears the same pill, so it flips with the nav.
+  var logo = document.querySelector("header .header__logo");
+  if (!logo) return;
+  logo.style.transition = ease ? "background-color .5s var(--ease-default),border-color .5s var(--ease-default),transform .3s var(--ease-default),box-shadow .3s var(--ease-default)" : "";
+  logo.style.backgroundColor = bg;
+  logo.style.borderColor = bd;
 }
 function buildPillReel(pill) {
   if (!pill) return null;
@@ -748,6 +756,10 @@ function makeTypeIn(host, runs, opts) {
             navLinks.forEach(function (a) { a.style.color = rgb; });
             if (glassSpan) glassSpan.style.color = rgb;
             if (giSpan) giSpan.style.color = "rgb(" + c2 + "," + c2 + "," + c2 + ")";
+            // The nav pill was skipped above too (this branch never paints it), so a jump
+            // back to the top (Home/logo → #top from the dark run) left black letters on a
+            // navy pill. Repaint it with the letters, eased like a threshold flip.
+            paintNavPill(he, true);
             void hdr.offsetWidth;
             requestAnimationFrame(function () { els.forEach(function (el) { el.style.transition = ""; }); });
           }, 900);   // .5s roll + the letter stagger
