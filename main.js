@@ -56,12 +56,6 @@ function paintNavPill(t, ease) {
   nav.style.transition = ease ? "background-color .5s var(--ease-default),border-color .5s var(--ease-default),transform .3s var(--ease-default)" : "transform .3s var(--ease-default)";
   nav.style.backgroundColor = bg;
   nav.style.borderColor = bd;
-  // The top-left logo wears the same pill, so it flips with the nav.
-  var logo = document.querySelector("header .header__logo");
-  if (!logo) return;
-  logo.style.transition = ease ? "background-color .5s var(--ease-default),border-color .5s var(--ease-default),transform .3s var(--ease-default),box-shadow .3s var(--ease-default)" : "";
-  logo.style.backgroundColor = bg;
-  logo.style.borderColor = bd;
 }
 function buildPillReel(pill) {
   if (!pill) return null;
