@@ -719,7 +719,13 @@ function makeTypeIn(host, runs, opts) {
       // Only update __a when unrolling back to the dark world, so the returning letter arrives
       // in the correct dark-world colour.
       var rgb = "rgb(" + c + "," + c + "," + c + ")";
-      if (!ease || !rolled) {
+      // Holding __a back only makes sense when a reel will actually show the change, i.e.
+      // the black __b copies are in front (header--on-light). Jumping to #top (logo) from
+      // the hero's own dark zoom has no such reel: deferring left the white text and navy
+      // pill sitting there ~.9s before snapping. Repaint straight away in that case.
+      var reelPending = ease && rolled && hdr && hdr.classList.contains("header--on-light");
+      if (ease && rolled && !reelPending) { trans = "none"; ease = false; }   // that jump: snap, no fade
+      if (!reelPending) {
         paintNavPill(he, ease);                            // the pill changes whenever the text colour does
         navLinks.forEach(function (a) { a.style.transition = trans; a.style.color = rgb; });
         if (glassSpan) { glassSpan.style.transition = trans; glassSpan.style.color = rgb; }
@@ -1767,7 +1773,7 @@ function makeTypeIn(host, runs, opts) {
 
   /* ---------- Header world flip ----------
      The nav reel and the CTA pills switch to their light-on-dark look together while the
-     dark projects run (.features + .projects-tail) sits under the fixed header, and back
+     dark projects run (.features and its ::after tail) sits under the fixed header, and back
      as the light Skills section (.brand-teaser) arrives. A plain range test, so it flips
      back on the way up too. Runs on scroll only — section positions are cached and
      re-measured on resize/load and by sizeSection() when the projects filter resizes
@@ -2711,8 +2717,15 @@ function makeTypeIn(host, runs, opts) {
     // alone can run before the grid has laid out — e.g. coming back from /blog/, where the
     // intro is skipped — and a too-small lead set the panel moving almost at once.
     if (sideEl && window.ResizeObserver) {
-      var sideRO = new ResizeObserver(function () { measureSideLead(); if (typeof panCards === "function") panCards(); });
-      sideRO.observe(panEl); sideRO.observe(sideEl);
+      // sizeSection() too, and the viewport is watched as well: the pin is sized from the
+      // content's foot, so a late size change (the SQL line collapsing after the reveal,
+      // web fonts) must re-size it or it runs long. It returns early if nothing changed.
+      var sideRO = new ResizeObserver(function () {
+        measureSideLead();
+        if (typeof sizeSection === "function") sizeSection();
+        if (typeof panCards === "function") panCards();
+      });
+      sideRO.observe(panEl); sideRO.observe(sideEl); sideRO.observe(viewEl);
     }
 
     // Stagger the card pop-in along the anti-diagonal (row+col): the top-left card
@@ -3293,17 +3306,26 @@ function makeTypeIn(host, runs, opts) {
     }
     // How far the (visible) cards extend past their viewport — drives BOTH the section
     // height and the pan, so the two stay in lock-step.
-    var PAN_PAD = 24;
+    // Pinned scroll = exactly how far the content's foot sits below the cards' viewport,
+    // so the pin releases the moment the last row (and the "N rows in set" line under
+    // it) reaches the terminal's bottom edge — and the only thing between the content
+    // and the skills curve is the fixed tail (--projects-tail-h). No allowance or pad:
+    // the column stagger is closed by then (colOffsetProgress maps onto the pin), and
+    // the pin is re-sized whenever the cards' viewport changes size (sideRO), e.g. when
+    // the typed SQL line collapses after the reveal. + ALIGN_EPS: the pan stops that
+    // much short of the pin (see panCards). Measured from layout offsets, which ignore
+    // every transform.
     function cardOverflow() {
-      // + the column stagger's depth: the offset columns hang up to four-fifths of a
-      // card below the grid's layout box, and `translate` doesn't affect scrollHeight;
-      // without this the pin is that much too short and their last row can never scroll fully
-      // into view. Uses the MAX (threshold) offset so the pin length stays constant
-      // rather than shifting under the mapping as the offset closes.
-      // Halved: the offset has closed (COL_CLOSE_AT) well before the run ends, so the full
-      // allowance left a blank band under the last row; half still clears the stagger.
-      var ov = panEl.scrollHeight - viewEl.clientHeight + staggerCardH() * COL_OFFSET_FRAC * 0.5;
-      return ov > 0 ? ov + PAN_PAD : 0;                 // 0 when the cards already fit
+      var panTop = layoutTop(panEl), foot = 0;
+      var metaEl = projEl.querySelector(".term-result__meta");
+      if (metaEl && metaEl.offsetParent) foot = layoutTop(metaEl) + metaEl.offsetHeight - panTop;
+      cardEls.forEach(function (el) {
+        if (el.classList.contains("is-filtered-out")) return;
+        var b = layoutTop(el) + el.offsetHeight - panTop;
+        if (b > foot) foot = b;
+      });
+      var ov = foot - viewEl.clientHeight;
+      return ov > 0 ? ov + ALIGN_EPS : 0;               // 0 when the content already fits
     }
     // Size the section so the PINNED scroll length == the card overflow: more projects
     // below → a longer pin (scrolling down reveals them); all projects already visible
@@ -3351,21 +3373,11 @@ function makeTypeIn(host, runs, opts) {
     window.addEventListener("resize", function () { brandGap = null; }, { passive: true });
     function colOffsetProgress() {
       var top = secTop();
-      if (!brandEl) return Math.min(1, Math.max(0, -top / Math.max(1, secH - window.innerHeight)));
-      var vh = window.innerHeight;
-      // Layout distance from the terminal's top to the seam. It IS constant — which is
-      // exactly why it must not be measured live: both terms shift with scroll by the
-      // same amount, so the difference never changes, but getBoundingClientRect flushed
-      // style+layout every frame to rediscover it. Cached as a document-space delta.
-      if (brandGap === null) brandGap = (brandEl.getBoundingClientRect().top + (window.scrollY || 0)) - (secDocTop);
-      var gap = brandGap;
-      var span = gap - vh * (1 - BULGE_RANGE * BULGE_MID);  // threshold → bulge half-drawn
-      if (span <= 0) return 1;
-      // NOT clamped below 0: scrolling back up past the threshold (toward the blog)
-      // carries p negative, so the columns keep parting further instead of resting at
-      // the threshold offset. Clamped above at 1; applyColumnOffset closes the gap over
-      // COL_CLOSE_AT of that run, so they are flush a little before the bulge.
-      return Math.min(1, -top / span);
+      // Mapped onto the PIN (not the run to the seam) so the columns are flush, at
+      // COL_CLOSE_AT of it, before the pin releases: nothing may hang below the last
+      // row at the handoff. NOT clamped below 0: scrolling back up past the threshold
+      // (toward the blog) carries p negative, so the columns keep parting further.
+      return Math.min(1, -top / Math.max(1, secH - window.innerHeight));
     }
     // Card height when the stagger is live, else 0. A small (filtered) result set sits
     // in normal, flush rows: the stagger only earns its keep once the grid is deep
@@ -4985,9 +4997,11 @@ function navToLightWorld() {
     cvs.style.cssText = "";
     pin = (wrap && getComputedStyle(wrap).position === "sticky") ? Math.max(flow.offsetHeight - vh, 0) : 0;
     var CH = H - pin, CW = Math.round(W * (1 + PAN));
-    var feat = document.querySelector(".features"), tail = document.querySelector(".projects-tail");
+    var feat = document.querySelector(".features");
     var pTop = feat ? canvasY(docTop(feat)) : Infinity;
-    var pEnd = tail ? canvasY(docTop(tail) + tail.offsetHeight) : (feat ? pTop + feat.offsetHeight : Infinity);
+    // The tail is .features' ::after, drawn in its margin-bottom, so the dark run ends
+    // that margin below the section's box.
+    var pEnd = feat ? pTop + feat.offsetHeight + (parseFloat(getComputedStyle(feat).marginBottom) || 0) : Infinity;
     if (isFinite(pEnd)) pEnd = Math.max(pTop, pEnd - 0.75 * vh);
     function dark(y) { return y >= pTop && y < pEnd; }
     var base = "rgb(" + LIGHT + ")";
