@@ -1390,10 +1390,11 @@
     // above). From the reference nav-images: p = (clientY/vh − 0.5)·2·GAIN rem, left
     // column y = −p, right column y = +p, eased. mCY is the smoothed (clientY/vh − 0.5);
     // the 0.05 lerp stands in for GSAP's duration-2 ease.
-    // GAIN is the reference's 6rem less 23% — the cards moved further with the cursor
-    // than the effect wanted. Displacement only: the easing and the direction split are
-    // untouched, so it tracks the cursor just as promptly, only 23% less far.
-    var HOVER_GAIN = 4.62;          // rem at the top/bottom of the window (was 6)
+    // GAIN was the reference's 6rem less 23% (4.62), then halved again to 2.31: the
+    // cards still moved further with the cursor than the effect wanted. Displacement
+    // only: the easing and the direction split are untouched, so it tracks the cursor
+    // just as promptly, only half as far.
+    var HOVER_GAIN = 2.31;          // rem at the top/bottom of the window (was 4.62, before that 6)
     mCY += (mTY - mCY) * 0.05;
     var p = mCY * 2 * HOVER_GAIN;   // rem
     // Scroll-momentum column splay — the two columns part vertically (left up / right
