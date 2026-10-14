@@ -208,10 +208,27 @@ header .header__nav-left a{color:#050419;font-size:16px}
 /* Cube logo, top-left, desktop only (the mobile menu panel carries its own). It sits
    OUTSIDE .header__nav-left so main.js's per-letter reel (which queries
    '.header__nav-left a') never tries to rebuild it. The auto margin on the nav keeps
-   it packed against the logo instead of being pushed to the middle by space-between. */
-.header__logo{display:flex;align-items:center;padding:0 8px 0 16px}
-.header__logo img{width:auto;height:36px;display:block}
+   it packed against the logo instead of being pushed to the middle by space-between.
+   It wears the same frosted pill as the nav (48px tall, like the nav's), and
+   paintNavPill in main.js flips both together. */
+.header__logo{display:flex;align-items:center;margin-left:16px;padding:8px 14px;
+  border-radius:999px;border:1px solid rgba(255,255,255,.75);background-color:rgba(252,252,252,.5);
+  -webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%);
+  box-shadow:0 8px 24px -14px rgba(5,4,25,.35)}
+.header__logo img{width:auto;height:30px;display:block}
 .header__logo + .header__nav-left{margin-right:auto}
+/* Hover/focus: the pill lifts and the cube tips forward with a small overshoot, so it
+   reads as a button rather than a badge. main.js (paintNavPill) writes an inline
+   transition on world flips, and keeps transform/box-shadow in it so this still eases. */
+.header__logo{transition:transform .3s var(--ease-default),box-shadow .3s var(--ease-default)}
+.header__logo img{transition:transform .45s cubic-bezier(.34,1.56,.64,1)}
+@media (pointer: fine){
+  .header__logo:hover{transform:translateY(-1px);box-shadow:0 12px 28px -12px rgba(5,4,25,.45)}
+  .header__logo:hover img{transform:scale(1.12) rotate(-10deg)}
+}
+.header__logo:focus-visible{outline:2px solid var(--color-highlight);outline-offset:3px}
+.header__logo:focus-visible img{transform:scale(1.12) rotate(-10deg)}
+@media (prefers-reduced-motion: reduce){.header__logo,.header__logo img{transition:none}}
 @media (max-width: 820px){.header__logo{display:none}}
 
 /* Tool-logo marquee behind the hero (z-index 2 < hero 3; later opaque sections cover it).
