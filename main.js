@@ -907,6 +907,10 @@ function makeTypeIn(host, runs, opts) {
         var hs = wantFlip ? 0.88 : 1;                        // shrink 1 ↔ 0.88 (subtle)
         if (navLeft)  { navLeft.style.transition  = "transform .3s var(--ease-default)"; navLeft.style.transformOrigin  = "center center";  navLeft.style.transform  = "scale(" + hs + ")"; }
         if (navRight) { navRight.style.transition = "transform .3s var(--ease-default)"; navRight.style.transformOrigin = "right center"; navRight.style.transform = "scale(" + hs + ")"; }
+        // The logo pill shrinks with them, but it lives outside <header> and its
+        // transform is owned by logoToFooter (end of file), so signal it instead.
+        document.documentElement.classList.toggle("hdr-small", wantFlip);
+        window.dispatchEvent(new Event("hdrsmall"));
       }
       lastFlipY = y;                              // for the jump test on the next crossing
       // Back on the hero with the header still in the threshold-reel state (header--on-light:
@@ -4575,6 +4579,9 @@ function makeTypeIn(host, runs, opts) {
   // resting cursor left on the page is the blog description's).
   var typer = makeTypeIn(h, rows.map(function (el) { return { el: el, step: HEAD_STEP }; }), { gap: 120, hold: 420 });
   if (!typer) return;
+  // The entrance WILL play: hold logoToFooter's dock until the labels + "Email me"
+  // appear (popEmail), so the logo and nav arrive with them, not during the typing.
+  window.__footerIntroWait = true;
 
   // …and once it lands, the eight column links reel in from nothing. They already carry
   // the per-letter .lreel clips (footerLinkReel builds them for the hover roll, further
@@ -4590,6 +4597,10 @@ function makeTypeIn(host, runs, opts) {
   var mailCols = mail ? Array.prototype.slice.call(mail.querySelectorAll(".pill-char__col")) : [];
   if (mail) mail.classList.add("is-waiting", "is-reeling");
   function popEmail() {
+    if (window.__footerIntroWait) {                  // release the logo dock (logoToFooter)
+      window.__footerIntroWait = false;
+      window.dispatchEvent(new Event("footerintrodone"));
+    }
     if (!mail) return;
     mail.classList.remove("is-waiting");
     // The pill is CENTRED with its own transform (translateX(-50%) in the bottom tab), so
@@ -4733,6 +4744,34 @@ function navToLightWorld() {
     if (history.replaceState) { try { history.replaceState(null, "", "#contact"); } catch (err) {} }
     navToLightWorld();
   });
+})();
+
+/* ---- End-of-page state ---------------------------------------------------------
+   At the absolute end of the page (where Contact also lands, see contactToBottom)
+   html.nav-at-end is set, and removed as soon as you scroll up off the end. That
+   starts logoToFooter (end of file): the logo glides into the footer's top tab and,
+   once it has LANDED, the two nav groups grow back from the hero-exit .88
+   (updateHeroExit) to full size and Subscribe fades out. Desktop only,
+   like the shrink. Every page (the footer and header logo are shared); on sub-pages
+   the nav never shrank, so only the logo and Subscribe move there. */
+(function navFullAtEnd() {
+  if (window.__phone) return;
+  var atEnd = false, queued = false;
+  function update() {
+    queued = false;
+    var de = document.documentElement;
+    // 60px of slack: smooth scrolling (Lenis) eases the last few pixels in slowly, so
+    // waiting for the exact bottom made the dock start late.
+    var end = (window.scrollY || window.pageYOffset || 0) + window.innerHeight >= de.scrollHeight - 60;
+    if (end === atEnd) return;
+    atEnd = end;
+    de.classList.toggle("nav-at-end", end);
+    window.dispatchEvent(new Event("navatend"));
+  }
+  function queue() { if (!queued) { queued = true; requestAnimationFrame(update); } }
+  window.addEventListener("scroll", queue, { passive: true });
+  window.addEventListener("resize", queue, { passive: true });
+  if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", queue);
 })();
 
 /* ---- Post action rail (2026-08-11) --------------------------------------------
@@ -5078,4 +5117,173 @@ function navToLightWorld() {
     var featEl = document.querySelector(".features");
     if (featEl) ro.observe(featEl);                    // the projects filter resizes it at runtime
   }
+})();
+
+/* ---- Logo docks into the footer, tucked behind the headline -----------------------
+   Owns the header logo's (.header__logo, fixed top-left) transform everywhere:
+
+   HOME: when the hero exits, the two nav groups shrink to .88 (updateHeroExit); the
+   logo pill shrinks with them (html.hdr-small), pinned to its left edge, on the same
+   .3s ease. Sub-pages never shrink.
+
+   FOOTER: at the very end of the page (html.nav-at-end, set by navFullAtEnd; on the
+   first visit only once the footer's entrance reaches its labels + "Email me", see
+   __footerIntroWait) the logo sheds its pill and wordmark (html.logo-bare) and glides,
+   growing, onto a matching cube INSIDE the footer box (.lfooter__cube, made here),
+   whose lower part is tucked behind the headline. While gliding, the part of the
+   flying logo over the box's body is cut away (clip-path hole) and the in-box cube is
+   matched to it, so over the text it is always the one under the text. The nav
+   groups grow back to full size and Subscribe fades on the same eased progress, so
+   they finish exactly as the logo lands. Scroll (or jump) away and it all reverses.
+
+   Every glide eases from wherever the logo IS (a snapshot taken when the goal flips)
+   to a live target: the in-box cube going out, home coming back. So jumping from
+   the footer to Socials glides home from the spot it was last seen, not from the
+   footer's new off-screen position. Desktop only: the logo is hidden at <=820px. */
+(function logoToFooter() {
+  var logo = document.querySelector(".header__logo");
+  var clip = document.querySelector(".lfooter__clip");
+  var img = logo && logo.querySelector("img");
+  if (!logo || !img) return;
+  var de = document.documentElement;
+  var desktop = matchMedia("(min-width: 821px)");
+  var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var DUR = 600;                    // ms for a full glide
+  var SMALL = 0.88;                 // hero-exit shrink, same as the nav groups
+  var MAIN_TOP = 43.5 / 896;        // where the box's body starts below the top tab (footer-mask.svg)
+  var EASE_CSS = "var(--ease-default)";
+  // CSS does the pill fade, gap collapse and the landing cross-fade; transform is
+  // ours, and only transitions at home (the hero-exit shrink), never mid-glide.
+  var TRANS = "box-shadow .3s " + EASE_CSS + ", background-color .3s " + EASE_CSS + ", border-color .3s " +
+    EASE_CSS + ", gap .4s " + EASE_CSS + ", opacity .25s " + EASE_CSS;
+  logo.style.transformOrigin = "50% 50%";
+
+  var cube = null;
+  if (clip) {
+    cube = document.createElement("img");
+    cube.className = "lfooter__cube";
+    cube.src = img.getAttribute("src");
+    cube.alt = ""; cube.setAttribute("aria-hidden", "true"); cube.decoding = "async";
+    clip.insertBefore(cube, clip.firstChild);      // first, so the headline paints over it
+  }
+
+  var hdr = document.querySelector("header");
+  var groups = hdr ? [
+    [hdr.querySelector(".header__nav-left"), "center center"],
+    [hdr.querySelector(".header__nav-right"), "right center"]
+  ].filter(function (g) { return g[0]; }) : [];
+  var sub = hdr && hdr.querySelector(".header__ctas [data-subscribe-open]");
+  function homeScale() { return de.classList.contains("hdr-small") ? SMALL : 1; }
+
+  var docked = false;
+  function setDocked(on) {          // landed: in-box cube takes over (cross-fade in CSS)
+    if (on === docked) return;
+    docked = on;
+    de.classList.toggle("logo-docked", on);
+  }
+  // Nav groups (home scale → 1) and Subscribe (1 → 0) follow the dock fraction d.
+  var navDriven = false;
+  function navFollow(d) {
+    var base = homeScale();
+    navDriven = d > 0;
+    groups.forEach(function (g) {
+      g[0].style.transition = "none";
+      g[0].style.transformOrigin = g[1];
+      g[0].style.transform = base === 1 && d === 0 ? "" : "scale(" + (base + (1 - base) * d).toFixed(4) + ")";
+    });
+    if (sub) {
+      sub.style.transition = "none";
+      sub.style.opacity = d > 0 ? (1 - d).toFixed(3) : "";
+      sub.style.visibility = d >= 1 ? "hidden" : "";
+      sub.style.pointerEvents = d > 0 ? "none" : "";
+    }
+  }
+
+  // Ease-out: moves off at full speed the moment it triggers, settles on landing.
+  function ease(t) { return 1 - Math.pow(1 - t, 3); }
+  var goal = 0, q = 1, from = null, cur = null, last = 0, raf = 0, atHome = false;
+
+  // Where things are, from layout boxes only (offset*, untransformed), so nothing
+  // depends on the transforms written below. The logo is position:fixed, so its
+  // offsets are viewport coords; the cube's are relative to the clip.
+  function homePose() {
+    var W = logo.offsetWidth, hs = homeScale();
+    // Scale is about the centre; shift left by the shrink so the LEFT edge stays put.
+    return { x: logo.offsetLeft + W / 2 - W * (1 - hs) / 2, y: logo.offsetTop + logo.offsetHeight / 2, s: hs, d: 0 };
+  }
+  function dockPose() {
+    var cb = clip.getBoundingClientRect(), ch = cube.offsetHeight;
+    return { x: cb.left + cube.offsetLeft,           // left:50% + translateX(-50%) → centre
+             y: cb.top + cube.offsetTop + ch / 2,
+             s: img.offsetHeight ? ch / img.offsetHeight : 1, d: 1 };
+  }
+  function lerp(a, b, e) {
+    return { x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e, s: a.s + (b.s - a.s) * e, d: a.d + (b.d - a.d) * e };
+  }
+  function writeLogo(pose) {
+    var tx = pose.x - (logo.offsetLeft + logo.offsetWidth / 2), ty = pose.y - (logo.offsetTop + logo.offsetHeight / 2);
+    logo.style.transform = Math.abs(tx) < 0.01 && Math.abs(ty) < 0.01 && pose.s === 1 ? ""
+      : "translate3d(" + tx.toFixed(2) + "px," + ty.toFixed(2) + "px,0) scale(" + pose.s.toFixed(4) + ")";
+  }
+
+  function goHome() {               // at rest top-left: only the hero-exit shrink applies
+    cur = homePose();
+    if (!atHome) {
+      atHome = true;
+      logo.style.clipPath = "";
+      if (cube) { cube.style.transform = ""; cube.style.opacity = ""; }
+      if (navDriven) navFollow(0);                       // once, on arriving home; then hands off
+      de.classList.remove("logo-bare");                  // pill + wordmark back only once home
+      setDocked(false);
+    }
+    logo.style.transition = TRANS + ", transform .3s " + EASE_CSS;   // shrink/grow eases
+    writeLogo(cur);
+  }
+
+  function frame(now) {
+    raf = 0;
+    if (!desktop.matches) { goal = 0; q = 1; from = null; goHome(); last = 0; return; }
+    var g = clip && cube && de.classList.contains("nav-at-end") && !window.__footerIntroWait ? 1 : 0;
+    if (g !== goal) {               // flip: glide from wherever it is right now
+      goal = g; q = 0; from = cur || homePose(); last = 0;
+      if (!goal) setDocked(false);
+    }
+    if (!goal && q >= 1) { goHome(); last = 0; return; }
+
+    var dt = last ? now - last : 16;
+    last = now;
+    q = reduce ? 1 : Math.min(1, q + dt / DUR);
+    cur = lerp(from, goal ? dockPose() : homePose(), ease(q));
+
+    atHome = false;
+    de.classList.add("logo-bare");                       // cube only, out and back
+    logo.style.transition = TRANS;                       // no transform transition mid-glide
+    writeLogo(cur);
+    navFollow(cur.d);
+
+    // Over the box's body the flying logo is cut away (an evenodd hole in its own
+    // pre-transform px) and the in-box cube, under the headline, shows it instead.
+    var cb = clip.getBoundingClientRect(), bt = cb.top + cb.height * MAIN_TOP;
+    var W = logo.offsetWidth, H = logo.offsetHeight, s = cur.s;
+    function lx(x) { return ((x - cur.x) / s + W / 2).toFixed(1); }
+    function ly(y) { return ((y - cur.y) / s + H / 2).toFixed(1); }
+    logo.style.clipPath = 'path(evenodd, "M-99999 -99999H99999V99999H-99999Z M' +
+      lx(cb.left) + " " + ly(bt) + "H" + lx(cb.right) + "V" + ly(cb.bottom) + "H" + lx(cb.left) + 'Z")';
+    var dp = dockPose(), k = img.offsetHeight * s / cube.offsetHeight;
+    cube.style.transform = "translateX(-50%) translate(" + (cur.x - dp.x).toFixed(2) + "px," +
+      (cur.y - dp.y).toFixed(2) + "px) scale(" + k.toFixed(4) + ")";
+    cube.style.opacity = "1";
+
+    if (goal && q >= 1) setDocked(true);                 // landed
+    if (q < 1) raf = requestAnimationFrame(frame);       // keep gliding without scroll input
+    else last = 0;
+  }
+  function queue() { if (!raf) raf = requestAnimationFrame(frame); }
+  window.addEventListener("scroll", queue, { passive: true });
+  window.addEventListener("resize", queue, { passive: true });
+  window.addEventListener("navatend", queue);
+  window.addEventListener("footerintrodone", queue);
+  window.addEventListener("hdrsmall", queue);
+  if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", queue);
+  queue();
 })();
