@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
-  <!-- True isometric (30°), 12-unit cube, 1 unit = 50px. Legs 3.25 units, gap 2 units, small cube 6.75 units. -->
-  <polygon id="big-top"    fill="#45C6FA" points="600,0 1119.615,300 600,600 459.271,518.75 838.157,300 459.271,81.25"/>
-  <polygon id="big-right"  fill="#0A4B7D" points="1119.615,300 600,600 600,1200 1119.615,900"/>
-  <polygon id="big-left"   fill="#3939FA" points="80.385,900 600,1200 600,600 459.271,518.75 459.271,956.25 80.385,737.5"/>
-  <polygon id="small-top"  fill="#45C6FA" points="372.668,131.25 664.952,300 372.668,468.75 80.385,300"/>
-  <polygon id="small-left" fill="#3939FA" points="80.385,300 372.668,468.75 372.668,806.25 80.385,637.5"/>
-</svg>

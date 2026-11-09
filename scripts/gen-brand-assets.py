@@ -27,7 +27,7 @@ import resvg_py
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "logo design" / "cube-logo-v5.svg"
+SRC = ROOT / "logo design" / "cube-logo-v4.svg"
 BG = ROOT / "og-card.jpg"  # background donor: the blue contour field
 OG = ROOT / "og-logo-cube.jpg"
 
