@@ -5139,7 +5139,9 @@ function navToLightWorld() {
    Every glide eases from wherever the logo IS (a snapshot taken when the goal flips)
    to a live target: the in-box cube going out, home coming back. So jumping from
    the footer to Socials glides home from the spot it was last seen, not from the
-   footer's new off-screen position. Desktop only: the logo is hidden at <=820px. */
+   footer's new off-screen position. Leaving the page while it is away from home
+   hands its pose to the next page (sessionStorage), which glides it home from there.
+   Desktop only: the logo is hidden at <=820px. */
 (function logoToFooter() {
   var logo = document.querySelector(".header__logo");
   var clip = document.querySelector(".lfooter__clip");
@@ -5263,21 +5265,23 @@ function navToLightWorld() {
 
     // Over the box's body the flying logo is cut away (an evenodd hole in its own
     // pre-transform px) and the in-box cube, under the headline, shows it instead.
-    var cb = clip.getBoundingClientRect(), bt = cb.top + cb.height * MAIN_TOP;
-    var W = logo.offsetWidth, H = logo.offsetHeight, s = cur.s;
-    function lx(x) { return ((x - cur.x) / s + W / 2).toFixed(1); }
-    function ly(y) { return ((y - cur.y) / s + H / 2).toFixed(1); }
-    logo.style.clipPath = 'path(evenodd, "M-99999 -99999H99999V99999H-99999Z M' +
-      lx(cb.left) + " " + ly(bt) + "H" + lx(cb.right) + "V" + ly(cb.bottom) + "H" + lx(cb.left) + 'Z")';
-    var dp = dockPose(), k = img.offsetHeight * s / cube.offsetHeight;
-    cube.style.transform = "translateX(-50%) translate(" + (cur.x - dp.x).toFixed(2) + "px," +
-      (cur.y - dp.y).toFixed(2) + "px) scale(" + k.toFixed(4) + ")";
-    cube.style.opacity = "1";
+    if (clip && cube) {
+      var cb = clip.getBoundingClientRect(), bt = cb.top + cb.height * MAIN_TOP;
+      var W = logo.offsetWidth, H = logo.offsetHeight, s = cur.s;
+      var lx = function (x) { return ((x - cur.x) / s + W / 2).toFixed(1); };
+      var ly = function (y) { return ((y - cur.y) / s + H / 2).toFixed(1); };
+      logo.style.clipPath = 'path(evenodd, "M-99999 -99999H99999V99999H-99999Z M' +
+        lx(cb.left) + " " + ly(bt) + "H" + lx(cb.right) + "V" + ly(cb.bottom) + "H" + lx(cb.left) + 'Z")';
+      var dp = dockPose(), k = img.offsetHeight * s / cube.offsetHeight;
+      cube.style.transform = "translateX(-50%) translate(" + (cur.x - dp.x).toFixed(2) + "px," +
+        (cur.y - dp.y).toFixed(2) + "px) scale(" + k.toFixed(4) + ")";
+      cube.style.opacity = "1";
+    }
 
     if (goal && q >= 1) setDocked(true);                 // landed
     if (q < 1) raf = requestAnimationFrame(frame);       // keep gliding without scroll input
-    else last = 0;
-  }
+    else { last = 0; if (!goal) goHome(); }              // back home: pill + wordmark return NOW
+  }                                                      // (after a jump no scroll event follows)
   function queue() { if (!raf) raf = requestAnimationFrame(frame); }
   window.addEventListener("scroll", queue, { passive: true });
   window.addEventListener("resize", queue, { passive: true });
@@ -5285,5 +5289,31 @@ function navToLightWorld() {
   window.addEventListener("footerintrodone", queue);
   window.addEventListener("hdrsmall", queue);
   if (window.__lenis && typeof window.__lenis.on === "function") window.__lenis.on("scroll", queue);
+
+  // CROSS-PAGE: leaving while the logo is away from home (docked in the footer, or
+  // mid-glide), its on-screen pose is handed to the next page, which starts the logo
+  // there and glides it home, the same as an in-page jump. Fresh hand-offs only (a
+  // few seconds old), and never on a reload: the page comes back at the same scroll.
+  var KEY = "vj:logo-from";
+  addEventListener("pagehide", function () {
+    try {
+      if (cur && !atHome && desktop.matches)
+        sessionStorage.setItem(KEY, JSON.stringify({ x: cur.x, y: cur.y, s: cur.s, d: cur.d, t: Date.now() }));
+      else sessionStorage.removeItem(KEY);
+    } catch (e) {}
+  });
+  try {
+    var saved = JSON.parse(sessionStorage.getItem(KEY) || "null");
+    sessionStorage.removeItem(KEY);
+    var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+    if (saved && Date.now() - saved.t < 5000 && !(nav && nav.type === "reload") && desktop.matches) {
+      from = cur = { x: saved.x, y: saved.y, s: saved.s, d: saved.d };
+      goal = 0; q = reduce ? 1 : 0; atHome = false;
+      de.classList.add("logo-bare");
+      logo.style.transition = TRANS;
+      writeLogo(cur);                                    // in place before the first paint
+      navFollow(cur.d);
+    }
+  } catch (e) {}
   queue();
 })();
