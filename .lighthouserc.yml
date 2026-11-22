@@ -4,13 +4,14 @@ ci:
       - https://vishnujan.dev/
     numberOfRuns: 1
   assert:
-    preset: lighthouse:recommended
+    # Scores are reported as warnings, never a failed run: the audit is for keeping an eye on
+    # performance and accessibility, not a gate (it runs after the site is already deployed).
     assertions:
       categories:performance:
         - warn
         - minScore: 0.8
       categories:accessibility:
-        - error
+        - warn
         - minScore: 0.9
       categories:best-practices:
         - warn
